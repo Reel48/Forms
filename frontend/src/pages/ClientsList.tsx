@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { clientsAPI, Client } from '../api';
+import { clientsAPI } from '../api';
+import type { Client } from '../api';
 
 function ClientsList() {
   const [clients, setClients] = useState<Client[]>([]);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { quotesAPI, clientsAPI, QuoteCreate, Client, LineItem } from '../api';
+import { quotesAPI, clientsAPI } from '../api';
+import type { QuoteCreate, Client, LineItem } from '../api';
 
 function QuoteBuilder() {
   const { id } = useParams<{ id: string }>();

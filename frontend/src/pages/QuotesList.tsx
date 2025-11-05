@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { quotesAPI, Quote } from '../api';
+import { quotesAPI } from '../api';
+import type { Quote } from '../api';
 
 function QuotesList() {
   const [quotes, setQuotes] = useState<Quote[]>([]);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { quotesAPI, Quote } from '../api';
+import { quotesAPI } from '../api';
+import type { Quote } from '../api';
 
 function QuoteView() {
   const { id } = useParams<{ id: string }>();
