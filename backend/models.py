@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
@@ -75,11 +75,12 @@ class Quote(QuoteBase):
     created_at: datetime
     updated_at: datetime
     line_items: List[LineItem] = []
-    client: Optional[Client] = None
+    clients: Optional[Client] = None  # Supabase returns 'clients' (table name) - matches frontend expectation
     stripe_invoice_id: Optional[str] = None
     stripe_payment_intent_id: Optional[str] = None
     payment_status: Optional[str] = "unpaid"
     
     class Config:
         from_attributes = True
+        populate_by_name = True  # Allow both field name and alias
 
