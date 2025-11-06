@@ -29,6 +29,9 @@ dist-ssr/
 .env.local
 .env.production
 
+# Credentials files
+SUPABASE_CREDENTIALS.txt
+
 # IDE
 .vscode/
 .idea/
