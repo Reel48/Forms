@@ -20,7 +20,7 @@ This is a guide for deploying the FastAPI backend to Railway.
    Add these in Railway dashboard (Settings → Variables):
    ```
    SUPABASE_URL=https://boisewltuwcjfrdjnfwd.supabase.co
-   SUPABASE_KEY=your-anon-key-here
+   SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvaXNld2x0dXdjamZyZGpuZndkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTU1OTEsImV4cCI6MjA3ODAzMTU5MX0.2n5T_YlWgrN50ADQdnO-o9dWVYVPKt4NQ8qtjGs_oi4
    ALLOWED_ORIGINS=https://your-vercel-app.vercel.app,http://localhost:5173
    ```
    Note: `PORT` is automatically set by Railway - don't set it manually
