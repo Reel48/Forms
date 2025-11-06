@@ -22,8 +22,11 @@ This is a guide for deploying the FastAPI backend to Railway.
    SUPABASE_URL=https://boisewltuwcjfrdjnfwd.supabase.co
    SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvaXNld2x0dXdjamZyZGpuZndkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTU1OTEsImV4cCI6MjA3ODAzMTU5MX0.2n5T_YlWgrN50ADQdnO-o9dWVYVPKt4NQ8qtjGs_oi4
    ALLOWED_ORIGINS=https://your-vercel-app.vercel.app,http://localhost:5173
+   STRIPE_SECRET_KEY=sk_live_... (or sk_test_... for testing)
+   STRIPE_WEBHOOK_SECRET=whsec_... (optional - see STRIPE_WEBHOOK_SETUP.md)
    ```
    Note: `PORT` is automatically set by Railway - don't set it manually
+   Note: `STRIPE_WEBHOOK_SECRET` is optional but recommended for automatic payment status updates
 
 5. **Get Your URL**:
    - Railway will generate a URL like `https://your-app.railway.app`
@@ -32,6 +35,11 @@ This is a guide for deploying the FastAPI backend to Railway.
 6. **Update Frontend**:
    - In Vercel, set `VITE_API_URL` to your Railway URL
    - Example: `VITE_API_URL=https://your-app.railway.app`
+
+7. **Set Up Stripe Webhooks** (Optional but Recommended):
+   - See `STRIPE_WEBHOOK_SETUP.md` for detailed instructions
+   - Webhooks enable automatic payment status updates
+   - After deploying, create webhook endpoint in Stripe Dashboard pointing to: `https://your-app.railway.app/api/stripe/webhook`
 
 ## Alternative: Render Deployment
 
