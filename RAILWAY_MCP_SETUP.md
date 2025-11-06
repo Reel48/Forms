@@ -29,21 +29,29 @@ Or download from: https://docs.railway.com/develop/cli
 
 ### Step 2: Authenticate Railway CLI
 
-Login to Railway using your token:
+Railway CLI uses browser-based authentication. Run:
 
 ```bash
 railway login
 ```
 
-When prompted, use your Railway token:
-```
-bf239955-4a92-4f20-aa66-76d0045f8e0a
+This will open your browser to authenticate. **OR** you can use browserless login:
+
+```bash
+railway login --browserless
 ```
 
-Or set it directly:
+Then follow the prompts to authenticate.
+
+**Alternative: Using Railway Token Directly**
+
+If you have a Railway API token, you can set it as an environment variable. The Railway MCP server may use this:
+
 ```bash
-railway login --token bf239955-4a92-4f20-aa66-76d0045f8e0a
+export RAILWAY_TOKEN=bf239955-4a92-4f20-aa66-76d0045f8e0a
 ```
+
+**Note**: The Railway MCP server uses the Railway CLI for authentication, so you need to authenticate via `railway login` first. The token can be used for API calls but CLI authentication is separate.
 
 ### Step 3: Verify Railway CLI
 
@@ -118,7 +126,11 @@ Your Railway token:
 bf239955-4a92-4f20-aa66-76d0045f8e0a
 ```
 
-**Security Note**: This token is stored locally in Railway CLI config. Never share it publicly.
+**Note**: 
+- Railway CLI uses browser-based authentication (`railway login`)
+- The token can be used for API calls if needed
+- The Railway MCP server uses Railway CLI authentication
+- Token location (after CLI login): `~/.railway/config.json` (on macOS/Linux)
 
 ## Next Steps
 
