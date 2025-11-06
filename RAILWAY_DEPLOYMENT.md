@@ -10,19 +10,20 @@ This is a guide for deploying the FastAPI backend to Railway.
    - Select your `Reel48/Forms` repository
 
 3. **Configure Service**:
-   - Railway will auto-detect it's a Python project
-   - Root Directory: Set to `backend`
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - **Root Directory**: Set to `backend` (IMPORTANT!)
+   - Railway will auto-detect Python from `requirements.txt` and `runtime.txt`
+   - Builder is configured as `railpack` in `railway.json` files
+   - Start Command is auto-detected from `Procfile` or `railway.json`
+   - No need to manually set build/start commands - they're configured in the files
 
 4. **Environment Variables**:
-   Add these in Railway dashboard:
+   Add these in Railway dashboard (Settings → Variables):
    ```
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_key
-   PORT=8000
+   SUPABASE_URL=https://boisewltuwcjfrdjnfwd.supabase.co
+   SUPABASE_KEY=your-anon-key-here
    ALLOWED_ORIGINS=https://your-vercel-app.vercel.app,http://localhost:5173
    ```
+   Note: `PORT` is automatically set by Railway - don't set it manually
 
 5. **Get Your URL**:
    - Railway will generate a URL like `https://your-app.railway.app`
