@@ -18,6 +18,7 @@ class ClientCreate(ClientBase):
 class Client(ClientBase):
     id: str
     created_at: datetime
+    stripe_customer_id: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -75,6 +76,9 @@ class Quote(QuoteBase):
     updated_at: datetime
     line_items: List[LineItem] = []
     client: Optional[Client] = None
+    stripe_invoice_id: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
+    payment_status: Optional[str] = "unpaid"
     
     class Config:
         from_attributes = True

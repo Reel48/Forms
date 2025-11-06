@@ -7,6 +7,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Quote, QuoteCreate, QuoteUpdate, LineItem, LineItemCreate
 from database import supabase
+from stripe_service import StripeService
 import uuid
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
@@ -104,6 +105,29 @@ async def create_quote(quote: QuoteCreate):
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", created_quote["id"]).execute()
         return response.data[0]
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/{quote_id}/accept", response_model=Quote)
+async def accept_quote(quote_id: str):
+    """Accept a quote and optionally create Stripe invoice"""
+    try:
+        # Update quote status to accepted
+        update_data = {
+            "status": "accepted",
+            "updated_at": datetime.now().isoformat()
+        }
+        
+        response = supabase.table("quotes").update(update_data).eq("id", quote_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Quote not found")
+        
+        # Fetch complete quote with relations
+        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+        return response.data[0]
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

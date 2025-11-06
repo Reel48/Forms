@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf
+from routers import quotes, clients, pdf, stripe
 import os
 
 load_dotenv()
@@ -27,6 +27,7 @@ app.add_middleware(
 app.include_router(quotes.router)
 app.include_router(clients.router)
 app.include_router(pdf.router)
+app.include_router(stripe.router)
 
 @app.get("/")
 async def root():

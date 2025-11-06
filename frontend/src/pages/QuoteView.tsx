@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { quotesAPI } from '../api';
+import { quotesAPI, stripeAPI } from '../api';
 import type { Quote } from '../api';
 
 function QuoteView() {
@@ -8,6 +8,8 @@ function QuoteView() {
   const navigate = useNavigate();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadQuote();
@@ -54,6 +56,52 @@ function QuoteView() {
     }
   };
 
+  const handleAcceptQuote = async () => {
+    if (!confirm('Are you sure you want to accept this quote?')) return;
+    
+    try {
+      await quotesAPI.accept(id!);
+      await loadQuote(); // Reload to get updated status
+    } catch (error) {
+      console.error('Failed to accept quote:', error);
+      alert('Failed to accept quote. Please try again.');
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!quote?.clients) {
+      alert('Quote must have an associated client to create an invoice.');
+      return;
+    }
+
+    try {
+      setCreatingInvoice(true);
+      const response = await stripeAPI.createInvoice(id!);
+      setInvoiceUrl(response.data.invoice_url);
+      await loadQuote(); // Reload to get updated invoice info
+      alert('Invoice created successfully! You can now send it to the client.');
+    } catch (error: any) {
+      console.error('Failed to create invoice:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to create invoice. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setCreatingInvoice(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load invoice URL if invoice exists
+    if (quote?.stripe_invoice_id && !invoiceUrl) {
+      stripeAPI.getInvoice(quote.stripe_invoice_id)
+        .then(response => {
+          setInvoiceUrl(response.data.hosted_invoice_url);
+        })
+        .catch(error => {
+          console.error('Failed to load invoice:', error);
+        });
+    }
+  }, [quote?.stripe_invoice_id]);
+
   if (loading) {
     return <div className="container">Loading...</div>;
   }
@@ -95,6 +143,11 @@ function QuoteView() {
           <div>
             <strong>Status:</strong> <span className={`badge badge-${quote.status}`}>{quote.status}</span>
           </div>
+          {quote.payment_status && (
+            <div>
+              <strong>Payment:</strong> <span className={`badge badge-${quote.payment_status}`}>{quote.payment_status}</span>
+            </div>
+          )}
           <div>
             <strong>Created:</strong> {formatDate(quote.created_at)}
           </div>
@@ -104,6 +157,51 @@ function QuoteView() {
             </div>
           )}
         </div>
+
+        {/* Payment Actions */}
+        {quote.status === 'sent' || quote.status === 'viewed' ? (
+          <div className="mb-4 p-3" style={{ backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+            <h3>Quote Actions</h3>
+            <div className="flex gap-2">
+              <button onClick={handleAcceptQuote} className="btn-primary">
+                Accept Quote
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {quote.status === 'accepted' && !quote.stripe_invoice_id && quote.clients ? (
+          <div className="mb-4 p-3" style={{ backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
+            <h3>Create Invoice</h3>
+            <p>This quote has been accepted. Create a Stripe invoice to collect payment.</p>
+            <button 
+              onClick={handleCreateInvoice} 
+              className="btn-primary"
+              disabled={creatingInvoice}
+            >
+              {creatingInvoice ? 'Creating Invoice...' : 'Create Stripe Invoice'}
+            </button>
+          </div>
+        ) : null}
+
+        {quote.stripe_invoice_id && (
+          <div className="mb-4 p-3" style={{ backgroundColor: '#e3f2fd', borderRadius: '8px' }}>
+            <h3>Invoice Created</h3>
+            <p>Stripe invoice has been created for this quote.</p>
+            <div className="flex gap-2">
+              {invoiceUrl && (
+                <a 
+                  href={invoiceUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                >
+                  View Invoice
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         {quote.clients && (
           <div className="mb-4">
