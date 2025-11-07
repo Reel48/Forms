@@ -10,6 +10,12 @@ function QuoteBuilder() {
   
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
+  const [linkDialog, setLinkDialog] = useState<{ open: boolean; field: 'notes' | 'terms' | null; linkText: string; url: string }>({
+    open: false,
+    field: null,
+    linkText: '',
+    url: '',
+  });
   const [formData, setFormData] = useState<QuoteCreate>({
     title: '',
     client_id: '',
@@ -147,6 +153,41 @@ function QuoteBuilder() {
   };
 
   const { subtotal, taxAmount, total } = calculateTotals();
+
+  const openLinkDialog = (field: 'notes' | 'terms') => {
+    setLinkDialog({
+      open: true,
+      field,
+      linkText: '',
+      url: '',
+    });
+  };
+
+  const closeLinkDialog = () => {
+    setLinkDialog({
+      open: false,
+      field: null,
+      linkText: '',
+      url: '',
+    });
+  };
+
+  const insertLink = () => {
+    if (!linkDialog.field || !linkDialog.url) return;
+    
+    const linkText = linkDialog.linkText || linkDialog.url;
+    const markdownLink = `[${linkText}](${linkDialog.url})`;
+    
+    const currentValue = formData[linkDialog.field] || '';
+    const newValue = currentValue + (currentValue ? ' ' : '') + markdownLink;
+    
+    setFormData({
+      ...formData,
+      [linkDialog.field]: newValue,
+    });
+    
+    closeLinkDialog();
+  };
 
   if (loading && isEdit) {
     return <div className="container">Loading...</div>;
@@ -322,22 +363,114 @@ function QuoteBuilder() {
           </div>
 
           <div className="form-group">
-            <label>Notes</label>
+            <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+              <label style={{ marginBottom: 0 }}>Notes</label>
+              <button
+                type="button"
+                onClick={() => openLinkDialog('notes')}
+                className="btn-outline"
+                style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}
+              >
+                + Add Link
+              </button>
+            </div>
             <textarea
               value={formData.notes || ''}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Additional notes for the quote..."
+              placeholder="Additional notes for the quote... Use [link text](url) format or paste URLs directly."
             />
+            <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+              Tip: Use markdown format [link text](url) or paste URLs directly. They will be clickable when viewing the quote.
+            </small>
           </div>
 
           <div className="form-group">
-            <label>Terms & Conditions</label>
+            <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+              <label style={{ marginBottom: 0 }}>Terms & Conditions</label>
+              <button
+                type="button"
+                onClick={() => openLinkDialog('terms')}
+                className="btn-outline"
+                style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}
+              >
+                + Add Link
+              </button>
+            </div>
             <textarea
               value={formData.terms || ''}
               onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
-              placeholder="Terms and conditions..."
+              placeholder="Terms and conditions... Use [link text](url) format or paste URLs directly."
             />
+            <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+              Tip: Use markdown format [link text](url) or paste URLs directly. They will be clickable when viewing the quote.
+            </small>
           </div>
+
+          {/* Link Insertion Dialog */}
+          {linkDialog.open && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}
+              onClick={closeLinkDialog}
+            >
+              <div
+                className="card"
+                style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ marginTop: 0 }}>Insert Link</h3>
+                <div className="form-group">
+                  <label>Link Text (optional)</label>
+                  <input
+                    type="text"
+                    value={linkDialog.linkText}
+                    onChange={(e) => setLinkDialog({ ...linkDialog, linkText: e.target.value })}
+                    placeholder="e.g., Terms of Service"
+                  />
+                  <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                    Leave empty to use the URL as the link text
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label>URL *</label>
+                  <input
+                    type="url"
+                    value={linkDialog.url}
+                    onChange={(e) => setLinkDialog({ ...linkDialog, url: e.target.value })}
+                    placeholder="https://example.com"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2" style={{ marginTop: '1.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={insertLink}
+                    className="btn-primary"
+                    disabled={!linkDialog.url}
+                  >
+                    Insert Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeLinkDialog}
+                    className="btn-outline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2" style={{ marginTop: '2rem' }}>
             <button type="submit" className="btn-primary" disabled={loading}>

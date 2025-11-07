@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { quotesAPI, stripeAPI } from '../api';
 import type { Quote } from '../api';
+import { renderTextWithLinks } from '../utils/textUtils';
 
 function QuoteView() {
   const { id } = useParams<{ id: string }>();
@@ -274,14 +275,18 @@ function QuoteView() {
         {quote.notes && (
           <div className="mb-4 mt-4">
             <h2>Notes</h2>
-            <p>{quote.notes}</p>
+            <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+              {renderTextWithLinks(quote.notes)}
+            </div>
           </div>
         )}
 
         {quote.terms && (
           <div className="mb-4">
             <h2>Terms & Conditions</h2>
-            <p>{quote.terms}</p>
+            <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+              {renderTextWithLinks(quote.terms)}
+            </div>
           </div>
         )}
       </div>
