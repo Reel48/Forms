@@ -79,6 +79,7 @@ function QuotesList() {
                 <th>Client</th>
                 <th>Total</th>
                 <th>Status</th>
+                <th>Payment Status</th>
                 <th>Created</th>
                 <th>Actions</th>
               </tr>
@@ -96,6 +97,13 @@ function QuotesList() {
                   <td className="text-right">${parseFloat(quote.total).toFixed(2)}</td>
                   <td>
                     <span className={`badge badge-${quote.status}`}>{quote.status}</span>
+                  </td>
+                  <td>
+                    {quote.payment_status ? (
+                      <span className={`badge badge-${quote.payment_status}`}>{quote.payment_status}</span>
+                    ) : (
+                      <span className="text-muted">-</span>
+                    )}
                   </td>
                   <td>{formatDate(quote.created_at)}</td>
                   <td>
