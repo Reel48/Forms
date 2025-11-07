@@ -1,161 +1,293 @@
 # Stripe Webhook Setup Guide
 
-## Do You Need Webhooks?
+This guide will walk you through setting up Stripe webhooks for your Quote Builder application.
 
-**YES** - Webhooks are **highly recommended** for automatic payment status updates.
+## Prerequisites
 
-### What Webhooks Do:
-- ✅ Automatically update quote payment status when invoices are paid
-- ✅ Update payment status when payments fail
-- ✅ Keep your database in sync with Stripe payment events
+1. ✅ Enhanced webhook handler implemented
+2. ✅ Database migration for webhook events table
+3. ✅ Stripe account with API keys configured
 
-### Without Webhooks:
-- ⚠️ You can still create invoices manually
-- ⚠️ Payment status won't update automatically
-- ⚠️ You'll need to manually check Stripe and update quotes
+## Step 1: Run Database Migration
 
-## Webhook Setup Steps
+Before setting up webhooks, run the migration to create the webhook events table:
 
-### Step 1: Deploy Your Backend First
+1. Open your **Supabase Dashboard**
+2. Go to **SQL Editor**
+3. Open the file `database/webhook_events_migration.sql`
+4. Copy and paste the SQL into the editor
+5. Click **Run**
 
-Webhooks need a publicly accessible URL. Your backend must be deployed to AWS App Runner first.
+This creates the `webhook_events` table for storing webhook events and enabling idempotency.
 
-**Your webhook endpoint will be:**
-```
-https://your-app-runner-url.awsapprunner.com/api/stripe/webhook
-```
+## Step 2: Get Your Webhook Endpoint URL
 
-### Step 2: Set Up Webhook in Stripe Dashboard
+You need a publicly accessible URL for your webhook endpoint. Choose one:
 
-1. **Go to Stripe Dashboard**
-   - Visit https://dashboard.stripe.com
+### Option A: Production (Recommended)
+
+If your backend is deployed:
+- **Webhook URL**: `https://your-backend-domain.com/api/stripe/webhook`
+- Example: `https://api.yourdomain.com/api/stripe/webhook`
+
+### Option B: Local Development (Using ngrok)
+
+For local testing:
+
+1. **Install ngrok** (if not already installed):
+   ```bash
+   # macOS
+   brew install ngrok
+   
+   # Or download from https://ngrok.com/download
+   ```
+
+2. **Start your backend server**:
+   ```bash
+   cd backend
+   uvicorn main:app --reload
+   ```
+   Your server should be running on `http://localhost:8000`
+
+3. **Start ngrok in a new terminal**:
+   ```bash
+   ngrok http 8000
+   ```
+
+4. **Copy the HTTPS URL** ngrok provides:
+   - Example: `https://abc123.ngrok.io`
+   - **Webhook URL**: `https://abc123.ngrok.io/api/stripe/webhook`
+
+   ⚠️ **Note**: ngrok URLs change each time you restart ngrok (unless you have a paid account with a fixed domain)
+
+## Step 3: Configure Webhook in Stripe Dashboard
+
+1. **Log in to Stripe Dashboard**
+   - Go to https://dashboard.stripe.com
    - Make sure you're in the correct mode (Test or Live)
 
 2. **Navigate to Webhooks**
    - Click **"Developers"** in the left sidebar
    - Click **"Webhooks"**
 
-3. **Add Endpoint**
+3. **Add Webhook Endpoint**
+   - Click **"Add endpoint"** button
+   - Enter your **Endpoint URL**:
+     - Production: `https://your-backend-domain.com/api/stripe/webhook`
+     - Local (ngrok): `https://your-ngrok-url.ngrok.io/api/stripe/webhook`
+
+4. **Select Events to Listen For**
+   Click **"Select events"** and choose these invoice events:
+   
+   **Required Events:**
+   - ✅ `invoice.paid`
+   - ✅ `invoice.payment_failed`
+   - ✅ `invoice.finalized`
+   
+   **Recommended Events:**
+   - ✅ `invoice.updated`
+   - ✅ `invoice.voided`
+   - ✅ `invoice.marked_uncollectible`
+   - ✅ `invoice.sent`
+   - ✅ `invoice.payment_action_required`
+   
+   **Optional Events:**
+   - `invoice.upcoming` (mainly for subscriptions)
+
+5. **Save the Endpoint**
    - Click **"Add endpoint"**
-   - Enter your endpoint URL:
-     ```
-     https://your-app-runner-url.awsapprunner.com/api/stripe/webhook
-     ```
-     ⚠️ Replace `your-app-runner-url.awsapprunner.com` with your actual AWS App Runner URL
 
-4. **Select Events**
-   Click **"Select events"** and choose:
-   - ✅ `invoice.paid` - When an invoice is paid
-   - ✅ `invoice.payment_failed` - When payment fails
-   - ✅ `invoice.finalized` - When invoice is finalized
+## Step 4: Get Webhook Signing Secret
 
-5. **Create Endpoint**
-   - Click **"Add endpoint"**
+After creating the endpoint:
 
-### Step 3: Get Webhook Signing Secret
-
-1. **After creating the endpoint**, click on it in the webhooks list
+1. **Click on the endpoint** you just created
 2. Find the **"Signing secret"** section
 3. Click **"Reveal"** or **"Click to reveal"**
-4. Copy the secret (starts with `whsec_...`)
+4. **Copy the secret** (starts with `whsec_...`)
 
-### Step 4: Add Webhook Secret to Environment Variables
+## Step 5: Add Webhook Secret to Environment Variables
 
-#### For Local Development (.env file):
-```env
-STRIPE_WEBHOOK_SECRET=whsec_YOUR_SECRET_HERE
-```
-
-#### For AWS App Runner Deployment:
-1. Go to AWS App Runner Console → Your Service → Configuration → Edit
-2. Under Runtime environment variables, add:
+1. **Open your `.env` file** in the `backend` directory:
+   ```bash
+   cd backend
+   nano .env  # or use your preferred editor
    ```
+
+2. **Add the webhook secret**:
+   ```env
    STRIPE_WEBHOOK_SECRET=whsec_YOUR_SECRET_HERE
    ```
-3. Replace `YOUR_SECRET_HERE` with the actual secret from Step 3
-4. Save and the service will automatically redeploy
 
-### Step 5: Test the Webhook
+3. **Save the file**
 
-1. **Create a test invoice** in your app
-2. **Pay the invoice** in Stripe Dashboard (or use test card)
-3. **Check your database** - the quote's `payment_status` should automatically update to `"paid"`
+4. **Restart your backend server** to load the new environment variable:
+   ```bash
+   # Stop the server (Ctrl+C) and restart
+   uvicorn main:app --reload
+   ```
 
-## Webhook Events Handled
+## Step 6: Test the Webhook
 
-Your webhook endpoint handles these events:
+### Test Using Stripe Dashboard
 
-| Event | What It Does |
-|-------|-------------|
-| `invoice.paid` | Updates quote `payment_status` to `"paid"` |
-| `invoice.payment_failed` | Updates quote `payment_status` to `"failed"` |
-| `invoice.finalized` | Updates quote `payment_status` to `"unpaid"` |
+1. Go to **Stripe Dashboard** → **Webhooks**
+2. Click on your webhook endpoint
+3. Click **"Send test webhook"**
+4. Select an event type (e.g., `invoice.paid`)
+5. Click **"Send test webhook"**
+
+### Verify It's Working
+
+1. **Check your backend logs** - you should see:
+   ```
+   INFO: Received webhook event: invoice.paid (ID: evt_...)
+   INFO: Successfully processed webhook event invoice.paid
+   ```
+
+2. **Check the webhook events table**:
+   - Query: `SELECT * FROM webhook_events ORDER BY created_at DESC LIMIT 10;`
+   - Or use the API endpoint: `GET /api/stripe/webhook-events`
+
+3. **Check your quote** - if you have a test quote with an invoice:
+   - The payment status should update automatically
+
+## Step 7: Monitor Webhook Events
+
+### Using the API
+
+**Get recent webhook events:**
+```bash
+GET /api/stripe/webhook-events?limit=50
+```
+
+**Filter by event type:**
+```bash
+GET /api/stripe/webhook-events?event_type=invoice.paid
+```
+
+**Filter by status:**
+```bash
+GET /api/stripe/webhook-events?status=completed
+```
+
+**Get specific event:**
+```bash
+GET /api/stripe/webhook-events/{stripe_event_id}
+```
+
+### Using Stripe Dashboard
+
+1. Go to **Webhooks** → Your endpoint
+2. View **"Recent events"** tab
+3. See delivery status, response codes, and retry attempts
 
 ## Troubleshooting
 
-### "Webhook secret not configured"
-- ✅ Add `STRIPE_WEBHOOK_SECRET` to your environment variables
-- ✅ Restart your backend server after adding it
-- ✅ For AWS App Runner: Service will auto-redeploy after adding the variable
-
 ### Webhook Not Receiving Events
-- ✅ Verify your webhook URL is correct and accessible
-- ✅ Check that your backend is deployed and running
-- ✅ Verify events are selected in Stripe Dashboard
-- ✅ Check AWS CloudWatch logs for webhook requests
 
-### Payment Status Not Updating
-- ✅ Verify webhook secret matches Stripe Dashboard
-- ✅ Check backend logs for webhook processing errors
-- ✅ Ensure quote has `stripe_invoice_id` set
-- ✅ Test webhook manually in Stripe Dashboard → Webhooks → Send test webhook
+1. **Check endpoint URL is correct**
+   - Must be HTTPS (not HTTP)
+   - Must include `/api/stripe/webhook` path
+   - No trailing slash
 
-### Testing Locally (Before Deployment)
-
-If you want to test webhooks locally before deploying:
-
-1. **Use ngrok** to expose your local server:
+2. **Verify webhook secret is set**
    ```bash
-   ngrok http 8000
+   # Check .env file
+   cat backend/.env | grep STRIPE_WEBHOOK_SECRET
    ```
 
-2. **Use the ngrok URL** in Stripe webhook endpoint:
+3. **Check server is running and accessible**
+   - Test: `curl https://your-endpoint-url/api/stripe/webhook`
+   - Should return 400 (expected - no signature provided)
+
+4. **Check Stripe Dashboard**
+   - Go to Webhooks → Your endpoint → Recent events
+   - Look for failed deliveries
+   - Check error messages
+
+### Webhook Returns 400 "Invalid signature"
+
+1. **Verify webhook secret matches**
+   - Check Stripe Dashboard → Webhooks → Your endpoint → Signing secret
+   - Compare with your `.env` file
+
+2. **Check if using correct Stripe mode**
+   - Test mode webhook secret only works with test mode
+   - Live mode webhook secret only works with live mode
+
+3. **Restart server after changing .env**
+   - Environment variables are loaded at startup
+
+### Events Not Updating Quotes
+
+1. **Check if quote has invoice ID**
+   - Quote must have `stripe_invoice_id` set
+   - Webhook matches invoice ID to quote
+
+2. **Check webhook event logs**
+   ```bash
+   GET /api/stripe/webhook-events
    ```
-   https://abc123.ngrok.io/api/stripe/webhook
-   ```
+   - Look for events with `processing_status: "failed"`
+   - Check `error_message` field
 
-3. **Note**: ngrok URLs change each time you restart, so you'll need to update the webhook URL in Stripe
+3. **Check backend logs**
+   - Look for error messages
+   - Check if invoice ID matches quote
 
-## Security Notes
+### Webhook Events Not Stored
 
-- ✅ Webhook signatures are verified automatically (already implemented)
-- ✅ Never expose your webhook secret in frontend code
-- ✅ Always use HTTPS in production
-- ✅ The webhook endpoint validates Stripe signatures to prevent spoofing
+1. **Verify database migration ran**
+   - Check if `webhook_events` table exists
+   - Run migration if needed
 
-## Quick Checklist
+2. **Check database connection**
+   - Verify Supabase credentials in `.env`
+   - Test connection: `python -c "from database import supabase; print('Connected')"`
 
-- [ ] Backend deployed to AWS App Runner
-- [ ] Webhook endpoint created in Stripe Dashboard
-- [ ] Events selected: `invoice.paid`, `invoice.payment_failed`, `invoice.finalized`
-- [ ] Webhook signing secret copied
-- [ ] `STRIPE_WEBHOOK_SECRET` added to AWS App Runner environment variables
-- [ ] Backend redeployed (to load new env var)
-- [ ] Test webhook sent from Stripe Dashboard
-- [ ] Payment status updates verified
+## Webhook Event Flow
 
-## Current Status
-
-Your webhook endpoint is implemented at:
 ```
-POST /api/stripe/webhook
+1. Stripe sends webhook → Your endpoint
+2. Verify signature → Validate request
+3. Check idempotency → Skip if already processed
+4. Store event → Save to webhook_events table
+5. Process event → Update quote status
+6. Update event status → Mark as completed
+7. Return 200 → Acknowledge to Stripe
 ```
 
-The endpoint:
-- ✅ Verifies webhook signatures
-- ✅ Handles payment events
-- ✅ Updates database automatically
-- ⚠️ Requires `STRIPE_WEBHOOK_SECRET` to be set
+## Security Best Practices
 
-**Next Step**: Set up the webhook in Stripe Dashboard and add the secret to your environment variables!
+1. ✅ **Always use HTTPS** - Never use HTTP for webhooks
+2. ✅ **Verify signatures** - Always validate webhook signatures
+3. ✅ **Store events** - Keep audit trail of all webhook events
+4. ✅ **Idempotency** - Prevent duplicate processing
+5. ✅ **Logging** - Log all webhook events for debugging
+6. ✅ **Error handling** - Return appropriate status codes
 
+## Next Steps
+
+Once webhooks are set up:
+
+1. **Test with real invoices** - Create a test quote, accept it, create invoice
+2. **Monitor webhook events** - Use the API endpoints to view events
+3. **Set up alerts** - Monitor for failed webhook deliveries
+4. **Review logs** - Check webhook processing regularly
+
+## Support
+
+If you encounter issues:
+
+1. Check backend logs for error messages
+2. Review webhook events in database: `SELECT * FROM webhook_events ORDER BY created_at DESC;`
+3. Check Stripe Dashboard → Webhooks → Recent events
+4. Verify all environment variables are set correctly
+
+Your webhook system is now production-ready with:
+- ✅ Comprehensive event handling
+- ✅ Idempotency protection
+- ✅ Full audit trail
+- ✅ Structured logging
+- ✅ Error handling
