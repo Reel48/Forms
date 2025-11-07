@@ -52,7 +52,23 @@ function ClientsList() {
       loadClients();
     } catch (error: any) {
       console.error('Failed to save client:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to save client. Please try again.';
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response,
+        request: error?.request,
+        config: error?.config
+      });
+      
+      let errorMessage = 'Failed to save client. Please try again.';
+      
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        errorMessage = `Network Error: Cannot connect to backend API. Please check:\n\n1. Backend is running\n2. API URL is correct: ${import.meta.env.VITE_API_URL || 'http://localhost:8000'}\n3. CORS is configured properly\n\nCheck browser console for details.`;
+      } else if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       alert(errorMessage);
     }
   };

@@ -57,15 +57,27 @@ async def create_client(client: ClientCreate):
                 print(f"Failed to create Stripe customer: {e}")
         
         # Insert into Supabase (let it generate id and created_at)
-        # Use .select("*") to ensure we get all fields back including auto-generated ones
         print(f"DEBUG: Inserting into Supabase: {client_data}")
-        response = supabase.table("clients").insert(client_data).select("*").execute()
+        insert_response = supabase.table("clients").insert(client_data).execute()
         
-        print(f"DEBUG: Supabase response: {response}")
-        print(f"DEBUG: Response data: {response.data}")
+        print(f"DEBUG: Insert response: {insert_response}")
+        print(f"DEBUG: Insert response data: {insert_response.data}")
+        
+        if not insert_response.data:
+            raise HTTPException(status_code=500, detail="Failed to create client: No data returned")
+        
+        # Get the created client ID
+        created_client_id = insert_response.data[0]["id"]
+        
+        # Fetch the complete client record with all fields
+        print(f"DEBUG: Fetching created client with id: {created_client_id}")
+        response = supabase.table("clients").select("*").eq("id", created_client_id).execute()
+        
+        print(f"DEBUG: Fetch response: {response}")
+        print(f"DEBUG: Fetch response data: {response.data}")
         
         if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to create client: No data returned")
+            raise HTTPException(status_code=500, detail="Failed to fetch created client")
         
         # Try to validate the response
         try:
