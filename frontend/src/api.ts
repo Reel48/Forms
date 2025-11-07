@@ -95,6 +95,19 @@ export interface QuoteCreate {
   line_items: LineItem[];
 }
 
+export interface CompanySettings {
+  id: string;
+  company_name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  tax_id?: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Quotes API
 export const quotesAPI = {
   getAll: () => api.get<Quote[]>('/api/quotes'),
@@ -119,6 +132,12 @@ export const clientsAPI = {
   create: (client: Omit<Client, 'id' | 'created_at'>) => api.post<Client>('/api/clients', client),
   update: (id: string, client: Partial<Client>) => api.put<Client>(`/api/clients/${id}`, client),
   delete: (id: string) => api.delete(`/api/clients/${id}`),
+};
+
+// Company Settings API
+export const companySettingsAPI = {
+  get: () => api.get<CompanySettings>('/api/company-settings'),
+  update: (settings: Partial<CompanySettings>) => api.put<CompanySettings>('/api/company-settings', settings),
 };
 
 export default api;

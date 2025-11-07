@@ -3,6 +3,7 @@ import QuotesList from './pages/QuotesList';
 import QuoteBuilder from './pages/QuoteBuilder';
 import QuoteView from './pages/QuoteView';
 import ClientsList from './pages/ClientsList';
+import CompanySettingsPage from './pages/CompanySettings';
 import './App.css';
 
 function Navigation() {
@@ -26,6 +27,11 @@ function Navigation() {
             Clients
           </Link>
         </li>
+        <li>
+          <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>
+            Settings
+          </Link>
+        </li>
       </ul>
     </nav>
   );
@@ -41,6 +47,7 @@ function App() {
         <Route path="/quotes/:id" element={<QuoteView />} />
         <Route path="/quotes/:id/edit" element={<QuoteBuilder />} />
         <Route path="/clients" element={<ClientsList />} />
+        <Route path="/settings" element={<CompanySettingsPage />} />
       </Routes>
     </BrowserRouter>
   );

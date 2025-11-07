@@ -121,6 +121,15 @@ async def generate_quote_pdf(quote_id: str):
         normal_style = styles['Normal']
         normal_style.fontSize = 10
         
+        # Fetch company settings
+        company_settings = None
+        try:
+            company_response = supabase.table("company_settings").select("*").limit(1).execute()
+            if company_response.data:
+                company_settings = company_response.data[0]
+        except Exception:
+            pass  # Continue without company settings if fetch fails
+        
         # Title
         elements.append(Paragraph(f"Quote: {quote['quote_number']}", title_style))
         elements.append(Spacer(1, 0.2*inch))
@@ -144,29 +153,74 @@ async def generate_quote_pdf(quote_id: str):
         elements.append(quote_table)
         elements.append(Spacer(1, 0.3*inch))
         
-        # Client information
-        if quote.get('clients'):
-            client = quote['clients']
-            elements.append(Paragraph("Bill To:", heading_style))
-            client_info = []
-            client_info.append([client.get('name', '') or ''])
-            if client.get('company'):
-                client_info.append([client['company']])
-            if client.get('email'):
-                client_info.append([client['email']])
-            if client.get('phone'):
-                client_info.append([client['phone']])
-            if client.get('address'):
-                client_info.append([client['address']])
+        # Company and Client information side by side
+        company_client_data = []
+        
+        # Company/Seller Information
+        if company_settings and (company_settings.get('company_name') or company_settings.get('email') or company_settings.get('phone') or company_settings.get('address')):
+            company_info = []
+            company_info.append(["From:", ""])
+            if company_settings.get('company_name'):
+                company_info.append([company_settings['company_name'], ""])
+            if company_settings.get('address'):
+                company_info.append([company_settings['address'], ""])
+            if company_settings.get('email'):
+                company_info.append([f"Email: {company_settings['email']}", ""])
+            if company_settings.get('phone'):
+                company_info.append([f"Phone: {company_settings['phone']}", ""])
+            if company_settings.get('website'):
+                company_info.append([f"Website: {company_settings['website']}", ""])
+            if company_settings.get('tax_id'):
+                company_info.append([f"Tax ID: {company_settings['tax_id']}", ""])
             
-            client_table = Table(client_info, colWidths=[6*inch])
-            client_table.setStyle(TableStyle([
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            company_table = Table(company_info, colWidths=[2.75*inch, 0.5*inch])
+            company_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ]))
-            elements.append(client_table)
+            company_client_data.append(company_table)
+        
+        # Client information
+        if quote.get('clients'):
+            client = quote['clients']
+            client_info = []
+            client_info.append(["Bill To:", ""])
+            client_info.append([client.get('name', '') or '', ""])
+            if client.get('company'):
+                client_info.append([client['company'], ""])
+            if client.get('email'):
+                client_info.append([f"Email: {client['email']}", ""])
+            if client.get('phone'):
+                client_info.append([f"Phone: {client['phone']}", ""])
+            if client.get('address'):
+                client_info.append([client['address'], ""])
+            
+            client_table = Table(client_info, colWidths=[2.75*inch, 0.5*inch])
+            client_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            company_client_data.append(client_table)
+        
+        # Create side-by-side layout
+        if company_client_data:
+            if len(company_client_data) == 2:
+                # Two columns
+                combined_table = Table([[company_client_data[0], company_client_data[1]]], colWidths=[3*inch, 3*inch])
+                combined_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ]))
+                elements.append(combined_table)
+            else:
+                # Single column
+                elements.append(company_client_data[0])
             elements.append(Spacer(1, 0.3*inch))
         
         # Line items table

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe
+from routers import quotes, clients, pdf, stripe, company_settings
 from decimal import Decimal
 import os
 
@@ -39,6 +39,7 @@ app.include_router(quotes.router)
 app.include_router(clients.router)
 app.include_router(pdf.router)
 app.include_router(stripe.router)
+app.include_router(company_settings.router)
 
 @app.get("/")
 async def root():

@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { quotesAPI, stripeAPI } from '../api';
-import type { Quote } from '../api';
+import { quotesAPI, stripeAPI, companySettingsAPI } from '../api';
+import type { Quote, CompanySettings } from '../api';
 import { renderTextWithLinks } from '../utils/textUtils';
 
 function QuoteView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadQuote();
+    loadCompanySettings();
   }, [id]);
 
   const loadQuote = async () => {
@@ -24,6 +26,15 @@ function QuoteView() {
       console.error('Failed to load quote:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompanySettings = async () => {
+    try {
+      const response = await companySettingsAPI.get();
+      setCompanySettings(response.data);
+    } catch (error) {
+      console.error('Failed to load company settings:', error);
     }
   };
 
@@ -207,16 +218,46 @@ function QuoteView() {
           </div>
         )}
 
-        {quote.clients && (
-          <div className="mb-4">
-            <h2>Client Information</h2>
-            <p><strong>Name:</strong> {quote.clients.name}</p>
-            {quote.clients.company && <p><strong>Company:</strong> {quote.clients.company}</p>}
-            {quote.clients.email && <p><strong>Email:</strong> {quote.clients.email}</p>}
-            {quote.clients.phone && <p><strong>Phone:</strong> {quote.clients.phone}</p>}
-            {quote.clients.address && <p><strong>Address:</strong> {quote.clients.address}</p>}
-          </div>
-        )}
+        <div className="mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          {/* Company/Seller Information */}
+          {companySettings && (companySettings.company_name || companySettings.email || companySettings.phone || companySettings.address) && (
+            <div>
+              <h2>From</h2>
+              {companySettings.logo_url && (
+                <img 
+                  src={companySettings.logo_url} 
+                  alt={companySettings.company_name || 'Company Logo'} 
+                  style={{ maxHeight: '60px', marginBottom: '0.5rem' }}
+                />
+              )}
+              {companySettings.company_name && <p><strong>{companySettings.company_name}</strong></p>}
+              {companySettings.address && <p>{companySettings.address}</p>}
+              {companySettings.email && <p><strong>Email:</strong> {companySettings.email}</p>}
+              {companySettings.phone && <p><strong>Phone:</strong> {companySettings.phone}</p>}
+              {companySettings.website && (
+                <p>
+                  <strong>Website:</strong>{' '}
+                  <a href={companySettings.website} target="_blank" rel="noopener noreferrer">
+                    {companySettings.website}
+                  </a>
+                </p>
+              )}
+              {companySettings.tax_id && <p><strong>Tax ID:</strong> {companySettings.tax_id}</p>}
+            </div>
+          )}
+
+          {/* Client Information */}
+          {quote.clients && (
+            <div>
+              <h2>Bill To</h2>
+              <p><strong>Name:</strong> {quote.clients.name}</p>
+              {quote.clients.company && <p><strong>Company:</strong> {quote.clients.company}</p>}
+              {quote.clients.email && <p><strong>Email:</strong> {quote.clients.email}</p>}
+              {quote.clients.phone && <p><strong>Phone:</strong> {quote.clients.phone}</p>}
+              {quote.clients.address && <p><strong>Address:</strong> {quote.clients.address}</p>}
+            </div>
+          )}
+        </div>
 
         <div className="mb-4">
           <h2>Line Items</h2>

@@ -135,3 +135,52 @@ class Quote(QuoteBase):
             Decimal: lambda v: str(v)
         }
 
+# Company Settings Models
+class CompanySettingsBase(BaseModel):
+    company_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
+    tax_id: Optional[str] = None
+    logo_url: Optional[str] = None
+    
+    @field_validator('email', mode='before')
+    @classmethod
+    def empty_email_to_none(cls, v):
+        """Convert empty strings to None for email field"""
+        if v == "" or v is None:
+            return None
+        return v
+
+class CompanySettings(CompanySettingsBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class CompanySettingsUpdate(CompanySettingsBase):
+    pass
+
