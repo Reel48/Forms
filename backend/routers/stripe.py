@@ -224,10 +224,17 @@ async def create_invoice_from_quote(quote_id: str):
                 "stripe_customer_id": customer_id
             }).eq("id", client["id"]).execute()
         
+        # Get line items - ensure we have the data
+        line_items = quote.get("line_items", [])
+        if not line_items:
+            raise HTTPException(status_code=400, detail="Quote must have line items to create an invoice")
+        
+        logger.info(f"Creating invoice with {len(line_items)} line items for quote {quote_id}")
+        
         # Create invoice
         invoice_data = StripeService.create_invoice_from_quote(
             quote,
-            quote.get("line_items", []),
+            line_items,
             customer_id,
             quote.get("quote_number")
         )

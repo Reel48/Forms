@@ -62,48 +62,10 @@ class StripeService:
         subtotal_cents = int(float(quote_data.get("subtotal", 0)) * 100)
         tax_cents = int(float(quote_data.get("tax_amount", 0)) * 100)
         
-        # Create invoice items for each line item
-        invoice_items = []
-        for item in line_items:
-            quantity = float(item.get("quantity", 1))
-            unit_price = float(item.get("unit_price", 0))
-            discount_percent = float(item.get("discount_percent", 0) or 0)
-            
-            # Calculate line item total
-            subtotal = quantity * unit_price
-            discount_amount = subtotal * (discount_percent / 100)
-            line_total = subtotal - discount_amount
-            
-            # Create invoice item
-            invoice_item = stripe.InvoiceItem.create(
-                customer=customer_id,
-                amount=int(line_total * 100),  # Convert to cents
-                currency=quote_data.get("currency", "usd").lower(),
-                description=item.get("description", "Line item"),
-                metadata={
-                    "quote_id": quote_data.get("id"),
-                    "line_item_id": item.get("id"),
-                }
-            )
-            invoice_items.append(invoice_item.id)
-        
-        # Add tax as a separate line item if applicable
-        if tax_cents > 0:
-            stripe.InvoiceItem.create(
-                customer=customer_id,
-                amount=tax_cents,
-                currency=quote_data.get("currency", "usd").lower(),
-                description=f"Tax ({quote_data.get('tax_rate', 0)}%)",
-                metadata={
-                    "quote_id": quote_data.get("id"),
-                    "type": "tax",
-                }
-            )
-        
-        # Create the invoice
+        # Create the invoice as draft first (before adding items)
         invoice = stripe.Invoice.create(
             customer=customer_id,
-            auto_advance=True,  # Automatically finalize and attempt payment
+            auto_advance=False,  # Don't auto-advance, we'll finalize manually
             collection_method="send_invoice",  # Send invoice to customer
             days_until_due=30,  # Payment due in 30 days
             description=f"Invoice for Quote {quote_number}",
@@ -113,7 +75,86 @@ class StripeService:
             }
         )
         
-        # Finalize the invoice
+        # Create invoice items for each line item and attach to invoice
+        invoice_items = []
+        for item in line_items:
+            quantity = float(item.get("quantity", 1) or 1)
+            unit_price = float(item.get("unit_price", 0) or 0)
+            discount_percent = float(item.get("discount_percent", 0) or 0)
+            description = item.get("description", "Line item") or "Line item"
+            
+            # Calculate line item total
+            subtotal = quantity * unit_price
+            discount_amount = subtotal * (discount_percent / 100)
+            line_total = subtotal - discount_amount
+            
+            # Skip if amount is zero or negative
+            if line_total <= 0:
+                continue
+            
+            # Create invoice item and attach directly to the invoice
+            invoice_item_params = {
+                "customer": customer_id,
+                "invoice": invoice.id,  # Explicitly attach to this invoice
+                "currency": quote_data.get("currency", "usd").lower(),
+                "description": description,
+                "metadata": {
+                    "quote_id": quote_data.get("id"),
+                    "line_item_id": str(item.get("id", "")),
+                }
+            }
+            
+            # If there's a discount, use the discounted amount
+            # Otherwise use quantity and unit_price for better display
+            if discount_percent > 0:
+                # Apply discount by using the discounted total as the amount
+                invoice_item_params["amount"] = int(line_total * 100)
+                invoice_item_params["description"] = f"{description} (Qty: {quantity}, Discount: {discount_percent}%)"
+            else:
+                # Use quantity and unit_price for better Stripe display
+                invoice_item_params["quantity"] = int(quantity) if quantity == int(quantity) else quantity
+                invoice_item_params["unit_amount"] = int(unit_price * 100)  # Convert to cents
+            
+            try:
+                invoice_item = stripe.InvoiceItem.create(**invoice_item_params)
+                invoice_items.append(invoice_item.id)
+            except Exception as e:
+                # Log error but continue with other items
+                import logging
+                logging.error(f"Failed to create invoice item: {str(e)}, Item: {description}")
+                # Fallback: create with just amount
+                try:
+                    invoice_item = stripe.InvoiceItem.create(
+                        customer=customer_id,
+                        invoice=invoice.id,
+                        amount=int(line_total * 100),
+                        currency=quote_data.get("currency", "usd").lower(),
+                        description=description,
+                        metadata={
+                            "quote_id": quote_data.get("id"),
+                            "line_item_id": str(item.get("id", "")),
+                        }
+                    )
+                    invoice_items.append(invoice_item.id)
+                except Exception as e2:
+                    logging.error(f"Failed to create invoice item (fallback): {str(e2)}")
+                    raise
+        
+        # Add tax as a separate line item if applicable
+        if tax_cents > 0:
+            stripe.InvoiceItem.create(
+                customer=customer_id,
+                invoice=invoice.id,  # Attach to invoice
+                amount=tax_cents,
+                currency=quote_data.get("currency", "usd").lower(),
+                description=f"Tax ({quote_data.get('tax_rate', 0)}%)",
+                metadata={
+                    "quote_id": quote_data.get("id"),
+                    "type": "tax",
+                }
+            )
+        
+        # Finalize the invoice (this will include all attached invoice items)
         invoice = stripe.Invoice.finalize_invoice(invoice.id)
         
         return {
