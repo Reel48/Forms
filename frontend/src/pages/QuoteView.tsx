@@ -4,6 +4,14 @@ import { quotesAPI, stripeAPI, companySettingsAPI } from '../api';
 import type { Quote, CompanySettings } from '../api';
 import { renderTextWithLinks } from '../utils/textUtils';
 
+// Helper function to strip HTML tags and get clean numeric value
+const getCleanNumericValue = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  // Remove any HTML tags that might be in the string
+  const cleanValue = String(value).replace(/<[^>]*>/g, '').trim();
+  return parseFloat(cleanValue) || 0;
+};
+
 function QuoteView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -297,15 +305,15 @@ function QuoteView() {
             <tbody>
               <tr>
                 <td className="text-right"><strong>Subtotal:</strong></td>
-                <td className="text-right">${parseFloat(quote.subtotal).toFixed(2)}</td>
+                <td className="text-right">${getCleanNumericValue(quote.subtotal).toFixed(2)}</td>
               </tr>
               <tr>
                 <td className="text-right"><strong>Tax ({quote.tax_rate}%):</strong></td>
-                <td className="text-right">${parseFloat(quote.tax_amount).toFixed(2)}</td>
+                <td className="text-right">${getCleanNumericValue(quote.tax_amount).toFixed(2)}</td>
               </tr>
               <tr>
                 <td className="text-right"><strong>Total:</strong></td>
-                <td className="text-right"><strong>${parseFloat(quote.total).toFixed(2)}</strong></td>
+                <td className="text-right"><strong>${getCleanNumericValue(quote.total).toFixed(2)}</strong></td>
               </tr>
             </tbody>
           </table>
