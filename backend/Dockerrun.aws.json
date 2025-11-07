@@ -1,0 +1,19 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "YOUR_ECR_REPOSITORY_URI:latest",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": 8000
+    }
+  ],
+  "Environment": [
+    {
+      "Name": "PORT",
+      "Value": "8000"
+    }
+  ]
+}
+
