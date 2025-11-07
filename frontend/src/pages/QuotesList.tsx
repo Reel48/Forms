@@ -16,8 +16,10 @@ function QuotesList() {
     try {
       const response = await quotesAPI.getAll();
       setQuotes(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load quotes:', error);
+      // Don't show alert for initial load, just log the error
+      // Users will see the "No quotes yet" message
     } finally {
       setLoading(false);
     }

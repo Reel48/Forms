@@ -32,9 +32,10 @@ function QuoteView() {
     try {
       await quotesAPI.delete(id!);
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete quote:', error);
-      alert('Failed to delete quote. Please try again.');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to delete quote. Please try again.';
+      alert(errorMessage);
     }
   };
 
@@ -50,9 +51,10 @@ function QuoteView() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to generate PDF. Please try again.';
+      alert(errorMessage);
     }
   };
 
@@ -62,9 +64,10 @@ function QuoteView() {
     try {
       await quotesAPI.accept(id!);
       await loadQuote(); // Reload to get updated status
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to accept quote:', error);
-      alert('Failed to accept quote. Please try again.');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to accept quote. Please try again.';
+      alert(errorMessage);
     }
   };
 

@@ -121,9 +121,26 @@ function QuoteBuilder() {
         await quotesAPI.create(formData);
       }
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save quote:', error);
-      alert('Failed to save quote. Please try again.');
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response,
+        request: error?.request,
+        config: error?.config
+      });
+      
+      let errorMessage = 'Failed to save quote. Please try again.';
+      
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        errorMessage = `Network Error: Cannot connect to backend API. Please check your connection and try again.`;
+      } else if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
