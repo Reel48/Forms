@@ -254,7 +254,8 @@ async def generate_quote_pdf(quote_id: str):
         line_items_data.append(["", "", "", "Subtotal:", f"${subtotal:.2f}"])
         if tax_amount > 0:
             line_items_data.append(["", "", "", f"Tax ({quote['tax_rate']}%):", f"${tax_amount:.2f}"])
-        line_items_data.append(["", "", "", "<b>Total:</b>", f"<b>${total:.2f}</b>"])
+        # Use Paragraph for bold text in PDF - ReportLab will render the HTML tags properly
+        line_items_data.append(["", "", "", Paragraph("<b>Total:</b>", normal_style), Paragraph(f"<b>${total:.2f}</b>", normal_style)])
         
         items_table = Table(line_items_data, colWidths=[3*inch, 0.8*inch, 1*inch, 1*inch, 1*inch])
         items_table.setStyle(TableStyle([
