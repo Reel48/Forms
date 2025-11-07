@@ -237,9 +237,7 @@ function QuoteView() {
               {companySettings.website && (
                 <p>
                   <strong>Website:</strong>{' '}
-                  <a href={companySettings.website} target="_blank" rel="noopener noreferrer">
-                    {companySettings.website}
-                  </a>
+                  {renderTextWithLinks(companySettings.website)}
                 </p>
               )}
               {companySettings.tax_id && <p><strong>Tax ID:</strong> {companySettings.tax_id}</p>}

@@ -169,7 +169,9 @@ async def generate_quote_pdf(quote_id: str):
             if company_settings.get('phone'):
                 company_info.append([f"Phone: {company_settings['phone']}", ""])
             if company_settings.get('website'):
-                company_info.append([f"Website: {company_settings['website']}", ""])
+                website_with_links = convert_links_to_pdf_format(company_settings['website'])
+                # Use Paragraph to render HTML links properly
+                company_info.append([Paragraph(f"Website: {website_with_links}", normal_style), ""])
             if company_settings.get('tax_id'):
                 company_info.append([f"Tax ID: {company_settings['tax_id']}", ""])
             

@@ -7,6 +7,11 @@ function CompanySettingsPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [linkDialog, setLinkDialog] = useState<{ open: boolean; linkText: string; url: string }>({
+    open: false,
+    linkText: '',
+    url: '',
+  });
   const [formData, setFormData] = useState<Partial<CompanySettings>>({
     company_name: '',
     email: '',
@@ -56,6 +61,39 @@ function CompanySettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openLinkDialog = () => {
+    setLinkDialog({
+      open: true,
+      linkText: '',
+      url: '',
+    });
+  };
+
+  const closeLinkDialog = () => {
+    setLinkDialog({
+      open: false,
+      linkText: '',
+      url: '',
+    });
+  };
+
+  const insertLink = () => {
+    if (!linkDialog.url) return;
+    
+    const linkText = linkDialog.linkText || linkDialog.url;
+    const markdownLink = `[${linkText}](${linkDialog.url})`;
+    
+    const currentValue = formData.website || '';
+    const newValue = currentValue + (currentValue ? ' ' : '') + markdownLink;
+    
+    setFormData({
+      ...formData,
+      website: newValue,
+    });
+    
+    closeLinkDialog();
   };
 
   if (loading) {
@@ -115,13 +153,26 @@ function CompanySettingsPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Website</label>
-              <input
-                type="url"
-                value={formData.website}
+              <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+                <label style={{ marginBottom: 0 }}>Website</label>
+                <button
+                  type="button"
+                  onClick={openLinkDialog}
+                  className="btn-outline"
+                  style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}
+                >
+                  + Add Link
+                </button>
+              </div>
+              <textarea
+                value={formData.website || ''}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                placeholder="https://www.company.com"
+                placeholder="https://www.company.com or use markdown format [link text](url)"
+                rows={2}
               />
+              <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                Tip: Use markdown format [link text](url) or paste URLs directly. They will be clickable when viewing quotes.
+              </small>
             </div>
 
             <div className="form-group">
@@ -147,6 +198,72 @@ function CompanySettingsPage() {
               Enter a URL to your company logo. The logo will appear on quotes.
             </small>
           </div>
+
+          {/* Link Insertion Dialog */}
+          {linkDialog.open && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}
+              onClick={closeLinkDialog}
+            >
+              <div
+                className="card"
+                style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ marginTop: 0 }}>Insert Link</h3>
+                <div className="form-group">
+                  <label>Link Text (optional)</label>
+                  <input
+                    type="text"
+                    value={linkDialog.linkText}
+                    onChange={(e) => setLinkDialog({ ...linkDialog, linkText: e.target.value })}
+                    placeholder="e.g., Visit Our Website"
+                  />
+                  <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                    Leave empty to use the URL as the link text
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label>URL *</label>
+                  <input
+                    type="url"
+                    value={linkDialog.url}
+                    onChange={(e) => setLinkDialog({ ...linkDialog, url: e.target.value })}
+                    placeholder="https://example.com"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2" style={{ marginTop: '1.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={insertLink}
+                    className="btn-primary"
+                    disabled={!linkDialog.url}
+                  >
+                    Insert Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeLinkDialog}
+                    className="btn-outline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2" style={{ marginTop: '2rem' }}>
             <button type="submit" className="btn-primary" disabled={saving}>
