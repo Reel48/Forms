@@ -206,7 +206,7 @@ function QuoteView() {
         </div>
 
         {/* Payment Actions */}
-        {quote.status === 'sent' || quote.status === 'viewed' ? (
+        {quote.status === 'draft' || quote.status === 'sent' || quote.status === 'viewed' ? (
           <div className="mb-4 p-3" style={{ backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
             <h3>Quote Actions</h3>
             <div className="flex gap-2">
@@ -214,6 +214,11 @@ function QuoteView() {
                 Accept Quote
               </button>
             </div>
+            {quote.status === 'draft' && (
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                Accept this quote to create a Stripe invoice for payment collection.
+              </p>
+            )}
           </div>
         ) : null}
 
