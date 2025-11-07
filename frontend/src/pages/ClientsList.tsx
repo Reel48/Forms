@@ -50,9 +50,10 @@ function ClientsList() {
       setShowForm(false);
       setEditingClient(null);
       loadClients();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save client:', error);
-      alert('Failed to save client. Please try again.');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to save client. Please try again.';
+      alert(errorMessage);
     }
   };
 

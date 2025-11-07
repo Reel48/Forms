@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
@@ -11,6 +11,14 @@ class ClientBase(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    
+    @field_validator('email', mode='before')
+    @classmethod
+    def empty_email_to_none(cls, v):
+        """Convert empty strings to None for email field"""
+        if v == "" or v is None:
+            return None
+        return v
 
 class ClientCreate(ClientBase):
     pass
