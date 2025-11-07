@@ -33,11 +33,15 @@ function ClientsList() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting client form with data:', formData);
+    console.log('API URL being used:', import.meta.env.VITE_API_URL || 'http://localhost:8000 (default)');
     try {
       if (editingClient) {
         await clientsAPI.update(editingClient.id, formData);
       } else {
+        console.log('Creating new client...');
         await clientsAPI.create(formData);
+        console.log('Client created successfully!');
       }
       setFormData({
         name: '',
