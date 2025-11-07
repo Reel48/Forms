@@ -10,11 +10,77 @@ from decimal import Decimal
 from io import BytesIO
 import sys
 import os
+import re
+import html
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import supabase
 from datetime import datetime
 
 router = APIRouter(prefix="/api/pdf", tags=["pdf"])
+
+def convert_links_to_pdf_format(text: str) -> str:
+    """
+    Convert markdown links [text](url) and plain URLs to ReportLab hyperlink format.
+    ReportLab uses <link href="url" color="blue">text</link> for hyperlinks.
+    """
+    if not text:
+        return ""
+    
+    # Use placeholders to protect link content during processing
+    placeholders = {}
+    placeholder_counter = 0
+    
+    # First, find and replace markdown links [text](url) with placeholders
+    markdown_link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+    
+    def replace_markdown_with_placeholder(match):
+        nonlocal placeholder_counter
+        link_text = match.group(1)
+        url = match.group(2)
+        # Ensure URL has protocol
+        if not url.startswith(('http://', 'https://')):
+            url = f'https://{url}'
+        placeholder = f'__MARKDOWN_LINK_{placeholder_counter}__'
+        placeholders[placeholder] = {
+            'type': 'markdown',
+            'text': link_text,
+            'url': url
+        }
+        placeholder_counter += 1
+        return placeholder
+    
+    text = re.sub(markdown_link_pattern, replace_markdown_with_placeholder, text)
+    
+    # Then, find and replace plain URLs with placeholders
+    # (markdown links are already replaced, so any URLs found are plain URLs)
+    url_pattern = r'(https?://[^\s<>"]+|www\.[^\s<>"]+)'
+    
+    def replace_url_with_placeholder(match):
+        nonlocal placeholder_counter
+        url = match.group(0)
+        full_url = url if url.startswith(('http://', 'https://')) else f'https://{url}'
+        placeholder = f'__PLAIN_URL_{placeholder_counter}__'
+        placeholders[placeholder] = {
+            'type': 'plain',
+            'text': url,
+            'url': full_url
+        }
+        placeholder_counter += 1
+        return placeholder
+    
+    text = re.sub(url_pattern, replace_url_with_placeholder, text)
+    
+    # Now escape the text (placeholders won't be affected as they don't contain special chars)
+    text = html.escape(text)
+    
+    # Replace placeholders with actual link tags
+    for placeholder, link_data in placeholders.items():
+        url_escaped = html.escape(link_data['url'])
+        text_escaped = html.escape(link_data['text'])
+        link_tag = f'<link href="{url_escaped}" color="blue"><u>{text_escaped}</u></link>'
+        text = text.replace(placeholder, link_tag)
+    
+    return text
 
 @router.get("/quote/{quote_id}")
 async def generate_quote_pdf(quote_id: str):
@@ -155,12 +221,14 @@ async def generate_quote_pdf(quote_id: str):
         # Notes and terms
         if quote.get('notes'):
             elements.append(Paragraph("Notes:", heading_style))
-            elements.append(Paragraph(quote['notes'], normal_style))
+            notes_with_links = convert_links_to_pdf_format(quote['notes'])
+            elements.append(Paragraph(notes_with_links, normal_style))
             elements.append(Spacer(1, 0.2*inch))
         
         if quote.get('terms'):
             elements.append(Paragraph("Terms & Conditions:", heading_style))
-            elements.append(Paragraph(quote['terms'], normal_style))
+            terms_with_links = convert_links_to_pdf_format(quote['terms'])
+            elements.append(Paragraph(terms_with_links, normal_style))
         
         # Build PDF
         doc.build(elements)
