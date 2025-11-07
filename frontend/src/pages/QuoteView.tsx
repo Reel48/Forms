@@ -66,7 +66,8 @@ function QuoteView() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `quote_${quote?.quote_number}.pdf`;
+      // Use quote number as filename (e.g., "QT-20250101-ABC123.pdf")
+      link.download = `${quote?.quote_number || 'quote'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

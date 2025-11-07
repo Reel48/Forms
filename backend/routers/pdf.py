@@ -95,7 +95,14 @@ async def generate_quote_pdf(quote_id: str):
         
         # Create PDF buffer
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.75*inch, bottomMargin=0.75*inch)
+        # Set document title to quote title (shows in PDF tab)
+        doc = SimpleDocTemplate(
+            buffer, 
+            pagesize=letter, 
+            topMargin=0.75*inch, 
+            bottomMargin=0.75*inch,
+            title=quote.get('title', quote['quote_number'])  # Set PDF document title
+        )
         
         # Container for PDF elements
         elements = []
@@ -291,10 +298,13 @@ async def generate_quote_pdf(quote_id: str):
         doc.build(elements)
         buffer.seek(0)
         
+        # Use quote number as filename (e.g., "QT-20250101-ABC123.pdf")
+        filename = f"{quote['quote_number']}.pdf"
+        
         return Response(
             content=buffer.read(),
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=quote_{quote['quote_number']}.pdf"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
         
     except HTTPException:
