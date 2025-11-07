@@ -1,6 +1,6 @@
 # AWS Backend Migration Checklist
 
-Use this checklist to track your migration progress from Railway to AWS.
+Use this checklist to track your AWS deployment setup.
 
 ## Pre-Migration
 
@@ -8,7 +8,6 @@ Use this checklist to track your migration progress from Railway to AWS.
 - [ ] AWS CLI installed and configured
 - [ ] Docker installed (for container builds)
 - [ ] All environment variables documented
-- [ ] Current Railway deployment tested and working
 - [ ] Backup of current configuration
 
 ## AWS Setup
@@ -88,16 +87,13 @@ Use this checklist to track your migration progress from Railway to AWS.
 ## Post-Migration
 
 - [ ] All functionality verified
-- [ ] Performance compared to Railway
+- [ ] Performance tested
 - [ ] Costs reviewed
 - [ ] Documentation updated
 - [ ] Team notified of new backend URL
-- [ ] Old Railway deployment stopped (after verification)
-- [ ] Railway subscription cancelled (if applicable)
 
 ## Rollback Plan
 
-- [ ] Previous Railway deployment kept running during migration
 - [ ] Rollback procedure documented
 - [ ] Quick rollback tested (if needed)
 
