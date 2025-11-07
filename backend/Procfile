@@ -1,2 +1,2 @@
-web: /app/backend/start.sh
+web: if [ -d "/app/backend" ]; then cd /app/backend && /app/.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}; else /app/.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}; fi
 
