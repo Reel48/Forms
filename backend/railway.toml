@@ -2,7 +2,7 @@
 builder = "railpack"
 
 [deploy]
-startCommand = "cd backend && /app/.venv/bin/uvicorn main:app --host 0.0.0.0 --port $PORT"
+startCommand = "/app/backend/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
