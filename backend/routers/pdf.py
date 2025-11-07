@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_RIGHT, TA_LEFT
 from decimal import Decimal
@@ -136,6 +136,49 @@ async def generate_quote_pdf(quote_id: str):
                 company_settings = company_response.data[0]
         except Exception:
             pass  # Continue without company settings if fetch fails
+        
+        # Logo at top left (if available)
+        if company_settings and company_settings.get('logo_url'):
+            try:
+                import requests
+                # Fetch and add logo image
+                logo_response = requests.get(company_settings['logo_url'], timeout=10)
+                if logo_response.status_code == 200:
+                    # Calculate aspect ratio to maintain proportions
+                    from PIL import Image as PILImage
+                    img_data = BytesIO(logo_response.content)
+                    pil_img = PILImage.open(img_data)
+                    img_width, img_height = pil_img.size
+                    aspect_ratio = img_width / img_height
+                    
+                    # Set max dimensions and calculate to maintain aspect ratio
+                    max_width = 2 * inch
+                    max_height = 0.8 * inch
+                    
+                    # Calculate dimensions maintaining aspect ratio
+                    if aspect_ratio > 1:
+                        # Landscape: use max width
+                        width = max_width
+                        height = width / aspect_ratio
+                        if height > max_height:
+                            height = max_height
+                            width = height * aspect_ratio
+                    else:
+                        # Portrait: use max height
+                        height = max_height
+                        width = height * aspect_ratio
+                        if width > max_width:
+                            width = max_width
+                            height = width / aspect_ratio
+                    
+                    logo_img = Image(BytesIO(logo_response.content), width=width, height=height)
+                    logo_img.hAlign = 'LEFT'
+                    elements.append(logo_img)
+                    elements.append(Spacer(1, 0.2*inch))
+            except Exception as e:
+                # If logo fails to load, continue without it
+                print(f"Warning: Could not load logo: {e}")
+                pass
         
         # Title
         elements.append(Paragraph(f"Quote: {quote['quote_number']}", title_style))

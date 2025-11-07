@@ -145,6 +145,22 @@ function QuoteView() {
   return (
     <div className="container">
       <div className="card">
+        {/* Logo at top left */}
+        {companySettings?.logo_url && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <img 
+              src={companySettings.logo_url} 
+              alt={companySettings.company_name || 'Company Logo'} 
+              style={{ 
+                maxHeight: '80px', 
+                maxWidth: '200px',
+                objectFit: 'contain',
+                display: 'block'
+              }}
+            />
+          </div>
+        )}
+
         <div className="flex-between mb-4">
           <div>
             <h1>{quote.title}</h1>
@@ -232,13 +248,6 @@ function QuoteView() {
           {companySettings && (companySettings.company_name || companySettings.email || companySettings.phone || companySettings.address) && (
             <div>
               <h2>From</h2>
-              {companySettings.logo_url && (
-                <img 
-                  src={companySettings.logo_url} 
-                  alt={companySettings.company_name || 'Company Logo'} 
-                  style={{ maxHeight: '60px', marginBottom: '0.5rem' }}
-                />
-              )}
               {companySettings.company_name && <p><strong>{companySettings.company_name}</strong></p>}
               {companySettings.address && <p>{companySettings.address}</p>}
               {companySettings.email && <p><strong>Email:</strong> {companySettings.email}</p>}

@@ -9,4 +9,6 @@ reportlab==4.0.7
 python-dateutil==2.8.2
 stripe==7.0.0
 email-validator>=2.1.1
+requests==2.31.0
+Pillow==10.1.0
 
