@@ -1,29 +1,37 @@
 #!/bin/bash
-set -e
-echo "=== Starting Application ==="
-echo "Current directory: $(pwd)"
-echo "PORT: ${PORT:-8000}"
+# Railway startup script
+# This script handles both cases:
+# 1. Root Directory NOT set: Railway copies repo root to /app, so backend is at /app/backend
+# 2. Root Directory SET to "backend": Railway copies backend to /app directly
 
-# Try to find the backend directory or use current directory
-if [ -d "/app/backend" ]; then
-    echo "Found /app/backend, changing to it..."
+set -e
+
+echo "=== Railway Startup Script ==="
+echo "PORT: ${PORT:-8000}"
+echo "PWD: $(pwd)"
+
+# Determine the correct directory
+if [ -f "/app/backend/main.py" ]; then
+    echo "Found /app/backend/main.py - using /app/backend"
     cd /app/backend
 elif [ -f "/app/main.py" ]; then
-    echo "Found main.py in /app, using current directory..."
+    echo "Found /app/main.py - using /app"
     cd /app
 elif [ -f "main.py" ]; then
-    echo "Found main.py in current directory, staying here..."
+    echo "Found main.py in current directory"
 else
     echo "ERROR: Cannot find main.py!"
-    ls -la /app/
+    echo "Listing /app contents:"
+    ls -la /app/ 2>&1 || true
+    echo "Listing current directory:"
+    ls -la . 2>&1 || true
     exit 1
 fi
 
-echo "Working directory: $(pwd)"
-echo "Checking for main.py:"
-ls -la main.py || (echo "main.py not found!" && exit 1)
+echo "Final working directory: $(pwd)"
+echo "Verifying main.py exists:"
+ls -la main.py
 
-echo "Python executable: /app/.venv/bin/python"
-echo "Starting uvicorn server..."
+echo "Starting uvicorn..."
 exec /app/.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
 
