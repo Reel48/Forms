@@ -17,7 +17,13 @@ allowed_origins_raw = os.getenv(
 )
 allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
 
+# Log allowed origins for debugging (don't log in production with sensitive data)
+if os.getenv("ENVIRONMENT") != "production":
+    print(f"DEBUG: Allowed CORS origins: {allowed_origins}")
+
 # CORS middleware
+# Note: FastAPI CORS doesn't support wildcards like *.vercel.app
+# You must list each domain explicitly
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
