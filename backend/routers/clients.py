@@ -41,6 +41,8 @@ async def create_client(client: ClientCreate):
         except AttributeError:
             client_data = client.dict(exclude_none=True)
         
+        print(f"DEBUG: Client data to insert: {client_data}")
+        
         # Let Supabase generate UUID and created_at automatically
         # Only include fields that are provided
         
@@ -56,18 +58,35 @@ async def create_client(client: ClientCreate):
         
         # Insert into Supabase (let it generate id and created_at)
         # Use .select("*") to ensure we get all fields back including auto-generated ones
+        print(f"DEBUG: Inserting into Supabase: {client_data}")
         response = supabase.table("clients").insert(client_data).select("*").execute()
+        
+        print(f"DEBUG: Supabase response: {response}")
+        print(f"DEBUG: Response data: {response.data}")
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create client: No data returned")
         
-        return response.data[0]
+        # Try to validate the response
+        try:
+            result = response.data[0]
+            print(f"DEBUG: Returning result: {result}")
+            # Validate using the Client model
+            validated_client = Client(**result)
+            return validated_client
+        except Exception as validation_error:
+            print(f"DEBUG: Validation error: {validation_error}")
+            import traceback
+            traceback.print_exc()
+            # Return the raw data anyway, but log the validation error
+            return response.data[0]
     except HTTPException:
         raise
     except Exception as e:
         # Log the full error for debugging
         import traceback
         error_details = str(e)
+        print(f"DEBUG: Full error traceback:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create client: {error_details}")
 

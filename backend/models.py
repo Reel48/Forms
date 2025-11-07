@@ -28,6 +28,32 @@ class Client(ClientBase):
     created_at: datetime
     stripe_customer_id: Optional[str] = None
     
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def parse_created_at(cls, v):
+        """Parse created_at from string or datetime"""
+        if isinstance(v, str):
+            # Handle ISO format strings from Supabase
+            # Supabase returns timestamps like "2025-11-07 16:10:22.788214+00"
+            try:
+                # Try standard fromisoformat first
+                if 'T' in v or ' ' in v:
+                    # Replace space with T for ISO format, handle timezone
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                # Fallback: try dateutil if available
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    # Last resort: basic parsing
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
     class Config:
         from_attributes = True
 
