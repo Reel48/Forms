@@ -62,8 +62,8 @@ echo -e "\n${YELLOW}Step 2: Logging into ECR...${NC}"
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 echo -e "${GREEN}✓ Logged in${NC}"
 
-echo -e "\n${YELLOW}Step 3: Building Docker image...${NC}"
-docker build -t $REPO_NAME:latest .
+echo -e "\n${YELLOW}Step 3: Building Docker image for linux/amd64 (AWS App Runner compatibility)...${NC}"
+docker build --platform linux/amd64 -t $REPO_NAME:latest .
 echo -e "${GREEN}✓ Image built${NC}"
 
 echo -e "\n${YELLOW}Step 4: Tagging image...${NC}"

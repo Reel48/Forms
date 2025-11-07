@@ -8,7 +8,7 @@
 - [x] No hardcoded localhost URLs (only fallback)
 - [x] Build output directory configured (`frontend/dist`)
 
-### Backend (Railway/Render/etc)
+### Backend (AWS App Runner)
 - [x] CORS configured via `ALLOWED_ORIGINS` environment variable
 - [x] Environment variables ready for production
 - [ ] Backend deployed and accessible
@@ -18,20 +18,10 @@
 
 ### Step 1: Deploy Backend First
 
-**Option A: Railway (Recommended)**
-1. Go to [railway.app](https://railway.app)
-2. New Project → Deploy from GitHub
-3. Select your repository
-4. Set Root Directory: `backend`
-5. Add Environment Variables:
-   ```
-   SUPABASE_URL=https://boisewltuwcjfrdjnfwd.supabase.co
-   SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvaXNld2x0dXdjamZyZGpuZndkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTU1OTEsImV4cCI6MjA3ODAzMTU5MX0.2n5T_YlWgrN50ADQdnO-o9dWVYVPKt4NQ8qtjGs_oi4
-   ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main.vercel.app,http://localhost:5173
-   ```
-   ⚠️ **Replace `your-app` with your actual Vercel domain**
-6. Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-7. Copy your Railway URL (e.g., `https://your-app.railway.app`)
+**Backend is deployed on AWS App Runner**
+- See `AWS_BACKEND_DEPLOYMENT.md` for setup instructions
+- Your backend URL: `https://uvpc5mx3se.us-east-1.awsapprunner.com`
+- Environment variables are configured in AWS App Runner Console
 
 **Option B: Render**
 1. Go to [render.com](https://render.com)
@@ -49,7 +39,7 @@
 3. Vercel will auto-detect settings from `vercel.json`
 4. **Add Environment Variable**:
    ```
-   VITE_API_URL=https://your-backend.railway.app
+   VITE_API_URL=https://uvpc5mx3se.us-east-1.awsapprunner.com
    ```
    ⚠️ **Use your actual backend URL from Step 1**
 5. Click Deploy
@@ -73,7 +63,7 @@ Vercel provides multiple URLs:
 VITE_API_URL=https://your-backend-url.com
 ```
 
-### Railway/Render (Backend)
+### AWS App Runner (Backend)
 ```
 SUPABASE_URL=https://boisewltuwcjfrdjnfwd.supabase.co
 SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvaXNld2x0dXdjamZyZGpuZndkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTU1OTEsImV4cCI6MjA3ODAzMTU5MX0.2n5T_YlWgrN50ADQdnO-o9dWVYVPKt4NQ8qtjGs_oi4
@@ -99,7 +89,7 @@ STRIPE_WEBHOOK_SECRET=whsec_... (get from Stripe Dashboard after setting up webh
 ### API Connection Errors
 - ✅ Verify `VITE_API_URL` is set in Vercel
 - ✅ Check backend is running and accessible
-- ✅ Test backend URL directly: `https://your-backend.railway.app/health`
+- ✅ Test backend URL directly: `https://uvpc5mx3se.us-east-1.awsapprunner.com/health`
 
 ### Build Errors
 - ✅ Check Vercel build logs

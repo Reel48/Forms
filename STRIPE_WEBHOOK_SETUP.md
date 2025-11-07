@@ -18,11 +18,11 @@
 
 ### Step 1: Deploy Your Backend First
 
-Webhooks need a publicly accessible URL. You must deploy your backend to Railway/Render/etc. first.
+Webhooks need a publicly accessible URL. Your backend must be deployed to AWS App Runner first.
 
 **Your webhook endpoint will be:**
 ```
-https://your-backend-url.railway.app/api/stripe/webhook
+https://your-app-runner-url.awsapprunner.com/api/stripe/webhook
 ```
 
 ### Step 2: Set Up Webhook in Stripe Dashboard
@@ -39,9 +39,9 @@ https://your-backend-url.railway.app/api/stripe/webhook
    - Click **"Add endpoint"**
    - Enter your endpoint URL:
      ```
-     https://your-backend-url.railway.app/api/stripe/webhook
+     https://your-app-runner-url.awsapprunner.com/api/stripe/webhook
      ```
-     ⚠️ Replace `your-backend-url.railway.app` with your actual Railway URL
+     ⚠️ Replace `your-app-runner-url.awsapprunner.com` with your actual AWS App Runner URL
 
 4. **Select Events**
    Click **"Select events"** and choose:
@@ -66,13 +66,14 @@ https://your-backend-url.railway.app/api/stripe/webhook
 STRIPE_WEBHOOK_SECRET=whsec_YOUR_SECRET_HERE
 ```
 
-#### For Railway Deployment:
-1. Go to Railway Dashboard → Your Service → Variables
-2. Add:
+#### For AWS App Runner Deployment:
+1. Go to AWS App Runner Console → Your Service → Configuration → Edit
+2. Under Runtime environment variables, add:
    ```
    STRIPE_WEBHOOK_SECRET=whsec_YOUR_SECRET_HERE
    ```
 3. Replace `YOUR_SECRET_HERE` with the actual secret from Step 3
+4. Save and the service will automatically redeploy
 
 ### Step 5: Test the Webhook
 
@@ -95,13 +96,13 @@ Your webhook endpoint handles these events:
 ### "Webhook secret not configured"
 - ✅ Add `STRIPE_WEBHOOK_SECRET` to your environment variables
 - ✅ Restart your backend server after adding it
-- ✅ For Railway: Redeploy after adding the variable
+- ✅ For AWS App Runner: Service will auto-redeploy after adding the variable
 
 ### Webhook Not Receiving Events
 - ✅ Verify your webhook URL is correct and accessible
 - ✅ Check that your backend is deployed and running
 - ✅ Verify events are selected in Stripe Dashboard
-- ✅ Check Railway logs for webhook requests
+- ✅ Check AWS CloudWatch logs for webhook requests
 
 ### Payment Status Not Updating
 - ✅ Verify webhook secret matches Stripe Dashboard
@@ -134,11 +135,11 @@ If you want to test webhooks locally before deploying:
 
 ## Quick Checklist
 
-- [ ] Backend deployed to Railway/Render
+- [ ] Backend deployed to AWS App Runner
 - [ ] Webhook endpoint created in Stripe Dashboard
 - [ ] Events selected: `invoice.paid`, `invoice.payment_failed`, `invoice.finalized`
 - [ ] Webhook signing secret copied
-- [ ] `STRIPE_WEBHOOK_SECRET` added to Railway environment variables
+- [ ] `STRIPE_WEBHOOK_SECRET` added to AWS App Runner environment variables
 - [ ] Backend redeployed (to load new env var)
 - [ ] Test webhook sent from Stripe Dashboard
 - [ ] Payment status updates verified

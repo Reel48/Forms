@@ -8,7 +8,7 @@ This guide will help you deploy the Quote Builder frontend to Vercel.
 
 ### Option 1: Deploy Backend Separately (Recommended)
 Deploy your FastAPI backend to:
-- **Railway** (https://railway.app) - Easy Python deployment
+- **AWS App Runner** - Managed container deployment (current setup)
 - **Render** (https://render.com) - Free tier available
 - **Fly.io** (https://fly.io) - Good performance
 - **DigitalOcean App Platform** - Simple deployment
@@ -53,20 +53,16 @@ Click "Deploy" and Vercel will:
 2. Build your React app
 3. Deploy it
 
-## Quick Backend Deployment (Railway)
+## Backend Deployment (AWS App Runner)
 
-### Railway Setup (5 minutes):
+Your backend is deployed on AWS App Runner. See `AWS_BACKEND_DEPLOYMENT.md` for complete setup instructions.
 
-1. Go to [railway.app](https://railway.app) and sign in with GitHub
-2. Click "New Project" → "Deploy from GitHub repo"
-3. Select your repository
-4. Railway will auto-detect it's a Python project
-5. Add environment variables:
-   - `SUPABASE_URL`
-   - `SUPABASE_KEY`
-6. Set the start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-7. Railway will give you a URL like `https://your-app.railway.app`
-8. Use this URL for `VITE_API_URL` in Vercel
+**Your backend URL:**
+```
+https://uvpc5mx3se.us-east-1.awsapprunner.com
+```
+
+Use this URL for `VITE_API_URL` in Vercel.
 
 ## Troubleshooting
 
