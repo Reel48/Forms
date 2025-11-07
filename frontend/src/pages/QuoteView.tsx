@@ -24,6 +24,13 @@ function QuoteView() {
   useEffect(() => {
     loadQuote();
     loadCompanySettings();
+    
+    // Refresh quote every 10 seconds to catch webhook updates
+    const interval = setInterval(() => {
+      loadQuote();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [id]);
 
   const loadQuote = async () => {
@@ -228,7 +235,17 @@ function QuoteView() {
           <div className="mb-4 p-3" style={{ backgroundColor: '#e3f2fd', borderRadius: '8px' }}>
             <h3>Invoice Created</h3>
             <p>Stripe invoice has been created for this quote.</p>
-            <div className="flex gap-2">
+            {quote.payment_status === 'paid' && (
+              <p style={{ color: '#065f46', fontWeight: 'bold', marginTop: '0.5rem' }}>
+                ✅ Payment received! This invoice has been paid.
+              </p>
+            )}
+            {quote.payment_status === 'failed' && (
+              <p style={{ color: '#991b1b', fontWeight: 'bold', marginTop: '0.5rem' }}>
+                ⚠️ Payment failed. Please try again or contact support.
+              </p>
+            )}
+            <div className="flex gap-2" style={{ marginTop: '1rem' }}>
               {invoiceUrl && (
                 <a 
                   href={invoiceUrl} 
@@ -239,6 +256,13 @@ function QuoteView() {
                   View Invoice
                 </a>
               )}
+              <button 
+                onClick={loadQuote} 
+                className="btn-outline"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Refresh Status
+              </button>
             </div>
           </div>
         )}
