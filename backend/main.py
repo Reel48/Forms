@@ -2,11 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from routers import quotes, clients, pdf, stripe
+from decimal import Decimal
 import os
 
 load_dotenv()
 
-app = FastAPI(title="Quote Builder API", version="1.0.0")
+# FastAPI JSON encoder for Decimal (converts to string for JSON serialization)
+app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal: str})
 
 # Get allowed origins from environment or use defaults
 # In production, set ALLOWED_ORIGINS to include your Vercel domain(s)

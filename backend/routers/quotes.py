@@ -65,11 +65,25 @@ async def create_quote(quote: QuoteCreate):
         quote_number = f"QT-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
         
         # Calculate totals
-        line_items_data = [item.dict() for item in quote.line_items]
+        # Convert line items to dict, ensuring Decimal fields are strings
+        line_items_data = []
+        for item in quote.line_items:
+            item_dict = item.model_dump() if hasattr(item, 'model_dump') else item.dict()
+            # Convert Decimal fields to strings
+            for key, value in item_dict.items():
+                if isinstance(value, Decimal):
+                    item_dict[key] = str(value)
+            line_items_data.append(item_dict)
+        
         totals = calculate_quote_totals(line_items_data, quote.tax_rate)
         
-        # Create quote
-        quote_data = quote.dict(exclude={"line_items"})
+        # Create quote - convert Decimal fields to strings for JSON serialization
+        quote_data = quote.model_dump(exclude={"line_items"}) if hasattr(quote, 'model_dump') else quote.dict(exclude={"line_items"})
+        # Convert any remaining Decimal fields to strings
+        for key, value in quote_data.items():
+            if isinstance(value, Decimal):
+                quote_data[key] = str(value)
+        
         quote_data.update({
             "id": str(uuid.uuid4()),
             "quote_number": quote_number,
@@ -135,7 +149,13 @@ async def accept_quote(quote_id: str):
 async def update_quote(quote_id: str, quote_update: QuoteUpdate):
     """Update a quote"""
     try:
-        update_data = quote_update.dict(exclude_unset=True)
+        # Convert to dict, ensuring Decimal fields are strings
+        update_data = quote_update.model_dump(exclude_unset=True) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
+        # Convert any Decimal fields to strings
+        for key, value in update_data.items():
+            if isinstance(value, Decimal):
+                update_data[key] = str(value)
+        
         update_data["updated_at"] = datetime.now().isoformat()
         
         # If line items are being updated, recalculate totals

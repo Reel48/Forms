@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
+import json
 
 # Client Models
 class ClientBase(BaseModel):
@@ -64,6 +65,11 @@ class LineItemBase(BaseModel):
     unit_price: Decimal
     discount_percent: Optional[Decimal] = Decimal("0")
     tax_rate: Optional[Decimal] = Decimal("0")
+    
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v)
+        }
 
 class LineItemCreate(LineItemBase):
     pass
@@ -75,6 +81,9 @@ class LineItem(LineItemBase):
     
     class Config:
         from_attributes = True
+        json_encoders = {
+            Decimal: lambda v: str(v)
+        }
 
 # Quote Models
 class QuoteBase(BaseModel):
@@ -86,6 +95,11 @@ class QuoteBase(BaseModel):
     tax_rate: Decimal = Decimal("0")
     currency: str = "USD"
     status: str = "draft"  # draft, sent, viewed, accepted, declined
+    
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v)
+        }
 
 class QuoteCreate(QuoteBase):
     line_items: List[LineItemCreate] = []
@@ -117,4 +131,7 @@ class Quote(QuoteBase):
     class Config:
         from_attributes = True
         populate_by_name = True  # Allow both field name and alias
+        json_encoders = {
+            Decimal: lambda v: str(v)
+        }
 
