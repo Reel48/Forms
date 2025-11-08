@@ -43,10 +43,17 @@ export interface Client {
   email?: string;
   company?: string;
   phone?: string;
-  address?: string;
+  address?: string;  // Keep for backward compatibility
   notes?: string;
   created_at: string;
   stripe_customer_id?: string;
+  // Structured address fields
+  address_line1?: string;
+  address_line2?: string;
+  address_city?: string;
+  address_state?: string;
+  address_postal_code?: string;
+  address_country?: string;
 }
 
 export interface LineItem {

@@ -123,7 +123,8 @@ async def update_client(client_id: str, client: ClientCreate):
             try:
                 stripe_customer_id = StripeService.create_or_get_customer(
                     {**client_data, "id": client_id},
-                    existing_client.get("stripe_customer_id")
+                    existing_client.get("stripe_customer_id"),
+                    update_if_exists=True  # Update existing customer with new address/data
                 )
                 client_data["stripe_customer_id"] = stripe_customer_id
             except Exception as e:

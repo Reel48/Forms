@@ -10,8 +10,15 @@ class ClientBase(BaseModel):
     email: Optional[EmailStr] = None
     company: Optional[str] = None
     phone: Optional[str] = None
-    address: Optional[str] = None
+    address: Optional[str] = None  # Keep for backward compatibility
     notes: Optional[str] = None
+    # Structured address fields
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    address_city: Optional[str] = None
+    address_state: Optional[str] = None
+    address_postal_code: Optional[str] = None
+    address_country: Optional[str] = "US"
     
     @field_validator('email', mode='before')
     @classmethod

@@ -16,15 +16,107 @@ class StripeService:
     """Service for interacting with Stripe API"""
     
     @staticmethod
-    def create_or_get_customer(client_data: Dict[str, Any], existing_stripe_id: Optional[str] = None) -> str:
+    def format_address_for_stripe(client_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
+        """
+        Format client address for Stripe customer/invoice
+        Priority: Structured fields > Parsed text > Text as line1
+        """
+        # Priority 1: Use structured address fields if complete
+        if all([
+            client_data.get("address_line1"),
+            client_data.get("address_city"),
+            client_data.get("address_state"),
+            client_data.get("address_postal_code")
+        ]):
+            address = {
+                "line1": client_data["address_line1"],
+                "city": client_data["address_city"],
+                "state": client_data["address_state"],
+                "postal_code": client_data["address_postal_code"],
+                "country": client_data.get("address_country", "US")
+            }
+            # Add line2 if present
+            if client_data.get("address_line2"):
+                address["line2"] = client_data["address_line2"]
+            return address
+        
+        # Priority 2: Try to parse text address (simple US format)
+        text_address = client_data.get("address")
+        if text_address:
+            # Simple parsing for common US formats
+            # Format: "123 Main St, City, ST 12345" or "123 Main St, City, State 12345"
+            import re
+            # Try to extract components
+            # This is a simple parser - can be improved
+            parts = [p.strip() for p in text_address.split(',')]
+            if len(parts) >= 3:
+                # Assume: street, city, state zip
+                street = parts[0]
+                city = parts[1] if len(parts) > 1 else ""
+                state_zip = parts[2] if len(parts) > 2 else ""
+                
+                # Extract state and zip from "ST 12345" or "State 12345"
+                state_zip_match = re.match(r'([A-Z]{2}|[A-Za-z\s]+)\s*(\d{5}(?:-\d{4})?)', state_zip)
+                if state_zip_match:
+                    state = state_zip_match.group(1).strip()
+                    zip_code = state_zip_match.group(2)
+                    
+                    # If state is more than 2 chars, try to abbreviate or use as-is
+                    if len(state) > 2:
+                        # Keep full state name (Stripe accepts it)
+                        pass
+                    
+                    return {
+                        "line1": street,
+                        "city": city,
+                        "state": state,
+                        "postal_code": zip_code,
+                        "country": "US"
+                    }
+            
+            # Priority 3: Fallback - use entire address as line1
+            return {
+                "line1": text_address,
+                "country": client_data.get("address_country", "US")
+            }
+        
+        return None
+    
+    @staticmethod
+    def create_or_get_customer(client_data: Dict[str, Any], existing_stripe_id: Optional[str] = None, update_if_exists: bool = False) -> str:
         """
         Create a Stripe customer or return existing one
+        If update_if_exists is True, update the existing customer with new data
         Returns the Stripe customer ID
         """
         if existing_stripe_id:
             try:
                 # Verify customer exists
-                stripe.Customer.retrieve(existing_stripe_id)
+                existing_customer = stripe.Customer.retrieve(existing_stripe_id)
+                
+                # Update customer if requested
+                if update_if_exists:
+                    update_params = {
+                        "name": client_data.get("name"),
+                        "email": client_data.get("email"),
+                        "phone": client_data.get("phone"),
+                        "metadata": {
+                            "client_id": client_data.get("id"),
+                            "company": client_data.get("company", ""),
+                        }
+                    }
+                    
+                    # Add address if available
+                    address = StripeService.format_address_for_stripe(client_data)
+                    if address:
+                        update_params["address"] = address
+                    
+                    # Remove None values
+                    update_params = {k: v for k, v in update_params.items() if v is not None}
+                    
+                    # Update the customer
+                    stripe.Customer.modify(existing_stripe_id, **update_params)
+                
                 return existing_stripe_id
             except stripe.error.InvalidRequestError:
                 # Customer doesn't exist, create new one
@@ -39,6 +131,11 @@ class StripeService:
                 "company": client_data.get("company", ""),
             }
         }
+        
+        # Add address if available
+        address = StripeService.format_address_for_stripe(client_data)
+        if address:
+            customer_params["address"] = address
         
         # Remove None values
         customer_params = {k: v for k, v in customer_params.items() if v is not None}

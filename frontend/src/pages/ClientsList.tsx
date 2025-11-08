@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { clientsAPI } from '../api';
 import type { Client } from '../api';
+import AddressInput from '../components/AddressInput';
 
 function ClientsList() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -14,6 +15,13 @@ function ClientsList() {
     phone: '',
     address: '',
     notes: '',
+    // Structured address fields
+    address_line1: '',
+    address_line2: '',
+    address_city: '',
+    address_state: '',
+    address_postal_code: '',
+    address_country: 'US',
   });
 
   useEffect(() => {
@@ -36,11 +44,19 @@ function ClientsList() {
     console.log('Submitting client form with data:', formData);
     console.log('API URL being used:', import.meta.env.VITE_API_URL || 'http://localhost:8000 (default)');
     try {
+      // Prepare data for API - remove empty string values for optional fields
+      const apiData: any = { ...formData };
+      Object.keys(apiData).forEach(key => {
+        if (apiData[key] === '') {
+          apiData[key] = undefined;
+        }
+      });
+
       if (editingClient) {
-        await clientsAPI.update(editingClient.id, formData);
+        await clientsAPI.update(editingClient.id, apiData);
       } else {
         console.log('Creating new client...');
-        await clientsAPI.create(formData);
+        await clientsAPI.create(apiData);
         console.log('Client created successfully!');
       }
       setFormData({
@@ -50,6 +66,13 @@ function ClientsList() {
         phone: '',
         address: '',
         notes: '',
+        // Structured address fields
+        address_line1: '',
+        address_line2: '',
+        address_city: '',
+        address_state: '',
+        address_postal_code: '',
+        address_country: 'US',
       });
       setShowForm(false);
       setEditingClient(null);
@@ -86,6 +109,13 @@ function ClientsList() {
       phone: client.phone || '',
       address: client.address || '',
       notes: client.notes || '',
+      // Structured address fields
+      address_line1: client.address_line1 || '',
+      address_line2: client.address_line2 || '',
+      address_city: client.address_city || '',
+      address_state: client.address_state || '',
+      address_postal_code: client.address_postal_code || '',
+      address_country: client.address_country || 'US',
     });
     setShowForm(true);
   };
@@ -159,10 +189,9 @@ function ClientsList() {
             </div>
 
             <div className="form-group">
-              <label>Address</label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              <AddressInput
+                value={formData}
+                onChange={(addressData) => setFormData({ ...formData, ...addressData })}
               />
             </div>
 
