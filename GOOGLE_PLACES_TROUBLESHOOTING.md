@@ -1,6 +1,36 @@
 # Google Places API Troubleshooting Guide
 
+## ⚠️ IMPORTANT: Enable BOTH APIs
+
+You need **TWO APIs enabled** in Google Cloud Console:
+1. ✅ **Places API** (for autocomplete)
+2. ✅ **Maps JavaScript API** (required for the Places API to work)
+
+**Most common error:** `ApiNotActivatedMapError` means Maps JavaScript API is not enabled!
+
+---
+
 ## Common Issues and Solutions
+
+### Issue 0: "ApiNotActivatedMapError" (MOST COMMON)
+
+**Symptoms:**
+- Error: "Google Maps JavaScript API error: ApiNotActivatedMapError"
+- Autocomplete doesn't work
+- Console shows API not activated error
+
+**Solution:**
+1. Go to: https://console.cloud.google.com/apis/library/maps-backend.googleapis.com
+2. Click **"Enable"** button
+3. Wait a few seconds for activation
+4. Refresh your application
+
+**Why this happens:**
+- You enabled "Places API" ✅
+- But forgot to enable "Maps JavaScript API" ❌
+- **You need BOTH enabled!**
+
+---
 
 ### Issue 1: "Google Places API key not configured"
 
@@ -38,6 +68,12 @@
 - **Search:** "Places API"
 - **Verify:** Status shows "Enabled"
 - **Fix:** Click "Enable" if not enabled
+
+#### B2. Maps JavaScript API Not Enabled (MOST COMMON!)
+- **Check:** Go to: https://console.cloud.google.com/apis/library/maps-backend.googleapis.com
+- **Verify:** Status shows "Enabled"
+- **Fix:** Click "Enable" if not enabled
+- **Note:** You need BOTH Places API AND Maps JavaScript API enabled!
 
 #### C. API Key Restrictions Blocking Domain
 - **Check:** Go to Google Cloud Console → APIs & Services → Credentials → Your API Key
@@ -110,10 +146,11 @@
 ### Step 5: Check Google Cloud Console
 1. Go to: https://console.cloud.google.com/
 2. Check:
-   - ✅ Places API is enabled
+   - ✅ **Maps JavaScript API is enabled** (REQUIRED!)
+   - ✅ **Places API is enabled** (REQUIRED!)
    - ✅ API key exists and is active
    - ✅ Billing is enabled
-   - ✅ API restrictions allow "Places API"
+   - ✅ API restrictions allow "Maps JavaScript API" and "Places API"
    - ✅ Application restrictions allow your domain (or set to "None" for testing)
 
 ---
@@ -124,10 +161,11 @@
 - [ ] Environment variable is named exactly: `VITE_GOOGLE_PLACES_API_KEY`
 - [ ] Environment variable is set for all environments (Production, Preview, Development)
 - [ ] Application has been redeployed after setting environment variable
-- [ ] Places API is enabled in Google Cloud Console
+- [ ] **Maps JavaScript API is enabled** (REQUIRED - most common issue!)
+- [ ] **Places API is enabled** (REQUIRED)
 - [ ] Billing is enabled in Google Cloud Console
 - [ ] API key restrictions allow your domain (or set to "None" for testing)
-- [ ] API restrictions include "Places API"
+- [ ] API restrictions include "Maps JavaScript API" and "Places API"
 
 ---
 

@@ -176,19 +176,44 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
   }
 
   if (loadError) {
+    const isApiNotActivated = loadError.message?.includes('ApiNotActivatedMapError') || 
+                              loadError.message?.includes('ApiNotActivated');
+    
     return (
       <div style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '6px', color: '#991b1b' }}>
         <strong>Error loading Google Maps:</strong> {loadError.message}
         <br />
         <small>
-          This could be due to:
-          <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-            <li>Invalid API key</li>
-            <li>Places API not enabled in Google Cloud Console</li>
-            <li>API key restrictions blocking this domain</li>
-            <li>Billing not enabled in Google Cloud Console</li>
-          </ul>
-          Check browser console for more details. You can still enter addresses manually.
+          {isApiNotActivated ? (
+            <>
+              <strong>⚠️ Maps JavaScript API not enabled!</strong>
+              <br />
+              <br />
+              To fix this:
+              <ol style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+                <li>Go to <a href="https://console.cloud.google.com/apis/library/maps-backend.googleapis.com" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>Google Cloud Console → Maps JavaScript API</a></li>
+                <li>Click <strong>"Enable"</strong> button</li>
+                <li>Wait a few seconds for it to activate</li>
+                <li>Refresh this page</li>
+              </ol>
+              <strong>Note:</strong> You need BOTH "Places API" AND "Maps JavaScript API" enabled.
+            </>
+          ) : (
+            <>
+              This could be due to:
+              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+                <li>Maps JavaScript API not enabled (most common)</li>
+                <li>Invalid API key</li>
+                <li>Places API not enabled</li>
+                <li>API key restrictions blocking this domain</li>
+                <li>Billing not enabled in Google Cloud Console</li>
+              </ul>
+              Check browser console for more details.
+            </>
+          )}
+          <br />
+          <br />
+          You can still enter addresses manually below.
         </small>
       </div>
     );
