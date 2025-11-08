@@ -12,6 +12,36 @@ You need **TWO APIs enabled** in Google Cloud Console:
 
 ## Common Issues and Solutions
 
+### Issue 0.5: "Google maps can't load this address correctly" / "Do you own this website?"
+
+**Symptoms:**
+- Error message: "Google maps can't load this address correctly"
+- Popup asking "Do you own this website?"
+- Autocomplete doesn't work
+- APIs are enabled but still getting errors
+
+**Cause:**
+- API key has HTTP referrer restrictions that don't include your Vercel domain
+
+**Solution:**
+1. Go to: https://console.cloud.google.com/apis/credentials
+2. Click on your API key
+3. Scroll to "Application restrictions"
+4. **For testing:** Select "None" (no restrictions)
+5. **For production:** Select "HTTP referrers (web sites)" and add:
+   - `*.vercel.app/*` (covers all Vercel domains)
+   - `localhost:*` (for local development)
+   - Your custom domain if applicable
+6. Click "Save"
+7. Wait 1-2 minutes
+8. Refresh your application
+
+**Quick Test:**
+- Temporarily set restrictions to "None" to verify it works
+- Then add proper restrictions for production
+
+---
+
 ### Issue 0: "ApiNotActivatedMapError" (MOST COMMON)
 
 **Symptoms:**
@@ -75,15 +105,26 @@ You need **TWO APIs enabled** in Google Cloud Console:
 - **Fix:** Click "Enable" if not enabled
 - **Note:** You need BOTH Places API AND Maps JavaScript API enabled!
 
-#### C. API Key Restrictions Blocking Domain
+#### C. API Key Restrictions Blocking Domain (Causes "can't load this address correctly")
+- **Symptoms:** 
+  - Error: "Google maps can't load this address correctly"
+  - Being asked "Do you own this website?"
+  - Autocomplete doesn't work even though APIs are enabled
 - **Check:** Go to Google Cloud Console → APIs & Services → Credentials → Your API Key
 - **Look at:** "Application restrictions"
 - **Problem:** If set to "HTTP referrers", your Vercel domain might not be in the list
-- **Fix:** Add your domains:
-  - `localhost:*` (for development)
-  - `*.vercel.app` (for all Vercel previews)
-  - `yourdomain.com/*` (for production)
-  - Or temporarily set to "None" for testing
+- **Fix:** 
+  1. Click on your API key in the credentials list
+  2. Under "Application restrictions", you have two options:
+     - **Option A (Recommended for testing):** Select "None" temporarily to test
+     - **Option B (Production):** Select "HTTP referrers (web sites)" and add:
+       - `localhost:*` (for development)
+       - `*.vercel.app/*` (for all Vercel previews and production)
+       - `*://localhost:*` (alternative localhost format)
+       - Your custom domain if you have one: `yourdomain.com/*`
+  3. Click "Save"
+  4. Wait 1-2 minutes for changes to propagate
+  5. Refresh your application
 
 #### D. Billing Not Enabled
 - **Check:** Go to Google Cloud Console → Billing
