@@ -33,23 +33,45 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey || '',
     libraries,
+    id: 'google-maps-script',
   });
 
   useEffect(() => {
     if (!apiKey) {
-      console.warn('Google Places API key not found. Address autocomplete will not work.');
+      console.error('Google Places API key not found. Address autocomplete will not work.');
+      console.error('Make sure VITE_GOOGLE_PLACES_API_KEY is set in environment variables.');
+    } else {
+      console.log('Google Places API key found:', apiKey.substring(0, 10) + '...');
     }
   }, [apiKey]);
 
+  useEffect(() => {
+    if (loadError) {
+      console.error('Google Maps load error:', loadError);
+    }
+    if (isLoaded) {
+      console.log('Google Maps script loaded successfully');
+    }
+  }, [isLoaded, loadError]);
+
   const onLoad = (autocomplete: google.maps.places.Autocomplete) => {
+    console.log('Autocomplete loaded successfully');
     setAutocomplete(autocomplete);
   };
 
   const onPlaceChanged = () => {
-    if (!autocomplete) return;
+    if (!autocomplete) {
+      console.warn('Autocomplete not initialized');
+      return;
+    }
 
     const place = autocomplete.getPlace();
-    if (!place.address_components) return;
+    console.log('Place selected:', place);
+    
+    if (!place.address_components) {
+      console.warn('Place has no address_components:', place);
+      return;
+    }
 
     // Parse address components from Google Places
     let line1 = '';
@@ -143,12 +165,31 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
     onChange(updated);
   };
 
+  if (!apiKey) {
+    return (
+      <div style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '6px', color: '#991b1b' }}>
+        <strong>Google Places API key not configured</strong>
+        <br />
+        <small>Please set VITE_GOOGLE_PLACES_API_KEY in your environment variables. Address autocomplete will not work, but you can still enter addresses manually.</small>
+      </div>
+    );
+  }
+
   if (loadError) {
     return (
       <div style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '6px', color: '#991b1b' }}>
         <strong>Error loading Google Maps:</strong> {loadError.message}
         <br />
-        <small>Address autocomplete will not work. You can still enter addresses manually.</small>
+        <small>
+          This could be due to:
+          <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+            <li>Invalid API key</li>
+            <li>Places API not enabled in Google Cloud Console</li>
+            <li>API key restrictions blocking this domain</li>
+            <li>Billing not enabled in Google Cloud Console</li>
+          </ul>
+          Check browser console for more details. You can still enter addresses manually.
+        </small>
       </div>
     );
   }
