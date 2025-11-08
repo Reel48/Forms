@@ -252,21 +252,44 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 Address (Start typing to search)
               </label>
-              <Autocomplete
-                onLoad={onLoad}
-                onPlaceChanged={onPlaceChanged}
-                options={{
-                  types: ['address'],
-                  componentRestrictions: { country: ['us', 'ca'] }, // Optional: restrict to US/Canada
-                }}
-              >
-                <input
-                  ref={autocompleteRef}
-                  type="text"
-                  placeholder="Type address to search..."
-                  style={{ width: '100%', padding: '0.625rem', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '1rem' }}
-                />
-              </Autocomplete>
+              {loadError && (
+                <div style={{ padding: '0.75rem', backgroundColor: '#fef3c7', borderRadius: '6px', marginBottom: '1rem', border: '1px solid #fbbf24' }}>
+                  <strong>⚠️ API Key Restriction Issue</strong>
+                  <br />
+                  <small>
+                    If you see a Google Maps error box and can't click suggestions, you need to fix your API key restrictions:
+                    <br />
+                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>
+                      Go to Google Cloud Console → Credentials
+                    </a>
+                    <br />
+                    Click your API key → Set "Application restrictions" to "None" (for testing) or add <code>*.vercel.app/*</code>
+                  </small>
+                </div>
+              )}
+              <div style={{ position: 'relative' }}>
+                <Autocomplete
+                  onLoad={onLoad}
+                  onPlaceChanged={onPlaceChanged}
+                  options={{
+                    types: ['address'],
+                    componentRestrictions: { country: ['us', 'ca'] }, // Optional: restrict to US/Canada
+                  }}
+                >
+                  <input
+                    ref={autocompleteRef}
+                    type="text"
+                    placeholder="Type address to search..."
+                    style={{ width: '100%', padding: '0.625rem', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '1rem', position: 'relative', zIndex: 1 }}
+                  />
+                </Autocomplete>
+              </div>
+              {loadError && (
+                <div style={{ padding: '0.5rem', backgroundColor: '#fee2e2', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                  <strong>Note:</strong> The Google Maps error box may appear and block clicks. This is because your API key has domain restrictions. 
+                  Fix it in Google Cloud Console to enable clicking on suggestions.
+                </div>
+              )}
             </>
           ) : (
             <div style={{ padding: '0.5rem', backgroundColor: '#fef3c7', borderRadius: '6px', marginBottom: '1rem' }}>
