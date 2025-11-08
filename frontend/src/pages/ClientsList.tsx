@@ -219,6 +219,13 @@ function ClientsList() {
                     phone: '',
                     address: '',
                     notes: '',
+                    // Structured address fields
+                    address_line1: '',
+                    address_line2: '',
+                    address_city: '',
+                    address_state: '',
+                    address_postal_code: '',
+                    address_country: 'US',
                   });
                 }}
                 className="btn-outline"
