@@ -131,11 +131,16 @@ async def update_client(client_id: str, client: ClientCreate):
                 # Log error but don't fail client update
                 print(f"Failed to update Stripe customer: {e}")
         
-        # Use .select("*") to ensure we get all fields back
-        response = supabase.table("clients").update(client_data).eq("id", client_id).select("*").execute()
+        # Update the client - Supabase returns updated data by default
+        response = supabase.table("clients").update(client_data).eq("id", client_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Client not found")
-        return response.data[0]
+        
+        # Fetch the complete updated client to ensure all fields are returned
+        updated_response = supabase.table("clients").select("*").eq("id", client_id).execute()
+        if not updated_response.data:
+            raise HTTPException(status_code=404, detail="Client not found after update")
+        return updated_response.data[0]
     except HTTPException:
         raise
     except Exception as e:
