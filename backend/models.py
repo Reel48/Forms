@@ -194,7 +194,7 @@ class CompanySettingsUpdate(CompanySettingsBase):
 # Form Models
 class FormFieldBase(BaseModel):
     field_type: str  # text, email, number, dropdown, multiple_choice, checkbox, etc.
-    label: str
+    label: str = ""  # Allow empty labels for draft fields
     description: Optional[str] = None
     placeholder: Optional[str] = None
     required: bool = False

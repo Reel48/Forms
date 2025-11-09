@@ -143,27 +143,33 @@ async def create_form(form: FormCreate):
         created_form = form_response.data[0]
         
         # Create fields if provided
-        if form.fields:
+        if form.fields and len(form.fields) > 0:
             fields_data = []
             for idx, field in enumerate(form.fields):
+                # Use idx if order_index is 0 or not set, otherwise use the provided order_index
+                order_idx = field.order_index if field.order_index is not None and field.order_index >= 0 else idx
                 field_data = {
                     "id": str(uuid.uuid4()),
                     "form_id": form_id,
                     "field_type": field.field_type,
-                    "label": field.label,
-                    "description": field.description,
-                    "placeholder": field.placeholder,
-                    "required": field.required,
+                    "label": field.label or "",  # Allow empty labels for draft fields
+                    "description": field.description or None,
+                    "placeholder": field.placeholder or None,
+                    "required": field.required or False,
                     "validation_rules": field.validation_rules or {},
                     "options": field.options or [],
-                    "order_index": field.order_index if field.order_index > 0 else idx,
+                    "order_index": order_idx,
                     "conditional_logic": field.conditional_logic or {},
                     "created_at": now
                 }
                 fields_data.append(field_data)
             
             if fields_data:
-                supabase.table("form_fields").insert(fields_data).execute()
+                fields_response = supabase.table("form_fields").insert(fields_data).execute()
+                if not fields_response.data:
+                    # Log error but don't fail the form creation
+                    print(f"Warning: Failed to insert fields for form {form_id}")
+                    print(f"Fields data: {fields_data}")
         
         # Fetch the complete form with fields
         return await get_form(form_id)

@@ -238,7 +238,10 @@ function FormBuilder() {
         navigate('/forms');
       } else {
         // Create new form with fields
-        await formsAPI.create(formData);
+        console.log('Creating form with data:', formData);
+        console.log('Fields to save:', formData.fields);
+        const response = await formsAPI.create(formData);
+        console.log('Form created, response:', response.data);
         navigate('/forms');
       }
     } catch (error: any) {
