@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import QuotesList from './pages/QuotesList';
 import QuoteBuilder from './pages/QuoteBuilder';
 import QuoteView from './pages/QuoteView';
@@ -11,27 +11,35 @@ import './App.css';
 
 function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Determine active section based on path
   const isFormsSection = location.pathname.startsWith('/forms');
   const isQuotesSection = !isFormsSection && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
   
+  // Handle toggle switch
+  const handleToggle = () => {
+    if (isFormsSection) {
+      navigate('/');
+    } else {
+      navigate('/forms');
+    }
+  };
+  
   return (
     <nav>
-      {/* Section Switcher */}
+      {/* Section Toggle Switcher */}
       <div className="section-switcher">
-        <Link 
-          to="/forms" 
-          className={`section-tab ${isFormsSection ? 'active' : ''}`}
+        <span className={`toggle-label ${isQuotesSection ? 'active' : ''}`}>Quotes</span>
+        <button
+          type="button"
+          className={`toggle-switch ${isFormsSection ? 'active' : ''}`}
+          onClick={handleToggle}
+          aria-label="Toggle between Forms and Quotes"
         >
-          Forms
-        </Link>
-        <Link 
-          to="/" 
-          className={`section-tab ${isQuotesSection ? 'active' : ''}`}
-        >
-          Quotes
-        </Link>
+          <span className="toggle-slider"></span>
+        </button>
+        <span className={`toggle-label ${isFormsSection ? 'active' : ''}`}>Forms</span>
       </div>
       
       {/* Section-specific Navigation */}

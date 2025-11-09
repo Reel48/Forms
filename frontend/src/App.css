@@ -12,37 +12,62 @@ nav {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Section Switcher */
+/* Section Toggle Switcher */
 .section-switcher {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
   border-bottom: 2px solid #e0e0e0;
 }
 
-.section-tab {
-  text-decoration: none;
-  color: #6b7280;
+.toggle-label {
   font-weight: 600;
-  padding: 0.5rem 1.5rem;
-  border-radius: 6px;
-  transition: all 0.2s;
-  background-color: transparent;
+  color: #6b7280;
+  transition: color 0.2s;
+  font-size: 0.875rem;
 }
 
-.section-tab:hover {
-  background-color: #f5f5f5;
-  color: #374151;
+.toggle-label.active {
+  color: #2563eb;
 }
 
-.section-tab.active {
+.toggle-switch {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  background-color: #d1d5db;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  padding: 0;
+  outline: none;
+}
+
+.toggle-switch:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.toggle-switch.active {
   background-color: #2563eb;
-  color: white;
 }
 
-.section-tab.active:hover {
-  background-color: #1d4ed8;
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active .toggle-slider {
+  transform: translateX(24px);
 }
 
 nav ul {
