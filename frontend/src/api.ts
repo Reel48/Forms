@@ -121,6 +121,21 @@ export interface QuoteFilters {
   payment_status?: string;
 }
 
+export interface Form {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormCreate {
+  name: string;
+}
+
+export interface FormUpdate {
+  name?: string;
+}
+
 // Quotes API
 export const quotesAPI = {
   getAll: (filters?: QuoteFilters) => {
@@ -158,6 +173,15 @@ export const clientsAPI = {
 export const companySettingsAPI = {
   get: () => api.get<CompanySettings>('/api/company-settings'),
   update: (settings: Partial<CompanySettings>) => api.put<CompanySettings>('/api/company-settings', settings),
+};
+
+// Forms API
+export const formsAPI = {
+  getAll: () => api.get<Form[]>('/api/forms'),
+  getById: (id: string) => api.get<Form>(`/api/forms/${id}`),
+  create: (form: FormCreate) => api.post<Form>('/api/forms', form),
+  update: (id: string, form: Partial<FormUpdate>) => api.put<Form>(`/api/forms/${id}`, form),
+  delete: (id: string) => api.delete(`/api/forms/${id}`),
 };
 
 export default api;

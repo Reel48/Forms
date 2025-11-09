@@ -12,6 +12,39 @@ nav {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* Section Switcher */
+.section-switcher {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.section-tab {
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  background-color: transparent;
+}
+
+.section-tab:hover {
+  background-color: #f5f5f5;
+  color: #374151;
+}
+
+.section-tab.active {
+  background-color: #2563eb;
+  color: white;
+}
+
+.section-tab.active:hover {
+  background-color: #1d4ed8;
+}
+
 nav ul {
   list-style: none;
   display: flex;
