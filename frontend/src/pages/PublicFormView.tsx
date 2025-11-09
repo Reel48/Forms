@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
 
 function PublicFormView() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const [form, setForm] = useState<Form | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -586,7 +585,10 @@ function PublicFormView() {
   useEffect(() => {
     if (submitted && form?.thank_you_screen?.redirect_url) {
       const timer = setTimeout(() => {
-        window.location.href = form.thank_you_screen.redirect_url!;
+        const redirectUrl = form.thank_you_screen?.redirect_url;
+        if (redirectUrl) {
+          window.location.href = redirectUrl;
+        }
       }, 3000);
       return () => clearTimeout(timer);
     }

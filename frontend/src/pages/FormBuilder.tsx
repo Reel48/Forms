@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { formsAPI } from '../api';
-import type { Form, FormField, FormCreate } from '../api';
+import type { FormField, FormCreate } from '../api';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Short Text' },
@@ -68,13 +68,19 @@ function FormBuilder() {
   };
 
   const addField = (fieldType: string) => {
+    const validationRules = fieldType === 'rating' 
+      ? { min: 1, max: 5 }
+      : fieldType === 'opinion_scale'
+      ? { min: 1, max: 10 }
+      : {};
+    
     const newField: FormField = {
       field_type: fieldType,
       label: '',
       description: '',
       placeholder: '',
       required: false,
-      validation_rules: {},
+      validation_rules: validationRules,
       options: fieldType === 'dropdown' || fieldType === 'multiple_choice' || fieldType === 'checkbox' 
         ? [{ label: '', value: '' }] 
         : fieldType === 'rating'
@@ -82,11 +88,6 @@ function FormBuilder() {
         : fieldType === 'opinion_scale'
         ? [{ label: 'Low', value: 'low' }, { label: 'High', value: 'high' }]
         : [],
-      validation_rules: fieldType === 'rating' 
-        ? { min: 1, max: 5 }
-        : fieldType === 'opinion_scale'
-        ? { min: 1, max: 10 }
-        : {},
       order_index: formData.fields?.length || 0,
       conditional_logic: {},
     };
