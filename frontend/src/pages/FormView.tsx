@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { formsAPI } from '../api';
+import type { Form } from '../api';
+
+const FIELD_TYPE_LABELS: Record<string, string> = {
+  text: 'Short Text',
+  textarea: 'Long Text',
+  email: 'Email',
+  number: 'Number',
+  phone: 'Phone',
+  date: 'Date',
+  dropdown: 'Dropdown',
+  multiple_choice: 'Multiple Choice',
+  checkbox: 'Checkboxes',
+  yes_no: 'Yes/No',
+};
 
 function FormView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [form, setForm] = useState<any>(null);
+  const [form, setForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,32 +93,143 @@ function FormView() {
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <h2 style={{ color: '#374151', marginBottom: '1rem' }}>Form View</h2>
-          <p className="text-muted" style={{ marginBottom: '2rem' }}>
-            The form view is coming soon! You'll be able to see form details, submissions, and manage form settings here.
-          </p>
-          
-          {form && (
-            <div style={{ textAlign: 'left', maxWidth: '600px', margin: '0 auto' }}>
-              <div className="form-group">
-                <label>Form Name</label>
-                <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
-                  {form.name || 'Untitled Form'}
-                </p>
-              </div>
-              
-              {form.created_at && (
-                <div className="form-group">
-                  <label>Created</label>
-                  <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
-                    {new Date(form.created_at).toLocaleString()}
-                  </p>
-                </div>
-              )}
+      {/* Form Details */}
+      <div className="card mb-4">
+        <h2 style={{ marginTop: 0 }}>Form Details</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+              Form Name
+            </label>
+            <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+              {form.name || 'Untitled Form'}
+            </p>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+              Status
+            </label>
+            <p style={{ margin: 0 }}>
+              <span className={`badge ${form.status === 'published' ? 'badge-sent' : form.status === 'archived' ? 'badge-declined' : 'badge-draft'}`}>
+                {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
+              </span>
+            </p>
+          </div>
+          {form.description && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+                Description
+              </label>
+              <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+                {form.description}
+              </p>
             </div>
           )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+              Created
+            </label>
+            <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+              {new Date(form.created_at).toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+              Last Updated
+            </label>
+            <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+              {new Date(form.updated_at).toLocaleString()}
+            </p>
+          </div>
+          {form.public_url_slug && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+                Public URL Slug
+              </label>
+              <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontFamily: 'monospace' }}>
+                {form.public_url_slug}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Form Fields */}
+      <div className="card">
+        <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
+          Form Fields ({form.form_fields?.length || 0})
+        </h2>
+        
+        {!form.form_fields || form.form_fields.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+            <p>No fields in this form yet.</p>
+            <Link to={`/forms/${id}/edit`} className="btn-primary" style={{ marginTop: '1rem' }}>
+              Add Fields
+            </Link>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {form.form_fields.map((field, index) => (
+              <div
+                key={field.id || index}
+                className="card"
+                style={{ border: '1px solid #e5e7eb' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span className="badge badge-draft" style={{ fontSize: '0.75rem' }}>
+                        {FIELD_TYPE_LABELS[field.field_type] || field.field_type}
+                      </span>
+                      {field.required && (
+                        <span style={{ color: '#dc2626', fontSize: '0.75rem', fontWeight: '500' }}>* Required</span>
+                      )}
+                      <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                        Order: {field.order_index + 1}
+                      </span>
+                    </div>
+                    <h3 style={{ margin: 0, marginBottom: '0.25rem' }}>
+                      {field.label || 'Untitled Field'}
+                    </h3>
+                    {field.description && (
+                      <p style={{ margin: '0.25rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                        {field.description}
+                      </p>
+                    )}
+                    {field.placeholder && (
+                      <p style={{ margin: '0.25rem 0', color: '#9ca3af', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                        Placeholder: {field.placeholder}
+                      </p>
+                    )}
+                    {(field.options && field.options.length > 0) && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500', color: '#6b7280' }}>
+                          Options:
+                        </label>
+                        <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
+                          {field.options.map((option: any, optIndex: number) => (
+                            <li key={optIndex}>
+                              {option.label || option.value || `Option ${optIndex + 1}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Submissions Section - Coming Soon */}
+      <div className="card mt-4" style={{ backgroundColor: '#f9fafb', border: '1px dashed #d1d5db' }}>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <h3 style={{ color: '#374151', marginBottom: '0.5rem' }}>Submissions</h3>
+          <p className="text-muted" style={{ margin: 0 }}>
+            Submissions view coming soon! You'll be able to see all form responses here.
+          </p>
         </div>
       </div>
     </div>

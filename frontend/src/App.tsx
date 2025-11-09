@@ -5,6 +5,7 @@ import QuoteView from './pages/QuoteView';
 import FormsList from './pages/FormsList';
 import FormBuilder from './pages/FormBuilder';
 import FormView from './pages/FormView';
+import PublicFormView from './pages/PublicFormView';
 import ClientsList from './pages/ClientsList';
 import CompanySettingsPage from './pages/CompanySettings';
 import './App.css';
@@ -86,10 +87,13 @@ function Navigation() {
   );
 }
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+  const isPublicForm = location.pathname.startsWith('/public/form/');
+  
   return (
-    <BrowserRouter>
-      <Navigation />
+    <>
+      {!isPublicForm && <Navigation />}
       <Routes>
         <Route path="/" element={<QuotesList />} />
         <Route path="/quotes/new" element={<QuoteBuilder />} />
@@ -99,9 +103,18 @@ function App() {
         <Route path="/forms/new" element={<FormBuilder />} />
         <Route path="/forms/:id" element={<FormView />} />
         <Route path="/forms/:id/edit" element={<FormBuilder />} />
+        <Route path="/public/form/:slug" element={<PublicFormView />} />
         <Route path="/clients" element={<ClientsList />} />
         <Route path="/settings" element={<CompanySettingsPage />} />
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

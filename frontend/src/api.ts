@@ -121,19 +121,56 @@ export interface QuoteFilters {
   payment_status?: string;
 }
 
+export interface FormField {
+  id?: string;
+  form_id?: string;
+  field_type: string; // text, email, number, dropdown, multiple_choice, checkbox, etc.
+  label: string;
+  description?: string;
+  placeholder?: string;
+  required: boolean;
+  validation_rules?: Record<string, any>;
+  options?: Array<Record<string, any>>; // For dropdown, multiple choice, etc.
+  order_index: number;
+  conditional_logic?: Record<string, any>;
+  created_at?: string;
+}
+
 export interface Form {
   id: string;
   name: string;
+  description?: string;
+  status: string; // draft, published, archived
+  public_url_slug?: string;
+  theme?: Record<string, any>;
+  settings?: Record<string, any>;
+  welcome_screen?: Record<string, any>;
+  thank_you_screen?: Record<string, any>;
   created_at: string;
   updated_at: string;
+  form_fields?: FormField[];
 }
 
 export interface FormCreate {
   name: string;
+  description?: string;
+  status?: string;
+  public_url_slug?: string;
+  theme?: Record<string, any>;
+  settings?: Record<string, any>;
+  welcome_screen?: Record<string, any>;
+  thank_you_screen?: Record<string, any>;
+  fields?: FormField[];
 }
 
 export interface FormUpdate {
   name?: string;
+  description?: string;
+  status?: string;
+  theme?: Record<string, any>;
+  settings?: Record<string, any>;
+  welcome_screen?: Record<string, any>;
+  thank_you_screen?: Record<string, any>;
 }
 
 // Quotes API
@@ -177,11 +214,25 @@ export const companySettingsAPI = {
 
 // Forms API
 export const formsAPI = {
-  getAll: () => api.get<Form[]>('/api/forms'),
+  getAll: (filters?: { status?: string; search?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.search) params.append('search', filters.search);
+    const queryString = params.toString();
+    return api.get<Form[]>(`/api/forms${queryString ? `?${queryString}` : ''}`);
+  },
   getById: (id: string) => api.get<Form>(`/api/forms/${id}`),
+  getBySlug: (slug: string) => api.get<Form>(`/api/forms/public/${slug}`),
   create: (form: FormCreate) => api.post<Form>('/api/forms', form),
   update: (id: string, form: Partial<FormUpdate>) => api.put<Form>(`/api/forms/${id}`, form),
   delete: (id: string) => api.delete(`/api/forms/${id}`),
+  // Field management
+  createField: (formId: string, field: FormField) => api.post<FormField>(`/api/forms/${formId}/fields`, field),
+  updateField: (formId: string, fieldId: string, field: Partial<FormField>) => api.put<FormField>(`/api/forms/${formId}/fields/${fieldId}`, field),
+  deleteField: (formId: string, fieldId: string) => api.delete(`/api/forms/${formId}/fields/${fieldId}`),
+  reorderFields: (formId: string, fieldOrders: Array<{ field_id: string; order_index: number }>) => api.put(`/api/forms/${formId}/fields/reorder`, fieldOrders),
+  // Form submission
+  submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
 };
 
 export default api;

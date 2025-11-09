@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from decimal import Decimal
 import json
@@ -190,4 +190,177 @@ class CompanySettings(CompanySettingsBase):
 
 class CompanySettingsUpdate(CompanySettingsBase):
     pass
+
+# Form Models
+class FormFieldBase(BaseModel):
+    field_type: str  # text, email, number, dropdown, multiple_choice, checkbox, etc.
+    label: str
+    description: Optional[str] = None
+    placeholder: Optional[str] = None
+    required: bool = False
+    validation_rules: Dict[str, Any] = {}
+    options: List[Dict[str, Any]] = []  # For dropdown, multiple choice, etc.
+    order_index: int = 0
+    conditional_logic: Dict[str, Any] = {}
+
+class FormFieldCreate(FormFieldBase):
+    pass
+
+class FormField(FormFieldBase):
+    id: str
+    form_id: str
+    created_at: datetime
+    
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class FormBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    status: str = "draft"  # draft, published, archived
+    public_url_slug: Optional[str] = None
+    theme: Dict[str, Any] = {}
+    settings: Dict[str, Any] = {}
+    welcome_screen: Dict[str, Any] = {}
+    thank_you_screen: Dict[str, Any] = {}
+
+class FormCreate(FormBase):
+    fields: List[FormFieldCreate] = []
+
+class FormUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    theme: Optional[Dict[str, Any]] = None
+    settings: Optional[Dict[str, Any]] = None
+    welcome_screen: Optional[Dict[str, Any]] = None
+    thank_you_screen: Optional[Dict[str, Any]] = None
+
+class Form(FormBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    fields: List[FormField] = []
+    
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+# Form Submission Models
+class FormSubmissionAnswerBase(BaseModel):
+    field_id: str
+    answer_text: Optional[str] = None
+    answer_value: Dict[str, Any] = {}
+
+class FormSubmissionAnswerCreate(FormSubmissionAnswerBase):
+    pass
+
+class FormSubmissionAnswer(FormSubmissionAnswerBase):
+    id: str
+    submission_id: str
+    created_at: datetime
+    
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class FormSubmissionBase(BaseModel):
+    form_id: str
+    submitter_email: Optional[str] = None
+    submitter_name: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    started_at: Optional[datetime] = None
+    time_spent_seconds: Optional[int] = None
+    status: str = "completed"  # completed, abandoned
+
+class FormSubmissionCreate(FormSubmissionBase):
+    answers: List[FormSubmissionAnswerCreate] = []
+
+class FormSubmission(FormSubmissionBase):
+    id: str
+    submitted_at: datetime
+    answers: List[FormSubmissionAnswer] = []
+    
+    @field_validator('submitted_at', 'started_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
 
