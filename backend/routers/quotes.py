@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from fastapi import APIRouter, HTTPException, Query
+from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 import sys
@@ -36,11 +36,89 @@ def calculate_quote_totals(line_items: List[dict], tax_rate: Decimal) -> dict:
     }
 
 @router.get("", response_model=List[Quote])
-async def get_quotes():
-    """Get all quotes"""
+async def get_quotes(
+    search: Optional[str] = Query(None, description="Search by title, quote number, or client name"),
+    status: Optional[str] = Query(None, description="Filter by quote status (draft, sent, viewed, accepted, declined)"),
+    payment_status: Optional[str] = Query(None, description="Filter by payment status (unpaid, paid, partially_paid, refunded, failed, voided, uncollectible)")
+):
+    """Get all quotes with optional filtering"""
     try:
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").order("created_at", desc=True).execute()
-        return response.data
+        # Valid status values
+        valid_statuses = {"draft", "sent", "viewed", "accepted", "declined"}
+        valid_payment_statuses = {"unpaid", "paid", "partially_paid", "refunded", "failed", "voided", "uncollectible"}
+        
+        # Validate status values
+        if status is not None and status not in valid_statuses:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid status. Must be one of: {', '.join(sorted(valid_statuses))}"
+            )
+        
+        if payment_status is not None and payment_status not in valid_payment_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid payment_status. Must be one of: {', '.join(sorted(valid_payment_statuses))}"
+            )
+        
+        # Start building query
+        query = supabase.table("quotes").select("*, clients(*), line_items(*)")
+        
+        # Apply status filter
+        if status:
+            query = query.eq("status", status)
+        
+        # Apply payment_status filter
+        # Note: For "unpaid", we need to include null values, so we'll filter in memory
+        # For other statuses, we can filter at the database level
+        if payment_status and payment_status != "unpaid":
+            query = query.eq("payment_status", payment_status)
+        
+        # Apply text search - search across title and quote_number
+        # Note: We'll filter client name in memory after fetching since Supabase
+        # doesn't easily support filtering on joined table fields
+        if search and search.strip():
+            search_term = search.strip()
+            # Use ilike for case-insensitive search on title
+            # For quote_number, we'll also search in memory for better control
+            query = query.ilike("title", f"%{search_term}%")
+        
+        # Order by created_at descending
+        query = query.order("created_at", desc=True)
+        
+        # Execute query
+        response = query.execute()
+        quotes = response.data
+        
+        # Apply additional filters in memory for cases Supabase can't handle easily
+        if search and search.strip():
+            search_term_lower = search.strip().lower()
+            quotes = [
+                quote for quote in quotes
+                if (
+                    search_term_lower in quote.get("title", "").lower() or
+                    search_term_lower in quote.get("quote_number", "").lower() or
+                    (quote.get("clients") and search_term_lower in quote.get("clients", {}).get("name", "").lower())
+                )
+            ]
+        
+        # Handle null payment_status: if filtering for "unpaid", include both "unpaid" and null values
+        # If filtering for other payment_status, ensure we only get exact matches
+        if payment_status:
+            if payment_status == "unpaid":
+                quotes = [
+                    quote for quote in quotes
+                    if quote.get("payment_status") is None or quote.get("payment_status") == "unpaid"
+                ]
+            else:
+                # For other statuses, ensure exact match (already filtered by DB, but double-check)
+                quotes = [
+                    quote for quote in quotes
+                    if quote.get("payment_status") == payment_status
+                ]
+        
+        return quotes
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

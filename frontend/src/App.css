@@ -225,6 +225,16 @@ table tbody tr:hover {
   color: #991b1b;
 }
 
+.badge-voided {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.badge-uncollectible {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
 /* Utilities */
 .container {
   max-width: 1200px;

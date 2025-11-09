@@ -115,9 +115,22 @@ export interface CompanySettings {
   updated_at: string;
 }
 
+export interface QuoteFilters {
+  search?: string;
+  status?: string;
+  payment_status?: string;
+}
+
 // Quotes API
 export const quotesAPI = {
-  getAll: () => api.get<Quote[]>('/api/quotes'),
+  getAll: (filters?: QuoteFilters) => {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.payment_status) params.append('payment_status', filters.payment_status);
+    const queryString = params.toString();
+    return api.get<Quote[]>(`/api/quotes${queryString ? `?${queryString}` : ''}`);
+  },
   getById: (id: string) => api.get<Quote>(`/api/quotes/${id}`),
   create: (quote: QuoteCreate) => api.post<Quote>('/api/quotes', quote),
   update: (id: string, quote: Partial<QuoteCreate>) => api.put<Quote>(`/api/quotes/${id}`, quote),
