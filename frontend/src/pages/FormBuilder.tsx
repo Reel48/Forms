@@ -706,7 +706,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'text':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -717,6 +717,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="text"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
@@ -728,7 +730,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'textarea':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -738,6 +740,8 @@ function FormPreview({ form }: FormPreviewProps) {
               </p>
             )}
             <textarea
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
@@ -750,7 +754,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'email':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -761,6 +765,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="email"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
@@ -772,7 +778,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'number':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -783,6 +789,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="number"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
@@ -794,7 +802,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'phone':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -805,6 +813,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="tel"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
@@ -816,7 +826,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'url':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -827,6 +837,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="url"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder || 'https://example.com'}
@@ -838,7 +850,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'date':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -849,6 +861,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="date"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
@@ -859,7 +873,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'time':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -870,6 +884,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="time"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
@@ -880,7 +896,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'datetime':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -891,6 +907,8 @@ function FormPreview({ form }: FormPreviewProps) {
             )}
             <input
               type="datetime-local"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
@@ -902,7 +920,7 @@ function FormPreview({ form }: FormPreviewProps) {
         const maxRating = field.validation_rules?.max || 5;
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -911,31 +929,35 @@ function FormPreview({ form }: FormPreviewProps) {
                 {field.description}
               </p>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {Array.from({ length: maxRating }, (_, i) => i + 1).map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => handleFieldChange(fieldId, star)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '2rem',
-                    cursor: 'pointer',
-                    color: star <= (value || 0) ? '#fbbf24' : '#d1d5db',
-                    padding: 0,
-                    lineHeight: 1,
-                  }}
-                  title={`${star} star${star > 1 ? 's' : ''}`}
-                >
-                  ★
-                </button>
-              ))}
-              {value && (
-                <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  ({value} / {maxRating})
-                </span>
-              )}
+            <div id={fieldId} role="group" aria-label={field.label}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {Array.from({ length: maxRating }, (_, i) => i + 1).map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    name={fieldId}
+                    onClick={() => handleFieldChange(fieldId, star)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '2rem',
+                      cursor: 'pointer',
+                      color: star <= (value || 0) ? '#fbbf24' : '#d1d5db',
+                      padding: 0,
+                      lineHeight: 1,
+                    }}
+                    title={`${star} star${star > 1 ? 's' : ''}`}
+                    aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                  >
+                    ★
+                  </button>
+                ))}
+                {value && (
+                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                    ({value} / {maxRating})
+                  </span>
+                )}
+              </div>
             </div>
             {field.required && !value && (
               <p style={{ fontSize: '0.75rem', color: '#dc2626', margin: '0.25rem 0 0 0' }}>
@@ -951,7 +973,7 @@ function FormPreview({ form }: FormPreviewProps) {
         const scaleLabels = field.options || [];
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={`${fieldId}-0`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -960,43 +982,47 @@ function FormPreview({ form }: FormPreviewProps) {
                 {field.description}
               </p>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                {scaleLabels[0] && (
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280', minWidth: '100px', textAlign: 'left' }}>
-                    {scaleLabels[0].label || scaleLabels[0].value}
-                  </span>
-                )}
-                <div style={{ display: 'flex', gap: '0.5rem', flex: 1, justifyContent: 'center' }}>
-                  {Array.from({ length: scaleMax - scaleMin + 1 }, (_, i) => scaleMin + i).map((num) => (
-                    <label
-                      key={num}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name={fieldId}
-                        value={num}
-                        checked={value === num.toString()}
-                        onChange={(e) => handleFieldChange(fieldId, e.target.value)}
-                        required={field.required}
-                        style={{ margin: 0 }}
-                      />
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{num}</span>
-                    </label>
-                  ))}
+            <div id={fieldId} role="group" aria-label={field.label}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                  {scaleLabels[0] && (
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280', minWidth: '100px', textAlign: 'left' }}>
+                      {scaleLabels[0].label || scaleLabels[0].value}
+                    </span>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.5rem', flex: 1, justifyContent: 'center' }}>
+                    {Array.from({ length: scaleMax - scaleMin + 1 }, (_, i) => scaleMin + i).map((num) => (
+                      <label
+                        key={num}
+                        htmlFor={`${fieldId}-${num}`}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          id={`${fieldId}-${num}`}
+                          name={fieldId}
+                          value={num}
+                          checked={value === num.toString()}
+                          onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                          required={field.required}
+                          style={{ margin: 0 }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{num}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {scaleLabels[1] && (
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280', minWidth: '100px', textAlign: 'right' }}>
+                      {scaleLabels[1].label || scaleLabels[1].value}
+                    </span>
+                  )}
                 </div>
-                {scaleLabels[1] && (
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280', minWidth: '100px', textAlign: 'right' }}>
-                    {scaleLabels[1].label || scaleLabels[1].value}
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -1005,7 +1031,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'dropdown':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -1015,6 +1041,8 @@ function FormPreview({ form }: FormPreviewProps) {
               </p>
             )}
             <select
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
@@ -1032,7 +1060,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'multiple_choice':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={`${fieldId}-0`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -1041,20 +1069,27 @@ function FormPreview({ form }: FormPreviewProps) {
                 {field.description}
               </p>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {field.options?.map((option: any, optIndex: number) => (
-                <label key={optIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    type="radio"
-                    name={fieldId}
-                    value={option.value || option.label}
-                    checked={value === (option.value || option.label)}
-                    onChange={(e) => handleFieldChange(fieldId, e.target.value)}
-                    required={field.required}
-                  />
-                  <span>{option.label || option.value}</span>
-                </label>
-              ))}
+            <div role="radiogroup" aria-label={field.label}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {field.options?.map((option: any, optIndex: number) => {
+                  const optionValue = option.value || option.label;
+                  const optionId = `${fieldId}-${optIndex}`;
+                  return (
+                    <label key={optIndex} htmlFor={optionId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="radio"
+                        id={optionId}
+                        name={fieldId}
+                        value={optionValue}
+                        checked={value === optionValue}
+                        onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                        required={field.required}
+                      />
+                      <span>{option.label || option.value}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );
@@ -1062,7 +1097,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'checkbox':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={`${fieldId}-0`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -1071,24 +1106,32 @@ function FormPreview({ form }: FormPreviewProps) {
                 {field.description}
               </p>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {field.options?.map((option: any, optIndex: number) => (
-                <label key={optIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    type="checkbox"
-                    value={option.value || option.label}
-                    checked={(formValues[fieldId] || []).includes(option.value || option.label)}
-                    onChange={(e) => {
-                      const currentValues = formValues[fieldId] || [];
-                      const newValues = e.target.checked
-                        ? [...currentValues, option.value || option.label]
-                        : currentValues.filter((v: any) => v !== (option.value || option.label));
-                      handleFieldChange(fieldId, newValues);
-                    }}
-                  />
-                  <span>{option.label || option.value}</span>
-                </label>
-              ))}
+            <div role="group" aria-label={field.label}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {field.options?.map((option: any, optIndex: number) => {
+                  const optionValue = option.value || option.label;
+                  const optionId = `${fieldId}-${optIndex}`;
+                  return (
+                    <label key={optIndex} htmlFor={optionId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id={optionId}
+                        name={fieldId}
+                        value={optionValue}
+                        checked={(formValues[fieldId] || []).includes(optionValue)}
+                        onChange={(e) => {
+                          const currentValues = formValues[fieldId] || [];
+                          const newValues = e.target.checked
+                            ? [...currentValues, optionValue]
+                            : currentValues.filter((v: any) => v !== optionValue);
+                          handleFieldChange(fieldId, newValues);
+                        }}
+                      />
+                      <span>{option.label || option.value}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );
@@ -1096,7 +1139,7 @@ function FormPreview({ form }: FormPreviewProps) {
       case 'yes_no':
         return (
           <div key={fieldId} className="form-group">
-            <label>
+            <label htmlFor={`${fieldId}-yes`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
             </label>
@@ -1105,29 +1148,33 @@ function FormPreview({ form }: FormPreviewProps) {
                 {field.description}
               </p>
             )}
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="radio"
-                  name={fieldId}
-                  value="yes"
-                  checked={value === 'yes'}
-                  onChange={(e) => handleFieldChange(fieldId, e.target.value)}
-                  required={field.required}
-                />
-                <span>Yes</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="radio"
-                  name={fieldId}
-                  value="no"
-                  checked={value === 'no'}
-                  onChange={(e) => handleFieldChange(fieldId, e.target.value)}
-                  required={field.required}
-                />
-                <span>No</span>
-              </label>
+            <div role="radiogroup" aria-label={field.label}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <label htmlFor={`${fieldId}-yes`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="radio"
+                    id={`${fieldId}-yes`}
+                    name={fieldId}
+                    value="yes"
+                    checked={value === 'yes'}
+                    onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                    required={field.required}
+                  />
+                  <span>Yes</span>
+                </label>
+                <label htmlFor={`${fieldId}-no`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="radio"
+                    id={`${fieldId}-no`}
+                    name={fieldId}
+                    value="no"
+                    checked={value === 'no'}
+                    onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                    required={field.required}
+                  />
+                  <span>No</span>
+                </label>
+              </div>
             </div>
           </div>
         );
@@ -1135,9 +1182,11 @@ function FormPreview({ form }: FormPreviewProps) {
       default:
         return (
           <div key={fieldId} className="form-group">
-            <label>{field.label}</label>
+            <label htmlFor={fieldId}>{field.label}</label>
             <input
               type="text"
+              id={fieldId}
+              name={fieldId}
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
