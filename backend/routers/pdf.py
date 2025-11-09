@@ -190,7 +190,7 @@ async def generate_quote_pdf(quote_id: str):
         quote_info.append(["Date:", datetime.fromisoformat(quote['created_at']).strftime('%B %d, %Y')])
         if quote.get('expiration_date'):
             quote_info.append(["Expiration:", datetime.fromisoformat(quote['expiration_date']).strftime('%B %d, %Y')])
-        quote_info.append(["Status:", quote['status'].title()])
+        quote_info.append(["Quote Status:", quote['status'].title()])
         
         quote_table = Table(quote_info, colWidths=[2*inch, 4*inch])
         quote_table.setStyle(TableStyle([

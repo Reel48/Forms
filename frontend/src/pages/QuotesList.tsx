@@ -278,7 +278,7 @@ function QuotesList() {
                     <th>Title</th>
                     <th>Client</th>
                     <th>Total</th>
-                    <th>Status</th>
+                    <th>Quote Status</th>
                     <th>Payment Status</th>
                     <th>Created</th>
                     <th>Actions</th>

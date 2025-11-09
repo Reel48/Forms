@@ -188,7 +188,7 @@ function QuoteView() {
 
         <div className="form-row mb-4">
           <div>
-            <strong>Status:</strong> <span className={`badge badge-${quote.status}`}>{quote.status}</span>
+            <strong>Quote Status:</strong> <span className={`badge badge-${quote.status}`}>{quote.status}</span>
           </div>
           {quote.payment_status && (
             <div>
