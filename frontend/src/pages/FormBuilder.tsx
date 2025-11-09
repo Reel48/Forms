@@ -461,7 +461,7 @@ function FormBuilder() {
               {needsOptions && (
                 <div className="form-group">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <label>Options</label>
+                    <span style={{ fontWeight: '500' }}>Options</span>
                     <button
                       type="button"
                       onClick={() => addOption(selectedFieldIndex!)}
@@ -513,7 +513,7 @@ function FormBuilder() {
               {/* Validation Rules for Rating and Opinion Scale */}
               {(selectedField.field_type === 'rating' || selectedField.field_type === 'opinion_scale') && (
                 <div className="form-group">
-                  <label>Scale Range</label>
+                  <span style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem' }}>Scale Range</span>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
                       <label htmlFor={`field-${selectedFieldIndex}-min`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
@@ -564,7 +564,7 @@ function FormBuilder() {
 
               {/* Conditional Logic */}
               <div className="form-group">
-                <label>Conditional Logic</label>
+                <span style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem' }}>Conditional Logic</span>
                 <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
                   Show this field only when certain conditions are met
                 </p>
