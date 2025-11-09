@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { quotesAPI } from '../api';
 import type { Quote, QuoteFilters } from '../api';
 
@@ -25,6 +25,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 function QuotesList() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,9 +132,9 @@ function QuotesList() {
     <div className="container">
       <div className="flex-between mb-4">
         <h1>Quotes</h1>
-        <Link to="/quotes/new" className="btn-primary">
+        <button onClick={() => navigate('/quotes/new')} className="btn-primary">
           Create New Quote
-        </Link>
+        </button>
       </div>
 
       {/* Filters Section */}
