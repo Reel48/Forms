@@ -112,6 +112,12 @@ async def get_form(form_id: str):
 async def create_form(form: FormCreate):
     """Create a new form with fields"""
     try:
+        # Log incoming request
+        print(f"Creating form: {form.name}")
+        print(f"Fields received: {len(form.fields) if form.fields else 0}")
+        if form.fields:
+            print(f"Fields data: {[{'type': f.field_type, 'label': f.label} for f in form.fields]}")
+        
         # Generate form data
         form_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
@@ -141,9 +147,11 @@ async def create_form(form: FormCreate):
             raise HTTPException(status_code=500, detail="Failed to create form")
         
         created_form = form_response.data[0]
+        print(f"Form created with ID: {form_id}")
         
         # Create fields if provided
         if form.fields and len(form.fields) > 0:
+            print(f"Processing {len(form.fields)} fields...")
             fields_data = []
             for idx, field in enumerate(form.fields):
                 # Use idx if order_index is 0 or not set, otherwise use the provided order_index
@@ -163,20 +171,37 @@ async def create_form(form: FormCreate):
                     "created_at": now
                 }
                 fields_data.append(field_data)
+                print(f"  Field {idx}: {field.field_type} - {field.label or '(no label)'}")
             
             if fields_data:
-                fields_response = supabase.table("form_fields").insert(fields_data).execute()
-                if not fields_response.data:
-                    # Log error but don't fail the form creation
-                    print(f"Warning: Failed to insert fields for form {form_id}")
+                print(f"Inserting {len(fields_data)} fields into database...")
+                try:
+                    fields_response = supabase.table("form_fields").insert(fields_data).execute()
+                    if fields_response.data:
+                        print(f"Successfully inserted {len(fields_response.data)} fields")
+                    else:
+                        print(f"ERROR: Failed to insert fields for form {form_id}")
+                        print(f"Fields data: {fields_data}")
+                        # Raise error instead of silently failing
+                        raise HTTPException(status_code=500, detail=f"Failed to insert {len(fields_data)} fields")
+                except Exception as field_error:
+                    print(f"ERROR inserting fields: {str(field_error)}")
                     print(f"Fields data: {fields_data}")
+                    raise HTTPException(status_code=500, detail=f"Failed to insert fields: {str(field_error)}")
+        else:
+            print("No fields provided or fields list is empty")
         
         # Fetch the complete form with fields
-        return await get_form(form_id)
+        result = await get_form(form_id)
+        print(f"Returning form with {len(result.fields) if result.fields else 0} fields")
+        return result
         
     except HTTPException:
         raise
     except Exception as e:
+        print(f"ERROR in create_form: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{form_id}", response_model=Form)
