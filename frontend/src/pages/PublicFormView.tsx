@@ -114,7 +114,7 @@ function PublicFormView() {
   };
 
   const renderField = (field: FormField, index: number) => {
-    const fieldId = field.id || `field-${index}`;
+    const fieldId = (field.id && field.id.trim()) ? field.id : `field-${index}`;
     const value = formValues[fieldId] || '';
 
     // Check conditional logic
