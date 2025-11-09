@@ -394,8 +394,10 @@ function FormBuilder() {
               <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Edit Field</h2>
               
               <div className="form-group">
-                <label>Field Type</label>
+                <label htmlFor={`field-type-${selectedFieldIndex}`}>Field Type</label>
                 <select
+                  id={`field-type-${selectedFieldIndex}`}
+                  name={`field-type-${selectedFieldIndex}`}
                   value={selectedField.field_type}
                   onChange={(e) => updateField(selectedFieldIndex!, { field_type: e.target.value, options: e.target.value === 'dropdown' || e.target.value === 'multiple_choice' || e.target.value === 'checkbox' ? [{ label: '', value: '' }] : [] })}
                 >
@@ -408,9 +410,11 @@ function FormBuilder() {
               </div>
 
               <div className="form-group">
-                <label>Label *</label>
+                <label htmlFor={`field-label-${selectedFieldIndex}`}>Label *</label>
                 <input
                   type="text"
+                  id={`field-label-${selectedFieldIndex}`}
+                  name={`field-label-${selectedFieldIndex}`}
                   value={selectedField.label}
                   onChange={(e) => updateField(selectedFieldIndex!, { label: e.target.value })}
                   placeholder="Field label"
@@ -418,8 +422,10 @@ function FormBuilder() {
               </div>
 
               <div className="form-group">
-                <label>Description</label>
+                <label htmlFor={`field-description-${selectedFieldIndex}`}>Description</label>
                 <textarea
+                  id={`field-description-${selectedFieldIndex}`}
+                  name={`field-description-${selectedFieldIndex}`}
                   value={selectedField.description || ''}
                   onChange={(e) => updateField(selectedFieldIndex!, { description: e.target.value })}
                   placeholder="Help text for this field"
@@ -428,9 +434,11 @@ function FormBuilder() {
               </div>
 
               <div className="form-group">
-                <label>Placeholder</label>
+                <label htmlFor={`field-placeholder-${selectedFieldIndex}`}>Placeholder</label>
                 <input
                   type="text"
+                  id={`field-placeholder-${selectedFieldIndex}`}
+                  name={`field-placeholder-${selectedFieldIndex}`}
                   value={selectedField.placeholder || ''}
                   onChange={(e) => updateField(selectedFieldIndex!, { placeholder: e.target.value })}
                   placeholder="Placeholder text"
@@ -438,9 +446,11 @@ function FormBuilder() {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label htmlFor={`field-required-${selectedFieldIndex}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="checkbox"
+                    id={`field-required-${selectedFieldIndex}`}
+                    name={`field-required-${selectedFieldIndex}`}
                     checked={selectedField.required}
                     onChange={(e) => updateField(selectedFieldIndex!, { required: e.target.checked })}
                   />
@@ -461,32 +471,42 @@ function FormBuilder() {
                       + Add Option
                     </button>
                   </div>
-                  {selectedField.options?.map((option, optIndex) => (
-                    <div key={optIndex} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <input
-                        type="text"
-                        value={option.label || ''}
-                        onChange={(e) => updateOption(selectedFieldIndex!, optIndex, { label: e.target.value })}
-                        placeholder="Option label"
-                        style={{ flex: 1 }}
-                      />
-                      <input
-                        type="text"
-                        value={option.value || ''}
-                        onChange={(e) => updateOption(selectedFieldIndex!, optIndex, { value: e.target.value })}
-                        placeholder="Option value"
-                        style={{ flex: 1 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeOption(selectedFieldIndex!, optIndex)}
-                        className="btn-danger"
-                        style={{ padding: '0.25rem 0.5rem' }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                  {selectedField.options?.map((option, optIndex) => {
+                    const optionLabelId = `field-${selectedFieldIndex}-option-${optIndex}-label`;
+                    const optionValueId = `field-${selectedFieldIndex}-option-${optIndex}-value`;
+                    return (
+                      <div key={optIndex} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <label htmlFor={optionLabelId} style={{ display: 'none' }}>Option {optIndex + 1} Label</label>
+                        <input
+                          type="text"
+                          id={optionLabelId}
+                          name={optionLabelId}
+                          value={option.label || ''}
+                          onChange={(e) => updateOption(selectedFieldIndex!, optIndex, { label: e.target.value })}
+                          placeholder="Option label"
+                          style={{ flex: 1 }}
+                        />
+                        <label htmlFor={optionValueId} style={{ display: 'none' }}>Option {optIndex + 1} Value</label>
+                        <input
+                          type="text"
+                          id={optionValueId}
+                          name={optionValueId}
+                          value={option.value || ''}
+                          onChange={(e) => updateOption(selectedFieldIndex!, optIndex, { value: e.target.value })}
+                          placeholder="Option value"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOption(selectedFieldIndex!, optIndex)}
+                          className="btn-danger"
+                          style={{ padding: '0.25rem 0.5rem' }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -496,11 +516,13 @@ function FormBuilder() {
                   <label>Scale Range</label>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+                      <label htmlFor={`field-${selectedFieldIndex}-min`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                         Min {selectedField.field_type === 'rating' ? '(Stars)' : '(Number)'}
                       </label>
                       <input
                         type="number"
+                        id={`field-${selectedFieldIndex}-min`}
+                        name={`field-${selectedFieldIndex}-min`}
                         min="1"
                         max={selectedField.field_type === 'rating' ? '10' : '100'}
                         value={selectedField.validation_rules?.min || (selectedField.field_type === 'rating' ? 1 : 1)}
@@ -513,11 +535,13 @@ function FormBuilder() {
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+                      <label htmlFor={`field-${selectedFieldIndex}-max`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                         Max {selectedField.field_type === 'rating' ? '(Stars)' : '(Number)'}
                       </label>
                       <input
                         type="number"
+                        id={`field-${selectedFieldIndex}-max`}
+                        name={`field-${selectedFieldIndex}-max`}
                         min="1"
                         max={selectedField.field_type === 'rating' ? '10' : '100'}
                         value={selectedField.validation_rules?.max || (selectedField.field_type === 'rating' ? 5 : 10)}
@@ -545,9 +569,11 @@ function FormBuilder() {
                   Show this field only when certain conditions are met
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
+                  <label htmlFor={`field-conditional-enabled-${selectedFieldIndex}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
                     <input
                       type="checkbox"
+                      id={`field-conditional-enabled-${selectedFieldIndex}`}
+                      name={`field-conditional-enabled-${selectedFieldIndex}`}
                       checked={selectedField.conditional_logic?.enabled || false}
                       onChange={(e) => updateField(selectedFieldIndex!, {
                         conditional_logic: {
@@ -563,10 +589,12 @@ function FormBuilder() {
                     <div style={{ padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '6px', marginTop: '0.5rem' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                          <label htmlFor={`field-conditional-trigger-${selectedFieldIndex}`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
                             Show this field when:
                           </label>
                           <select
+                            id={`field-conditional-trigger-${selectedFieldIndex}`}
+                            name={`field-conditional-trigger-${selectedFieldIndex}`}
                             value={selectedField.conditional_logic?.trigger_field_id || ''}
                             onChange={(e) => updateField(selectedFieldIndex!, {
                               conditional_logic: {
@@ -591,10 +619,12 @@ function FormBuilder() {
                         {selectedField.conditional_logic?.trigger_field_id && (
                           <>
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                              <label htmlFor={`field-conditional-condition-${selectedFieldIndex}`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
                                 Condition:
                               </label>
                               <select
+                                id={`field-conditional-condition-${selectedFieldIndex}`}
+                                name={`field-conditional-condition-${selectedFieldIndex}`}
                                 value={selectedField.conditional_logic?.condition || 'equals'}
                                 onChange={(e) => updateField(selectedFieldIndex!, {
                                   conditional_logic: {
@@ -616,11 +646,13 @@ function FormBuilder() {
                              selectedField.conditional_logic.condition !== 'is_empty' && 
                              selectedField.conditional_logic.condition !== 'is_not_empty' && (
                               <div>
-                                <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                                <label htmlFor={`field-conditional-value-${selectedFieldIndex}`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
                                   Value:
                                 </label>
                                 <input
                                   type="text"
+                                  id={`field-conditional-value-${selectedFieldIndex}`}
+                                  name={`field-conditional-value-${selectedFieldIndex}`}
                                   value={selectedField.conditional_logic?.value || ''}
                                   onChange={(e) => updateField(selectedFieldIndex!, {
                                     conditional_logic: {
