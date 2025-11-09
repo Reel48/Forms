@@ -29,8 +29,12 @@ nav {
   font-size: 0.875rem;
 }
 
-.toggle-label.active {
-  color: #2563eb;
+.toggle-label.active.forms-active {
+  color: #eab308; /* Yellow */
+}
+
+.toggle-label.active.quotes-active {
+  color: #22c55e; /* Green */
 }
 
 .toggle-switch {
@@ -47,11 +51,15 @@ nav {
 }
 
 .toggle-switch:focus {
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
 }
 
-.toggle-switch.active {
-  background-color: #2563eb;
+.toggle-switch.forms-active {
+  background-color: #eab308; /* Yellow */
+}
+
+.toggle-switch.quotes-active {
+  background-color: #22c55e; /* Green */
 }
 
 .toggle-slider {
@@ -66,8 +74,12 @@ nav {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-switch.active .toggle-slider {
-  transform: translateX(24px);
+.toggle-switch.forms-active .toggle-slider {
+  transform: translateX(0); /* Left position for Forms */
+}
+
+.toggle-switch.quotes-active .toggle-slider {
+  transform: translateX(24px); /* Right position for Quotes */
 }
 
 nav ul {

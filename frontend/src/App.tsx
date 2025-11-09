@@ -30,16 +30,16 @@ function Navigation() {
     <nav>
       {/* Section Toggle Switcher */}
       <div className="section-switcher">
-        <span className={`toggle-label ${isQuotesSection ? 'active' : ''}`}>Quotes</span>
+        <span className={`toggle-label ${isFormsSection ? 'active forms-active' : ''}`}>Forms</span>
         <button
           type="button"
-          className={`toggle-switch ${isFormsSection ? 'active' : ''}`}
+          className={`toggle-switch ${isFormsSection ? 'forms-active' : 'quotes-active'}`}
           onClick={handleToggle}
           aria-label="Toggle between Forms and Quotes"
         >
           <span className="toggle-slider"></span>
         </button>
-        <span className={`toggle-label ${isFormsSection ? 'active' : ''}`}>Forms</span>
+        <span className={`toggle-label ${isQuotesSection ? 'active quotes-active' : ''}`}>Quotes</span>
       </div>
       
       {/* Section-specific Navigation */}
