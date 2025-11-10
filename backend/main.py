@@ -52,3 +52,15 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+@app.get("/debug/jwt-config")
+async def debug_jwt_config():
+    """Debug endpoint to check JWT configuration (remove in production)"""
+    import os
+    jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+    return {
+        "jwt_secret_configured": bool(jwt_secret),
+        "jwt_secret_length": len(jwt_secret) if jwt_secret else 0,
+        "jwt_secret_preview": jwt_secret[:20] + "..." if jwt_secret and len(jwt_secret) > 20 else jwt_secret if jwt_secret else None,
+        "supabase_url": os.getenv("SUPABASE_URL"),
+    }
+

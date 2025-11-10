@@ -51,17 +51,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (exp && Date.now() >= exp * 1000) {
           // Token is expired, don't try to fetch role
           console.log('Token expired, skipping role fetch');
+          setRole(null);
           return;
         }
       } catch (e) {
-        // If we can't parse the token, still try the request
+        // If we can't parse the token, don't try the request
+        console.log('Could not parse token, skipping role fetch');
+        setRole(null);
+        return;
       }
 
-      // Debug: Log token info (first 20 chars only for security)
-      console.log('Fetching role with token:', accessToken.substring(0, 20) + '...');
-      
       // Make sure we're using the token from the parameter
-      // Clear any existing Authorization header first, then set our token
       const response = await api.get('/api/auth/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -74,17 +74,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setRole('customer'); // Default role
       }
     } catch (error: any) {
-      // Only log non-401 errors (401 is expected when token is invalid/expired)
-      if (error?.response?.status !== 401) {
-        console.error('Error fetching user role:', error);
-      }
-      // Don't set role to customer on 401 - let the user stay logged out
+      // Silently handle 401 errors (expected when token is invalid/expired)
       if (error?.response?.status === 401) {
-        // Token is invalid, clear the role but don't set to customer
+        // Token is invalid, clear the role
         setRole(null);
-      } else {
-        setRole('customer'); // Default to customer on other errors
+        return;
       }
+      // Log other errors
+      console.error('Error fetching user role:', error);
+      // Don't set role to customer on error - leave it as null
+      setRole(null);
     }
   };
 
@@ -150,7 +149,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(session);
       setUser(session?.user ?? null);
 
-      if (session?.user && session?.access_token) {
+      // Only fetch role on specific events (not during recovery/initialization)
+      const shouldFetchRole = event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED';
+
+      if (session?.user && session?.access_token && shouldFetchRole) {
         // Check if token is expired before trying to use it
         let tokenValid = true;
         try {
@@ -158,28 +160,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const exp = payload.exp;
           if (exp && Date.now() >= exp * 1000) {
             tokenValid = false;
-            console.log('Token expired in auth state change');
+            console.log('Token expired in auth state change, skipping role fetch');
           }
         } catch (e) {
           tokenValid = false;
-          console.log('Could not parse token in auth state change');
+          console.log('Could not parse token in auth state change, skipping role fetch');
         }
 
         if (tokenValid) {
           // Update API client with token first
           api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
-          // Only fetch role on specific events and if token is valid
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-            // Then fetch role with the token directly
-            await fetchUserRole(session.access_token);
-          }
+          // Then fetch role with the token directly
+          await fetchUserRole(session.access_token);
         } else {
           setRole(null);
           delete api.defaults.headers.common['Authorization'];
         }
       } else {
-        setRole(null);
-        delete api.defaults.headers.common['Authorization'];
+        // No session or not a role-fetch event
+        if (!session || !session.user) {
+          setRole(null);
+          delete api.defaults.headers.common['Authorization'];
+        } else if (session.user && session.access_token && !shouldFetchRole) {
+          // We have a session but it's not a role-fetch event (e.g., INITIAL_SESSION)
+          // Just set the auth header but don't fetch role yet
+          api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+        }
       }
 
       setLoading(false);
