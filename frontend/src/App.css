@@ -353,3 +353,257 @@ table tbody tr:hover {
 .text-muted {
   color: #6b7280;
 }
+
+/* Typeform-like Styles */
+.typeform-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0;
+  margin: 0;
+}
+
+.typeform-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  padding: 1rem 2rem;
+}
+
+.typeform-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.typeform-progress-fill {
+  height: 100%;
+  background: white;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.typeform-progress-text {
+  text-align: center;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.typeform-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  min-height: calc(100vh - 80px);
+}
+
+.typeform-question {
+  width: 100%;
+  max-width: 700px;
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.typeform-question .form-group {
+  margin-bottom: 2rem;
+}
+
+.typeform-question label {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  display: block;
+  line-height: 1.4;
+}
+
+.typeform-question .form-group p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0.5rem 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+.typeform-question input[type="text"],
+.typeform-question input[type="email"],
+.typeform-question input[type="number"],
+.typeform-question input[type="tel"],
+.typeform-question input[type="url"],
+.typeform-question input[type="date"],
+.typeform-question input[type="time"],
+.typeform-question input[type="datetime-local"],
+.typeform-question textarea,
+.typeform-question select {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1.125rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.typeform-question input:focus,
+.typeform-question textarea:focus,
+.typeform-question select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.typeform-question textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.typeform-navigation {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.typeform-btn {
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.typeform-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.typeform-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.typeform-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.typeform-btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.typeform-btn-secondary:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.typeform-error {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+}
+
+.typeform-error p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Radio and Checkbox styling for Typeform */
+.typeform-question input[type="radio"],
+.typeform-question input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+  cursor: pointer;
+}
+
+.typeform-question label[for*="-"] {
+  font-size: 1.125rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.typeform-question label[for*="-"]:hover {
+  background: #f9fafb;
+}
+
+/* Rating stars styling */
+.typeform-question button[type="button"][name*="field"] {
+  font-size: 2.5rem;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.typeform-question button[type="button"][name*="field"]:hover {
+  transform: scale(1.2);
+}
+
+/* Opinion scale styling */
+.typeform-question input[type="radio"][id*="-"] {
+  width: 24px;
+  height: 24px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .typeform-content {
+    padding: 2rem 1rem;
+    min-height: calc(100vh - 60px);
+  }
+
+  .typeform-question {
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+  }
+
+  .typeform-question label {
+    font-size: 1.25rem;
+  }
+
+  .typeform-question input[type="text"],
+  .typeform-question input[type="email"],
+  .typeform-question input[type="number"],
+  .typeform-question input[type="tel"],
+  .typeform-question input[type="url"],
+  .typeform-question input[type="date"],
+  .typeform-question input[type="time"],
+  .typeform-question input[type="datetime-local"],
+  .typeform-question textarea,
+  .typeform-question select {
+    font-size: 1rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .typeform-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  .typeform-progress {
+    padding: 0.75rem 1rem;
+  }
+}

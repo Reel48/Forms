@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
 
@@ -12,6 +13,11 @@ function PublicFormView() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [startTime] = useState(Date.now());
+  
+  // Typeform-like state: one question at a time
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [visibleFields, setVisibleFields] = useState<FormField[]>([]);
   
   // Use ref to track if we're already loading to prevent multiple simultaneous loads
   const isLoadingRef = useRef(false);
@@ -132,9 +138,82 @@ function PublicFormView() {
     setFormValues((prev) => ({ ...prev, [fieldId]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const evaluateConditionalLogic = (field: FormField): boolean => {
+    if (!field.conditional_logic || !field.conditional_logic.enabled) {
+      return true; // Show field if no conditional logic
+    }
+
+    const triggerFieldId = field.conditional_logic.trigger_field_id;
+    if (!triggerFieldId) {
+      return true;
+    }
+
+    const triggerValue = formValues[triggerFieldId];
+    const condition = field.conditional_logic.condition || 'equals';
+    const expectedValue = field.conditional_logic.value;
+
+    switch (condition) {
+      case 'equals':
+        return triggerValue === expectedValue || triggerValue === expectedValue?.toString();
+      case 'not_equals':
+        return triggerValue !== expectedValue && triggerValue !== expectedValue?.toString();
+      case 'contains':
+        const triggerStr = String(triggerValue || '');
+        const expectedStr = String(expectedValue || '');
+        return triggerStr.toLowerCase().includes(expectedStr.toLowerCase());
+      case 'is_empty':
+        return !triggerValue || triggerValue === '' || (Array.isArray(triggerValue) && triggerValue.length === 0);
+      case 'is_not_empty':
+        return triggerValue !== undefined && triggerValue !== null && triggerValue !== '' && !(Array.isArray(triggerValue) && triggerValue.length === 0);
+      default:
+        return true;
+    }
+  };
+
+  // Calculate visible fields based on conditional logic
+  useEffect(() => {
+    if (!form || !form.fields) {
+      setVisibleFields([]);
+      return;
+    }
+
+    const visible: FormField[] = [];
+    for (const field of form.fields) {
+      if (evaluateConditionalLogic(field)) {
+        visible.push(field);
+      }
+    }
+    setVisibleFields(visible);
     
+    // Reset to first question when visible fields change
+    if (visible.length > 0 && currentQuestionIndex >= visible.length) {
+      setCurrentQuestionIndex(0);
+    }
+  }, [form, formValues, currentQuestionIndex]);
+
+  const handleNext = useCallback(() => {
+    setCurrentQuestionIndex(prev => {
+      if (prev < visibleFields.length - 1) {
+        setDirection('forward');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return prev + 1;
+      }
+      return prev;
+    });
+  }, [visibleFields.length]);
+
+  const handlePrevious = useCallback(() => {
+    setCurrentQuestionIndex(prev => {
+      if (prev > 0) {
+        setDirection('backward');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return prev - 1;
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
     if (!form) return;
 
     setSubmitting(true);
@@ -174,39 +253,51 @@ function PublicFormView() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [form, formValues, startTime]);
 
-  const evaluateConditionalLogic = (field: FormField): boolean => {
-    if (!field.conditional_logic || !field.conditional_logic.enabled) {
-      return true; // Show field if no conditional logic
-    }
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (submitted || loading || !form || visibleFields.length === 0) return;
+      
+      // Don't intercept if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        // Allow Enter in textarea (Shift+Enter for new line)
+        if (target.tagName === 'TEXTAREA' && e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (currentQuestionIndex < visibleFields.length - 1) {
+            handleNext();
+          } else if (currentQuestionIndex === visibleFields.length - 1) {
+            handleSubmit();
+          }
+        }
+        return;
+      }
+      
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (currentQuestionIndex < visibleFields.length - 1) {
+          handleNext();
+        } else if (currentQuestionIndex === visibleFields.length - 1) {
+          handleSubmit();
+        }
+      } else if (e.key === 'ArrowLeft' || (e.key === 'Backspace' && e.target === document.body)) {
+        e.preventDefault();
+        if (currentQuestionIndex > 0) {
+          handlePrevious();
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (currentQuestionIndex < visibleFields.length - 1) {
+          handleNext();
+        }
+      }
+    };
 
-    const triggerFieldId = field.conditional_logic.trigger_field_id;
-    if (!triggerFieldId) {
-      return true;
-    }
-
-    const triggerValue = formValues[triggerFieldId];
-    const condition = field.conditional_logic.condition || 'equals';
-    const expectedValue = field.conditional_logic.value;
-
-    switch (condition) {
-      case 'equals':
-        return triggerValue === expectedValue || triggerValue === expectedValue?.toString();
-      case 'not_equals':
-        return triggerValue !== expectedValue && triggerValue !== expectedValue?.toString();
-      case 'contains':
-        const triggerStr = String(triggerValue || '');
-        const expectedStr = String(expectedValue || '');
-        return triggerStr.toLowerCase().includes(expectedStr.toLowerCase());
-      case 'is_empty':
-        return !triggerValue || triggerValue === '' || (Array.isArray(triggerValue) && triggerValue.length === 0);
-      case 'is_not_empty':
-        return triggerValue !== undefined && triggerValue !== null && triggerValue !== '' && !(Array.isArray(triggerValue) && triggerValue.length === 0);
-      default:
-        return true;
-    }
-  };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentQuestionIndex, visibleFields.length, submitted, loading, form, handleNext, handlePrevious, handleSubmit]);
 
   const renderField = (field: FormField, index: number) => {
     const fieldId = (field.id && field.id.trim()) ? field.id : `field-${index}`;
@@ -773,39 +864,117 @@ function PublicFormView() {
     );
   }
 
-  return (
-    <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-      <div className="card">
-        <div style={{ textAlign: 'center', marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '2px solid #e5e7eb' }}>
-          <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>{form.name}</h1>
-          {form.description && (
-            <p style={{ color: '#6b7280', margin: 0 }}>{form.description}</p>
-          )}
+  // Typeform-like: Show one question at a time
+  const currentField = visibleFields[currentQuestionIndex];
+  const progress = visibleFields.length > 0 ? ((currentQuestionIndex + 1) / visibleFields.length) * 100 : 0;
+  const isLastQuestion = currentQuestionIndex === visibleFields.length - 1;
+
+  if (!currentField && visibleFields.length === 0) {
+    return (
+      <div className="typeform-container">
+        <div className="typeform-content">
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
+            This form has no fields.
+          </p>
         </div>
+      </div>
+    );
+  }
 
-        <form onSubmit={handleSubmit}>
-          {form.fields && form.fields.length > 0 ? (
-            form.fields.map((field, index) => renderField(field, index))
-          ) : (
-            <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
-              This form has no fields.
-            </p>
-          )}
+  return (
+    <div className="typeform-container">
+      {/* Progress Bar */}
+      {visibleFields.length > 0 && (
+        <div className="typeform-progress">
+          <div className="typeform-progress-bar">
+            <motion.div
+              className="typeform-progress-fill"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            />
+          </div>
+          <div className="typeform-progress-text">
+            {currentQuestionIndex + 1} of {visibleFields.length}
+          </div>
+        </div>
+      )}
 
-          {error && (
-            <div style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem', borderRadius: '6px', marginTop: '1rem' }}>
-              <p style={{ color: '#dc2626', margin: 0 }}>{error}</p>
-            </div>
+      {/* Question Container with Animation */}
+      <div className="typeform-content">
+        <AnimatePresence mode="wait">
+          {currentField && (
+            <motion.div
+              key={currentQuestionIndex}
+              initial={{ 
+                opacity: 0, 
+                x: direction === 'forward' ? 50 : -50,
+                scale: 0.95
+              }}
+              animate={{ 
+                opacity: 1, 
+                x: 0,
+                scale: 1
+              }}
+              exit={{ 
+                opacity: 0, 
+                x: direction === 'forward' ? -50 : 50,
+                scale: 0.95
+              }}
+              transition={{ 
+                duration: 0.3, 
+                ease: [0.4, 0, 0.2, 1]
+              }}
+              className="typeform-question"
+            >
+              {renderField(currentField, currentQuestionIndex)}
+              
+              {/* Navigation Buttons */}
+              <div className="typeform-navigation">
+                {currentQuestionIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={handlePrevious}
+                    className="typeform-btn typeform-btn-secondary"
+                  >
+                    ← Previous
+                  </button>
+                )}
+                <div style={{ flex: 1 }} />
+                {!isLastQuestion ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="typeform-btn typeform-btn-primary"
+                    disabled={currentField.required && !formValues[currentField.id || '']}
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="typeform-btn typeform-btn-primary"
+                    disabled={submitting || (currentField.required && !formValues[currentField.id || ''])}
+                  >
+                    {submitting ? 'Submitting...' : (form.thank_you_screen?.submit_button_text || 'Submit')}
+                  </button>
+                )}
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {form.fields && form.fields.length > 0 && (
-            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn-primary" disabled={submitting}>
-                {submitting ? 'Submitting...' : form.thank_you_screen?.submit_button_text || 'Submit'}
-              </button>
-            </div>
-          )}
-        </form>
+        {/* Error Message */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="typeform-error"
+          >
+            <p>{error}</p>
+          </motion.div>
+        )}
       </div>
     </div>
   );
