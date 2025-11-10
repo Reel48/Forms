@@ -123,18 +123,23 @@ async def get_current_user(
         
         # Get user from Supabase using service role (bypasses RLS)
         user_email = payload.get("email", "")
+        user_name = payload.get("user_metadata", {}).get("name", "") if isinstance(payload.get("user_metadata"), dict) else ""
         try:
             user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
             
             if user_response and user_response.user:
                 user = user_response.user
                 user_email = getattr(user, 'email', user_email)
+                user_metadata = getattr(user, 'user_metadata', {})
+                if isinstance(user_metadata, dict):
+                    user_name = user_metadata.get("name", user_name)
             else:
                 # User not found in auth, but we have token - use token data
                 print(f"Warning: User {user_id} not found in Supabase Auth, using token data")
                 user = type('User', (), {
                     'id': user_id,
-                    'email': user_email
+                    'email': user_email,
+                    'name': user_name
                 })()
             
         except Exception as e:
@@ -143,7 +148,8 @@ async def get_current_user(
             print("Using token payload data")
             user = type('User', (), {
                 'id': user_id,
-                'email': user_email
+                'email': user_email,
+                'name': user_name
             })()
         
         # Get user role from database using service role client to bypass RLS
@@ -168,6 +174,7 @@ async def get_current_user(
         user_data = {
             "id": user_id,
             "email": user_email or getattr(user, 'email', ''),
+            "name": user_name or getattr(user, 'name', ''),
             "role": role
         }
         

@@ -55,7 +55,7 @@ async def register(user_data: UserRegister):
         
         # Create user role entry (default to customer)
         try:
-            supabase.table("user_roles").insert({
+            supabase_storage.table("user_roles").insert({
                 "id": str(uuid.uuid4()),
                 "user_id": user.id,
                 "role": "customer",
@@ -72,6 +72,30 @@ async def register(user_data: UserRegister):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create user role: {str(e)}"
             )
+        
+        # Create client record for self-registered user
+        # Check if client already exists (in case admin created client first)
+        try:
+            existing_client = supabase_storage.table("clients").select("*").eq("user_id", user.id).execute()
+            if not existing_client.data or len(existing_client.data) == 0:
+                # No existing client, create one
+                client_name = user_data.name if user_data.name else user.email.split("@")[0]
+                supabase_storage.table("clients").insert({
+                    "name": client_name,
+                    "email": user.email,
+                    "user_id": user.id,
+                    "registration_source": "self_registered"
+                }).execute()
+            else:
+                # Client exists, update registration_source if it was admin_created
+                existing = existing_client.data[0]
+                if existing.get("registration_source") == "admin_created":
+                    supabase_storage.table("clients").update({
+                        "registration_source": "self_registered"
+                    }).eq("id", existing["id"]).execute()
+        except Exception as e:
+            # Log error but don't fail registration - client record can be created later
+            print(f"Warning: Failed to create/update client record for user {user.id}: {str(e)}")
         
         # Sign in the user to get session token
         sign_in_response = supabase_storage.auth.sign_in_with_password({

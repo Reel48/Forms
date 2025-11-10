@@ -11,6 +11,7 @@ import FormSubmissions from './pages/FormSubmissions';
 import PublicFormView from './pages/PublicFormView';
 import ClientsList from './pages/ClientsList';
 import CompanySettingsPage from './pages/CompanySettings';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import './App.css';
@@ -25,6 +26,7 @@ function Navigation() {
   const isQuotesActive = !isFormsActive && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
   const isClientsActive = location.pathname === '/clients';
   const isSettingsActive = location.pathname === '/settings';
+  const isProfileActive = location.pathname === '/profile';
   const isAdmin = role === 'admin';
 
   const handleLogout = async () => {
@@ -76,6 +78,16 @@ function Navigation() {
             </li>
           </>
         )}
+        {!isAdmin && (
+          <li>
+            <Link 
+              to="/profile" 
+              className={`nav-tab ${isProfileActive ? 'active' : ''}`}
+            >
+              Profile
+            </Link>
+          </li>
+        )}
       </ul>
 
       {/* User Info */}
@@ -120,6 +132,7 @@ function AppContent() {
         <Route path="/forms/:id/submissions" element={<ProtectedRoute requireAdmin><FormSubmissions /></ProtectedRoute>} />
         <Route path="/clients" element={<ProtectedRoute requireAdmin><ClientsList /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute requireAdmin><CompanySettingsPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Routes>
     </>
   );

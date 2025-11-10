@@ -250,6 +250,7 @@ function ClientsList() {
                 <th>Company</th>
                 <th>Email</th>
                 <th>Phone</th>
+                <th>Registration</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -260,6 +261,17 @@ function ClientsList() {
                   <td>{client.company || '-'}</td>
                   <td>{client.email || '-'}</td>
                   <td>{client.phone || '-'}</td>
+                  <td>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      backgroundColor: client.registration_source === 'self_registered' ? '#dbeafe' : '#f3f4f6',
+                      color: client.registration_source === 'self_registered' ? '#1e40af' : '#374151'
+                    }}>
+                      {client.registration_source === 'self_registered' ? 'Self Registered' : 'Admin Created'}
+                    </span>
+                  </td>
                   <td>
                     <div className="flex gap-2">
                       <button

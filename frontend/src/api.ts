@@ -110,6 +110,8 @@ export interface Client {
   notes?: string;
   created_at: string;
   stripe_customer_id?: string;
+  user_id?: string;
+  registration_source?: string;  // 'admin_created' or 'self_registered'
   // Structured address fields
   address_line1?: string;
   address_line2?: string;
@@ -290,6 +292,8 @@ export const clientsAPI = {
   create: (client: Omit<Client, 'id' | 'created_at'>) => api.post<Client>('/api/clients', client),
   update: (id: string, client: Partial<Client>) => api.put<Client>(`/api/clients/${id}`, client),
   delete: (id: string) => api.delete(`/api/clients/${id}`),
+  getMyProfile: () => api.get<Client>('/api/clients/profile/me'),
+  updateMyProfile: (client: Partial<Client>) => api.put<Client>('/api/clients/profile/me', client),
 };
 
 // Company Settings API
