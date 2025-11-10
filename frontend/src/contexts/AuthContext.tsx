@@ -39,7 +39,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Get user role from backend
       const accessToken = token || session?.access_token;
-      if (!accessToken) return;
+      if (!accessToken) {
+        // No token available, don't try to fetch role
+        return;
+      }
+
+      // Check if token is expired (basic check - JWT tokens have exp claim)
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        const exp = payload.exp;
+        if (exp && Date.now() >= exp * 1000) {
+          // Token is expired, don't try to fetch role
+          console.log('Token expired, skipping role fetch');
+          return;
+        }
+      } catch (e) {
+        // If we can't parse the token, still try the request
+      }
 
       const response = await api.get('/api/auth/me', {
         headers: {
@@ -52,9 +68,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         setRole('customer'); // Default role
       }
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-      setRole('customer'); // Default to customer on error
+    } catch (error: any) {
+      // Only log non-401 errors (401 is expected when token is invalid/expired)
+      if (error?.response?.status !== 401) {
+        console.error('Error fetching user role:', error);
+      }
+      // Don't set role to customer on 401 - let the user stay logged out
+      if (error?.response?.status === 401) {
+        // Token is invalid, clear the role but don't set to customer
+        setRole(null);
+      } else {
+        setRole('customer'); // Default to customer on other errors
+      }
     }
   };
 
@@ -85,15 +110,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
-      if (session?.user) {
+      if (session?.user && session?.access_token) {
         // Update API client with token first
         api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
-        // Then fetch role with the token directly
-        await fetchUserRole(session.access_token);
+        // Only fetch role if we have a valid session (not during token refresh)
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          // Then fetch role with the token directly
+          await fetchUserRole(session.access_token);
+        }
       } else {
         setRole(null);
         delete api.defaults.headers.common['Authorization'];
