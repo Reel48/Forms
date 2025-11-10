@@ -21,3 +21,6 @@ supabase_storage: Client = create_client(
     supabase_service_role_key if supabase_service_role_key else supabase_key
 )
 
+# Export URL and service role key for direct REST API calls
+__all__ = ['supabase', 'supabase_storage', 'supabase_url', 'supabase_service_role_key']
+

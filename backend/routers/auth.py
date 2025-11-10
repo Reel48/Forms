@@ -5,10 +5,11 @@ Handles user registration, login, and user management
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from database import supabase, supabase_storage
+from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from auth import get_current_user, get_current_admin
 import uuid
 from datetime import datetime
+import requests
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -376,8 +377,23 @@ async def create_user_for_client(
             alphabet = string.ascii_letters + string.digits
             password = ''.join(secrets.choice(alphabet) for i in range(12))
         
-        # Create user in Supabase Auth
-        auth_response = supabase_storage.auth.admin.create_user({
+        # Create user in Supabase Auth using REST API directly
+        # The Python client's admin.create_user() may not work correctly
+        if not supabase_service_role_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Service role key not configured. Cannot create users."
+            )
+        
+        # Use Supabase Auth Admin API directly via REST
+        auth_url = f"{supabase_url}/auth/v1/admin/users"
+        headers = {
+            "apikey": supabase_service_role_key,
+            "Authorization": f"Bearer {supabase_service_role_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
             "email": client_email,
             "password": password,
             "email_confirm": True,
@@ -385,21 +401,46 @@ async def create_user_for_client(
                 "name": client_name,
                 "client_id": request.client_id
             }
-        })
+        }
         
-        if not auth_response or not auth_response.user:
+        try:
+            response = requests.post(auth_url, json=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+            user_data = response.json()
+            
+            if not user_data or "id" not in user_data:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to create user: Invalid response from Supabase"
+                )
+            
+            user_id = user_data["id"]
+            user_email = user_data.get("email", client_email)
+            
+        except requests.exceptions.HTTPError as e:
+            error_detail = "Failed to create user"
+            try:
+                error_data = e.response.json()
+                error_message = error_data.get("msg", error_data.get("message", str(e)))
+                error_detail = f"Failed to create user: {error_message}"
+            except:
+                error_detail = f"Failed to create user: {str(e)}"
+            
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to create user"
+                detail=error_detail
             )
-        
-        user = auth_response.user
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create user: {str(e)}"
+            )
         
         # Create user role entry (default to customer)
         try:
-            supabase.table("user_roles").insert({
+            supabase_storage.table("user_roles").insert({
                 "id": str(uuid.uuid4()),
-                "user_id": user.id,
+                "user_id": user_id,
                 "role": "customer",
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
@@ -407,7 +448,8 @@ async def create_user_for_client(
         except Exception as e:
             # If role creation fails, try to delete the auth user
             try:
-                supabase_storage.auth.admin.delete_user(user.id)
+                delete_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
+                requests.delete(delete_url, headers=headers, timeout=10)
             except:
                 pass
             raise HTTPException(
@@ -416,12 +458,12 @@ async def create_user_for_client(
             )
         
         # Link user to client
-        supabase.table("clients").update({"user_id": user.id}).eq("id", request.client_id).execute()
+        supabase_storage.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
         
         return {
             "message": "User created and linked to client",
-            "user_id": user.id,
-            "email": client_email,
+            "user_id": user_id,
+            "email": user_email,
             "password": password  # Return password so admin can share it
         }
         
