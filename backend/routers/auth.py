@@ -233,9 +233,11 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
     Get all users with their roles and clients (admin only).
     Returns list of users and clients for assignment purposes.
     Includes clients that can be linked to users.
+    All users are returned regardless of existing assignments.
     """
     try:
         users = []
+        user_ids_seen = set()  # Track user IDs to avoid duplicates
         client_users = {}  # Track which clients have linked users
         
         # Get all user roles and fetch emails from Supabase Auth
@@ -246,13 +248,21 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
             user_id = role_data.get("user_id")
             user_role = role_data.get("role", "customer")
             
+            # Skip if we've already added this user
+            if user_id in user_ids_seen:
+                continue
+            
             # Get user email from Supabase Auth
             # If admin API fails, we'll skip this user (they won't appear in the list)
             user_email = None
+            user_name = None
             try:
                 user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
                 if user_response and user_response.user:
                     user_email = user_response.user.email
+                    # Get name from user_metadata if available
+                    if hasattr(user_response.user, 'user_metadata') and user_response.user.user_metadata:
+                        user_name = user_response.user.user_metadata.get('name')
             except Exception as e:
                 # Log but continue - some users might not be accessible via admin API
                 # This can happen if service role key doesn't have proper permissions
@@ -261,9 +271,11 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
                 continue
             
             if user_email:
+                user_ids_seen.add(user_id)
                 users.append({
                     "id": user_id,
                     "email": user_email,
+                    "name": user_name,
                     "role": user_role,
                     "type": "user"
                 })
@@ -280,25 +292,34 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
                 
                 if linked_user_id:
                     # Client already has a linked user - mark it
+                    # The user should already be in the list from user_roles, but ensure we track it
                     client_users[linked_user_id] = {
                         "client_id": client_id,
                         "client_name": client_name,
                         "client_email": client_email
                     }
+                    # If for some reason the user isn't in the list yet, we don't add them here
+                    # because they should be in user_roles. But we ensure they're marked.
                 elif client_email:
                     # Client without linked user - add as potential user
-                    users.append({
-                        "id": f"client_{client_id}",  # Use prefix to distinguish
-                        "email": client_email,
-                        "name": client_name,
-                        "client_id": client_id,
-                        "role": "customer",
-                        "type": "client"  # Indicates this is a client without a user account
-                    })
+                    # Use a unique ID format to distinguish from regular users
+                    client_prefixed_id = f"client_{client_id}"
+                    if client_prefixed_id not in user_ids_seen:
+                        user_ids_seen.add(client_prefixed_id)
+                        users.append({
+                            "id": client_prefixed_id,  # Use prefix to distinguish
+                            "email": client_email,
+                            "name": client_name,
+                            "client_id": client_id,
+                            "role": "customer",
+                            "type": "client"  # Indicates this is a client without a user account
+                        })
         except Exception as e:
             print(f"Error fetching clients: {e}")
             # Continue without clients if there's an error
         
+        # Return all users - they should always be available for assignment
+        # regardless of whether they have existing assignments
         return users
         
     except Exception as e:
