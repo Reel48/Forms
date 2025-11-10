@@ -7,7 +7,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormFieldUpdate, FormSubmissionCreate, FormSubmission
 from pydantic import ValidationError
-from database import supabase
+from database import supabase, supabase_storage
 import uuid
 import secrets
 import string
@@ -608,19 +608,50 @@ async def upload_file(form_id: str, file: UploadFile = File(...)):
         unique_filename = f"{form_id}/{file_hash}_{uuid.uuid4().hex[:8]}.{file_extension}" if file_extension else f"{form_id}/{file_hash}_{uuid.uuid4().hex[:8]}"
         
         # Upload to Supabase Storage (bucket: form-uploads)
+        # Use service_role client for storage operations (has proper permissions)
         try:
-            response = supabase.storage.from_("form-uploads").upload(
+            # Upload the file using storage client
+            # Note: We use supabase_storage which uses service_role key if available
+            response = supabase_storage.storage.from_("form-uploads").upload(
                 unique_filename,
                 file_content,
-                file_options={"content-type": file.content_type or "application/octet-stream", "upsert": "false"}
+                file_options={
+                    "content-type": file.content_type or "application/octet-stream",
+                    "upsert": "false"
+                }
             )
+            print(f"File uploaded successfully: {unique_filename}")
+        except HTTPException:
+            raise
         except Exception as storage_error:
-            # If bucket doesn't exist, try to create it
-            print(f"Storage error: {str(storage_error)}")
-            raise HTTPException(status_code=500, detail="Storage bucket not configured. Please create 'form-uploads' bucket in Supabase Storage.")
+            error_msg = str(storage_error)
+            print(f"Storage upload error: {error_msg}")
+            # Provide more helpful error messages
+            if "bucket" in error_msg.lower() or "not found" in error_msg.lower():
+                raise HTTPException(
+                    status_code=500, 
+                    detail="Storage bucket 'form-uploads' not configured. Please create it in Supabase Storage dashboard."
+                )
+            elif "permission" in error_msg.lower() or "policy" in error_msg.lower():
+                raise HTTPException(
+                    status_code=500,
+                    detail="Storage permissions not configured. Please check Supabase Storage policies for 'form-uploads' bucket."
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to upload file to storage: {error_msg}"
+                )
         
         # Get public URL
-        public_url_data = supabase.storage.from_("form-uploads").get_public_url(unique_filename)
+        try:
+            public_url_data = supabase_storage.storage.from_("form-uploads").get_public_url(unique_filename)
+        except Exception as url_error:
+            print(f"Warning: Could not get public URL: {str(url_error)}")
+            # Construct URL manually if get_public_url fails
+            import os
+            supabase_url = os.getenv("SUPABASE_URL", "")
+            public_url_data = f"{supabase_url}/storage/v1/object/public/form-uploads/{unique_filename}"
         
         return {
             "file_url": public_url_data,
