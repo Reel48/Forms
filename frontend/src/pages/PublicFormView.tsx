@@ -46,15 +46,11 @@ function PublicFormView() {
     isLoadingRef.current = true;
     loadedSlugRef.current = slug;
     let isMounted = true;
-    let hasSetForm = false; // Track if we've set the form to prevent double-setting
 
     const loadForm = async () => {
       console.log('[PublicFormView] loadForm called');
       
-      // Only set loading if we haven't already set the form
-      if (!hasSetForm) {
-        setLoading(true);
-      }
+      setLoading(true);
       setError(null);
       
       try {
@@ -62,9 +58,17 @@ function PublicFormView() {
         const response = await formsAPI.getBySlug(slug);
         console.log('[PublicFormView] Form fetched successfully:', response.data?.id);
         
-        if (!isMounted || hasSetForm) {
-          console.log('[PublicFormView] Component unmounted or form already set, not setting form');
+        if (!isMounted) {
+          console.log('[PublicFormView] Component unmounted, not setting form');
           isLoadingRef.current = false;
+          return;
+        }
+        
+        // Double-check we haven't already loaded (for StrictMode protection)
+        if (hasLoadedRef.current && loadedSlugRef.current === slug) {
+          console.log('[PublicFormView] Already loaded during async operation, skipping');
+          isLoadingRef.current = false;
+          setLoading(false);
           return;
         }
         
@@ -76,9 +80,8 @@ function PublicFormView() {
           redirectUrlRef.current = formData.thank_you_screen.redirect_url;
         }
         
-        // Mark as loaded and set form flag BEFORE setting state
+        // Mark as loaded BEFORE setting state to prevent re-runs
         hasLoadedRef.current = true;
-        hasSetForm = true;
         isLoadingRef.current = false;
         
         // Set form and loading together - React will batch these
