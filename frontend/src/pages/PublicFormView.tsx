@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
@@ -13,25 +13,39 @@ function PublicFormView() {
   const [submitted, setSubmitted] = useState(false);
   const [startTime] = useState(Date.now());
 
-  const loadForm = useCallback(async (formSlug: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await formsAPI.getBySlug(formSlug);
-      setForm(response.data);
-    } catch (error: any) {
-      console.error('Failed to load form:', error);
-      setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (slug) {
-      loadForm(slug);
+    if (!slug) {
+      return;
     }
-  }, [slug, loadForm]);
+
+    let isMounted = true;
+
+    const loadForm = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await formsAPI.getBySlug(slug);
+        if (isMounted) {
+          setForm(response.data);
+        }
+      } catch (error: any) {
+        console.error('Failed to load form:', error);
+        if (isMounted) {
+          setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadForm();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormValues({ ...formValues, [fieldId]: value });
