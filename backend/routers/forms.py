@@ -128,11 +128,21 @@ async def get_form(form_id: str):
 async def create_form(form: FormCreate):
     """Create a new form with fields"""
     try:
+        # Validate that form is a FormCreate instance
+        if not isinstance(form, FormCreate):
+            print(f"ERROR: form is not FormCreate instance, type: {type(form)}")
+            print(f"Form data: {form}")
+            raise HTTPException(status_code=400, detail=f"Invalid form data type: {type(form)}")
+        
         # Log incoming request
         print(f"Creating form: {form.name}")
-        print(f"Fields received: {len(form.fields) if form.fields else 0}")
-        if form.fields:
-            print(f"Fields data: {[{'type': f.field_type, 'label': f.label} for f in form.fields]}")
+        print(f"Form type: {type(form)}")
+        
+        # Safely get fields - should always exist on FormCreate
+        fields = form.fields if form.fields else []
+        print(f"Fields received: {len(fields) if fields else 0}")
+        if fields:
+            print(f"Fields data: {[{'type': f.field_type, 'label': f.label} for f in fields]}")
         
         # Generate form data
         form_id = str(uuid.uuid4())
@@ -141,6 +151,12 @@ async def create_form(form: FormCreate):
         # Generate public URL slug if not provided
         public_url_slug = form.public_url_slug or generate_url_slug()
         
+        # Get theme and other dict fields (should always exist on FormCreate)
+        theme = form.theme if form.theme else {}
+        settings = form.settings if form.settings else {}
+        welcome_screen = form.welcome_screen if form.welcome_screen else {}
+        thank_you_screen = form.thank_you_screen if form.thank_you_screen else {}
+        
         # Prepare form data
         form_data = {
             "id": form_id,
@@ -148,10 +164,10 @@ async def create_form(form: FormCreate):
             "description": form.description,
             "status": form.status,
             "public_url_slug": public_url_slug,
-            "theme": form.theme or {},
-            "settings": form.settings or {},
-            "welcome_screen": form.welcome_screen or {},
-            "thank_you_screen": form.thank_you_screen or {},
+            "theme": theme,
+            "settings": settings,
+            "welcome_screen": welcome_screen,
+            "thank_you_screen": thank_you_screen,
             "created_at": now,
             "updated_at": now
         }
@@ -166,10 +182,10 @@ async def create_form(form: FormCreate):
         print(f"Form created with ID: {form_id}")
         
         # Create fields if provided
-        if form.fields and len(form.fields) > 0:
-            print(f"Processing {len(form.fields)} fields...")
+        if fields and len(fields) > 0:
+            print(f"Processing {len(fields)} fields...")
             fields_data = []
-            for idx, field in enumerate(form.fields):
+            for idx, field in enumerate(fields):
                 # Use idx if order_index is 0 or not set, otherwise use the provided order_index
                 order_idx = field.order_index if field.order_index is not None and field.order_index >= 0 else idx
                 field_data = {
