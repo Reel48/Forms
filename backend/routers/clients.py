@@ -37,6 +37,20 @@ async def get_clients():
         all_clients = list(clients_dict.values())
         user_ids_seen = set()
         
+        # First, fix any clients that have user_id but wrong registration_source
+        for client in all_clients:
+            client_user_id = client.get("user_id")
+            if client_user_id and client.get("registration_source") == "admin_created":
+                # If client has a user_id, they must have registered themselves
+                # Update registration_source to self_registered
+                try:
+                    supabase_storage.table("clients").update({
+                        "registration_source": "self_registered"
+                    }).eq("id", client["id"]).execute()
+                    client["registration_source"] = "self_registered"
+                except Exception as e:
+                    print(f"Warning: Failed to update registration_source for client {client['id']}: {str(e)}")
+        
         # For each customer user, ensure they have a client record
         for user_id in customer_user_ids:
             if user_id in user_ids_seen:
@@ -45,6 +59,17 @@ async def get_clients():
             
             # Check if client record exists for this user
             if user_id in clients_by_user_id:
+                # Client exists, but make sure registration_source is correct
+                client = clients_by_user_id[user_id]
+                if client.get("registration_source") == "admin_created":
+                    # Update to self_registered since they have a user_id
+                    try:
+                        supabase_storage.table("clients").update({
+                            "registration_source": "self_registered"
+                        }).eq("id", client["id"]).execute()
+                        client["registration_source"] = "self_registered"
+                    except Exception as e:
+                        print(f"Warning: Failed to update registration_source for client {client['id']}: {str(e)}")
                 continue  # Already have a client record
             
             # Fetch user details from Auth API
@@ -56,16 +81,30 @@ async def get_clients():
                     user_email = user_data.get("email", "")
                     user_name = user_data.get("user_metadata", {}).get("name", "") or user_email.split("@")[0]
                     
-                    # Create client record for this user
-                    new_client = {
-                        "name": user_name,
-                        "email": user_email,
-                        "user_id": user_id,
-                        "registration_source": "self_registered"
-                    }
-                    insert_response = supabase_storage.table("clients").insert(new_client).execute()
-                    if insert_response.data:
-                        all_clients.append(insert_response.data[0])
+                    # Check if there's a client with the same email (admin-created, not linked)
+                    email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).is_("user_id", "null").execute()
+                    
+                    if email_client_response.data and len(email_client_response.data) > 0:
+                        # Found admin-created client with same email, link it
+                        existing_client = email_client_response.data[0]
+                        supabase_storage.table("clients").update({
+                            "user_id": user_id,
+                            "registration_source": "self_registered"
+                        }).eq("id", existing_client["id"]).execute()
+                        existing_client["user_id"] = user_id
+                        existing_client["registration_source"] = "self_registered"
+                        all_clients.append(existing_client)
+                    else:
+                        # Create new client record
+                        new_client = {
+                            "name": user_name,
+                            "email": user_email,
+                            "user_id": user_id,
+                            "registration_source": "self_registered"
+                        }
+                        insert_response = supabase_storage.table("clients").insert(new_client).execute()
+                        if insert_response.data:
+                            all_clients.append(insert_response.data[0])
             except Exception as e:
                 print(f"Warning: Failed to fetch/create client for user {user_id}: {str(e)}")
                 continue

@@ -205,7 +205,57 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: dict = Depends(get_current_user)):
     """
     Get current authenticated user information.
+    Also ensures client record exists and registration_source is correct.
     """
+    user_id = current_user.get("id")
+    user_email = current_user.get("email", "")
+    
+    # Ensure client record exists and registration_source is correct
+    if user_id:
+        try:
+            # Check if client record exists for this user
+            client_response = supabase_storage.table("clients").select("*").eq("user_id", user_id).execute()
+            
+            if client_response.data and len(client_response.data) > 0:
+                # Client exists, check if registration_source needs updating
+                client = client_response.data[0]
+                if client.get("registration_source") == "admin_created":
+                    # User has logged in, so they must have registered themselves
+                    # Update registration_source to self_registered
+                    supabase_storage.table("clients").update({
+                        "registration_source": "self_registered"
+                    }).eq("id", client["id"]).execute()
+            else:
+                # No client record exists, create one
+                # Check if there's a client with the same email (admin-created)
+                email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).execute()
+                
+                if email_client_response.data and len(email_client_response.data) > 0:
+                    # Found client with same email, link it to this user
+                    existing_client = email_client_response.data[0]
+                    supabase_storage.table("clients").update({
+                        "user_id": user_id,
+                        "registration_source": "self_registered"
+                    }).eq("id", existing_client["id"]).execute()
+                else:
+                    # Create new client record
+                    user_name = current_user.get("name", "") or user_email.split("@")[0] if user_email else "User"
+                    supabase_storage.table("clients").insert({
+                        "name": user_name,
+                        "email": user_email,
+                        "user_id": user_id,
+                        "registration_source": "self_registered"
+                    }).execute()
+        except Exception as e:
+            # Log error but don't fail the /me endpoint
+            print(f"Warning: Failed to update client record for user {user_id}: {str(e)}")
+    
+    return {
+        "id": current_user.get("id"),
+        "email": current_user.get("email"),
+        "role": current_user.get("role"),
+        "name": current_user.get("name")
+    }
     return {
         "id": current_user["id"],
         "email": current_user["email"],
