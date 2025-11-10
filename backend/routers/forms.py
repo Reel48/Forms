@@ -6,6 +6,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormFieldUpdate, FormSubmissionCreate, FormSubmission
+from pydantic import ValidationError
 from database import supabase
 import uuid
 import secrets
@@ -130,21 +131,43 @@ async def get_form(form_id: str):
 async def create_form(form: FormCreate):
     """Create a new form with fields"""
     try:
-        # Validate that form is a FormCreate instance
-        if not isinstance(form, FormCreate):
-            print(f"ERROR: form is not FormCreate instance, type: {type(form)}")
-            print(f"Form data: {form}")
-            raise HTTPException(status_code=400, detail=f"Invalid form data type: {type(form)}")
-        
-        # Log incoming request
+        # Log incoming request for debugging
         print(f"Creating form: {form.name}")
         print(f"Form type: {type(form)}")
+        print(f"Form has fields attribute: {hasattr(form, 'fields')}")
         
         # Safely get fields - should always exist on FormCreate
-        fields = form.fields if form.fields else []
+        # Use getattr with default to handle any edge cases
+        fields = getattr(form, 'fields', None)
+        if fields is None:
+            print("WARNING: fields attribute is None, using empty list")
+            fields = []
+        elif not isinstance(fields, list):
+            print(f"WARNING: fields is not a list, type: {type(fields)}, converting...")
+            fields = list(fields) if fields else []
+        
         print(f"Fields received: {len(fields) if fields else 0}")
         if fields:
-            print(f"Fields data: {[{'type': f.field_type, 'label': f.label} for f in fields]}")
+            # Check if fields are dicts and convert them to FormFieldCreate objects
+            parsed_fields = []
+            for idx, field in enumerate(fields):
+                if isinstance(field, dict):
+                    print(f"  Field {idx} is a dict, converting to FormFieldCreate...")
+                    try:
+                        parsed_fields.append(FormFieldCreate(**field))
+                    except ValidationError as field_error:
+                        print(f"  ERROR converting field {idx}: {str(field_error)}")
+                        raise HTTPException(status_code=400, detail=f"Invalid field data at index {idx}: {str(field_error)}")
+                    except Exception as field_error:
+                        print(f"  ERROR converting field {idx}: {str(field_error)}")
+                        raise HTTPException(status_code=400, detail=f"Invalid field data at index {idx}: {str(field_error)}")
+                elif isinstance(field, FormFieldCreate):
+                    parsed_fields.append(field)
+                else:
+                    print(f"  WARNING: Field {idx} has unexpected type: {type(field)}, attempting to use as-is")
+                    parsed_fields.append(field)
+            fields = parsed_fields
+            print(f"Fields data: {[{'type': getattr(f, 'field_type', 'unknown'), 'label': getattr(f, 'label', 'no label')} for f in fields]}")
         
         # Generate form data
         form_id = str(uuid.uuid4())
