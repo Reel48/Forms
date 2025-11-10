@@ -605,9 +605,7 @@ table tbody tr:hover {
   flex: 1;
 }
 
-.typeform-option-checkbox {
-  /* Checkboxes can have multiple selections, so slightly different styling */
-}
+/* .typeform-option-checkbox - Checkboxes can have multiple selections, so slightly different styling */
 
 /* Yes/No Button Styling */
 .typeform-yesno {
