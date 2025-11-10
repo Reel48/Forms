@@ -17,6 +17,15 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log('API Request:', config.method?.toUpperCase(), config.url, 'to', config.baseURL);
+    if (config.data && config.url?.includes('/forms') && config.method?.toUpperCase() === 'POST') {
+      console.log('Form creation payload:', JSON.stringify(config.data, null, 2));
+      if (config.data.fields) {
+        console.log(`Fields in payload: ${config.data.fields.length} fields`);
+        console.log('Fields details:', config.data.fields.map((f: any) => ({ type: f.field_type, label: f.label })));
+      } else {
+        console.log('WARNING: No fields property in form creation payload!');
+      }
+    }
     return config;
   },
   (error) => {
