@@ -364,6 +364,48 @@ function PublicFormView() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentQuestionIndex, visibleFields.length, submitted, loading, form, handleNext, handlePrevious, handleSubmit]);
 
+  // Helper function to render media (image/video) for a field
+  const renderMedia = (field: FormField) => {
+    const mediaUrl = field.validation_rules?.mediaUrl;
+    if (!mediaUrl) return null;
+
+    if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      return (
+        <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+          <img 
+            src={mediaUrl} 
+            alt={field.label}
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '400px', 
+              borderRadius: '12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      );
+    } else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
+      return (
+        <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+          <video 
+            src={mediaUrl} 
+            controls 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '400px', 
+              borderRadius: '12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}
+          />
+        </div>
+      );
+    }
+    return null;
+  };
+
   const renderField = (field: FormField, index: number) => {
     const fieldId = (field.id && field.id.trim()) ? field.id : `field-${index}`;
     const value = formValues[fieldId] || '';
@@ -373,10 +415,14 @@ function PublicFormView() {
       return null; // Don't render field if condition is not met
     }
 
+    // Render media if present
+    const mediaElement = renderMedia(field);
+
     switch (field.field_type) {
       case 'text':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -401,6 +447,7 @@ function PublicFormView() {
       case 'textarea':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -425,6 +472,7 @@ function PublicFormView() {
       case 'email':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -449,6 +497,7 @@ function PublicFormView() {
       case 'number':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -473,6 +522,7 @@ function PublicFormView() {
       case 'phone':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -497,6 +547,7 @@ function PublicFormView() {
       case 'url':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -521,6 +572,7 @@ function PublicFormView() {
       case 'date':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -544,6 +596,7 @@ function PublicFormView() {
       case 'time':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -567,6 +620,7 @@ function PublicFormView() {
       case 'datetime':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -587,9 +641,157 @@ function PublicFormView() {
           </div>
         );
 
+      case 'date_range':
+        const startDateId = `${fieldId}-start`;
+        const endDateId = `${fieldId}-end`;
+        const startDate = value?.startDate || '';
+        const endDate = value?.endDate || '';
+        return (
+          <div key={fieldId} className="form-group">
+            {mediaElement}
+            <label htmlFor={startDateId}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {field.description && (
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+                {field.description}
+              </p>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label htmlFor={startDateId} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#6b7280' }}>
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  id={startDateId}
+                  name={startDateId}
+                  value={startDate}
+                  onChange={(e) => handleFieldChange(fieldId, { ...value, startDate: e.target.value })}
+                  required={field.required}
+                />
+              </div>
+              <div>
+                <label htmlFor={endDateId} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#6b7280' }}>
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  id={endDateId}
+                  name={endDateId}
+                  value={endDate}
+                  onChange={(e) => handleFieldChange(fieldId, { ...value, endDate: e.target.value })}
+                  required={field.required}
+                  min={startDate || undefined}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'file_upload':
+        return (
+          <div key={fieldId} className="form-group">
+            {mediaElement}
+            <label htmlFor={fieldId}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {field.description && (
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+                {field.description}
+              </p>
+            )}
+            <div style={{ 
+              border: '2px dashed #d1d5db', 
+              borderRadius: '8px', 
+              padding: '2rem', 
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: value ? '#f0fdf4' : '#f9fafb'
+            }}
+            onClick={() => document.getElementById(`${fieldId}-file`)?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = '#667eea';
+              e.currentTarget.style.backgroundColor = '#f8f9ff';
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const files = e.dataTransfer.files;
+              if (files.length > 0) {
+                const file = files[0];
+                // For now, just store the file name. In production, you'd upload to a server
+                handleFieldChange(fieldId, { fileName: file.name, fileSize: file.size, fileType: file.type });
+              }
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+            }}
+            >
+              <input
+                type="file"
+                id={`${fieldId}-file`}
+                name={fieldId}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // For now, just store the file name. In production, you'd upload to a server
+                    handleFieldChange(fieldId, { fileName: file.name, fileSize: file.size, fileType: file.type });
+                  }
+                }}
+                required={field.required}
+              />
+              {value?.fileName ? (
+                <div>
+                  <p style={{ margin: 0, color: '#22c55e', fontWeight: '500' }}>✓ {value.fileName}</p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    {(value.fileSize / 1024).toFixed(2)} KB
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFieldChange(fieldId, null);
+                      const input = document.getElementById(`${fieldId}-file`) as HTMLInputElement;
+                      if (input) input.value = '';
+                    }}
+                    style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.5rem 1rem', 
+                      fontSize: '0.875rem',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ margin: 0, color: '#6b7280' }}>📎 Click or drag file here</p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                    Max file size: 10MB
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case 'dropdown':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -619,6 +821,7 @@ function PublicFormView() {
       case 'multiple_choice':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={`${fieldId}-0`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -649,10 +852,12 @@ function PublicFormView() {
                         onChange={(e) => {
                           handleFieldChange(fieldId, e.target.value);
                           // Auto-advance after selection (with small delay for visual feedback)
+                          const currentIdx = currentQuestionIndex;
+                          const totalFields = visibleFields.length;
                           setTimeout(() => {
-                            if (currentQuestionIndex < visibleFields.length - 1) {
+                            if (currentIdx < totalFields - 1) {
                               handleNext();
-                            } else if (currentQuestionIndex === visibleFields.length - 1) {
+                            } else if (currentIdx === totalFields - 1) {
                               handleSubmit();
                             }
                           }, 300);
@@ -671,6 +876,7 @@ function PublicFormView() {
       case 'checkbox':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={`${fieldId}-0`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -718,6 +924,7 @@ function PublicFormView() {
       case 'yes_no':
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={`${fieldId}-yes`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -732,6 +939,14 @@ function PublicFormView() {
                 <label 
                   htmlFor={`${fieldId}-yes`} 
                   className={`typeform-yesno-option ${value === 'yes' ? 'typeform-yesno-selected' : ''}`}
+                  style={value === 'yes' ? {
+                    borderColor: primaryColor,
+                    background: backgroundType === 'gradient' 
+                      ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                      : primaryColor,
+                    color: 'white',
+                    boxShadow: `0 4px 12px ${primaryColor}40`,
+                  } : {}}
                 >
                   <input
                     type="radio"
@@ -759,6 +974,14 @@ function PublicFormView() {
                 <label 
                   htmlFor={`${fieldId}-no`} 
                   className={`typeform-yesno-option ${value === 'no' ? 'typeform-yesno-selected' : ''}`}
+                  style={value === 'no' ? {
+                    borderColor: primaryColor,
+                    background: backgroundType === 'gradient' 
+                      ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                      : primaryColor,
+                    color: 'white',
+                    boxShadow: `0 4px 12px ${primaryColor}40`,
+                  } : {}}
                 >
                   <input
                     type="radio"
@@ -792,6 +1015,7 @@ function PublicFormView() {
         const maxRating = field.validation_rules?.max || 5;
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={fieldId}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -852,6 +1076,7 @@ function PublicFormView() {
         const scaleLabels = field.options || [];
         return (
           <div key={fieldId} className="form-group">
+            {mediaElement}
             <label htmlFor={`${fieldId}-0`}>
               {field.label}
               {field.required && <span style={{ color: '#dc2626' }}> *</span>}
@@ -1008,9 +1233,29 @@ function PublicFormView() {
   const progress = visibleFields.length > 0 ? ((currentQuestionIndex + 1) / visibleFields.length) * 100 : 0;
   const isLastQuestion = currentQuestionIndex === visibleFields.length - 1;
 
+  // Apply theme
+  const theme = form?.theme || {};
+  const primaryColor = theme.primaryColor || '#667eea';
+  const secondaryColor = theme.secondaryColor || '#764ba2';
+  const fontFamily = theme.fontFamily || 'Inter, system-ui, sans-serif';
+  const logoUrl = theme.logoUrl || '';
+  const backgroundType = theme.backgroundType || 'gradient';
+  const backgroundColor = theme.backgroundColor || primaryColor;
+
+  // Calculate background style
+  const containerStyle: React.CSSProperties = {
+    fontFamily: fontFamily,
+  };
+
+  if (backgroundType === 'gradient') {
+    containerStyle.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+  } else {
+    containerStyle.background = backgroundColor;
+  }
+
   if (!currentField && visibleFields.length === 0) {
     return (
-      <div className="typeform-container">
+      <div className="typeform-container" style={containerStyle}>
         <div className="typeform-content">
           <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
             This form has no fields.
@@ -1021,16 +1266,44 @@ function PublicFormView() {
   }
 
   return (
-    <div className="typeform-container">
+    <div className="typeform-container" style={containerStyle}>
+      {/* Logo */}
+      {logoUrl && (
+        <div style={{ 
+          position: 'fixed', 
+          top: '1rem', 
+          left: '50%', 
+          transform: 'translateX(-50%)', 
+          zIndex: 101,
+          maxHeight: '60px',
+          maxWidth: '200px'
+        }}>
+          <img 
+            src={logoUrl} 
+            alt="Logo" 
+            style={{ 
+              maxHeight: '100%', 
+              maxWidth: '100%', 
+              objectFit: 'contain' 
+            }} 
+            onError={(e) => {
+              // Hide logo if image fails to load
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
       {/* Progress Bar */}
       {visibleFields.length > 0 && (
-        <div className="typeform-progress">
+        <div className="typeform-progress" style={{ marginTop: logoUrl ? '80px' : '0' }}>
           <div className="typeform-progress-bar">
             <motion.div
               className="typeform-progress-fill"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
+              style={{ background: 'white' }}
             />
           </div>
           <div className="typeform-progress-text">
@@ -1086,6 +1359,11 @@ function PublicFormView() {
                     onClick={handleNext}
                     className="typeform-btn typeform-btn-primary"
                     disabled={currentField.required && !formValues[currentField.id || '']}
+                    style={{
+                      background: backgroundType === 'gradient' 
+                        ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                        : primaryColor,
+                    }}
                   >
                     Next →
                   </button>
@@ -1095,6 +1373,11 @@ function PublicFormView() {
                     onClick={handleSubmit}
                     className="typeform-btn typeform-btn-primary"
                     disabled={submitting || (currentField.required && !formValues[currentField.id || ''])}
+                    style={{
+                      background: backgroundType === 'gradient' 
+                        ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                        : primaryColor,
+                    }}
                   >
                     {submitting ? 'Submitting...' : (form.thank_you_screen?.submit_button_text || 'Submit')}
                   </button>

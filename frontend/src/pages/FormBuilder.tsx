@@ -16,12 +16,14 @@ const FIELD_TYPES = [
   { value: 'date', label: 'Date' },
   { value: 'time', label: 'Time' },
   { value: 'datetime', label: 'Date & Time' },
+  { value: 'date_range', label: 'Date Range' },
   { value: 'dropdown', label: 'Dropdown' },
   { value: 'multiple_choice', label: 'Multiple Choice' },
   { value: 'checkbox', label: 'Checkboxes' },
   { value: 'yes_no', label: 'Yes/No' },
   { value: 'rating', label: 'Rating (Stars)' },
   { value: 'opinion_scale', label: 'Opinion Scale' },
+  { value: 'file_upload', label: 'File Upload' },
 ];
 
 function FormBuilder() {
@@ -34,6 +36,14 @@ function FormBuilder() {
     description: '',
     status: 'draft',
     fields: [],
+    theme: {
+      primaryColor: '#667eea',
+      secondaryColor: '#764ba2',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      logoUrl: '',
+      backgroundType: 'gradient', // 'gradient' or 'solid'
+      backgroundColor: '#667eea',
+    },
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,6 +68,14 @@ function FormBuilder() {
         description: form.description || '',
         status: form.status,
         fields: form.fields || [],
+        theme: form.theme || {
+          primaryColor: '#667eea',
+          secondaryColor: '#764ba2',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          logoUrl: '',
+          backgroundType: 'gradient',
+          backgroundColor: '#667eea',
+        },
       });
     } catch (error: any) {
       console.error('Failed to load form:', error);
@@ -205,6 +223,7 @@ function FormBuilder() {
           name: formData.name,
           description: formData.description,
           status: formData.status,
+          theme: formData.theme,
         });
         
         // Sync fields - get current form to see existing fields
@@ -248,6 +267,7 @@ function FormBuilder() {
           description: formData.description,
           status: formData.status,
           fields: formData.fields || [],
+          theme: formData.theme,
         };
         
         console.log('Payload being sent:', payload);
@@ -340,6 +360,145 @@ function FormBuilder() {
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
               </select>
+            </div>
+          </div>
+
+          {/* Theme Customization */}
+          <div className="card mb-4">
+            <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Theme & Branding</h2>
+            
+            <div className="form-group">
+              <label htmlFor="theme-primary-color">Primary Color</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  id="theme-primary-color"
+                  value={formData.theme?.primaryColor || '#667eea'}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    theme: { ...formData.theme, primaryColor: e.target.value },
+                  })}
+                  style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                />
+                <input
+                  type="text"
+                  value={formData.theme?.primaryColor || '#667eea'}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    theme: { ...formData.theme, primaryColor: e.target.value },
+                  })}
+                  placeholder="#667eea"
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="theme-secondary-color">Secondary Color</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  id="theme-secondary-color"
+                  value={formData.theme?.secondaryColor || '#764ba2'}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    theme: { ...formData.theme, secondaryColor: e.target.value },
+                  })}
+                  style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                />
+                <input
+                  type="text"
+                  value={formData.theme?.secondaryColor || '#764ba2'}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    theme: { ...formData.theme, secondaryColor: e.target.value },
+                  })}
+                  placeholder="#764ba2"
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="theme-background-type">Background Type</label>
+              <select
+                id="theme-background-type"
+                value={formData.theme?.backgroundType || 'gradient'}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  theme: { ...formData.theme, backgroundType: e.target.value },
+                })}
+              >
+                <option value="gradient">Gradient</option>
+                <option value="solid">Solid Color</option>
+              </select>
+            </div>
+
+            {formData.theme?.backgroundType === 'solid' && (
+              <div className="form-group">
+                <label htmlFor="theme-background-color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="theme-background-color"
+                    value={formData.theme?.backgroundColor || '#667eea'}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      theme: { ...formData.theme, backgroundColor: e.target.value },
+                    })}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.theme?.backgroundColor || '#667eea'}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      theme: { ...formData.theme, backgroundColor: e.target.value },
+                    })}
+                    placeholder="#667eea"
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="theme-font-family">Font Family</label>
+              <select
+                id="theme-font-family"
+                value={formData.theme?.fontFamily || 'Inter, system-ui, sans-serif'}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  theme: { ...formData.theme, fontFamily: e.target.value },
+                })}
+              >
+                <option value="Inter, system-ui, sans-serif">Inter</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="'Open Sans', sans-serif">Open Sans</option>
+                <option value="'Lato', sans-serif">Lato</option>
+                <option value="'Montserrat', sans-serif">Montserrat</option>
+                <option value="'Poppins', sans-serif">Poppins</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Merriweather', serif">Merriweather</option>
+                <option value="system-ui, sans-serif">System Default</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="theme-logo-url">Logo URL (optional)</label>
+              <input
+                type="url"
+                id="theme-logo-url"
+                value={formData.theme?.logoUrl || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  theme: { ...formData.theme, logoUrl: e.target.value },
+                })}
+                placeholder="https://example.com/logo.png"
+              />
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                Enter a URL to your logo image. It will appear at the top of your form.
+              </p>
             </div>
           </div>
 
@@ -445,6 +604,47 @@ function FormBuilder() {
                   placeholder="Help text for this field"
                   rows={2}
                 />
+              </div>
+
+              {/* Media Upload */}
+              <div className="form-group">
+                <label htmlFor={`field-media-url-${selectedFieldIndex}`}>Image/Video URL (optional)</label>
+                <input
+                  type="url"
+                  id={`field-media-url-${selectedFieldIndex}`}
+                  name={`field-media-url-${selectedFieldIndex}`}
+                  value={selectedField.validation_rules?.mediaUrl || ''}
+                  onChange={(e) => updateField(selectedFieldIndex!, {
+                    validation_rules: {
+                      ...selectedField.validation_rules,
+                      mediaUrl: e.target.value,
+                    },
+                  })}
+                  placeholder="https://example.com/image.jpg or video.mp4"
+                />
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Add an image or video to display with this question. Supports JPG, PNG, GIF, MP4, WebM.
+                </p>
+                {selectedField.validation_rules?.mediaUrl && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    {selectedField.validation_rules.mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                      <img 
+                        src={selectedField.validation_rules.mediaUrl} 
+                        alt="Preview" 
+                        style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', marginTop: '0.5rem' }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : selectedField.validation_rules.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                      <video 
+                        src={selectedField.validation_rules.mediaUrl} 
+                        controls 
+                        style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', marginTop: '0.5rem' }}
+                      />
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
