@@ -16,6 +16,7 @@ function PublicFormView() {
   // Use ref to track if we're already loading to prevent multiple simultaneous loads
   const isLoadingRef = useRef(false);
   const loadedSlugRef = useRef<string | null>(null);
+  const redirectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current);
@@ -61,7 +62,14 @@ function PublicFormView() {
         }
         
         console.log('[PublicFormView] Setting form data');
-        setForm(response.data);
+        const formData = response.data;
+        setForm(formData);
+        
+        // Store redirect URL in ref for later use
+        if (formData?.thank_you_screen?.redirect_url) {
+          redirectUrlRef.current = formData.thank_you_screen.redirect_url;
+        }
+        
         console.log('[PublicFormView] Setting loading to false');
         setLoading(false);
         isLoadingRef.current = false;
@@ -686,14 +694,8 @@ function PublicFormView() {
     );
   }
 
-  // Handle redirect after submission - use ref to store redirect URL to avoid dependency issues
-  const redirectUrlRef = useRef<string | null>(null);
-  
-  useEffect(() => {
-    if (form?.thank_you_screen?.redirect_url) {
-      redirectUrlRef.current = form.thank_you_screen.redirect_url;
-    }
-  }, [form?.thank_you_screen?.redirect_url]);
+  // Store redirect URL in ref when form is loaded (do this in the main useEffect)
+  // This avoids having a separate useEffect that could cause issues
 
   useEffect(() => {
     console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'redirectUrlRef:', redirectUrlRef.current);
