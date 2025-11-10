@@ -82,11 +82,18 @@ nav {
   transform: translateX(24px); /* Right position for Quotes */
 }
 
+nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
 nav ul {
   list-style: none;
   display: flex;
   gap: 2rem;
   align-items: center;
+  flex: 1;
 }
 
 nav a {
@@ -105,6 +112,43 @@ nav a:hover {
 nav a.active {
   background-color: #2563eb;
   color: white;
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+}
+
+.user-email {
+  font-weight: 500;
+  color: #333;
+}
+
+.user-role {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.logout-button {
+  background-color: #dc2626;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: #b91c1c;
 }
 
 /* Buttons */

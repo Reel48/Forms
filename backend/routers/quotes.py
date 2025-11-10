@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Quote, QuoteCreate, QuoteUpdate, LineItem, LineItemCreate
 from database import supabase
 from stripe_service import StripeService
+from auth import get_current_user, get_current_admin, get_optional_user
 import uuid
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
@@ -39,9 +40,12 @@ def calculate_quote_totals(line_items: List[dict], tax_rate: Decimal) -> dict:
 async def get_quotes(
     search: Optional[str] = Query(None, description="Search by title, quote number, or client name"),
     status: Optional[str] = Query(None, description="Filter by quote status (draft, sent, viewed, accepted, declined)"),
-    payment_status: Optional[str] = Query(None, description="Filter by payment status (unpaid, paid, partially_paid, refunded, failed, voided, uncollectible)")
+    payment_status: Optional[str] = Query(None, description="Filter by payment status (unpaid, paid, partially_paid, refunded, failed, voided, uncollectible)"),
+    current_user: Optional[dict] = Depends(get_optional_user)
 ):
-    """Get all quotes with optional filtering"""
+    """Get all quotes with optional filtering.
+    Admins see all quotes. Customers see only assigned quotes.
+    """
     try:
         # Valid status values
         valid_statuses = {"draft", "sent", "viewed", "accepted", "declined"}
@@ -62,6 +66,17 @@ async def get_quotes(
         
         # Start building query
         query = supabase.table("quotes").select("*, clients(*), line_items(*)")
+        
+        # If customer, only show assigned quotes
+        if current_user and current_user.get("role") == "customer":
+            # Get assigned quote IDs
+            assignments_response = supabase.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
+            assigned_quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
+            
+            if not assigned_quote_ids:
+                return []  # No assigned quotes
+            
+            query = query.in_("id", assigned_quote_ids)
         
         # Apply status filter
         if status:
@@ -123,12 +138,21 @@ async def get_quotes(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{quote_id}", response_model=Quote)
-async def get_quote(quote_id: str):
-    """Get a specific quote"""
+async def get_quote(quote_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """Get a specific quote.
+    Admins can see any quote. Customers can only see assigned quotes.
+    """
     try:
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
+        
+        # If customer, verify they have access
+        if current_user and current_user.get("role") == "customer":
+            assignment = supabase.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
+            if not assignment.data:
+                raise HTTPException(status_code=403, detail="You don't have access to this quote")
+        
         return response.data[0]
     except HTTPException:
         raise
@@ -136,8 +160,8 @@ async def get_quote(quote_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("", response_model=Quote)
-async def create_quote(quote: QuoteCreate):
-    """Create a new quote"""
+async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_current_admin)):
+    """Create a new quote (admin only)"""
     try:
         # Generate quote number
         quote_number = f"QT-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
@@ -168,6 +192,7 @@ async def create_quote(quote: QuoteCreate):
             "subtotal": totals["subtotal"],
             "tax_amount": totals["tax_amount"],
             "total": totals["total"],
+            "created_by": current_admin["id"],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat()
         })
@@ -201,9 +226,16 @@ async def create_quote(quote: QuoteCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{quote_id}/accept", response_model=Quote)
-async def accept_quote(quote_id: str):
-    """Accept a quote and optionally create Stripe invoice"""
+async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_user)):
+    """Accept a quote and optionally create Stripe invoice.
+    Customers can accept their assigned quotes. Admins can accept any quote.
+    """
     try:
+        # If customer, verify they have access to this quote
+        if current_user.get("role") == "customer":
+            assignment = supabase.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
+            if not assignment.data:
+                raise HTTPException(status_code=403, detail="You don't have access to this quote")
         # Update quote status to accepted
         update_data = {
             "status": "accepted",
@@ -224,8 +256,8 @@ async def accept_quote(quote_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{quote_id}", response_model=Quote)
-async def update_quote(quote_id: str, quote_update: QuoteUpdate):
-    """Update a quote"""
+async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
+    """Update a quote (admin only)"""
     try:
         # Convert to dict, ensuring Decimal fields are strings
         update_data = quote_update.model_dump(exclude_unset=True) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
@@ -265,8 +297,8 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{quote_id}")
-async def delete_quote(quote_id: str):
-    """Delete a quote"""
+async def delete_quote(quote_id: str, current_admin: dict = Depends(get_current_admin)):
+    """Delete a quote (admin only)"""
     try:
         # Delete line items first (foreign key constraint)
         supabase.table("line_items").delete().eq("quote_id", quote_id).execute()

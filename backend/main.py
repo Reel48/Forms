@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe, company_settings, forms
+from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments
 from decimal import Decimal
 import os
 
@@ -35,6 +35,8 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
+app.include_router(assignments.router)
 app.include_router(quotes.router)
 app.include_router(clients.router)
 app.include_router(pdf.router)

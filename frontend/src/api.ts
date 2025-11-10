@@ -13,6 +13,32 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include auth token if available
+api.interceptors.request.use(
+  (config) => {
+    // Token will be added by AuthContext when user is logged in
+    // This ensures token is included in all requests
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - redirect to login
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Add request interceptor to log all API requests
 api.interceptors.request.use(
   (config) => {

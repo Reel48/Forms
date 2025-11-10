@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile
+from fastapi import APIRouter, HTTPException, Query, File, UploadFile, Depends
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormFieldUpdate, FormSubmissionCreate, FormSubmission
 from pydantic import ValidationError
 from database import supabase, supabase_storage
+from auth import get_current_user, get_current_admin, get_optional_user
 import uuid
 import secrets
 import string
@@ -27,11 +28,25 @@ def generate_url_slug() -> str:
 @router.get("", response_model=List[Form])
 async def get_forms(
     status: Optional[str] = Query(None, description="Filter by status (draft, published, archived)"),
-    search: Optional[str] = Query(None, description="Search by name or description")
+    search: Optional[str] = Query(None, description="Search by name or description"),
+    current_user: Optional[dict] = Depends(get_optional_user)
 ):
-    """Get all forms with optional filtering"""
+    """Get all forms with optional filtering.
+    Admins see all forms. Customers see only assigned forms.
+    """
     try:
         query = supabase.table("forms").select("*, form_fields(*)")
+        
+        # If customer, only show assigned forms
+        if current_user and current_user.get("role") == "customer":
+            # Get assigned form IDs
+            assignments_response = supabase.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
+            assigned_form_ids = [a["form_id"] for a in (assignments_response.data or [])]
+            
+            if not assigned_form_ids:
+                return []  # No assigned forms
+            
+            query = query.in_("id", assigned_form_ids)
         
         # Apply status filter
         if status:
@@ -100,8 +115,10 @@ async def get_form_by_slug(slug: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{form_id}", response_model=Form)
-async def get_form(form_id: str):
-    """Get a single form by ID with all fields"""
+async def get_form(form_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """Get a single form by ID with all fields.
+    Admins can see any form. Customers can only see assigned forms.
+    """
     try:
         response = supabase.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
         
@@ -109,6 +126,12 @@ async def get_form(form_id: str):
             raise HTTPException(status_code=404, detail="Form not found")
         
         form = response.data
+        
+        # If customer, verify they have access
+        if current_user and current_user.get("role") == "customer":
+            assignment = supabase.table("form_assignments").select("id").eq("form_id", form_id).eq("user_id", current_user["id"]).execute()
+            if not assignment.data:
+                raise HTTPException(status_code=403, detail="You don't have access to this form")
         
         # Sort fields by order_index and map form_fields to fields for Pydantic model
         fields = form.get("form_fields", [])
@@ -128,8 +151,8 @@ async def get_form(form_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("", response_model=Form)
-async def create_form(form: FormCreate):
-    """Create a new form with fields"""
+async def create_form(form: FormCreate, current_admin: dict = Depends(get_current_admin)):
+    """Create a new form with fields (admin only)"""
     try:
         # Log incoming request for debugging
         print(f"Creating form: {form.name}")
@@ -193,6 +216,7 @@ async def create_form(form: FormCreate):
             "settings": settings,
             "welcome_screen": welcome_screen,
             "thank_you_screen": thank_you_screen,
+            "created_by": current_admin["id"],
             "created_at": now,
             "updated_at": now
         }
@@ -282,8 +306,8 @@ async def create_form(form: FormCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{form_id}", response_model=Form)
-async def update_form(form_id: str, form_update: FormUpdate):
-    """Update a form"""
+async def update_form(form_id: str, form_update: FormUpdate, current_admin: dict = Depends(get_current_admin)):
+    """Update a form (admin only)"""
     try:
         # Check if form exists
         existing = supabase.table("forms").select("id").eq("id", form_id).execute()
@@ -321,8 +345,8 @@ async def update_form(form_id: str, form_update: FormUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{form_id}")
-async def delete_form(form_id: str):
-    """Delete a form and all its fields"""
+async def delete_form(form_id: str, current_admin: dict = Depends(get_current_admin)):
+    """Delete a form and all its fields (admin only)"""
     try:
         # Check if form exists
         existing = supabase.table("forms").select("id").eq("id", form_id).execute()
@@ -341,8 +365,8 @@ async def delete_form(form_id: str):
 
 # Field management endpoints
 @router.post("/{form_id}/fields", response_model=FormField)
-async def create_field(form_id: str, field: FormFieldCreate):
-    """Add a field to a form"""
+async def create_field(form_id: str, field: FormFieldCreate, current_admin: dict = Depends(get_current_admin)):
+    """Add a field to a form (admin only)"""
     try:
         # Check if form exists
         existing = supabase.table("forms").select("id").eq("id", form_id).execute()
@@ -382,8 +406,8 @@ async def create_field(form_id: str, field: FormFieldCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{form_id}/fields/{field_id}", response_model=FormField)
-async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdate):
-    """Update a form field"""
+async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdate, current_admin: dict = Depends(get_current_admin)):
+    """Update a form field (admin only)"""
     try:
         # Check if field exists and belongs to form
         existing = supabase.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
@@ -407,8 +431,8 @@ async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdat
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{form_id}/fields/{field_id}")
-async def delete_field(form_id: str, field_id: str):
-    """Delete a form field"""
+async def delete_field(form_id: str, field_id: str, current_admin: dict = Depends(get_current_admin)):
+    """Delete a form field (admin only)"""
     try:
         # Check if field exists and belongs to form
         existing = supabase.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
@@ -426,8 +450,8 @@ async def delete_field(form_id: str, field_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{form_id}/fields/reorder")
-async def reorder_fields(form_id: str, field_orders: List[dict]):
-    """Reorder form fields"""
+async def reorder_fields(form_id: str, field_orders: List[dict], current_admin: dict = Depends(get_current_admin)):
+    """Reorder form fields (admin only)"""
     try:
         # Check if form exists
         existing = supabase.table("forms").select("id").eq("id", form_id).execute()
@@ -451,8 +475,8 @@ async def reorder_fields(form_id: str, field_orders: List[dict]):
 
 # Form Submission endpoints
 @router.get("/{form_id}/submissions", response_model=List[FormSubmission])
-async def get_form_submissions(form_id: str):
-    """Get all submissions for a form"""
+async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_current_admin)):
+    """Get all submissions for a form (admin only)"""
     try:
         # Check if form exists
         form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()

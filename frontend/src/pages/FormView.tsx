@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
+import { useAuth } from '../contexts/AuthContext';
+import { AssignmentModal } from '../components/AssignmentModal';
+import { AssignmentsList } from '../components/AssignmentsList';
+import api from '../api';
 
 const FIELD_TYPE_LABELS: Record<string, string> = {
   text: 'Short Text',
@@ -22,12 +26,34 @@ function FormView() {
   const [form, setForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const { role } = useAuth();
 
   useEffect(() => {
     if (id) {
       loadForm(id);
+      loadAssignments();
     }
   }, [id]);
+
+  const loadAssignments = async () => {
+    try {
+      const response = await api.get(`/api/forms/${id}/assignments`);
+      setAssignments(response.data || []);
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+    }
+  };
+
+  const handleAssign = async (userIds: string[]) => {
+    try {
+      await api.post(`/api/forms/${id}/assign`, { user_ids: userIds });
+      await loadAssignments();
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const loadForm = async (formId: string) => {
     setLoading(true);
@@ -97,7 +123,13 @@ function FormView() {
           <h1>{form.name || 'Form Details'}</h1>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button onClick={() => navigate(`/forms/${id}/edit`)} className="btn-primary">
+          {role === 'admin' && (
+            <button onClick={() => setShowAssignmentModal(true)} className="btn-primary">
+              Assign to Customers
+            </button>
+          )}
+          {role === 'admin' && (
+            <button onClick={() => navigate(`/forms/${id}/edit`)} className="btn-primary">
             Edit
           </button>
           <button onClick={handleDelete} className="btn-danger">
@@ -307,19 +339,38 @@ function FormView() {
       </div>
 
       {/* Submissions Section */}
-      <div className="card mt-4">
-        <div className="flex-between">
-          <div>
-            <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Submissions</h3>
-            <p className="text-muted" style={{ margin: 0, fontSize: '0.875rem' }}>
-              View and manage all form responses
-            </p>
+      {role === 'admin' && (
+        <div className="card mt-4">
+          <div className="flex-between">
+            <div>
+              <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Submissions</h3>
+              <p className="text-muted" style={{ margin: 0, fontSize: '0.875rem' }}>
+                View and manage all form responses
+              </p>
+            </div>
+            <button onClick={() => navigate(`/forms/${id}/submissions`)} className="btn-primary">
+              View Submissions
+            </button>
           </div>
-          <button onClick={() => navigate(`/forms/${id}/submissions`)} className="btn-primary">
-            View Submissions
-          </button>
         </div>
-      </div>
+      )}
+
+      {role === 'admin' && (
+        <AssignmentsList
+          formId={id}
+          onUnassign={loadAssignments}
+        />
+      )}
+
+      {role === 'admin' && (
+        <AssignmentModal
+          isOpen={showAssignmentModal}
+          onClose={() => setShowAssignmentModal(false)}
+          onAssign={handleAssign}
+          title={`Assign Form: ${form.name}`}
+          existingAssignments={assignments}
+        />
+      )}
     </div>
   );
 }

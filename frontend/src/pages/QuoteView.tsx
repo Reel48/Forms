@@ -3,6 +3,10 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { quotesAPI, stripeAPI, companySettingsAPI } from '../api';
 import type { Quote, CompanySettings } from '../api';
 import { renderTextWithLinks } from '../utils/textUtils';
+import { useAuth } from '../contexts/AuthContext';
+import { AssignmentModal } from '../components/AssignmentModal';
+import { AssignmentsList } from '../components/AssignmentsList';
+import api from '../api';
 
 // Helper function to strip HTML tags and get clean numeric value
 const getCleanNumericValue = (value: string | number): number => {
@@ -20,10 +24,14 @@ function QuoteView() {
   const [loading, setLoading] = useState(true);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const { role } = useAuth();
 
   useEffect(() => {
     loadQuote();
     loadCompanySettings();
+    loadAssignments();
     
     // Refresh quote every 10 seconds to catch webhook updates
     const interval = setInterval(() => {
@@ -32,6 +40,24 @@ function QuoteView() {
     
     return () => clearInterval(interval);
   }, [id]);
+
+  const loadAssignments = async () => {
+    try {
+      const response = await api.get(`/api/quotes/${id}/assignments`);
+      setAssignments(response.data || []);
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+    }
+  };
+
+  const handleAssign = async (userIds: string[]) => {
+    try {
+      await api.post(`/api/quotes/${id}/assign`, { user_ids: userIds });
+      await loadAssignments();
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const loadQuote = async () => {
     try {
@@ -174,15 +200,24 @@ function QuoteView() {
             <p className="text-muted">Quote #{quote.quote_number}</p>
           </div>
           <div className="flex gap-2">
+            {role === 'admin' && (
+              <button onClick={() => setShowAssignmentModal(true)} className="btn-primary">
+                Assign to Customers
+              </button>
+            )}
             <button onClick={handleDownloadPDF} className="btn-primary">
               Download PDF
             </button>
-            <Link to={`/quotes/${id}/edit`} className="btn-secondary">
-              Edit
-            </Link>
-            <button onClick={handleDelete} className="btn-danger">
-              Delete
-            </button>
+            {role === 'admin' && (
+              <>
+                <Link to={`/quotes/${id}/edit`} className="btn-secondary">
+                  Edit
+                </Link>
+                <button onClick={handleDelete} className="btn-danger">
+                  Delete
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -375,7 +410,24 @@ function QuoteView() {
             </div>
           </div>
         )}
+
+        {role === 'admin' && (
+          <AssignmentsList
+            quoteId={id}
+            onUnassign={loadAssignments}
+          />
+        )}
       </div>
+
+      {role === 'admin' && (
+        <AssignmentModal
+          isOpen={showAssignmentModal}
+          onClose={() => setShowAssignmentModal(false)}
+          onAssign={handleAssign}
+          title={`Assign Quote: ${quote.title}`}
+          existingAssignments={assignments}
+        />
+      )}
     </div>
   );
 }
