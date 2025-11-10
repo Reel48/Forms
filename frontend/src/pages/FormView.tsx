@@ -97,9 +97,9 @@ function FormView() {
           <h1>{form.name || 'Form Details'}</h1>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link to={`/forms/${id}/edit`} className="btn-primary">
+          <button onClick={() => navigate(`/forms/${id}/edit`)} className="btn-primary">
             Edit
-          </Link>
+          </button>
           <button onClick={handleDelete} className="btn-danger">
             Delete
           </button>
@@ -315,9 +315,9 @@ function FormView() {
               View and manage all form responses
             </p>
           </div>
-          <Link to={`/forms/${id}/submissions`} className="btn-primary">
+          <button onClick={() => navigate(`/forms/${id}/submissions`)} className="btn-primary">
             View Submissions
-          </Link>
+          </button>
         </div>
       </div>
     </div>
