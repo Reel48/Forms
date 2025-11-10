@@ -267,6 +267,18 @@ export const formsAPI = {
   submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
   getSubmissions: (formId: string) => api.get<FormSubmission[]>(`/api/forms/${formId}/submissions`),
   getSubmission: (formId: string, submissionId: string) => api.get<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}`),
+  // File upload
+  uploadFile: (formId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{file_url: string; file_name: string; file_size: number; file_type: string; storage_path: string}>(`/api/forms/${formId}/upload-file`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  // Payment intent
+  createPaymentIntent: (formId: string, amount: number, currency?: string, metadata?: Record<string, any>) => api.post<{client_secret: string; payment_intent_id: string}>(`/api/forms/${formId}/create-payment-intent`, { amount, currency: currency || 'usd', metadata }),
 };
 
 export default api;

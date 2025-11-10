@@ -13,6 +13,10 @@ function PublicFormView() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [startTime] = useState(Date.now());
+  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
+  const [paymentIntents, setPaymentIntents] = useState<Record<string, { clientSecret: string; paymentIntentId: string }>>({});
+  const [paymentProcessing, setPaymentProcessing] = useState<Record<string, boolean>>({});
+  const [rankingDragState, setRankingDragState] = useState<Record<string, { draggedIndex: number | null; dragStart: number | null; dragOver: number | null }>>({});
   
   // Typeform-like state: one question at a time
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -364,6 +368,36 @@ function PublicFormView() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentQuestionIndex, visibleFields.length, submitted, loading, form, handleNext, handlePrevious, handleSubmit]);
 
+  // Initialize payment intents for payment fields
+  useEffect(() => {
+    if (!form?.id || !form?.fields) return;
+    
+    form.fields.forEach(field => {
+      if (field.field_type === 'payment') {
+        const paymentAmount = field.validation_rules?.paymentAmount || 0;
+        const paymentCurrency = field.validation_rules?.paymentCurrency || 'usd';
+        const fieldId = field.id || '';
+        
+        if (paymentAmount > 0 && !paymentIntents[fieldId]) {
+          formsAPI.createPaymentIntent(form.id, paymentAmount, paymentCurrency)
+            .then(response => {
+              setPaymentIntents(prev => ({
+                ...prev,
+                [fieldId]: {
+                  clientSecret: response.data.client_secret,
+                  paymentIntentId: response.data.payment_intent_id
+                }
+              }));
+            })
+            .catch(err => {
+              console.error('Failed to initialize payment intent:', err);
+            });
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form?.id, form?.fields]);
+
   // Helper function to render media (image/video) for a field
   const renderMedia = (field: FormField) => {
     const mediaUrl = field.validation_rules?.mediaUrl;
@@ -691,6 +725,29 @@ function PublicFormView() {
         );
 
       case 'file_upload':
+        const uploading = uploadingFiles[fieldId] || false;
+        const handleFileUpload = async (file: File) => {
+          if (!form?.id) return;
+          if (file.size > 10 * 1024 * 1024) {
+            setError('File size exceeds 10MB limit');
+            return;
+          }
+          setUploadingFiles(prev => ({ ...prev, [fieldId]: true }));
+          try {
+            const response = await formsAPI.uploadFile(form.id, file);
+            handleFieldChange(fieldId, {
+              file_url: response.data.file_url,
+              file_name: response.data.file_name,
+              file_size: response.data.file_size,
+              file_type: response.data.file_type,
+              storage_path: response.data.storage_path
+            });
+          } catch (err: any) {
+            setError(err?.response?.data?.detail || 'Failed to upload file');
+          } finally {
+            setUploadingFiles(prev => ({ ...prev, [fieldId]: false }));
+          }
+        };
         return (
           <div key={fieldId} className="form-group">
             {mediaElement}
@@ -708,12 +765,14 @@ function PublicFormView() {
               borderRadius: '8px', 
               padding: '2rem', 
               textAlign: 'center',
-              cursor: 'pointer',
+              cursor: uploading ? 'wait' : 'pointer',
               transition: 'all 0.2s',
-              backgroundColor: value ? '#f0fdf4' : '#f9fafb'
+              backgroundColor: value?.file_url ? '#f0fdf4' : '#f9fafb',
+              opacity: uploading ? 0.6 : 1
             }}
-            onClick={() => document.getElementById(`${fieldId}-file`)?.click()}
+            onClick={() => !uploading && document.getElementById(`${fieldId}-file`)?.click()}
             onDragOver={(e) => {
+              if (uploading) return;
               e.preventDefault();
               e.currentTarget.style.borderColor = '#667eea';
               e.currentTarget.style.backgroundColor = '#f8f9ff';
@@ -724,11 +783,10 @@ function PublicFormView() {
             }}
             onDrop={(e) => {
               e.preventDefault();
+              if (uploading) return;
               const files = e.dataTransfer.files;
               if (files.length > 0) {
-                const file = files[0];
-                // For now, just store the file name. In production, you'd upload to a server
-                handleFieldChange(fieldId, { fileName: file.name, fileSize: file.size, fileType: file.type });
+                handleFileUpload(files[0]);
               }
               e.currentTarget.style.borderColor = '#d1d5db';
               e.currentTarget.style.backgroundColor = '#f9fafb';
@@ -741,18 +799,22 @@ function PublicFormView() {
                 style={{ display: 'none' }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) {
-                    // For now, just store the file name. In production, you'd upload to a server
-                    handleFieldChange(fieldId, { fileName: file.name, fileSize: file.size, fileType: file.type });
+                  if (file && !uploading) {
+                    handleFileUpload(file);
                   }
                 }}
-                required={field.required}
+                required={field.required && !value?.file_url}
+                disabled={uploading}
               />
-              {value?.fileName ? (
+              {uploading ? (
                 <div>
-                  <p style={{ margin: 0, color: '#22c55e', fontWeight: '500' }}>✓ {value.fileName}</p>
+                  <p style={{ margin: 0, color: '#667eea' }}>Uploading...</p>
+                </div>
+              ) : value?.file_url ? (
+                <div>
+                  <p style={{ margin: 0, color: '#22c55e', fontWeight: '500' }}>✓ {value.file_name}</p>
                   <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                    {(value.fileSize / 1024).toFixed(2)} KB
+                    {(value.file_size / 1024).toFixed(2)} KB
                   </p>
                   <button
                     type="button"
@@ -1141,6 +1203,288 @@ function PublicFormView() {
                 </div>
               </div>
             </div>
+          </div>
+        );
+
+      case 'matrix':
+        const matrixColumns = field.validation_rules?.matrixColumns || [];
+        const matrixType = field.validation_rules?.matrixType || 'radio';
+        const matrixRows = field.options || [];
+        return (
+          <div key={fieldId} className="form-group">
+            {mediaElement}
+            <label htmlFor={fieldId}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {field.description && (
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+                {field.description}
+              </p>
+            )}
+            {matrixRows.length > 0 && matrixColumns.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '0.75rem', borderBottom: '2px solid #e5e7eb', fontWeight: '500' }}></th>
+                      {matrixColumns.map((col: string, colIdx: number) => (
+                        <th key={colIdx} style={{ textAlign: 'center', padding: '0.75rem', borderBottom: '2px solid #e5e7eb', fontWeight: '500', fontSize: '0.875rem' }}>
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrixRows.map((row: any, rowIdx: number) => {
+                      const rowValue = value?.[rowIdx] || (matrixType === 'checkbox' ? [] : '');
+                      return (
+                        <tr key={rowIdx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '0.75rem', fontWeight: '500' }}>
+                            {row.label || row.value}
+                          </td>
+                          {matrixColumns.map((col: string, colIdx: number) => {
+                            const cellId = `${fieldId}-${rowIdx}-${colIdx}`;
+                            if (matrixType === 'checkbox') {
+                              const isChecked = Array.isArray(rowValue) && rowValue.includes(col);
+                              return (
+                                <td key={colIdx} style={{ textAlign: 'center', padding: '0.5rem' }}>
+                                  <input
+                                    type="checkbox"
+                                    id={cellId}
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const currentRowValue = Array.isArray(rowValue) ? [...rowValue] : [];
+                                      const newRowValue = e.target.checked
+                                        ? [...currentRowValue, col]
+                                        : currentRowValue.filter((v: string) => v !== col);
+                                      const newValue = { ...value, [rowIdx]: newRowValue };
+                                      handleFieldChange(fieldId, newValue);
+                                    }}
+                                  />
+                                </td>
+                              );
+                            } else {
+                              return (
+                                <td key={colIdx} style={{ textAlign: 'center', padding: '0.5rem' }}>
+                                  <input
+                                    type="radio"
+                                    id={cellId}
+                                    name={`${fieldId}-${rowIdx}`}
+                                    value={col}
+                                    checked={rowValue === col}
+                                    onChange={(e) => {
+                                      const newValue = { ...value, [rowIdx]: e.target.value };
+                                      handleFieldChange(fieldId, newValue);
+                                    }}
+                                  />
+                                </td>
+                              );
+                            }
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', fontStyle: 'italic' }}>
+                Configure rows (Options) and columns (Matrix Configuration) to display the matrix
+              </p>
+            )}
+          </div>
+        );
+
+      case 'ranking':
+        const rankingOptions = field.options || [];
+        const dragState = rankingDragState[fieldId] || { draggedIndex: null, dragStart: null, dragOver: null };
+        
+        const handleDragStart = (index: number) => {
+          setRankingDragState(prev => ({ ...prev, [fieldId]: { draggedIndex: index, dragStart: index, dragOver: null } }));
+        };
+        
+        const handleDragOver = (e: React.DragEvent, index: number) => {
+          e.preventDefault();
+          setRankingDragState(prev => ({ ...prev, [fieldId]: { ...prev[fieldId] || { draggedIndex: null, dragStart: null, dragOver: null }, dragOver: index } }));
+        };
+        
+        const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+          e.preventDefault();
+          const startIndex = dragState.dragStart;
+          if (startIndex === null) return;
+          
+          const currentRanking = value || rankingOptions.map((_, idx) => idx);
+          const newRanking = [...currentRanking];
+          
+          // Remove dragged item
+          const [dragged] = newRanking.splice(startIndex, 1);
+          // Insert at new position
+          newRanking.splice(dropIndex, 0, dragged);
+          
+          handleFieldChange(fieldId, newRanking);
+          setRankingDragState(prev => ({ ...prev, [fieldId]: { draggedIndex: null, dragStart: null, dragOver: null } }));
+        };
+        
+        const handleDragEnd = () => {
+          setRankingDragState(prev => ({ ...prev, [fieldId]: { draggedIndex: null, dragStart: null, dragOver: null } }));
+        };
+        
+        const currentRanking = value || rankingOptions.map((_, idx) => idx);
+        
+        return (
+          <div key={fieldId} className="form-group">
+            {mediaElement}
+            <label htmlFor={fieldId}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {field.description && (
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+                {field.description}
+              </p>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {currentRanking.map((optionIndex: number, displayIndex: number) => {
+                const option = rankingOptions[optionIndex];
+                if (!option) return null;
+                return (
+                  <div
+                    key={optionIndex}
+                    draggable
+                    onDragStart={() => handleDragStart(displayIndex)}
+                    onDragOver={(e) => handleDragOver(e, displayIndex)}
+                    onDrop={(e) => handleDrop(e, displayIndex)}
+                    onDragEnd={handleDragEnd}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '1rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        backgroundColor: dragState.draggedIndex === displayIndex ? '#f3f4f6' : '#ffffff',
+                        cursor: 'grab',
+                        transition: 'all 0.2s',
+                      }}
+                  >
+                    <span style={{ fontSize: '1.25rem', color: '#9ca3af' }}>☰</span>
+                    <span style={{ flex: 1, fontWeight: '500' }}>{displayIndex + 1}. {option.label || option.value}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+              Drag items to reorder them
+            </p>
+          </div>
+        );
+
+      case 'payment':
+        const paymentAmount = field.validation_rules?.paymentAmount || 0;
+        const paymentCurrency = field.validation_rules?.paymentCurrency || 'usd';
+        const paymentIntent = paymentIntents[fieldId];
+        const isProcessing = paymentProcessing[fieldId] || false;
+        
+        const formatCurrency = (amount: number, currency: string) => {
+          const symbols: Record<string, string> = {
+            usd: '$',
+            eur: '€',
+            gbp: '£',
+            cad: '$',
+            aud: '$'
+          };
+          return `${symbols[currency] || '$'}${amount.toFixed(2)}`;
+        };
+        
+        return (
+          <div key={fieldId} className="form-group">
+            {mediaElement}
+            <label htmlFor={fieldId}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {field.description && (
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+                {field.description}
+              </p>
+            )}
+            {paymentAmount > 0 ? (
+              <div style={{
+                border: '2px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '2rem',
+                backgroundColor: '#ffffff',
+                textAlign: 'center'
+              }}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
+                    {formatCurrency(paymentAmount, paymentCurrency)}
+                  </p>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.5rem 0 0 0' }}>
+                    {paymentCurrency.toUpperCase()}
+                  </p>
+                </div>
+                {paymentIntent?.clientSecret ? (
+                  <div>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+                      Payment will be processed securely via Stripe
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // In a real implementation, you'd integrate Stripe Elements here
+                        // For now, we'll mark as paid when clicked (for testing)
+                        handleFieldChange(fieldId, {
+                          payment_intent_id: paymentIntent.paymentIntentId,
+                          amount: paymentAmount,
+                          currency: paymentCurrency,
+                          status: 'pending'
+                        });
+                        setPaymentProcessing(prev => ({ ...prev, [fieldId]: true }));
+                        // Simulate payment processing
+                        setTimeout(() => {
+                          handleFieldChange(fieldId, {
+                            payment_intent_id: paymentIntent.paymentIntentId,
+                            amount: paymentAmount,
+                            currency: paymentCurrency,
+                            status: 'succeeded'
+                          });
+                          setPaymentProcessing(prev => ({ ...prev, [fieldId]: false }));
+                        }, 2000);
+                      }}
+                      disabled={isProcessing || value?.status === 'succeeded'}
+                      style={{
+                        padding: '0.75rem 2rem',
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        color: '#ffffff',
+                        background: isProcessing || value?.status === 'succeeded' 
+                          ? '#9ca3af' 
+                          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: isProcessing || value?.status === 'succeeded' ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {isProcessing ? 'Processing...' : value?.status === 'succeeded' ? '✓ Payment Complete' : 'Pay Now'}
+                    </button>
+                    {value?.status === 'succeeded' && (
+                      <p style={{ fontSize: '0.875rem', color: '#22c55e', marginTop: '1rem', fontWeight: '500' }}>
+                        ✓ Payment successful
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Initializing payment...</p>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', fontStyle: 'italic' }}>
+                Please configure the payment amount in the form builder
+              </p>
+            )}
           </div>
         );
 

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query, File, UploadFile
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+from decimal import Decimal
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -9,6 +10,7 @@ from database import supabase
 import uuid
 import secrets
 import string
+import hashlib
 
 router = APIRouter(prefix="/api/forms", tags=["forms"])
 
@@ -542,3 +544,82 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{form_id}/upload-file")
+async def upload_file(form_id: str, file: UploadFile = File(...)):
+    """Upload a file for a form submission to Supabase Storage"""
+    try:
+        # Check if form exists
+        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Validate file size (10MB max)
+        file_content = await file.read()
+        if len(file_content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+        
+        # Generate unique filename
+        file_hash = hashlib.md5(file_content).hexdigest()[:8]
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
+        unique_filename = f"{form_id}/{file_hash}_{uuid.uuid4().hex[:8]}.{file_extension}" if file_extension else f"{form_id}/{file_hash}_{uuid.uuid4().hex[:8]}"
+        
+        # Upload to Supabase Storage (bucket: form-uploads)
+        try:
+            response = supabase.storage.from_("form-uploads").upload(
+                unique_filename,
+                file_content,
+                file_options={"content-type": file.content_type or "application/octet-stream", "upsert": "false"}
+            )
+        except Exception as storage_error:
+            # If bucket doesn't exist, try to create it
+            print(f"Storage error: {str(storage_error)}")
+            raise HTTPException(status_code=500, detail="Storage bucket not configured. Please create 'form-uploads' bucket in Supabase Storage.")
+        
+        # Get public URL
+        public_url_data = supabase.storage.from_("form-uploads").get_public_url(unique_filename)
+        
+        return {
+            "file_url": public_url_data,
+            "file_name": file.filename,
+            "file_size": len(file_content),
+            "file_type": file.content_type,
+            "storage_path": unique_filename
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error uploading file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+
+@router.post("/{form_id}/create-payment-intent")
+async def create_payment_intent(form_id: str, amount: float, currency: str = "usd", metadata: Optional[Dict[str, Any]] = None):
+    """Create a Stripe payment intent for a form payment field"""
+    try:
+        # Check if form exists
+        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Import Stripe service
+        from stripe_service import StripeService
+        
+        # Create payment intent
+        payment_intent = StripeService.create_payment_intent(
+            amount=Decimal(str(amount)),
+            currency=currency,
+            customer_id=None,  # No customer required for one-time payments
+            metadata={
+                "form_id": form_id,
+                **(metadata or {})
+            }
+        )
+        
+        return payment_intent
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating payment intent: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create payment intent: {str(e)}")

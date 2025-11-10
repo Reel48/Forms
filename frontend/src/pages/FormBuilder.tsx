@@ -23,6 +23,9 @@ const FIELD_TYPES = [
   { value: 'yes_no', label: 'Yes/No' },
   { value: 'rating', label: 'Rating (Stars)' },
   { value: 'opinion_scale', label: 'Opinion Scale' },
+  { value: 'matrix', label: 'Matrix/Grid' },
+  { value: 'ranking', label: 'Ranking' },
+  { value: 'payment', label: 'Payment' },
   { value: 'file_upload', label: 'File Upload' },
 ];
 
@@ -773,6 +776,112 @@ function FormBuilder() {
                       Use the Options section above to set labels for the scale endpoints
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Matrix/Grid Configuration */}
+              {selectedField.field_type === 'matrix' && (
+                <div className="form-group">
+                  <span style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem' }}>Matrix Configuration</span>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                    Matrix questions allow users to rate multiple items. Use Options for rows (items to rate) and validation_rules.matrixColumns for columns (rating options).
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label htmlFor={`field-${selectedFieldIndex}-matrix-columns`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                        Column Labels (Rating Options)
+                      </label>
+                      <input
+                        type="text"
+                        id={`field-${selectedFieldIndex}-matrix-columns`}
+                        placeholder="Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"
+                        value={selectedField.validation_rules?.matrixColumns?.join(', ') || ''}
+                        onChange={(e) => updateField(selectedFieldIndex!, {
+                          validation_rules: {
+                            ...selectedField.validation_rules,
+                            matrixColumns: e.target.value.split(',').map(s => s.trim()).filter(s => s),
+                          },
+                        })}
+                        style={{ width: '100%', padding: '0.5rem' }}
+                      />
+                      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Separate column labels with commas
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor={`field-${selectedFieldIndex}-matrix-type`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                        Input Type
+                      </label>
+                      <select
+                        id={`field-${selectedFieldIndex}-matrix-type`}
+                        value={selectedField.validation_rules?.matrixType || 'radio'}
+                        onChange={(e) => updateField(selectedFieldIndex!, {
+                          validation_rules: {
+                            ...selectedField.validation_rules,
+                            matrixType: e.target.value,
+                          },
+                        })}
+                        style={{ width: '100%', padding: '0.5rem' }}
+                      >
+                        <option value="radio">Single Choice (Radio)</option>
+                        <option value="checkbox">Multiple Choice (Checkbox)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                    Use the Options section above to set row labels (items to rate)
+                  </p>
+                </div>
+              )}
+
+              {/* Payment Configuration */}
+              {selectedField.field_type === 'payment' && (
+                <div className="form-group">
+                  <span style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem' }}>Payment Configuration</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label htmlFor={`field-${selectedFieldIndex}-payment-amount`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                        Amount ($)
+                      </label>
+                      <input
+                        type="number"
+                        id={`field-${selectedFieldIndex}-payment-amount`}
+                        step="0.01"
+                        min="0.01"
+                        value={selectedField.validation_rules?.paymentAmount || ''}
+                        onChange={(e) => updateField(selectedFieldIndex!, {
+                          validation_rules: {
+                            ...selectedField.validation_rules,
+                            paymentAmount: parseFloat(e.target.value) || 0,
+                          },
+                        })}
+                        style={{ width: '100%', padding: '0.5rem' }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`field-${selectedFieldIndex}-payment-currency`} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', fontWeight: '500' }}>
+                        Currency
+                      </label>
+                      <select
+                        id={`field-${selectedFieldIndex}-payment-currency`}
+                        value={selectedField.validation_rules?.paymentCurrency || 'usd'}
+                        onChange={(e) => updateField(selectedFieldIndex!, {
+                          validation_rules: {
+                            ...selectedField.validation_rules,
+                            paymentCurrency: e.target.value,
+                          },
+                        })}
+                        style={{ width: '100%', padding: '0.5rem' }}
+                      >
+                        <option value="usd">USD ($)</option>
+                        <option value="eur">EUR (€)</option>
+                        <option value="gbp">GBP (£)</option>
+                        <option value="cad">CAD ($)</option>
+                        <option value="aud">AUD ($)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               )}
 
