@@ -29,8 +29,9 @@ function PublicFormView() {
     }
 
     // If we've already successfully loaded this slug, don't load again
+    // IMPORTANT: Don't call setState here to avoid triggering re-renders
     if (hasLoadedRef.current && loadedSlugRef.current === slug) {
-      console.log('[PublicFormView] Already loaded this slug, skipping completely');
+      console.log('[PublicFormView] Already loaded this slug, skipping completely - no state updates');
       return;
     }
 
@@ -701,11 +702,12 @@ function PublicFormView() {
     );
   }
 
-  // Handle redirect after submission - only run when submitted changes
+  // Handle redirect after submission - only run when submitted changes to true
   useEffect(() => {
     console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'redirectUrlRef:', redirectUrlRef.current);
     
-    if (!submitted) {
+    // Only proceed if submitted is true
+    if (submitted !== true) {
       return;
     }
 
