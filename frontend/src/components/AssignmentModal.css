@@ -124,6 +124,20 @@
   font-weight: 500;
 }
 
+.creating-badge {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.client-item {
+  border-left: 3px solid #eab308;
+  background-color: #fffbeb;
+}
+
 .loading,
 .empty-state {
   text-align: center;

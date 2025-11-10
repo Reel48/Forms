@@ -35,6 +35,7 @@ class Client(ClientBase):
     id: str
     created_at: datetime
     stripe_customer_id: Optional[str] = None
+    user_id: Optional[str] = None  # Link to auth.users
     
     @field_validator('created_at', mode='before')
     @classmethod

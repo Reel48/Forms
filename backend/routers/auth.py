@@ -229,36 +229,68 @@ async def refresh_token(refresh_token: str):
 @router.get("/users")
 async def get_users(current_admin: dict = Depends(get_current_admin)):
     """
-    Get all users with their roles (admin only).
-    Returns list of users for assignment purposes.
+    Get all users with their roles and clients (admin only).
+    Returns list of users and clients for assignment purposes.
+    Includes clients that can be linked to users.
     """
     try:
-        # Get all user roles
-        roles_response = supabase.table("user_roles").select("*, auth.users!inner(email)").execute()
-        
         users = []
+        client_users = {}  # Track which clients have linked users
+        
+        # Get all user roles and fetch emails from Supabase Auth
+        roles_response = supabase.table("user_roles").select("*").execute()
+        
         for role_data in (roles_response.data or []):
             user_id = role_data.get("user_id")
             user_role = role_data.get("role", "customer")
             
-            # Get user email from auth.users (if available in the join)
+            # Get user email from Supabase Auth
             user_email = None
-            if "auth.users" in role_data and role_data["auth.users"]:
-                user_email = role_data["auth.users"].get("email")
-            else:
-                # Fallback: try to get from Supabase Auth
-                try:
-                    user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
-                    if user_response and user_response.user:
-                        user_email = user_response.user.email
-                except:
-                    pass
+            try:
+                user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
+                if user_response and user_response.user:
+                    user_email = user_response.user.email
+            except Exception as e:
+                print(f"Error fetching user {user_id}: {e}")
+                pass
             
-            users.append({
-                "id": user_id,
-                "email": user_email or f"user_{user_id[:8]}",
-                "role": user_role
-            })
+            if user_email:
+                users.append({
+                    "id": user_id,
+                    "email": user_email,
+                    "role": user_role,
+                    "type": "user"
+                })
+        
+        # Get all clients and check which ones have linked users
+        try:
+            clients_response = supabase.table("clients").select("id, name, email, user_id").execute()
+            for client in (clients_response.data or []):
+                client_id = client.get("id")
+                client_email = client.get("email")
+                client_name = client.get("name")
+                linked_user_id = client.get("user_id")
+                
+                if linked_user_id:
+                    # Client already has a linked user - mark it
+                    client_users[linked_user_id] = {
+                        "client_id": client_id,
+                        "client_name": client_name,
+                        "client_email": client_email
+                    }
+                elif client_email:
+                    # Client without linked user - add as potential user
+                    users.append({
+                        "id": f"client_{client_id}",  # Use prefix to distinguish
+                        "email": client_email,
+                        "name": client_name,
+                        "client_id": client_id,
+                        "role": "customer",
+                        "type": "client"  # Indicates this is a client without a user account
+                    })
+        except Exception as e:
+            print(f"Error fetching clients: {e}")
+            # Continue without clients if there's an error
         
         return users
         
@@ -266,5 +298,132 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get users: {str(e)}"
+        )
+
+
+class CreateUserForClientRequest(BaseModel):
+    client_id: str
+    password: Optional[str] = None
+
+@router.post("/users/create-for-client")
+async def create_user_for_client(
+    request: CreateUserForClientRequest,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """
+    Create an auth user for a client (admin only).
+    If password is not provided, generates a random one.
+    """
+    try:
+        # Get client information
+        client_response = supabase.table("clients").select("*").eq("id", request.client_id).execute()
+        if not client_response.data:
+            raise HTTPException(status_code=404, detail="Client not found")
+        
+        client = client_response.data[0]
+        client_email = client.get("email")
+        client_name = client.get("name")
+        
+        if not client_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Client must have an email address to create a user account"
+            )
+        
+        # Check if client already has a linked user
+        if client.get("user_id"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Client already has a linked user account"
+            )
+        
+        # Check if user with this email already exists by checking user_roles
+        # and then fetching from auth
+        try:
+            # First check if there's a user_roles entry with matching email
+            # We'll need to check auth.users by trying to find the user
+            # Since we can't easily list all users, we'll try to create and catch the error
+            # Or we can check user_roles and fetch each user
+            roles_response = supabase.table("user_roles").select("user_id").execute()
+            for role_entry in (roles_response.data or []):
+                user_id = role_entry.get("user_id")
+                try:
+                    user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
+                    if user_response and user_response.user and user_response.user.email == client_email:
+                        # Found existing user with this email - link to client
+                        supabase.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
+                        return {
+                            "message": "Linked existing user to client",
+                            "user_id": user_id,
+                            "email": client_email
+                        }
+                except:
+                    continue
+        except Exception as e:
+            print(f"Error checking existing users: {e}")
+        
+        # Generate password if not provided
+        password = request.password
+        if not password:
+            import secrets
+            import string
+            alphabet = string.ascii_letters + string.digits
+            password = ''.join(secrets.choice(alphabet) for i in range(12))
+        
+        # Create user in Supabase Auth
+        auth_response = supabase_storage.auth.admin.create_user({
+            "email": client_email,
+            "password": password,
+            "email_confirm": True,
+            "user_metadata": {
+                "name": client_name,
+                "client_id": request.client_id
+            }
+        })
+        
+        if not auth_response or not auth_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to create user"
+            )
+        
+        user = auth_response.user
+        
+        # Create user role entry (default to customer)
+        try:
+            supabase.table("user_roles").insert({
+                "id": str(uuid.uuid4()),
+                "user_id": user.id,
+                "role": "customer",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }).execute()
+        except Exception as e:
+            # If role creation fails, try to delete the auth user
+            try:
+                supabase_storage.auth.admin.delete_user(user.id)
+            except:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create user role: {str(e)}"
+            )
+        
+        # Link user to client
+        supabase.table("clients").update({"user_id": user.id}).eq("id", request.client_id).execute()
+        
+        return {
+            "message": "User created and linked to client",
+            "user_id": user.id,
+            "email": client_email,
+            "password": password  # Return password so admin can share it
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user for client: {str(e)}"
         )
 
