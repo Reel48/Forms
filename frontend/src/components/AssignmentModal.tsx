@@ -177,7 +177,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             <div className="user-list">
               {filteredUsers.map((user) => {
                 const isClient = user.type === 'client';
-                const isCreating = user.client_id && creatingUsers.has(user.client_id);
+                const isCreating = !!(user.client_id && creatingUsers.has(user.client_id));
                 const isAssigned = existingAssignments.some(a => a.user_id === user.id);
                 
                 return (
