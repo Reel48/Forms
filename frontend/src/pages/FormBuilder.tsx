@@ -240,8 +240,22 @@ function FormBuilder() {
         // Create new form with fields
         console.log('Creating form with data:', formData);
         console.log('Fields to save:', formData.fields);
-        const response = await formsAPI.create(formData);
+        console.log('Fields count:', formData.fields?.length || 0);
+        
+        // Ensure fields array is included
+        const payload: FormCreate = {
+          name: formData.name,
+          description: formData.description,
+          status: formData.status,
+          fields: formData.fields || [],
+        };
+        
+        console.log('Payload being sent:', payload);
+        console.log('Payload fields count:', payload.fields?.length || 0);
+        
+        const response = await formsAPI.create(payload);
         console.log('Form created, response:', response.data);
+        console.log('Response fields count:', response.data.form_fields?.length || 0);
         navigate('/forms');
       }
     } catch (error: any) {
