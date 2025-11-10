@@ -105,6 +105,29 @@ function PublicFormView() {
     };
   }, [slug]);
 
+  // Handle redirect after submission - only run when submitted changes to true
+  useEffect(() => {
+    // Only proceed if submitted is true
+    if (submitted !== true) {
+      return;
+    }
+
+    // Get redirect URL from ref (set when form was loaded)
+    const redirectUrl = redirectUrlRef.current;
+    
+    if (!redirectUrl) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      window.location.href = redirectUrl;
+    }, 3000);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [submitted]);
+
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormValues((prev) => ({ ...prev, [fieldId]: value }));
   };
@@ -701,35 +724,6 @@ function PublicFormView() {
       </div>
     );
   }
-
-  // Handle redirect after submission - only run when submitted changes to true
-  useEffect(() => {
-    console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'redirectUrlRef:', redirectUrlRef.current);
-    
-    // Only proceed if submitted is true
-    if (submitted !== true) {
-      return;
-    }
-
-    // Get redirect URL from ref (set when form was loaded)
-    const redirectUrl = redirectUrlRef.current;
-    
-    if (!redirectUrl) {
-      console.log('[PublicFormView] No redirect URL, skipping redirect');
-      return;
-    }
-
-    console.log('[PublicFormView] Setting up redirect timer for:', redirectUrl);
-    const timer = setTimeout(() => {
-      console.log('[PublicFormView] Redirecting to:', redirectUrl);
-      window.location.href = redirectUrl;
-    }, 3000);
-    
-    return () => {
-      console.log('[PublicFormView] Clearing redirect timer');
-      clearTimeout(timer);
-    };
-  }, [submitted]);
 
   if (submitted) {
     const thankYouMessage = form?.thank_you_screen?.title || 'Thank you!';
