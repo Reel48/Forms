@@ -71,6 +71,29 @@ function QuotesList() {
     }
   }, [quotes, role]);
 
+  // Refresh assignments when window gains focus (e.g., navigating back to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (role === 'admin' && quotes.length > 0) {
+        loadAllAssignments();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [quotes, role]);
+
+  // Refresh assignments when component mounts (e.g., navigating to this page)
+  useEffect(() => {
+    if (role === 'admin' && quotes.length > 0) {
+      // Small delay to ensure quotes are loaded first
+      const timer = setTimeout(() => {
+        loadAllAssignments();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   const loadUsers = async () => {
     try {
       const response = await api.get('/api/auth/users');

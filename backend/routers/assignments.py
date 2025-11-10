@@ -5,7 +5,7 @@ Allows admins to assign quotes and forms to customers
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import List, Optional
-from database import supabase
+from database import supabase, supabase_storage
 from auth import get_current_admin, get_current_user
 import uuid
 from datetime import datetime
@@ -41,19 +41,20 @@ async def assign_quote(
     Assign a quote to one or more customers (admin only).
     """
     try:
+        # Use service role client to bypass RLS for admin operations
         # Verify quote exists
-        quote_response = supabase.table("quotes").select("id").eq("id", quote_id).execute()
+        quote_response = supabase_storage.table("quotes").select("id").eq("id", quote_id).execute()
         if not quote_response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
         assignments = []
         for user_id in assign_request.user_ids:
             # Check if assignment already exists
-            existing = supabase.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", user_id).execute()
+            existing = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", user_id).execute()
             
             if existing.data:
                 # Update existing assignment
-                supabase.table("quote_assignments").update({
+                supabase_storage.table("quote_assignments").update({
                     "assigned_by": current_admin["id"],
                     "assigned_at": datetime.now().isoformat(),
                     "expires_at": assign_request.expires_at,
@@ -72,7 +73,7 @@ async def assign_quote(
                     "status": "assigned",
                     "created_at": datetime.now().isoformat()
                 }
-                result = supabase.table("quote_assignments").insert(assignment_data).execute()
+                result = supabase_storage.table("quote_assignments").insert(assignment_data).execute()
                 if result.data:
                     assignments.append(result.data[0]["id"])
         
@@ -100,8 +101,11 @@ async def get_quote_assignments(
     Admins see all assignments, customers see only their own.
     """
     try:
+        # Use service role client for admin to bypass RLS, regular client for customers
+        client = supabase_storage if current_user["role"] == "admin" else supabase
+        
         # Get assignments without join (join syntax was causing 400 errors)
-        query = supabase.table("quote_assignments").select("*").eq("quote_id", quote_id)
+        query = client.table("quote_assignments").select("*").eq("quote_id", quote_id)
         
         # If customer, only show their own assignments
         if current_user["role"] != "admin":
@@ -152,19 +156,20 @@ async def assign_form(
     Assign a form to one or more customers (admin only).
     """
     try:
+        # Use service role client to bypass RLS for admin operations
         # Verify form exists
-        form_response = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         assignments = []
         for user_id in assign_request.user_ids:
             # Check if assignment already exists
-            existing = supabase.table("form_assignments").select("id").eq("form_id", form_id).eq("user_id", user_id).execute()
+            existing = supabase_storage.table("form_assignments").select("id").eq("form_id", form_id).eq("user_id", user_id).execute()
             
             if existing.data:
                 # Update existing assignment
-                supabase.table("form_assignments").update({
+                supabase_storage.table("form_assignments").update({
                     "assigned_by": current_admin["id"],
                     "assigned_at": datetime.now().isoformat(),
                     "expires_at": assign_request.expires_at,
@@ -184,7 +189,7 @@ async def assign_form(
                     "access_token": str(uuid.uuid4()),
                     "created_at": datetime.now().isoformat()
                 }
-                result = supabase.table("form_assignments").insert(assignment_data).execute()
+                result = supabase_storage.table("form_assignments").insert(assignment_data).execute()
                 if result.data:
                     assignments.append(result.data[0]["id"])
         
@@ -212,8 +217,11 @@ async def get_form_assignments(
     Admins see all assignments, customers see only their own.
     """
     try:
+        # Use service role client for admin to bypass RLS, regular client for customers
+        client = supabase_storage if current_user["role"] == "admin" else supabase
+        
         # Get assignments without join (join syntax was causing 400 errors)
-        query = supabase.table("form_assignments").select("*").eq("form_id", form_id)
+        query = client.table("form_assignments").select("*").eq("form_id", form_id)
         
         # If customer, only show their own assignments
         if current_user["role"] != "admin":
