@@ -115,11 +115,13 @@ function FormView() {
 
   return (
     <div className="container">
+      <div style={{ marginBottom: '1rem' }}>
+        <button onClick={() => navigate('/forms')} className="btn-outline" style={{ marginBottom: '1rem' }}>
+          ← Back to Forms
+        </button>
+      </div>
       <div className="flex-between mb-4">
         <div>
-          <button onClick={() => navigate('/forms')} className="btn-outline" style={{ marginBottom: '1rem' }}>
-            ← Back to Forms
-          </button>
           <h1>{form.name || 'Form Details'}</h1>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>

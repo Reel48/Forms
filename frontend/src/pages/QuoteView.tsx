@@ -177,6 +177,11 @@ function QuoteView() {
 
   return (
     <div className="container">
+      <div style={{ marginBottom: '1rem' }}>
+        <button onClick={() => navigate('/')} className="btn-outline" style={{ marginBottom: '1rem' }}>
+          ← Back to Quotes
+        </button>
+      </div>
       <div className="card">
         {/* Logo at top left */}
         {companySettings?.logo_url && (
