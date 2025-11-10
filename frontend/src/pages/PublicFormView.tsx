@@ -742,8 +742,22 @@ function PublicFormView() {
               file_type: response.data.file_type,
               storage_path: response.data.storage_path
             });
+            // Clear any previous errors on success
+            setError(null);
           } catch (err: any) {
-            setError(err?.response?.data?.detail || 'Failed to upload file');
+            const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to upload file';
+            console.error('File upload error:', errorMessage);
+            // Show error but don't block form submission
+            // Store error in field value so user knows upload failed
+            handleFieldChange(fieldId, {
+              upload_error: errorMessage,
+              file_name: file.name,
+              file_size: file.size,
+              file_type: file.type
+            });
+            // Set a temporary error message that will clear after a few seconds
+            setError(`File upload failed: ${errorMessage}. You can still submit the form.`);
+            setTimeout(() => setError(null), 5000);
           } finally {
             setUploadingFiles(prev => ({ ...prev, [fieldId]: false }));
           }
@@ -803,7 +817,7 @@ function PublicFormView() {
                     handleFileUpload(file);
                   }
                 }}
-                required={field.required && !value?.file_url}
+                required={field.required && !value?.file_url && !value?.upload_error}
                 disabled={uploading}
               />
               {uploading ? (
@@ -836,6 +850,37 @@ function PublicFormView() {
                     }}
                   >
                     Remove
+                  </button>
+                </div>
+              ) : value?.upload_error ? (
+                <div>
+                  <p style={{ margin: 0, color: '#dc2626', fontWeight: '500' }}>⚠ Upload failed: {value.upload_error}</p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    File: {value.file_name} ({(value.file_size / 1024).toFixed(2)} KB)
+                  </p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                    You can still submit the form, but the file won't be attached.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFieldChange(fieldId, null);
+                      const input = document.getElementById(`${fieldId}-file`) as HTMLInputElement;
+                      if (input) input.value = '';
+                    }}
+                    style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.5rem 1rem', 
+                      fontSize: '0.875rem',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Remove & Try Again
                   </button>
                 </div>
               ) : (
