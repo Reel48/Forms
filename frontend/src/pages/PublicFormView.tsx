@@ -13,8 +13,16 @@ function PublicFormView() {
   const [submitted, setSubmitted] = useState(false);
   const [startTime] = useState(Date.now());
 
+  // Log state changes
   useEffect(() => {
+    console.log('[PublicFormView] State changed - loading:', loading, 'error:', error, 'form:', form?.id, 'error:', error);
+  }, [loading, error, form?.id]);
+
+  useEffect(() => {
+    console.log('[PublicFormView] useEffect triggered - slug:', slug);
+    
     if (!slug) {
+      console.log('[PublicFormView] No slug, setting loading to false');
       setLoading(false);
       return;
     }
@@ -24,22 +32,39 @@ function PublicFormView() {
     let isCancelled = false;
 
     const loadForm = async () => {
-      if (isCancelled) return;
+      console.log('[PublicFormView] loadForm called, isCancelled:', isCancelled);
       
+      if (isCancelled) {
+        console.log('[PublicFormView] Load cancelled, returning');
+        return;
+      }
+      
+      console.log('[PublicFormView] Setting loading to true');
       setLoading(true);
       setError(null);
       
       try {
+        console.log('[PublicFormView] Fetching form with slug:', slug);
         const response = await formsAPI.getBySlug(slug);
+        console.log('[PublicFormView] Form fetched successfully:', response.data?.id);
         
-        if (isCancelled || !isMounted) return;
+        if (isCancelled || !isMounted) {
+          console.log('[PublicFormView] Component unmounted or cancelled, not setting form');
+          return;
+        }
         
+        console.log('[PublicFormView] Setting form data');
         setForm(response.data);
+        console.log('[PublicFormView] Setting loading to false');
         setLoading(false);
       } catch (error: any) {
-        if (isCancelled || !isMounted) return;
+        console.error('[PublicFormView] Failed to load form:', error);
         
-        console.error('Failed to load form:', error);
+        if (isCancelled || !isMounted) {
+          console.log('[PublicFormView] Component unmounted or cancelled, not setting error');
+          return;
+        }
+        
         setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
         setLoading(false);
       }
@@ -48,6 +73,7 @@ function PublicFormView() {
     loadForm();
 
     return () => {
+      console.log('[PublicFormView] Cleanup function called');
       isCancelled = true;
       isMounted = false;
     };
@@ -652,18 +678,25 @@ function PublicFormView() {
 
   // Handle redirect after submission
   useEffect(() => {
+    console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'redirect_url:', form?.thank_you_screen?.redirect_url);
+    
     if (!submitted || !form?.thank_you_screen?.redirect_url) {
       return;
     }
 
     const redirectUrl = form.thank_you_screen.redirect_url;
+    console.log('[PublicFormView] Setting up redirect timer for:', redirectUrl);
     const timer = setTimeout(() => {
       if (redirectUrl) {
+        console.log('[PublicFormView] Redirecting to:', redirectUrl);
         window.location.href = redirectUrl;
       }
     }, 3000);
     
-    return () => clearTimeout(timer);
+    return () => {
+      console.log('[PublicFormView] Clearing redirect timer');
+      clearTimeout(timer);
+    };
   }, [submitted, form?.thank_you_screen?.redirect_url]);
 
   if (submitted) {
