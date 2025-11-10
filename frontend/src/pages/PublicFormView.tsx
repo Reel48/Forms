@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
@@ -12,14 +12,13 @@ function PublicFormView() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [startTime] = useState(Date.now());
+  
+  // Use ref to track if we're already loading to prevent multiple simultaneous loads
+  const isLoadingRef = useRef(false);
+  const loadedSlugRef = useRef<string | null>(null);
 
-  // Log state changes
   useEffect(() => {
-    console.log('[PublicFormView] State changed - loading:', loading, 'error:', error, 'form:', form?.id, 'error:', error);
-  }, [loading, error, form?.id]);
-
-  useEffect(() => {
-    console.log('[PublicFormView] useEffect triggered - slug:', slug);
+    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current);
     
     if (!slug) {
       console.log('[PublicFormView] No slug, setting loading to false');
@@ -27,19 +26,26 @@ function PublicFormView() {
       return;
     }
 
-    // Prevent multiple simultaneous loads
+    // If we're already loading this exact slug, don't load again
+    if (isLoadingRef.current && loadedSlugRef.current === slug) {
+      console.log('[PublicFormView] Already loading this slug, skipping');
+      return;
+    }
+
+    // If we've already loaded this slug and have the form, don't load again
+    if (loadedSlugRef.current === slug && form?.id) {
+      console.log('[PublicFormView] Already loaded this slug, skipping');
+      return;
+    }
+
+    // Mark as loading
+    isLoadingRef.current = true;
+    loadedSlugRef.current = slug;
     let isMounted = true;
-    let isCancelled = false;
 
     const loadForm = async () => {
-      console.log('[PublicFormView] loadForm called, isCancelled:', isCancelled);
+      console.log('[PublicFormView] loadForm called');
       
-      if (isCancelled) {
-        console.log('[PublicFormView] Load cancelled, returning');
-        return;
-      }
-      
-      console.log('[PublicFormView] Setting loading to true');
       setLoading(true);
       setError(null);
       
@@ -48,8 +54,8 @@ function PublicFormView() {
         const response = await formsAPI.getBySlug(slug);
         console.log('[PublicFormView] Form fetched successfully:', response.data?.id);
         
-        if (isCancelled || !isMounted) {
-          console.log('[PublicFormView] Component unmounted or cancelled, not setting form');
+        if (!isMounted) {
+          console.log('[PublicFormView] Component unmounted, not setting form');
           return;
         }
         
@@ -57,16 +63,18 @@ function PublicFormView() {
         setForm(response.data);
         console.log('[PublicFormView] Setting loading to false');
         setLoading(false);
+        isLoadingRef.current = false;
       } catch (error: any) {
         console.error('[PublicFormView] Failed to load form:', error);
         
-        if (isCancelled || !isMounted) {
-          console.log('[PublicFormView] Component unmounted or cancelled, not setting error');
+        if (!isMounted) {
+          console.log('[PublicFormView] Component unmounted, not setting error');
           return;
         }
         
         setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
         setLoading(false);
+        isLoadingRef.current = false;
       }
     };
 
@@ -74,8 +82,8 @@ function PublicFormView() {
 
     return () => {
       console.log('[PublicFormView] Cleanup function called');
-      isCancelled = true;
       isMounted = false;
+      // Don't reset isLoadingRef here as it might be needed for the next render
     };
   }, [slug]);
 
