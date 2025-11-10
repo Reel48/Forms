@@ -80,17 +80,11 @@ function PublicFormView() {
         hasSetForm = true;
         isLoadingRef.current = false;
         
-        // Use React's batching - set both states together
-        // Use a timeout to ensure this happens after any pending renders
-        setTimeout(() => {
-          if (isMounted) {
-            setForm(formData);
-            setLoading(false);
-            console.log('[PublicFormView] Form and loading state updated via setTimeout');
-          }
-        }, 0);
+        // Set form and loading together - React will batch these
+        setForm(formData);
+        setLoading(false);
         
-        console.log('[PublicFormView] Form data prepared, hasLoadedRef set to true');
+        console.log('[PublicFormView] Form and loading state updated, hasLoadedRef set to true');
       } catch (error: any) {
         console.error('[PublicFormView] Failed to load form:', error);
         
