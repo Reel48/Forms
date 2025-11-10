@@ -4,7 +4,7 @@ from datetime import datetime
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormSubmissionCreate, FormSubmission
+from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormFieldUpdate, FormSubmissionCreate, FormSubmission
 from database import supabase
 import uuid
 import secrets
@@ -321,7 +321,7 @@ async def create_field(form_id: str, field: FormFieldCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{form_id}/fields/{field_id}", response_model=FormField)
-async def update_field(form_id: str, field_id: str, field_update: dict):
+async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdate):
     """Update a form field"""
     try:
         # Check if field exists and belongs to form
@@ -329,8 +329,11 @@ async def update_field(form_id: str, field_id: str, field_update: dict):
         if not existing.data:
             raise HTTPException(status_code=404, detail="Field not found")
         
+        # Prepare update data (only include provided fields)
+        update_data = field_update.model_dump(exclude_unset=True)
+        
         # Update field
-        response = supabase.table("form_fields").update(field_update).eq("id", field_id).execute()
+        response = supabase.table("form_fields").update(update_data).eq("id", field_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update field")
@@ -443,7 +446,19 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate):
         # Fetch complete submission with answers
         response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).single().execute()
         
-        return response.data
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to fetch submission")
+        
+        submission = response.data
+        
+        # Map form_submission_answers to answers for Pydantic model
+        answers = submission.get("form_submission_answers", [])
+        submission["answers"] = answers
+        # Remove form_submission_answers to avoid confusion
+        if "form_submission_answers" in submission:
+            del submission["form_submission_answers"]
+        
+        return submission
         
     except HTTPException:
         raise

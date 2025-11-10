@@ -206,6 +206,18 @@ class FormFieldBase(BaseModel):
 class FormFieldCreate(FormFieldBase):
     pass
 
+class FormFieldUpdate(BaseModel):
+    """Update model for form fields - all fields optional"""
+    field_type: Optional[str] = None
+    label: Optional[str] = None
+    description: Optional[str] = None
+    placeholder: Optional[str] = None
+    required: Optional[bool] = None
+    validation_rules: Optional[Dict[str, Any]] = None
+    options: Optional[List[Dict[str, Any]]] = None
+    order_index: Optional[int] = None
+    conditional_logic: Optional[Dict[str, Any]] = None
+
 class FormField(FormFieldBase):
     id: str
     form_id: str
