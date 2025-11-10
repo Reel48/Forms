@@ -35,10 +35,16 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Always reload users when modal opens to ensure we have the latest list
       loadUsers();
       // Pre-select existing assignments
       const existingIds = new Set(existingAssignments.map(a => a.user_id));
       setSelectedUserIds(existingIds);
+    } else {
+      // Clear state when modal closes
+      setUsers([]);
+      setSelectedUserIds(new Set());
+      setSearchTerm('');
     }
   }, [isOpen, existingAssignments]);
 
@@ -47,8 +53,13 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     try {
       // Get all users and clients (admin only endpoint)
       const response = await api.get('/api/auth/users');
+      console.log('Loaded users from API:', response.data.length, 'total users');
+      
       // Filter to only show customers (both users and clients)
-      setUsers(response.data.filter((u: User) => u.role === 'customer'));
+      const customerUsers = response.data.filter((u: User) => u.role === 'customer');
+      console.log('Filtered to customers:', customerUsers.length, 'customers');
+      
+      setUsers(customerUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
       setUsers([]);

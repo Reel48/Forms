@@ -240,7 +240,44 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
         user_ids_seen = set()  # Track user IDs to avoid duplicates
         client_users = {}  # Track which clients have linked users
         
-        # Get all user roles and fetch emails from Supabase Auth
+        # Get all users from Supabase Auth using REST API (more reliable than individual lookups)
+        if not supabase_service_role_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Service role key not configured"
+            )
+        
+        # Fetch all users from Supabase Auth using REST API
+        auth_url = f"{supabase_url}/auth/v1/admin/users"
+        headers = {
+            "apikey": supabase_service_role_key,
+            "Authorization": f"Bearer {supabase_service_role_key}",
+            "Content-Type": "application/json"
+        }
+        
+        all_auth_users = {}
+        try:
+            # Get all users (with pagination if needed)
+            response = requests.get(auth_url, headers=headers, params={"per_page": 1000}, timeout=10)
+            if response.status_code == 200:
+                users_data = response.json()
+                for auth_user in users_data.get("users", []):
+                    user_id = auth_user.get("id")
+                    user_email = auth_user.get("email")
+                    user_metadata = auth_user.get("user_metadata", {})
+                    user_name = user_metadata.get("name")
+                    
+                    if user_id and user_email:
+                        all_auth_users[user_id] = {
+                            "email": user_email,
+                            "name": user_name
+                        }
+        except Exception as e:
+            print(f"Warning: Could not fetch users from auth API: {e}")
+            # Fall back to individual lookups if bulk fetch fails
+            all_auth_users = {}
+        
+        # Get all user roles and match with auth users
         # Use service role client to bypass RLS
         roles_response = supabase_storage.table("user_roles").select("*").execute()
         
@@ -252,23 +289,28 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
             if user_id in user_ids_seen:
                 continue
             
-            # Get user email from Supabase Auth
-            # If admin API fails, we'll skip this user (they won't appear in the list)
+            # Get user email from our auth users map or try individual lookup
             user_email = None
             user_name = None
-            try:
-                user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
-                if user_response and user_response.user:
-                    user_email = user_response.user.email
-                    # Get name from user_metadata if available
-                    if hasattr(user_response.user, 'user_metadata') and user_response.user.user_metadata:
-                        user_name = user_response.user.user_metadata.get('name')
-            except Exception as e:
-                # Log but continue - some users might not be accessible via admin API
-                # This can happen if service role key doesn't have proper permissions
-                print(f"Warning: Could not fetch user {user_id} from auth API: {e}")
-                # Skip this user - they won't appear in the assignment list
-                continue
+            
+            if user_id in all_auth_users:
+                # Use data from bulk fetch
+                user_email = all_auth_users[user_id]["email"]
+                user_name = all_auth_users[user_id]["name"]
+            else:
+                # Fallback to individual lookup if not in bulk fetch
+                try:
+                    user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
+                    if user_response and user_response.user:
+                        user_email = user_response.user.email
+                        # Get name from user_metadata if available
+                        if hasattr(user_response.user, 'user_metadata') and user_response.user.user_metadata:
+                            user_name = user_response.user.user_metadata.get('name')
+                except Exception as e:
+                    # Log but continue - some users might not be accessible via admin API
+                    print(f"Warning: Could not fetch user {user_id} from auth API: {e}")
+                    # Skip this user - they won't appear in the assignment list
+                    continue
             
             if user_email:
                 user_ids_seen.add(user_id)
