@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { formsAPI } from '../api';
-import type { Form, FormSubmission, FormField } from '../api';
+import type { Form, FormSubmission } from '../api';
 
 function FormSubmissions() {
   const { id } = useParams<{ id: string }>();
