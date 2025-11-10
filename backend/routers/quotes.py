@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Quote, QuoteCreate, QuoteUpdate, LineItem, LineItemCreate
-from database import supabase
+from database import supabase, supabase_storage
 from stripe_service import StripeService
 from auth import get_current_user, get_current_admin, get_optional_user
 import uuid
@@ -69,8 +69,8 @@ async def get_quotes(
         
         # If customer, only show assigned quotes
         if current_user and current_user.get("role") == "customer":
-            # Get assigned quote IDs
-            assignments_response = supabase.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
+            # Get assigned quote IDs using service role client to bypass RLS
+            assignments_response = supabase_storage.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
             assigned_quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
             
             if not assigned_quote_ids:
@@ -147,9 +147,9 @@ async def get_quote(quote_id: str, current_user: Optional[dict] = Depends(get_op
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
-        # If customer, verify they have access
+        # If customer, verify they have access using service role client to bypass RLS
         if current_user and current_user.get("role") == "customer":
-            assignment = supabase.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
+            assignment = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
             if not assignment.data:
                 raise HTTPException(status_code=403, detail="You don't have access to this quote")
         
@@ -231,9 +231,9 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
     Customers can accept their assigned quotes. Admins can accept any quote.
     """
     try:
-        # If customer, verify they have access to this quote
+        # If customer, verify they have access to this quote using service role client to bypass RLS
         if current_user.get("role") == "customer":
-            assignment = supabase.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
+            assignment = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
             if not assignment.data:
                 raise HTTPException(status_code=403, detail="You don't have access to this quote")
         # Update quote status to accepted
