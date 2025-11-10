@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
@@ -13,13 +13,7 @@ function PublicFormView() {
   const [submitted, setSubmitted] = useState(false);
   const [startTime] = useState(Date.now());
 
-  useEffect(() => {
-    if (slug) {
-      loadForm(slug);
-    }
-  }, [slug]);
-
-  const loadForm = async (formSlug: string) => {
+  const loadForm = useCallback(async (formSlug: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -31,7 +25,13 @@ function PublicFormView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (slug) {
+      loadForm(slug);
+    }
+  }, [slug, loadForm]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormValues({ ...formValues, [fieldId]: value });
