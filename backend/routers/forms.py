@@ -211,24 +211,44 @@ async def create_form(form: FormCreate):
             print(f"Processing {len(fields)} fields...")
             fields_data = []
             for idx, field in enumerate(fields):
-                # Use idx if order_index is 0 or not set, otherwise use the provided order_index
-                order_idx = field.order_index if field.order_index is not None and field.order_index >= 0 else idx
-                field_data = {
-                    "id": str(uuid.uuid4()),
-                    "form_id": form_id,
-                    "field_type": field.field_type,
-                    "label": field.label or "",  # Allow empty labels for draft fields
-                    "description": field.description or None,
-                    "placeholder": field.placeholder or None,
-                    "required": field.required or False,
-                    "validation_rules": field.validation_rules or {},
-                    "options": field.options or [],
-                    "order_index": order_idx,
-                    "conditional_logic": field.conditional_logic or {},
-                    "created_at": now
-                }
-                fields_data.append(field_data)
-                print(f"  Field {idx}: {field.field_type} - {field.label or '(no label)'}")
+                try:
+                    # Safely access field attributes using getattr
+                    field_type = getattr(field, 'field_type', 'text')
+                    field_label = getattr(field, 'label', '')
+                    field_description = getattr(field, 'description', None)
+                    field_placeholder = getattr(field, 'placeholder', None)
+                    field_required = getattr(field, 'required', False)
+                    field_validation_rules = getattr(field, 'validation_rules', None) or {}
+                    field_options = getattr(field, 'options', None) or []
+                    field_order_index = getattr(field, 'order_index', None)
+                    field_conditional_logic = getattr(field, 'conditional_logic', None) or {}
+                    
+                    # Use idx if order_index is 0 or not set, otherwise use the provided order_index
+                    order_idx = field_order_index if field_order_index is not None and field_order_index >= 0 else idx
+                    
+                    field_data = {
+                        "id": str(uuid.uuid4()),
+                        "form_id": form_id,
+                        "field_type": field_type,
+                        "label": field_label or "",  # Allow empty labels for draft fields
+                        "description": field_description,
+                        "placeholder": field_placeholder,
+                        "required": field_required,
+                        "validation_rules": field_validation_rules,
+                        "options": field_options,
+                        "order_index": order_idx,
+                        "conditional_logic": field_conditional_logic,
+                        "created_at": now
+                    }
+                    fields_data.append(field_data)
+                    print(f"  Field {idx}: {field_type} - {field_label or '(no label)'}")
+                except Exception as field_process_error:
+                    print(f"  ERROR processing field {idx}: {str(field_process_error)}")
+                    print(f"  Field object: {field}")
+                    print(f"  Field type: {type(field)}")
+                    import traceback
+                    traceback.print_exc()
+                    raise HTTPException(status_code=400, detail=f"Error processing field at index {idx}: {str(field_process_error)}")
             
             if fields_data:
                 print(f"Inserting {len(fields_data)} fields into database...")
