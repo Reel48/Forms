@@ -10,6 +10,7 @@ interface Assignment {
   status: string;
   user?: {
     email: string;
+    name?: string;
   };
 }
 
@@ -93,6 +94,11 @@ export const AssignmentsList: React.FC<AssignmentsListProps> = ({
             <div className="assignment-info">
               <span className="assignment-email">
                 {assignment.user?.email || assignment.user_id}
+                {assignment.user?.name && assignment.user.name !== assignment.user.email && (
+                  <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>
+                    ({assignment.user.name})
+                  </span>
+                )}
               </span>
               <span className="assignment-status">{assignment.status}</span>
               <span className="assignment-date">

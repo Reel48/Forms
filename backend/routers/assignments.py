@@ -5,10 +5,11 @@ Allows admins to assign quotes and forms to customers
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import List, Optional
-from database import supabase, supabase_storage
+from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from auth import get_current_admin, get_current_user
 import uuid
 from datetime import datetime
+import requests
 
 router = APIRouter(prefix="/api", tags=["assignments"])
 
@@ -114,8 +115,45 @@ async def get_quote_assignments(
         response = query.execute()
         assignments = response.data or []
         
-        # Optionally enrich with user email if needed (fetch separately)
-        # For now, just return assignments as-is
+        # Enrich assignments with user email and name
+        if assignments and supabase_service_role_key:
+            # Get all unique user IDs
+            user_ids = list(set([a.get("user_id") for a in assignments if a.get("user_id")]))
+            
+            if user_ids:
+                # Fetch all users from Supabase Auth using REST API
+                auth_url = f"{supabase_url}/auth/v1/admin/users"
+                headers = {
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                user_map = {}
+                try:
+                    # Get all users (with pagination if needed)
+                    response = requests.get(auth_url, headers=headers, params={"per_page": 1000}, timeout=10)
+                    if response.status_code == 200:
+                        users_data = response.json()
+                        for auth_user in users_data.get("users", []):
+                            user_id = auth_user.get("id")
+                            if user_id in user_ids:
+                                user_email = auth_user.get("email")
+                                user_metadata = auth_user.get("user_metadata", {})
+                                user_name = user_metadata.get("name")
+                                user_map[user_id] = {
+                                    "email": user_email,
+                                    "name": user_name
+                                }
+                except Exception as e:
+                    print(f"Warning: Could not fetch users for assignments: {e}")
+                
+                # Enrich assignments with user info
+                for assignment in assignments:
+                    user_id = assignment.get("user_id")
+                    if user_id in user_map:
+                        assignment["user"] = user_map[user_id]
+        
         return assignments
         
     except Exception as e:
@@ -230,8 +268,45 @@ async def get_form_assignments(
         response = query.execute()
         assignments = response.data or []
         
-        # Optionally enrich with user email if needed (fetch separately)
-        # For now, just return assignments as-is
+        # Enrich assignments with user email and name
+        if assignments and supabase_service_role_key:
+            # Get all unique user IDs
+            user_ids = list(set([a.get("user_id") for a in assignments if a.get("user_id")]))
+            
+            if user_ids:
+                # Fetch all users from Supabase Auth using REST API
+                auth_url = f"{supabase_url}/auth/v1/admin/users"
+                headers = {
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                user_map = {}
+                try:
+                    # Get all users (with pagination if needed)
+                    response = requests.get(auth_url, headers=headers, params={"per_page": 1000}, timeout=10)
+                    if response.status_code == 200:
+                        users_data = response.json()
+                        for auth_user in users_data.get("users", []):
+                            user_id = auth_user.get("id")
+                            if user_id in user_ids:
+                                user_email = auth_user.get("email")
+                                user_metadata = auth_user.get("user_metadata", {})
+                                user_name = user_metadata.get("name")
+                                user_map[user_id] = {
+                                    "email": user_email,
+                                    "name": user_name
+                                }
+                except Exception as e:
+                    print(f"Warning: Could not fetch users for assignments: {e}")
+                
+                # Enrich assignments with user info
+                for assignment in assignments:
+                    user_id = assignment.get("user_id")
+                    if user_id in user_map:
+                        assignment["user"] = user_map[user_id]
+        
         return assignments
         
     except Exception as e:
