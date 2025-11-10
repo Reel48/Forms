@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { clientsAPI } from '../api';
-import type { Client } from '../api';
 import AddressInput from '../components/AddressInput';
 
 function Profile() {
