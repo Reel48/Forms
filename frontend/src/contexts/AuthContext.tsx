@@ -57,6 +57,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // If we can't parse the token, still try the request
       }
 
+      // Debug: Log token info (first 20 chars only for security)
+      console.log('Fetching role with token:', accessToken.substring(0, 20) + '...');
+      
+      // Make sure we're using the token from the parameter
+      // Clear any existing Authorization header first, then set our token
       const response = await api.get('/api/auth/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,

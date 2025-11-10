@@ -18,6 +18,13 @@ api.interceptors.request.use(
   (config) => {
     // Token will be added by AuthContext when user is logged in
     // This ensures token is included in all requests
+    // Log Authorization header for debugging (first 20 chars only)
+    if (config.headers?.Authorization) {
+      const authHeader = config.headers.Authorization as string;
+      console.log('Request Authorization header:', authHeader.substring(0, 30) + '...');
+    } else {
+      console.log('Request has no Authorization header');
+    }
     return config;
   },
   (error) => {
