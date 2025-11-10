@@ -195,13 +195,25 @@ function FormsList() {
                   </td>
                   <td>{formatDate(form.created_at)}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <Link to={`/forms/${form.id}`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                         View
                       </Link>
                       <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                         Edit
                       </Link>
+                      {form.public_url_slug && form.status === 'published' && (
+                        <a
+                          href={`/public/form/${form.public_url_slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none' }}
+                          title="Open public form"
+                        >
+                          🔗
+                        </a>
+                      )}
                       <button
                         onClick={() => handleDelete(form.id, form.name)}
                         className="btn-danger"

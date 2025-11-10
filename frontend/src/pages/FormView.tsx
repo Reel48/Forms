@@ -157,11 +157,81 @@ function FormView() {
           {form.public_url_slug && (
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
-                Public URL Slug
+                Public Form URL
               </label>
-              <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontFamily: 'monospace' }}>
-                {form.public_url_slug}
-              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                  <a
+                    href={`/public/form/${form.public_url_slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.875rem',
+                      color: '#2563eb',
+                      textDecoration: 'none',
+                      wordBreak: 'break-all'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                  >
+                    {window.location.origin}/public/form/{form.public_url_slug}
+                  </a>
+                </div>
+                <button
+                  onClick={async () => {
+                    const url = `${window.location.origin}/public/form/${form.public_url_slug}`;
+                    try {
+                      await navigator.clipboard.writeText(url);
+                      alert('URL copied to clipboard!');
+                    } catch (err) {
+                      // Fallback for older browsers
+                      const textArea = document.createElement('textarea');
+                      textArea.value = url;
+                      textArea.style.position = 'fixed';
+                      textArea.style.opacity = '0';
+                      document.body.appendChild(textArea);
+                      textArea.select();
+                      try {
+                        document.execCommand('copy');
+                        alert('URL copied to clipboard!');
+                      } catch (fallbackErr) {
+                        alert('Failed to copy URL. Please copy manually.');
+                      }
+                      document.body.removeChild(textArea);
+                    }
+                  }}
+                  className="btn-outline"
+                  style={{ 
+                    padding: '0.625rem 1rem',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.875rem'
+                  }}
+                  title="Copy URL to clipboard"
+                >
+                  📋 Copy
+                </button>
+                <a
+                  href={`/public/form/${form.public_url_slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                  style={{ 
+                    padding: '0.625rem 1rem',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.875rem',
+                    textDecoration: 'none'
+                  }}
+                >
+                  🔗 Open
+                </a>
+              </div>
+              {form.status !== 'published' && (
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#dc2626' }}>
+                  ⚠️ Form must be published for the public URL to work
+                </p>
+              )}
             </div>
           )}
         </div>
