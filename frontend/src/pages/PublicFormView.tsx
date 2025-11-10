@@ -474,6 +474,7 @@ function PublicFormView() {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -499,6 +500,7 @@ function PublicFormView() {
               placeholder={field.placeholder}
               required={field.required}
               rows={4}
+              autoComplete="off"
             />
           </div>
         );
@@ -524,6 +526,7 @@ function PublicFormView() {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="email"
             />
           </div>
         );
@@ -549,6 +552,7 @@ function PublicFormView() {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -574,6 +578,7 @@ function PublicFormView() {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="tel"
             />
           </div>
         );
@@ -599,6 +604,7 @@ function PublicFormView() {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder || 'https://example.com'}
               required={field.required}
+              autoComplete="url"
             />
           </div>
         );
@@ -623,6 +629,7 @@ function PublicFormView() {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="bday"
             />
           </div>
         );
@@ -647,6 +654,7 @@ function PublicFormView() {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -671,6 +679,7 @@ function PublicFormView() {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -704,6 +713,7 @@ function PublicFormView() {
                   value={startDate}
                   onChange={(e) => handleFieldChange(fieldId, { ...value, startDate: e.target.value })}
                   required={field.required}
+                  autoComplete="off"
                 />
               </div>
               <div>
@@ -718,6 +728,7 @@ function PublicFormView() {
                   onChange={(e) => handleFieldChange(fieldId, { ...value, endDate: e.target.value })}
                   required={field.required}
                   min={startDate || undefined}
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -914,6 +925,7 @@ function PublicFormView() {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="off"
             >
               <option value="">Select an option...</option>
               {field.options?.map((option: any, optIndex: number) => (
@@ -1544,6 +1556,7 @@ function PublicFormView() {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
+              autoComplete="off"
             />
           </div>
         );

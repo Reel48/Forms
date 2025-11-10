@@ -1078,6 +1078,7 @@ function FormPreview({ form }: FormPreviewProps) {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -1102,6 +1103,7 @@ function FormPreview({ form }: FormPreviewProps) {
               placeholder={field.placeholder}
               required={field.required}
               rows={4}
+              autoComplete="off"
             />
           </div>
         );
@@ -1126,6 +1128,7 @@ function FormPreview({ form }: FormPreviewProps) {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="email"
             />
           </div>
         );
@@ -1150,6 +1153,7 @@ function FormPreview({ form }: FormPreviewProps) {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -1174,6 +1178,7 @@ function FormPreview({ form }: FormPreviewProps) {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder}
               required={field.required}
+              autoComplete="tel"
             />
           </div>
         );
@@ -1198,6 +1203,7 @@ function FormPreview({ form }: FormPreviewProps) {
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               placeholder={field.placeholder || 'https://example.com'}
               required={field.required}
+              autoComplete="url"
             />
           </div>
         );
@@ -1221,6 +1227,7 @@ function FormPreview({ form }: FormPreviewProps) {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="bday"
             />
           </div>
         );
@@ -1244,6 +1251,7 @@ function FormPreview({ form }: FormPreviewProps) {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -1267,6 +1275,7 @@ function FormPreview({ form }: FormPreviewProps) {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="off"
             />
           </div>
         );
@@ -1401,6 +1410,7 @@ function FormPreview({ form }: FormPreviewProps) {
               value={value}
               onChange={(e) => handleFieldChange(fieldId, e.target.value)}
               required={field.required}
+              autoComplete="off"
             >
               <option value="">Select an option...</option>
               {field.options?.map((option: any, optIndex: number) => (
