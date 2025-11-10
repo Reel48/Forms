@@ -35,15 +35,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [role, setRole] = useState<'admin' | 'customer' | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserRole = async () => {
+  const fetchUserRole = async (token?: string) => {
     try {
       // Get user role from backend
-      const token = session?.access_token;
-      if (!token) return;
+      const accessToken = token || session?.access_token;
+      if (!accessToken) return;
 
       const response = await api.get('/api/auth/me', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -65,9 +65,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
-        await fetchUserRole();
-        // Update API client with token
+        // Update API client with token first
         api.defaults.headers.common['Authorization'] = `Bearer ${currentSession.access_token}`;
+        // Then fetch role with the token directly
+        await fetchUserRole(currentSession.access_token);
       } else {
         setRole(null);
         delete api.defaults.headers.common['Authorization'];
@@ -89,9 +90,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        await fetchUserRole();
-        // Update API client with token
+        // Update API client with token first
         api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+        // Then fetch role with the token directly
+        await fetchUserRole(session.access_token);
       } else {
         setRole(null);
         delete api.defaults.headers.common['Authorization'];
@@ -116,9 +118,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (data.session) {
       setSession(data.session);
       setUser(data.user);
-      await fetchUserRole();
-      // Update API client with token
+      // Update API client with token first
       api.defaults.headers.common['Authorization'] = `Bearer ${data.session.access_token}`;
+      // Then fetch role with the token directly
+      await fetchUserRole(data.session.access_token);
     }
   };
 
@@ -133,11 +136,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (data.session) {
       setSession(data.session);
       setUser(data.user);
-      await fetchUserRole();
-      // Update API client with token
-      if (data.session) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.session.access_token}`;
-      }
+      // Update API client with token first
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.session.access_token}`;
+      // Then fetch role with the token directly
+      await fetchUserRole(data.session.access_token);
     }
   };
 
