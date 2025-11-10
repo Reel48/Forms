@@ -35,11 +35,32 @@ api.interceptors.request.use(
 // Add response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login';
+      // Token expired or invalid
+      // Don't redirect if we're already on login/register or if it's a public route
+      const publicRoutes = ['/login', '/register', '/public'];
+      const isPublicRoute = publicRoutes.some(route => window.location.pathname.startsWith(route));
+      
+      // Only redirect if not on a public route and not already on login/register
+      if (!isPublicRoute && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        // Try to refresh session first before redirecting
+        try {
+          const { supabase } = await import('./lib/supabase');
+          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError || !session) {
+            // Refresh failed, redirect to login
+            window.location.href = '/login';
+          } else {
+            // Session refreshed, update auth header and retry the request
+            api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+            // Don't redirect, let the component handle the retry
+          }
+        } catch (refreshErr) {
+          // Refresh failed, redirect to login
+          console.log('Session refresh failed, redirecting to login');
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

@@ -46,17 +46,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Check if token is expired (basic check - JWT tokens have exp claim)
       try {
-        const payload = JSON.parse(atob(accessToken.split('.')[1]));
-        const exp = payload.exp;
-        if (exp && Date.now() >= exp * 1000) {
-          // Token is expired, don't try to fetch role
-          console.log('Token expired, skipping role fetch');
+        const parts = accessToken.split('.');
+        if (parts.length !== 3) {
+          console.log('Invalid token format, skipping role fetch');
           setRole(null);
           return;
         }
+        
+        const payload = JSON.parse(atob(parts[1]));
+        const exp = payload.exp;
+        if (exp && Date.now() >= exp * 1000) {
+          // Token is expired, try to refresh it first
+          console.log('Token expired, attempting refresh...');
+          try {
+            const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError || !newSession) {
+              console.log('Token refresh failed, clearing role');
+              setRole(null);
+              return;
+            }
+            // Use the new token
+            api.defaults.headers.common['Authorization'] = `Bearer ${newSession.access_token}`;
+            // Retry with new token
+            const response = await api.get('/api/auth/me', {
+              headers: {
+                Authorization: `Bearer ${newSession.access_token}`,
+              },
+            });
+            if (response.data && response.data.role) {
+              setRole(response.data.role);
+            } else {
+              setRole('customer');
+            }
+            return;
+          } catch (refreshErr) {
+            console.log('Token refresh error:', refreshErr);
+            setRole(null);
+            return;
+          }
+        }
       } catch (e) {
         // If we can't parse the token, don't try the request
-        console.log('Could not parse token, skipping role fetch');
+        console.log('Could not parse token, skipping role fetch:', e);
         setRole(null);
         return;
       }
@@ -74,9 +105,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setRole('customer'); // Default role
       }
     } catch (error: any) {
-      // Silently handle 401 errors (expected when token is invalid/expired)
+      // Handle 401 errors - token might be expired or invalid
       if (error?.response?.status === 401) {
-        // Token is invalid, clear the role
+        // Try to refresh the session
+        try {
+          const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError && newSession) {
+            // Retry with new token
+            api.defaults.headers.common['Authorization'] = `Bearer ${newSession.access_token}`;
+            try {
+              const retryResponse = await api.get('/api/auth/me', {
+                headers: {
+                  Authorization: `Bearer ${newSession.access_token}`,
+                },
+              });
+              if (retryResponse.data && retryResponse.data.role) {
+                setRole(retryResponse.data.role);
+                return;
+              }
+            } catch (retryError) {
+              console.log('Retry after refresh failed:', retryError);
+            }
+          }
+        } catch (refreshErr) {
+          console.log('Session refresh failed:', refreshErr);
+        }
+        
+        // Token is invalid or refresh failed, clear the role
         setRole(null);
         return;
       }
@@ -106,18 +161,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (currentSession?.user && currentSession?.access_token) {
         // Check if token is expired before trying to use it
         try {
-          const payload = JSON.parse(atob(currentSession.access_token.split('.')[1]));
-          const exp = payload.exp;
-          if (exp && Date.now() >= exp * 1000) {
-            // Token is expired, don't try to fetch role
-            console.log('Session token expired, skipping role fetch');
+          const parts = currentSession.access_token.split('.');
+          if (parts.length !== 3) {
+            console.log('Invalid token format in session');
             setRole(null);
             delete api.defaults.headers.common['Authorization'];
             return;
           }
+          
+          const payload = JSON.parse(atob(parts[1]));
+          const exp = payload.exp;
+          if (exp && Date.now() >= exp * 1000) {
+            // Token is expired, try to refresh it
+            console.log('Session token expired, attempting refresh...');
+            try {
+              const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+              if (refreshError || !newSession) {
+                console.log('Token refresh failed');
+                setRole(null);
+                delete api.defaults.headers.common['Authorization'];
+                return;
+              }
+              // Use the refreshed session
+              setSession(newSession);
+              setUser(newSession.user);
+              api.defaults.headers.common['Authorization'] = `Bearer ${newSession.access_token}`;
+              await fetchUserRole(newSession.access_token);
+              return;
+            } catch (refreshErr) {
+              console.log('Token refresh error:', refreshErr);
+              setRole(null);
+              delete api.defaults.headers.common['Authorization'];
+              return;
+            }
+          }
         } catch (e) {
           // If we can't parse the token, don't try to use it
-          console.log('Could not parse session token');
+          console.log('Could not parse session token:', e);
           setRole(null);
           delete api.defaults.headers.common['Authorization'];
           return;
@@ -156,15 +236,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check if token is expired before trying to use it
         let tokenValid = true;
         try {
-          const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-          const exp = payload.exp;
-          if (exp && Date.now() >= exp * 1000) {
+          const parts = session.access_token.split('.');
+          if (parts.length !== 3) {
             tokenValid = false;
-            console.log('Token expired in auth state change, skipping role fetch');
+            console.log('Invalid token format in auth state change');
+          } else {
+            const payload = JSON.parse(atob(parts[1]));
+            const exp = payload.exp;
+            if (exp && Date.now() >= exp * 1000) {
+              tokenValid = false;
+              console.log('Token expired in auth state change, attempting refresh...');
+              // Try to refresh the session
+              try {
+                const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+                if (!refreshError && newSession) {
+                  // Use the refreshed session
+                  setSession(newSession);
+                  setUser(newSession.user);
+                  api.defaults.headers.common['Authorization'] = `Bearer ${newSession.access_token}`;
+                  await fetchUserRole(newSession.access_token);
+                  return;
+                }
+              } catch (refreshErr) {
+                console.log('Token refresh failed in auth state change:', refreshErr);
+              }
+            }
           }
         } catch (e) {
           tokenValid = false;
-          console.log('Could not parse token in auth state change, skipping role fetch');
+          console.log('Could not parse token in auth state change:', e);
         }
 
         if (tokenValid) {
@@ -183,8 +283,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           delete api.defaults.headers.common['Authorization'];
         } else if (session.user && session.access_token && !shouldFetchRole) {
           // We have a session but it's not a role-fetch event (e.g., INITIAL_SESSION)
-          // Just set the auth header but don't fetch role yet
-          api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+          // Check if token is valid before setting header
+          try {
+            const parts = session.access_token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              const exp = payload.exp;
+              if (!exp || Date.now() < exp * 1000) {
+                // Token is valid, set the auth header
+                api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+              }
+            }
+          } catch (e) {
+            // If we can't parse, don't set the header
+            console.log('Could not parse token, not setting auth header');
+          }
         }
       }
 
