@@ -688,26 +688,26 @@ function PublicFormView() {
 
   // Handle redirect after submission
   useEffect(() => {
-    console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'redirect_url:', form?.thank_you_screen?.redirect_url);
+    console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'form exists:', !!form);
     
     if (!submitted || !form?.thank_you_screen?.redirect_url) {
       return;
     }
 
+    // Store redirect URL in a variable to avoid accessing form in cleanup
     const redirectUrl = form.thank_you_screen.redirect_url;
     console.log('[PublicFormView] Setting up redirect timer for:', redirectUrl);
+    
     const timer = setTimeout(() => {
-      if (redirectUrl) {
-        console.log('[PublicFormView] Redirecting to:', redirectUrl);
-        window.location.href = redirectUrl;
-      }
+      console.log('[PublicFormView] Redirecting to:', redirectUrl);
+      window.location.href = redirectUrl;
     }, 3000);
     
     return () => {
       console.log('[PublicFormView] Clearing redirect timer');
       clearTimeout(timer);
     };
-  }, [submitted, form?.thank_you_screen?.redirect_url]);
+  }, [submitted, form]);
 
   if (submitted) {
     const thankYouMessage = form?.thank_you_screen?.title || 'Thank you!';
