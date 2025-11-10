@@ -26,15 +26,15 @@ function PublicFormView() {
       return;
     }
 
-    // If we're already loading this exact slug, don't load again
-    if (isLoadingRef.current && loadedSlugRef.current === slug) {
-      console.log('[PublicFormView] Already loading this slug, skipping');
+    // If we've already loaded this exact slug, don't load again
+    if (loadedSlugRef.current === slug) {
+      console.log('[PublicFormView] Already loaded this slug, skipping');
       return;
     }
 
-    // If we've already loaded this slug and have the form, don't load again
-    if (loadedSlugRef.current === slug && form?.id) {
-      console.log('[PublicFormView] Already loaded this slug, skipping');
+    // If we're already loading this exact slug, don't load again
+    if (isLoadingRef.current) {
+      console.log('[PublicFormView] Already loading, skipping');
       return;
     }
 
@@ -56,6 +56,7 @@ function PublicFormView() {
         
         if (!isMounted) {
           console.log('[PublicFormView] Component unmounted, not setting form');
+          isLoadingRef.current = false;
           return;
         }
         
@@ -69,12 +70,14 @@ function PublicFormView() {
         
         if (!isMounted) {
           console.log('[PublicFormView] Component unmounted, not setting error');
+          isLoadingRef.current = false;
           return;
         }
         
         setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
         setLoading(false);
         isLoadingRef.current = false;
+        loadedSlugRef.current = null; // Reset on error so we can retry
       }
     };
 
@@ -83,7 +86,6 @@ function PublicFormView() {
     return () => {
       console.log('[PublicFormView] Cleanup function called');
       isMounted = false;
-      // Don't reset isLoadingRef here as it might be needed for the next render
     };
   }, [slug]);
 
