@@ -306,13 +306,18 @@ function FormView() {
         )}
       </div>
 
-      {/* Submissions Section - Coming Soon */}
-      <div className="card mt-4" style={{ backgroundColor: '#f9fafb', border: '1px dashed #d1d5db' }}>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <h3 style={{ color: '#374151', marginBottom: '0.5rem' }}>Submissions</h3>
-          <p className="text-muted" style={{ margin: 0 }}>
-            Submissions view coming soon! You'll be able to see all form responses here.
-          </p>
+      {/* Submissions Section */}
+      <div className="card mt-4">
+        <div className="flex-between">
+          <div>
+            <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Submissions</h3>
+            <p className="text-muted" style={{ margin: 0, fontSize: '0.875rem' }}>
+              View and manage all form responses
+            </p>
+          </div>
+          <Link to={`/forms/${id}/submissions`} className="btn-primary">
+            View Submissions
+          </Link>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import QuoteView from './pages/QuoteView';
 import FormsList from './pages/FormsList';
 import FormBuilder from './pages/FormBuilder';
 import FormView from './pages/FormView';
+import FormSubmissions from './pages/FormSubmissions';
 import PublicFormView from './pages/PublicFormView';
 import ClientsList from './pages/ClientsList';
 import CompanySettingsPage from './pages/CompanySettings';
@@ -103,6 +104,7 @@ function AppContent() {
         <Route path="/forms/new" element={<FormBuilder />} />
         <Route path="/forms/:id" element={<FormView />} />
         <Route path="/forms/:id/edit" element={<FormBuilder />} />
+        <Route path="/forms/:id/submissions" element={<FormSubmissions />} />
         <Route path="/public/form/:slug" element={<PublicFormView />} />
         <Route path="/clients" element={<ClientsList />} />
         <Route path="/settings" element={<CompanySettingsPage />} />

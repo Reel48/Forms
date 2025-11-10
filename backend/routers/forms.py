@@ -389,6 +389,68 @@ async def reorder_fields(form_id: str, field_orders: List[dict]):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Form Submission endpoints
+@router.get("/{form_id}/submissions", response_model=List[FormSubmission])
+async def get_form_submissions(form_id: str):
+    """Get all submissions for a form"""
+    try:
+        # Check if form exists
+        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Fetch submissions with answers
+        response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
+        
+        submissions = response.data or []
+        
+        # Map form_submission_answers to answers for each submission
+        for submission in submissions:
+            answers = submission.get("form_submission_answers", [])
+            submission["answers"] = answers
+            # Remove form_submission_answers to avoid confusion
+            if "form_submission_answers" in submission:
+                del submission["form_submission_answers"]
+        
+        return submissions
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/submissions/{submission_id}", response_model=FormSubmission)
+async def get_form_submission(form_id: str, submission_id: str):
+    """Get a single submission by ID"""
+    try:
+        # Check if form exists
+        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Fetch submission with answers
+        response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).eq("form_id", form_id).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        submission = response.data
+        
+        # Map form_submission_answers to answers for Pydantic model
+        answers = submission.get("form_submission_answers", [])
+        submission["answers"] = answers
+        # Remove form_submission_answers to avoid confusion
+        if "form_submission_answers" in submission:
+            del submission["form_submission_answers"]
+        
+        return submission
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/{form_id}/submit", response_model=FormSubmission)
 async def submit_form(form_id: str, submission: FormSubmissionCreate):
     """Submit a form response"""

@@ -182,6 +182,29 @@ export interface FormUpdate {
   thank_you_screen?: Record<string, any>;
 }
 
+export interface FormSubmissionAnswer {
+  id: string;
+  submission_id: string;
+  field_id: string;
+  answer_text?: string;
+  answer_value?: Record<string, any>;
+  created_at: string;
+}
+
+export interface FormSubmission {
+  id: string;
+  form_id: string;
+  submitter_email?: string;
+  submitter_name?: string;
+  ip_address?: string;
+  user_agent?: string;
+  started_at?: string;
+  submitted_at: string;
+  time_spent_seconds?: number;
+  status: string; // completed, abandoned
+  answers: FormSubmissionAnswer[];
+}
+
 // Quotes API
 export const quotesAPI = {
   getAll: (filters?: QuoteFilters) => {
@@ -242,6 +265,8 @@ export const formsAPI = {
   reorderFields: (formId: string, fieldOrders: Array<{ field_id: string; order_index: number }>) => api.put(`/api/forms/${formId}/fields/reorder`, fieldOrders),
   // Form submission
   submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
+  getSubmissions: (formId: string) => api.get<FormSubmission[]>(`/api/forms/${formId}/submissions`),
+  getSubmission: (formId: string, submissionId: string) => api.get<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}`),
 };
 
 export default api;
