@@ -344,30 +344,65 @@ async def create_user_for_client(
                 detail="Client already has a linked user account"
             )
         
-        # Check if user with this email already exists by checking user_roles
-        # and then fetching from auth
-        try:
-            # First check if there's a user_roles entry with matching email
-            # We'll need to check auth.users by trying to find the user
-            # Since we can't easily list all users, we'll try to create and catch the error
-            # Or we can check user_roles and fetch each user
-            roles_response = supabase.table("user_roles").select("user_id").execute()
-            for role_entry in (roles_response.data or []):
-                user_id = role_entry.get("user_id")
-                try:
-                    user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
-                    if user_response and user_response.user and user_response.user.email == client_email:
-                        # Found existing user with this email - link to client
-                        supabase.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
-                        return {
-                            "message": "Linked existing user to client",
-                            "user_id": user_id,
-                            "email": client_email
-                        }
-                except:
-                    continue
-        except Exception as e:
-            print(f"Error checking existing users: {e}")
+        # Helper function to find user by email using REST API
+        def find_user_by_email(email: str):
+            """Find a user by email using Supabase Admin API"""
+            if not supabase_service_role_key:
+                return None
+            
+            # Use Supabase Auth Admin API to list users and find by email
+            # Note: Supabase doesn't have a direct "get by email" endpoint, so we list and filter
+            list_url = f"{supabase_url}/auth/v1/admin/users"
+            headers = {
+                "apikey": supabase_service_role_key,
+                "Authorization": f"Bearer {supabase_service_role_key}",
+                "Content-Type": "application/json"
+            }
+            
+            try:
+                # List users (we'll need to paginate if there are many)
+                # For now, we'll try to get users and search
+                response = requests.get(list_url, headers=headers, params={"per_page": 1000}, timeout=10)
+                if response.status_code == 200:
+                    users_data = response.json()
+                    users = users_data.get("users", [])
+                    for user in users:
+                        if user.get("email", "").lower() == email.lower():
+                            return user
+            except Exception as e:
+                print(f"Error searching for user by email: {e}")
+            
+            return None
+        
+        # Check if user with this email already exists
+        existing_user = find_user_by_email(client_email)
+        if existing_user:
+            # User already exists - link to client
+            user_id = existing_user.get("id")
+            
+            # Ensure user has a role entry (create if missing)
+            try:
+                role_check = supabase_storage.table("user_roles").select("*").eq("user_id", user_id).execute()
+                if not role_check.data or len(role_check.data) == 0:
+                    # Create role entry
+                    supabase_storage.table("user_roles").insert({
+                        "id": str(uuid.uuid4()),
+                        "user_id": user_id,
+                        "role": "customer",
+                        "created_at": datetime.now().isoformat(),
+                        "updated_at": datetime.now().isoformat()
+                    }).execute()
+            except Exception as e:
+                print(f"Warning: Could not ensure user role exists: {e}")
+            
+            # Link user to client
+            supabase_storage.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
+            
+            return {
+                "message": "Linked existing user to client",
+                "user_id": user_id,
+                "email": client_email
+            }
         
         # Generate password if not provided
         password = request.password
@@ -418,12 +453,48 @@ async def create_user_for_client(
             user_email = user_data.get("email", client_email)
             
         except requests.exceptions.HTTPError as e:
-            error_detail = "Failed to create user"
+            # Check if error is "user already exists"
+            error_message = None
             try:
                 error_data = e.response.json()
-                error_message = error_data.get("msg", error_data.get("message", str(e)))
-                error_detail = f"Failed to create user: {error_message}"
+                error_message = error_data.get("msg", error_data.get("message", ""))
             except:
+                pass
+            
+            # If user already exists, try to find and link them
+            if error_message and ("already registered" in error_message.lower() or "already exists" in error_message.lower()):
+                existing_user = find_user_by_email(client_email)
+                if existing_user:
+                    user_id = existing_user.get("id")
+                    
+                    # Ensure user has a role entry (create if missing)
+                    try:
+                        role_check = supabase_storage.table("user_roles").select("*").eq("user_id", user_id).execute()
+                        if not role_check.data or len(role_check.data) == 0:
+                            supabase_storage.table("user_roles").insert({
+                                "id": str(uuid.uuid4()),
+                                "user_id": user_id,
+                                "role": "customer",
+                                "created_at": datetime.now().isoformat(),
+                                "updated_at": datetime.now().isoformat()
+                            }).execute()
+                    except Exception as e:
+                        print(f"Warning: Could not ensure user role exists: {e}")
+                    
+                    # Link user to client
+                    supabase_storage.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
+                    
+                    return {
+                        "message": "Linked existing user to client",
+                        "user_id": user_id,
+                        "email": client_email
+                    }
+            
+            # If we couldn't find the user or it's a different error, raise the exception
+            error_detail = "Failed to create user"
+            if error_message:
+                error_detail = f"Failed to create user: {error_message}"
+            else:
                 error_detail = f"Failed to create user: {str(e)}"
             
             raise HTTPException(
