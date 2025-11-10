@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS quote_assignments (
   assigned_by UUID REFERENCES auth.users(id),
   assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   status VARCHAR(20) DEFAULT 'assigned', -- assigned, viewed, accepted, declined
+  expires_at TIMESTAMP WITH TIME ZONE, -- Optional expiration date for the assignment
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(quote_id, user_id)
 );
