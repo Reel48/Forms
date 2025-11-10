@@ -14,8 +14,13 @@ security = HTTPBearer()
 
 # Get JWT secret from environment (Supabase JWT secret)
 # This is used to verify tokens
-JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+# Note: Supabase JWT secret is base64 encoded, but python-jose expects it as-is
+JWT_SECRET_RAW = os.getenv("SUPABASE_JWT_SECRET")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
+
+# The JWT secret from Supabase is base64 encoded, but we need to use it as the raw bytes
+# python-jose will handle the base64 decoding internally when verifying
+JWT_SECRET = JWT_SECRET_RAW
 
 if not JWT_SECRET:
     print("WARNING: SUPABASE_JWT_SECRET not set. Token verification may fail.")
@@ -52,8 +57,25 @@ async def get_current_user(
         # Verify both signature and expiration
         try:
             import time
-            # Decode and verify the token (includes expiration check)
-            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            # Decode and verify the token
+            # Supabase tokens have an 'aud' (audience) claim that we need to handle
+            # We'll verify signature but allow any audience (Supabase uses 'authenticated' for user tokens)
+            try:
+                # Try decoding with audience verification disabled first
+                payload = jwt.decode(
+                    token, 
+                    JWT_SECRET, 
+                    algorithms=["HS256"],
+                    options={"verify_signature": True, "verify_exp": True, "verify_aud": False}
+                )
+            except jwt.InvalidAudienceError:
+                # If audience verification fails, try without it (Supabase tokens may have different audiences)
+                payload = jwt.decode(
+                    token, 
+                    JWT_SECRET, 
+                    algorithms=["HS256"],
+                    options={"verify_signature": True, "verify_exp": True, "verify_aud": False}
+                )
             
             # Additional expiration check (jwt.decode should handle this, but double-check)
             exp = payload.get("exp")
