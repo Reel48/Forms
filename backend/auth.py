@@ -34,13 +34,24 @@ async def get_current_user(
     try:
         # Verify JWT token manually using Supabase JWT secret
         if not JWT_SECRET:
+            print("ERROR: JWT_SECRET not configured")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="JWT secret not configured"
             )
         
         # Decode and verify JWT token
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        except JWTError as jwt_err:
+            print(f"JWT decode error: {str(jwt_err)}")
+            print(f"Token (first 50 chars): {token[:50]}...")
+            print(f"JWT_SECRET configured: {bool(JWT_SECRET)}")
+            raise
+        except Exception as e:
+            print(f"Unexpected error during JWT decode: {str(e)}")
+            raise
+        
         user_id = payload.get("sub")
         
         if not user_id:
