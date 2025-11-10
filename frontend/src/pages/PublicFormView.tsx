@@ -20,25 +20,25 @@ function PublicFormView() {
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current, 'hasLoadedRef:', hasLoadedRef.current);
-    
+    // Early return if no slug
     if (!slug) {
-      console.log('[PublicFormView] No slug, setting loading to false');
       setLoading(false);
       return;
     }
 
-    // If we've already successfully loaded this slug, don't load again
-    // IMPORTANT: Don't call setState here to avoid triggering re-renders
-    // Only use refs to avoid dependency issues
+    // If slug changed, reset the loaded state
+    if (loadedSlugRef.current !== slug) {
+      hasLoadedRef.current = false;
+      isLoadingRef.current = false;
+    }
+
+    // If we've already successfully loaded this exact slug, don't load again
     if (hasLoadedRef.current && loadedSlugRef.current === slug) {
-      console.log('[PublicFormView] Already loaded this slug, skipping completely - no state updates');
       return;
     }
 
-    // If we're already loading, don't start another load
-    if (isLoadingRef.current) {
-      console.log('[PublicFormView] Already loading, skipping');
+    // If we're already loading this slug, don't start another load
+    if (isLoadingRef.current && loadedSlugRef.current === slug) {
       return;
     }
 
@@ -48,31 +48,25 @@ function PublicFormView() {
     let isMounted = true;
 
     const loadForm = async () => {
-      console.log('[PublicFormView] loadForm called');
-      
+      // Update loading and error states
       setLoading(true);
       setError(null);
       
       try {
-        console.log('[PublicFormView] Fetching form with slug:', slug);
         const response = await formsAPI.getBySlug(slug);
-        console.log('[PublicFormView] Form fetched successfully:', response.data?.id);
         
         if (!isMounted) {
-          console.log('[PublicFormView] Component unmounted, not setting form');
           isLoadingRef.current = false;
           return;
         }
         
         // Double-check we haven't already loaded (for StrictMode protection)
         if (hasLoadedRef.current && loadedSlugRef.current === slug) {
-          console.log('[PublicFormView] Already loaded during async operation, skipping');
           isLoadingRef.current = false;
           setLoading(false);
           return;
         }
         
-        console.log('[PublicFormView] Setting form data');
         const formData = response.data;
         
         // Store redirect URL in ref for later use
@@ -87,13 +81,8 @@ function PublicFormView() {
         // Set form and loading together - React will batch these
         setForm(formData);
         setLoading(false);
-        
-        console.log('[PublicFormView] Form and loading state updated, hasLoadedRef set to true');
       } catch (error: any) {
-        console.error('[PublicFormView] Failed to load form:', error);
-        
         if (!isMounted) {
-          console.log('[PublicFormView] Component unmounted, not setting error');
           isLoadingRef.current = false;
           return;
         }
@@ -101,16 +90,18 @@ function PublicFormView() {
         setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
         setLoading(false);
         isLoadingRef.current = false;
-        hasLoadedRef.current = false; // Reset on error so we can retry
-        loadedSlugRef.current = null;
+        // Mark as "attempted" so we don't retry automatically on the same slug
+        // This prevents infinite retry loops while still allowing retry if slug changes
+        hasLoadedRef.current = true; // Set to true to prevent retry, even though load failed
       }
     };
 
     loadForm();
 
     return () => {
-      console.log('[PublicFormView] Cleanup function called');
       isMounted = false;
+      // Don't reset isLoadingRef here as it might be in the middle of loading
+      // The next effect run will handle it properly
     };
   }, [slug]);
 
