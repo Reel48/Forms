@@ -19,6 +19,10 @@ function PublicFormView() {
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [visibleFields, setVisibleFields] = useState<FormField[]>([]);
   
+  // Touch gesture support for mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  
   // Use ref to track if we're already loading to prevent multiple simultaneous loads
   const isLoadingRef = useRef(false);
   const loadedSlugRef = useRef<string | null>(null);
@@ -255,16 +259,71 @@ function PublicFormView() {
     }
   }, [form, formValues, startTime]);
 
-  // Keyboard navigation
+  // Touch gesture support for mobile swipe navigation
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartX.current || !touchStartY.current || submitted || loading || !form || visibleFields.length === 0) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchStartX.current - touchEndX;
+      const diffY = touchStartY.current - touchEndY;
+
+      // Only handle horizontal swipes (ignore if vertical swipe is larger)
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX > 0) {
+          // Swipe left - go to next
+          if (currentQuestionIndex < visibleFields.length - 1) {
+            handleNext();
+          } else if (currentQuestionIndex === visibleFields.length - 1) {
+            handleSubmit();
+          }
+        } else {
+          // Swipe right - go to previous
+          if (currentQuestionIndex > 0) {
+            handlePrevious();
+          }
+        }
+      }
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+    };
+
+    window.addEventListener('touchstart', handleTouchStart);
+    window.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [currentQuestionIndex, visibleFields.length, submitted, loading, form, handleNext, handlePrevious, handleSubmit]);
+
+  // Enhanced Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (submitted || loading || !form || visibleFields.length === 0) return;
       
-      // Don't intercept if user is typing in an input/textarea
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        // Allow Enter in textarea (Shift+Enter for new line)
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+      
+      // Don't intercept if user is typing in an input/textarea/select
+      if (isInput) {
+        // Special handling for textarea (Shift+Enter for new line, Enter to continue)
         if (target.tagName === 'TEXTAREA' && e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (currentQuestionIndex < visibleFields.length - 1) {
+            handleNext();
+          } else if (currentQuestionIndex === visibleFields.length - 1) {
+            handleSubmit();
+          }
+        }
+        // For select dropdowns, Enter should select and advance
+        if (target.tagName === 'SELECT' && e.key === 'Enter') {
           e.preventDefault();
           if (currentQuestionIndex < visibleFields.length - 1) {
             handleNext();
@@ -275,12 +334,18 @@ function PublicFormView() {
         return;
       }
       
+      // Global keyboard shortcuts
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         if (currentQuestionIndex < visibleFields.length - 1) {
           handleNext();
         } else if (currentQuestionIndex === visibleFields.length - 1) {
           handleSubmit();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (currentQuestionIndex > 0) {
+          handlePrevious();
         }
       } else if (e.key === 'ArrowLeft' || (e.key === 'Backspace' && e.target === document.body)) {
         e.preventDefault();
@@ -563,23 +628,38 @@ function PublicFormView() {
                 {field.description}
               </p>
             )}
-            <div role="radiogroup" aria-label={field.label}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div role="radiogroup" aria-label={field.label} className="typeform-options">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {field.options?.map((option: any, optIndex: number) => {
                   const optionValue = option.value || option.label;
                   const optionId = `${fieldId}-${optIndex}`;
+                  const isSelected = value === optionValue;
                   return (
-                    <label key={optIndex} htmlFor={optionId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label 
+                      key={optIndex} 
+                      htmlFor={optionId} 
+                      className={`typeform-option ${isSelected ? 'typeform-option-selected' : ''}`}
+                    >
                       <input
                         type="radio"
                         id={optionId}
                         name={fieldId}
                         value={optionValue}
-                        checked={value === optionValue}
-                        onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                        checked={isSelected}
+                        onChange={(e) => {
+                          handleFieldChange(fieldId, e.target.value);
+                          // Auto-advance after selection (with small delay for visual feedback)
+                          setTimeout(() => {
+                            if (currentQuestionIndex < visibleFields.length - 1) {
+                              handleNext();
+                            } else if (currentQuestionIndex === visibleFields.length - 1) {
+                              handleSubmit();
+                            }
+                          }, 300);
+                        }}
                         required={field.required}
                       />
-                      <span>{option.label || option.value}</span>
+                      <span className="typeform-option-label">{option.label || option.value}</span>
                     </label>
                   );
                 })}
@@ -600,19 +680,24 @@ function PublicFormView() {
                 {field.description}
               </p>
             )}
-            <div role="group" aria-label={field.label}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div role="group" aria-label={field.label} className="typeform-options">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {field.options?.map((option: any, optIndex: number) => {
                   const optionValue = option.value || option.label;
                   const optionId = `${fieldId}-${optIndex}`;
+                  const isChecked = (formValues[fieldId] || []).includes(optionValue);
                   return (
-                    <label key={optIndex} htmlFor={optionId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label 
+                      key={optIndex} 
+                      htmlFor={optionId} 
+                      className={`typeform-option typeform-option-checkbox ${isChecked ? 'typeform-option-selected' : ''}`}
+                    >
                       <input
                         type="checkbox"
                         id={optionId}
                         name={fieldId}
                         value={optionValue}
-                        checked={(formValues[fieldId] || []).includes(optionValue)}
+                        checked={isChecked}
                         onChange={(e) => {
                           const currentValues = formValues[fieldId] || [];
                           const newValues = e.target.checked
@@ -621,7 +706,7 @@ function PublicFormView() {
                           handleFieldChange(fieldId, newValues);
                         }}
                       />
-                      <span>{option.label || option.value}</span>
+                      <span className="typeform-option-label">{option.label || option.value}</span>
                     </label>
                   );
                 })}
@@ -642,28 +727,58 @@ function PublicFormView() {
                 {field.description}
               </p>
             )}
-            <div role="radiogroup" aria-label={field.label}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <label htmlFor={`${fieldId}-yes`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div role="radiogroup" aria-label={field.label} className="typeform-yesno">
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <label 
+                  htmlFor={`${fieldId}-yes`} 
+                  className={`typeform-yesno-option ${value === 'yes' ? 'typeform-yesno-selected' : ''}`}
+                >
                   <input
                     type="radio"
                     id={`${fieldId}-yes`}
                     name={fieldId}
                     value="yes"
                     checked={value === 'yes'}
-                    onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                    onChange={(e) => {
+                      handleFieldChange(fieldId, e.target.value);
+                      // Auto-advance after selection
+                      const currentIdx = currentQuestionIndex;
+                      const totalFields = visibleFields.length;
+                      setTimeout(() => {
+                        if (currentIdx < totalFields - 1) {
+                          handleNext();
+                        } else if (currentIdx === totalFields - 1) {
+                          handleSubmit();
+                        }
+                      }, 300);
+                    }}
                     required={field.required}
                   />
                   <span>Yes</span>
                 </label>
-                <label htmlFor={`${fieldId}-no`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label 
+                  htmlFor={`${fieldId}-no`} 
+                  className={`typeform-yesno-option ${value === 'no' ? 'typeform-yesno-selected' : ''}`}
+                >
                   <input
                     type="radio"
                     id={`${fieldId}-no`}
                     name={fieldId}
                     value="no"
                     checked={value === 'no'}
-                    onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                    onChange={(e) => {
+                      handleFieldChange(fieldId, e.target.value);
+                      // Auto-advance after selection
+                      const currentIdx = currentQuestionIndex;
+                      const totalFields = visibleFields.length;
+                      setTimeout(() => {
+                        if (currentIdx < totalFields - 1) {
+                          handleNext();
+                        } else if (currentIdx === totalFields - 1) {
+                          handleSubmit();
+                        }
+                      }, 300);
+                    }}
                     required={field.required}
                   />
                   <span>No</span>
@@ -693,7 +808,19 @@ function PublicFormView() {
                     key={star}
                     type="button"
                     name={fieldId}
-                    onClick={() => handleFieldChange(fieldId, star)}
+                    onClick={() => {
+                      handleFieldChange(fieldId, star);
+                      // Auto-advance after rating selection
+                      const currentIdx = currentQuestionIndex;
+                      const totalFields = visibleFields.length;
+                      setTimeout(() => {
+                        if (currentIdx < totalFields - 1) {
+                          handleNext();
+                        } else if (currentIdx === totalFields - 1) {
+                          handleSubmit();
+                        }
+                      }, 300);
+                    }}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -761,7 +888,19 @@ function PublicFormView() {
                           name={fieldId}
                           value={num}
                           checked={value === num.toString()}
-                          onChange={(e) => handleFieldChange(fieldId, e.target.value)}
+                          onChange={(e) => {
+                            handleFieldChange(fieldId, e.target.value);
+                            // Auto-advance after opinion scale selection
+                            const currentIdx = currentQuestionIndex;
+                            const totalFields = visibleFields.length;
+                            setTimeout(() => {
+                              if (currentIdx < totalFields - 1) {
+                                handleNext();
+                              } else if (currentIdx === totalFields - 1) {
+                                handleSubmit();
+                              }
+                            }, 300);
+                          }}
                           required={field.required}
                           style={{ margin: 0 }}
                         />

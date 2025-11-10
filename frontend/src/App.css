@@ -527,28 +527,91 @@ table tbody tr:hover {
   font-size: 0.875rem;
 }
 
-/* Radio and Checkbox styling for Typeform */
-.typeform-question input[type="radio"],
-.typeform-question input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin-right: 0.75rem;
-  cursor: pointer;
+/* Enhanced Option Styling for Typeform */
+.typeform-options {
+  margin-top: 1rem;
 }
 
-.typeform-question label[for*="-"] {
-  font-size: 1.125rem;
-  font-weight: 500;
+.typeform-option {
   display: flex;
   align-items: center;
-  padding: 0.75rem;
-  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  background: white;
+  position: relative;
 }
 
-.typeform-question label[for*="-"]:hover {
-  background: #f9fafb;
+.typeform-option:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateX(4px);
+}
+
+.typeform-option-selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.typeform-option input[type="radio"],
+.typeform-option input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.typeform-option-label {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #1f2937;
+  flex: 1;
+}
+
+.typeform-option-checkbox {
+  /* Checkboxes can have multiple selections, so slightly different styling */
+}
+
+/* Yes/No Button Styling */
+.typeform-yesno {
+  margin-top: 1.5rem;
+}
+
+.typeform-yesno-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  font-size: 1.125rem;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.typeform-yesno-option:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.typeform-yesno-selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.typeform-yesno-option input[type="radio"] {
+  display: none;
 }
 
 /* Rating stars styling */
@@ -601,9 +664,45 @@ table tbody tr:hover {
   .typeform-btn {
     padding: 0.75rem 1.5rem;
     font-size: 0.9375rem;
+    min-height: 44px; /* Touch-friendly minimum size */
   }
 
   .typeform-progress {
     padding: 0.75rem 1rem;
+  }
+
+  .typeform-option {
+    padding: 1rem;
+    min-height: 56px; /* Touch-friendly minimum size */
+  }
+
+  .typeform-yesno-option {
+    padding: 1rem 1.5rem;
+    min-width: 100px;
+    min-height: 56px; /* Touch-friendly minimum size */
+  }
+
+  .typeform-navigation {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .typeform-navigation button {
+    width: 100%;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .typeform-option:hover {
+    transform: none;
+  }
+
+  .typeform-yesno-option:hover {
+    transform: none;
+  }
+
+  .typeform-btn-primary:hover:not(:disabled) {
+    transform: none;
   }
 }
