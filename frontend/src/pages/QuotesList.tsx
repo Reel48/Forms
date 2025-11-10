@@ -3,6 +3,17 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { quotesAPI } from '../api';
 import type { Quote, QuoteFilters } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../api';
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
+
+interface Assignment {
+  user_id: string;
+}
 
 // Valid status values
 const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined'] as const;
@@ -32,6 +43,8 @@ function QuotesList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
+  const [users, setUsers] = useState<Record<string, User>>({});
   const { role } = useAuth();
 
   // Get filter values from URL params
@@ -49,6 +62,47 @@ function QuotesList() {
   useEffect(() => {
     loadQuotes();
   }, [debouncedSearchTerm, statusFilter, paymentStatusFilter]);
+
+  // Load users for assignment display (admin only)
+  useEffect(() => {
+    if (role === 'admin' && quotes.length > 0) {
+      loadUsers();
+      loadAllAssignments();
+    }
+  }, [quotes, role]);
+
+  const loadUsers = async () => {
+    try {
+      const response = await api.get('/api/auth/users');
+      const usersMap: Record<string, User> = {};
+      response.data.forEach((user: User) => {
+        usersMap[user.id] = user;
+      });
+      setUsers(usersMap);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  const loadAllAssignments = async () => {
+    try {
+      const assignmentsMap: Record<string, Assignment[]> = {};
+      await Promise.all(
+        quotes.map(async (quote) => {
+          try {
+            const response = await api.get(`/api/quotes/${quote.id}/assignments`);
+            assignmentsMap[quote.id] = response.data || [];
+          } catch (error) {
+            console.error(`Failed to load assignments for quote ${quote.id}:`, error);
+            assignmentsMap[quote.id] = [];
+          }
+        })
+      );
+      setAssignments(assignmentsMap);
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+    }
+  };
 
   const loadQuotes = async () => {
     setLoading(true);
@@ -77,6 +131,21 @@ function QuotesList() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAssignedToText = (quoteId: string): string => {
+    const quoteAssignments = assignments[quoteId] || [];
+    if (quoteAssignments.length === 0) {
+      return '-';
+    }
+    if (quoteAssignments.length === 1) {
+      const user = users[quoteAssignments[0].user_id];
+      if (user) {
+        return user.name && user.name !== user.email ? user.name : user.email;
+      }
+      return 'Unknown';
+    }
+    return `${quoteAssignments.length} people`;
   };
 
   // Update URL params when filters change
@@ -284,6 +353,7 @@ function QuotesList() {
                     <th>Total</th>
                     <th>Quote Status</th>
                     <th>Payment Status</th>
+                    {role === 'admin' && <th>Assigned To</th>}
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -309,6 +379,13 @@ function QuotesList() {
                           <span className="text-muted">-</span>
                         )}
                       </td>
+                      {role === 'admin' && (
+                        <td>
+                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                            {getAssignedToText(quote.id)}
+                          </span>
+                        </td>
+                      )}
                       <td>{formatDate(quote.created_at)}</td>
                       <td>
                         <Link to={`/quotes/${quote.id}`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>

@@ -3,6 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../api';
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
+
+interface Assignment {
+  user_id: string;
+}
 
 function FormsList() {
   const navigate = useNavigate();
@@ -10,11 +21,54 @@ function FormsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
+  const [users, setUsers] = useState<Record<string, User>>({});
   const { role } = useAuth();
 
   useEffect(() => {
     loadForms();
   }, [statusFilter]);
+
+  // Load users for assignment display (admin only)
+  useEffect(() => {
+    if (role === 'admin' && forms.length > 0) {
+      loadUsers();
+      loadAllAssignments();
+    }
+  }, [forms, role]);
+
+  const loadUsers = async () => {
+    try {
+      const response = await api.get('/api/auth/users');
+      const usersMap: Record<string, User> = {};
+      response.data.forEach((user: User) => {
+        usersMap[user.id] = user;
+      });
+      setUsers(usersMap);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  const loadAllAssignments = async () => {
+    try {
+      const assignmentsMap: Record<string, Assignment[]> = {};
+      await Promise.all(
+        forms.map(async (form) => {
+          try {
+            const response = await api.get(`/api/forms/${form.id}/assignments`);
+            assignmentsMap[form.id] = response.data || [];
+          } catch (error) {
+            console.error(`Failed to load assignments for form ${form.id}:`, error);
+            assignmentsMap[form.id] = [];
+          }
+        })
+      );
+      setAssignments(assignmentsMap);
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+    }
+  };
 
   const loadForms = async () => {
     setLoading(true);
@@ -33,6 +87,21 @@ function FormsList() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAssignedToText = (formId: string): string => {
+    const formAssignments = assignments[formId] || [];
+    if (formAssignments.length === 0) {
+      return '-';
+    }
+    if (formAssignments.length === 1) {
+      const user = users[formAssignments[0].user_id];
+      if (user) {
+        return user.name && user.name !== user.email ? user.name : user.email;
+      }
+      return 'Unknown';
+    }
+    return `${formAssignments.length} people`;
   };
 
   const formatDate = (dateString: string) => {
@@ -174,6 +243,7 @@ function FormsList() {
                 <th>Description</th>
                 <th>Fields</th>
                 <th>Status</th>
+                {role === 'admin' && <th>Assigned To</th>}
                 <th>Created</th>
                 <th>Actions</th>
               </tr>
@@ -201,6 +271,13 @@ function FormsList() {
                       {formatStatus(form.status)}
                     </span>
                   </td>
+                  {role === 'admin' && (
+                    <td>
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                        {getAssignedToText(form.id)}
+                      </span>
+                    </td>
+                  )}
                   <td>{formatDate(form.created_at)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
