@@ -19,7 +19,7 @@ function PublicFormView() {
   const redirectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current, 'form exists:', !!form);
+    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current);
     
     if (!slug) {
       console.log('[PublicFormView] No slug, setting loading to false');
@@ -27,9 +27,12 @@ function PublicFormView() {
       return;
     }
 
-    // If we've already successfully loaded this exact slug and have the form, don't load again
-    if (loadedSlugRef.current === slug && form?.id) {
-      console.log('[PublicFormView] Already loaded this slug and have form, skipping');
+    // If we've already loaded this exact slug, don't load again
+    // We use refs only to avoid dependency issues
+    if (loadedSlugRef.current === slug) {
+      console.log('[PublicFormView] Already loaded this slug, skipping');
+      // Make sure loading is false if we already have the form
+      setLoading(false);
       return;
     }
 
@@ -47,10 +50,7 @@ function PublicFormView() {
     const loadForm = async () => {
       console.log('[PublicFormView] loadForm called');
       
-      // Only set loading if we're not already in a loading state
-      if (!form?.id) {
-        setLoading(true);
-      }
+      setLoading(true);
       setError(null);
       
       try {
@@ -72,7 +72,7 @@ function PublicFormView() {
           redirectUrlRef.current = formData.thank_you_screen.redirect_url;
         }
         
-        // Use a single state update to set both form and loading
+        // Set form and loading in separate calls (React will batch them)
         setForm(formData);
         setLoading(false);
         isLoadingRef.current = false;
