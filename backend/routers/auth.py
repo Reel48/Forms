@@ -256,11 +256,6 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "role": current_user.get("role"),
         "name": current_user.get("name")
     }
-    return {
-        "id": current_user["id"],
-        "email": current_user["email"],
-        "role": current_user["role"]
-    }
 
 
 @router.post("/logout")
