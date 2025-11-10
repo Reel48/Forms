@@ -30,8 +30,13 @@ function PublicFormView() {
 
     // If we've already successfully loaded this slug, don't load again
     // IMPORTANT: Don't call setState here to avoid triggering re-renders
-    if (hasLoadedRef.current && loadedSlugRef.current === slug) {
-      console.log('[PublicFormView] Already loaded this slug, skipping completely - no state updates');
+    // Also check if form already exists in state (for StrictMode double-render protection)
+    if ((hasLoadedRef.current && loadedSlugRef.current === slug) || (form?.id && form.public_url_slug === slug)) {
+      console.log('[PublicFormView] Already loaded this slug (ref or state check), skipping completely - no state updates');
+      if (loading) {
+        // Only update loading if it's still true (shouldn't happen, but just in case)
+        setLoading(false);
+      }
       return;
     }
 
