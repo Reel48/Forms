@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { quotesAPI } from '../api';
 import type { Quote, QuoteFilters } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Valid status values
 const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined'] as const;
@@ -31,6 +32,7 @@ function QuotesList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const { role } = useAuth();
 
   // Get filter values from URL params
   const searchTerm = searchParams.get('search') || '';
@@ -132,9 +134,11 @@ function QuotesList() {
     <div className="container">
       <div className="flex-between mb-4">
         <h1>Quotes</h1>
-        <button onClick={() => navigate('/quotes/new')} className="btn-primary">
-          Create New Quote
-        </button>
+        {role === 'admin' && (
+          <button onClick={() => navigate('/quotes/new')} className="btn-primary">
+            Create New Quote
+          </button>
+        )}
       </div>
 
       {/* Filters Section */}

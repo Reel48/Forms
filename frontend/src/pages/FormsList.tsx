@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 function FormsList() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ function FormsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const { role } = useAuth();
 
   useEffect(() => {
     loadForms();
@@ -77,9 +79,11 @@ function FormsList() {
     <div className="container">
       <div className="flex-between mb-4">
         <h1>Forms</h1>
-        <button onClick={() => navigate('/forms/new')} className="btn-primary">
-          Create New Form
-        </button>
+        {role === 'admin' && (
+          <button onClick={() => navigate('/forms/new')} className="btn-primary">
+            Create New Form
+          </button>
+        )}
       </div>
 
       {/* Status Filter */}
@@ -145,11 +149,15 @@ function FormsList() {
             <p className="text-muted" style={{ marginBottom: '2rem' }}>
               {statusFilter
                 ? 'Try adjusting your filters or create a new form.'
-                : 'Create your first form to get started!'}
+                : role === 'admin'
+                ? 'Create your first form to get started!'
+                : 'No forms have been assigned to you yet.'}
             </p>
-            <button onClick={() => navigate('/forms/new')} className="btn-primary">
-              Create Your First Form
-            </button>
+            {role === 'admin' && (
+              <button onClick={() => navigate('/forms/new')} className="btn-primary">
+                Create Your First Form
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -199,9 +207,20 @@ function FormsList() {
                       <Link to={`/forms/${form.id}`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                         View
                       </Link>
-                      <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                        Edit
-                      </Link>
+                      {role === 'admin' && (
+                        <>
+                          <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                            Edit
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(form.id, form.name)}
+                            className="btn-danger"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                       {form.public_url_slug && form.status === 'published' && (
                         <a
                           href={`/public/form/${form.public_url_slug}`}
@@ -214,13 +233,6 @@ function FormsList() {
                           🔗
                         </a>
                       )}
-                      <button
-                        onClick={() => handleDelete(form.id, form.name)}
-                        className="btn-danger"
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                      >
-                        Delete
-                      </button>
                     </div>
                   </td>
                 </tr>
