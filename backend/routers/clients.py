@@ -82,7 +82,7 @@ async def get_clients():
                     user_name = user_data.get("user_metadata", {}).get("name", "") or user_email.split("@")[0]
                     
                     # Check if there's a client with the same email (admin-created, not linked)
-                    email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).is_("user_id", "null").execute()
+                    email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).is_("user_id", None).execute()
                     
                     if email_client_response.data and len(email_client_response.data) > 0:
                         # Found admin-created client with same email, link it

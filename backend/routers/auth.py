@@ -227,8 +227,8 @@ async def get_me(current_user: dict = Depends(get_current_user)):
                     }).eq("id", client["id"]).execute()
             else:
                 # No client record exists, create one
-                # Check if there's a client with the same email (admin-created)
-                email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).execute()
+                # Check if there's a client with the same email (admin-created, not linked)
+                email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).is_("user_id", None).execute()
                 
                 if email_client_response.data and len(email_client_response.data) > 0:
                     # Found client with same email, link it to this user
