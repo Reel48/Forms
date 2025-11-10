@@ -17,9 +17,10 @@ function PublicFormView() {
   const isLoadingRef = useRef(false);
   const loadedSlugRef = useRef<string | null>(null);
   const redirectUrlRef = useRef<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current);
+    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current, 'hasLoadedRef:', hasLoadedRef.current);
     
     if (!slug) {
       console.log('[PublicFormView] No slug, setting loading to false');
@@ -27,12 +28,9 @@ function PublicFormView() {
       return;
     }
 
-    // If we've already loaded this exact slug, don't load again
-    // We use refs only to avoid dependency issues
-    if (loadedSlugRef.current === slug) {
-      console.log('[PublicFormView] Already loaded this slug, skipping');
-      // Make sure loading is false if we already have the form
-      setLoading(false);
+    // If we've already successfully loaded this slug, don't load again
+    if (hasLoadedRef.current && loadedSlugRef.current === slug) {
+      console.log('[PublicFormView] Already loaded this slug, skipping completely');
       return;
     }
 
@@ -42,7 +40,7 @@ function PublicFormView() {
       return;
     }
 
-    // Mark as loading
+    // Mark as loading immediately
     isLoadingRef.current = true;
     loadedSlugRef.current = slug;
     let isMounted = true;
@@ -67,17 +65,20 @@ function PublicFormView() {
         console.log('[PublicFormView] Setting form data');
         const formData = response.data;
         
-        // Store redirect URL in ref for later use before setting form
+        // Store redirect URL in ref for later use
         if (formData?.thank_you_screen?.redirect_url) {
           redirectUrlRef.current = formData.thank_you_screen.redirect_url;
         }
         
-        // Set form and loading in separate calls (React will batch them)
-        setForm(formData);
-        setLoading(false);
+        // Mark as loaded BEFORE setting state to prevent re-runs
+        hasLoadedRef.current = true;
         isLoadingRef.current = false;
         
-        console.log('[PublicFormView] Form and loading state updated');
+        // Set form and loading - React will batch these
+        setForm(formData);
+        setLoading(false);
+        
+        console.log('[PublicFormView] Form and loading state updated, hasLoadedRef set to true');
       } catch (error: any) {
         console.error('[PublicFormView] Failed to load form:', error);
         
@@ -90,7 +91,8 @@ function PublicFormView() {
         setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
         setLoading(false);
         isLoadingRef.current = false;
-        loadedSlugRef.current = null; // Reset on error so we can retry
+        hasLoadedRef.current = false; // Reset on error so we can retry
+        loadedSlugRef.current = null;
       }
     };
 
@@ -699,19 +701,23 @@ function PublicFormView() {
     );
   }
 
-  // Store redirect URL in ref when form is loaded (do this in the main useEffect)
-  // This avoids having a separate useEffect that could cause issues
-
+  // Handle redirect after submission - only run when submitted changes
   useEffect(() => {
     console.log('[PublicFormView] Redirect useEffect - submitted:', submitted, 'redirectUrlRef:', redirectUrlRef.current);
     
-    if (!submitted || !redirectUrlRef.current) {
+    if (!submitted) {
       return;
     }
 
+    // Get redirect URL from ref (set when form was loaded)
     const redirectUrl = redirectUrlRef.current;
-    console.log('[PublicFormView] Setting up redirect timer for:', redirectUrl);
     
+    if (!redirectUrl) {
+      console.log('[PublicFormView] No redirect URL, skipping redirect');
+      return;
+    }
+
+    console.log('[PublicFormView] Setting up redirect timer for:', redirectUrl);
     const timer = setTimeout(() => {
       console.log('[PublicFormView] Redirecting to:', redirectUrl);
       window.location.href = redirectUrl;
