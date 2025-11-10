@@ -141,9 +141,9 @@ async def login(credentials: UserLogin):
         
         # Get user role using service role client to bypass RLS
         try:
-            # Use maybeSingle() instead of single() to handle cases where no row exists
-            role_response = supabase_storage.table("user_roles").select("*").eq("user_id", user.id).maybeSingle().execute()
-            role = role_response.data.get("role", "customer") if role_response.data else "customer"
+            # Use execute() and check if data exists (maybeSingle() not available in this Supabase client version)
+            role_response = supabase_storage.table("user_roles").select("*").eq("user_id", user.id).execute()
+            role = role_response.data[0].get("role", "customer") if role_response.data and len(role_response.data) > 0 else "customer"
         except Exception as e:
             print(f"Error fetching user role for user {user.id}: {str(e)}")
             role = "customer"
