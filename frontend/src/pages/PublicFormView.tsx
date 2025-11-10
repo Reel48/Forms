@@ -41,15 +41,19 @@ function PublicFormView() {
       return;
     }
 
-    // Mark as loading immediately
+    // Mark as loading immediately - BEFORE any async operations
     isLoadingRef.current = true;
     loadedSlugRef.current = slug;
     let isMounted = true;
+    let hasSetForm = false; // Track if we've set the form to prevent double-setting
 
     const loadForm = async () => {
       console.log('[PublicFormView] loadForm called');
       
-      setLoading(true);
+      // Only set loading if we haven't already set the form
+      if (!hasSetForm) {
+        setLoading(true);
+      }
       setError(null);
       
       try {
@@ -57,8 +61,8 @@ function PublicFormView() {
         const response = await formsAPI.getBySlug(slug);
         console.log('[PublicFormView] Form fetched successfully:', response.data?.id);
         
-        if (!isMounted) {
-          console.log('[PublicFormView] Component unmounted, not setting form');
+        if (!isMounted || hasSetForm) {
+          console.log('[PublicFormView] Component unmounted or form already set, not setting form');
           isLoadingRef.current = false;
           return;
         }
@@ -71,15 +75,22 @@ function PublicFormView() {
           redirectUrlRef.current = formData.thank_you_screen.redirect_url;
         }
         
-        // Mark as loaded BEFORE setting state to prevent re-runs
+        // Mark as loaded and set form flag BEFORE setting state
         hasLoadedRef.current = true;
+        hasSetForm = true;
         isLoadingRef.current = false;
         
-        // Set form and loading - React will batch these
-        setForm(formData);
-        setLoading(false);
+        // Use React's batching - set both states together
+        // Use a timeout to ensure this happens after any pending renders
+        setTimeout(() => {
+          if (isMounted) {
+            setForm(formData);
+            setLoading(false);
+            console.log('[PublicFormView] Form and loading state updated via setTimeout');
+          }
+        }, 0);
         
-        console.log('[PublicFormView] Form and loading state updated, hasLoadedRef set to true');
+        console.log('[PublicFormView] Form data prepared, hasLoadedRef set to true');
       } catch (error: any) {
         console.error('[PublicFormView] Failed to load form:', error);
         
