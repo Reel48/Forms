@@ -238,21 +238,26 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
         client_users = {}  # Track which clients have linked users
         
         # Get all user roles and fetch emails from Supabase Auth
-        roles_response = supabase.table("user_roles").select("*").execute()
+        # Use service role client to bypass RLS
+        roles_response = supabase_storage.table("user_roles").select("*").execute()
         
         for role_data in (roles_response.data or []):
             user_id = role_data.get("user_id")
             user_role = role_data.get("role", "customer")
             
             # Get user email from Supabase Auth
+            # If admin API fails, we'll skip this user (they won't appear in the list)
             user_email = None
             try:
                 user_response = supabase_storage.auth.admin.get_user_by_id(user_id)
                 if user_response and user_response.user:
                     user_email = user_response.user.email
             except Exception as e:
-                print(f"Error fetching user {user_id}: {e}")
-                pass
+                # Log but continue - some users might not be accessible via admin API
+                # This can happen if service role key doesn't have proper permissions
+                print(f"Warning: Could not fetch user {user_id} from auth API: {e}")
+                # Skip this user - they won't appear in the assignment list
+                continue
             
             if user_email:
                 users.append({
@@ -263,8 +268,9 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
                 })
         
         # Get all clients and check which ones have linked users
+        # Use service role client to bypass RLS
         try:
-            clients_response = supabase.table("clients").select("id, name, email, user_id").execute()
+            clients_response = supabase_storage.table("clients").select("id, name, email, user_id").execute()
             for client in (clients_response.data or []):
                 client_id = client.get("id")
                 client_email = client.get("email")

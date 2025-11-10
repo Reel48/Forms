@@ -100,14 +100,19 @@ async def get_quote_assignments(
     Admins see all assignments, customers see only their own.
     """
     try:
-        query = supabase.table("quote_assignments").select("*, user_roles!inner(role)").eq("quote_id", quote_id)
+        # Get assignments without join (join syntax was causing 400 errors)
+        query = supabase.table("quote_assignments").select("*").eq("quote_id", quote_id)
         
         # If customer, only show their own assignments
         if current_user["role"] != "admin":
             query = query.eq("user_id", current_user["id"])
         
         response = query.execute()
-        return response.data or []
+        assignments = response.data or []
+        
+        # Optionally enrich with user email if needed (fetch separately)
+        # For now, just return assignments as-is
+        return assignments
         
     except Exception as e:
         raise HTTPException(
@@ -207,14 +212,19 @@ async def get_form_assignments(
     Admins see all assignments, customers see only their own.
     """
     try:
-        query = supabase.table("form_assignments").select("*, user_roles!inner(role)").eq("form_id", form_id)
+        # Get assignments without join (join syntax was causing 400 errors)
+        query = supabase.table("form_assignments").select("*").eq("form_id", form_id)
         
         # If customer, only show their own assignments
         if current_user["role"] != "admin":
             query = query.eq("user_id", current_user["id"])
         
         response = query.execute()
-        return response.data or []
+        assignments = response.data or []
+        
+        # Optionally enrich with user email if needed (fetch separately)
+        # For now, just return assignments as-is
+        return assignments
         
     except Exception as e:
         raise HTTPException(
