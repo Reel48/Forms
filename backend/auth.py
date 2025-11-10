@@ -79,12 +79,14 @@ async def get_current_user(
                 'email': email
             })()
         
-        # Get user role from database
+        # Get user role from database using service role client to bypass RLS
         try:
-            role_response = supabase.table("user_roles").select("*").eq("user_id", user_id).single().execute()
+            role_response = supabase_storage.table("user_roles").select("*").eq("user_id", user_id).single().execute()
             role = role_response.data.get("role", "customer") if role_response.data else "customer"
-        except Exception:
+        except Exception as e:
             # If role not found, default to customer
+            # Log the error for debugging
+            print(f"Error fetching user role for user {user_id}: {str(e)}")
             role = "customer"
         
         user_data = {
