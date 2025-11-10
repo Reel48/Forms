@@ -15,40 +15,46 @@ function PublicFormView() {
 
   useEffect(() => {
     if (!slug) {
+      setLoading(false);
       return;
     }
 
+    // Prevent multiple simultaneous loads
     let isMounted = true;
+    let isCancelled = false;
 
     const loadForm = async () => {
+      if (isCancelled) return;
+      
       setLoading(true);
       setError(null);
+      
       try {
         const response = await formsAPI.getBySlug(slug);
-        if (isMounted) {
-          setForm(response.data);
-        }
+        
+        if (isCancelled || !isMounted) return;
+        
+        setForm(response.data);
+        setLoading(false);
       } catch (error: any) {
+        if (isCancelled || !isMounted) return;
+        
         console.error('Failed to load form:', error);
-        if (isMounted) {
-          setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setError(error?.response?.data?.detail || error?.message || 'Form not found or not available.');
+        setLoading(false);
       }
     };
 
     loadForm();
 
     return () => {
+      isCancelled = true;
       isMounted = false;
     };
   }, [slug]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    setFormValues({ ...formValues, [fieldId]: value });
+    setFormValues((prev) => ({ ...prev, [fieldId]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -646,15 +652,18 @@ function PublicFormView() {
 
   // Handle redirect after submission
   useEffect(() => {
-    if (submitted && form?.thank_you_screen?.redirect_url) {
-      const timer = setTimeout(() => {
-        const redirectUrl = form.thank_you_screen?.redirect_url;
-        if (redirectUrl) {
-          window.location.href = redirectUrl;
-        }
-      }, 3000);
-      return () => clearTimeout(timer);
+    if (!submitted || !form?.thank_you_screen?.redirect_url) {
+      return;
     }
+
+    const redirectUrl = form.thank_you_screen.redirect_url;
+    const timer = setTimeout(() => {
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      }
+    }, 3000);
+    
+    return () => clearTimeout(timer);
   }, [submitted, form?.thank_you_screen?.redirect_url]);
 
   if (submitted) {
@@ -694,7 +703,7 @@ function PublicFormView() {
             <p className="text-muted" style={{ marginBottom: '2rem' }}>{welcomeDescription}</p>
           )}
           <button
-            onClick={() => setFormValues({ ...formValues, _started: true })}
+            onClick={() => setFormValues((prev) => ({ ...prev, _started: true }))}
             className="btn-primary"
             style={{ fontSize: '1.125rem', padding: '0.75rem 2rem' }}
           >
