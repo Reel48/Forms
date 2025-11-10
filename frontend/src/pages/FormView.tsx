@@ -170,10 +170,10 @@ function FormView() {
       {/* Form Fields */}
       <div className="card">
         <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
-          Form Fields ({form.form_fields?.length || 0})
+          Form Fields ({form.fields?.length || 0})
         </h2>
         
-        {!form.form_fields || form.form_fields.length === 0 ? (
+        {!form.fields || form.fields.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
             <p>No fields in this form yet.</p>
             <Link to={`/forms/${id}/edit`} className="btn-primary" style={{ marginTop: '1rem' }}>
@@ -182,7 +182,7 @@ function FormView() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {form.form_fields.map((field, index) => (
+            {form.fields.map((field, index) => (
               <div
                 key={field.id || index}
                 className="card"

@@ -55,7 +55,7 @@ function PublicFormView() {
         started_at: new Date(startTime).toISOString(),
         time_spent_seconds: timeSpent,
         status: 'completed',
-        answers: form.form_fields?.map((field) => {
+        answers: form.fields?.map((field) => {
           const fieldId = field.id || '';
           const value = formValues[fieldId];
           if (value === undefined || value === null || value === '') {
@@ -702,8 +702,8 @@ function PublicFormView() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {form.form_fields && form.form_fields.length > 0 ? (
-            form.form_fields.map((field, index) => renderField(field, index))
+          {form.fields && form.fields.length > 0 ? (
+            form.fields.map((field, index) => renderField(field, index))
           ) : (
             <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
               This form has no fields.
@@ -716,7 +716,7 @@ function PublicFormView() {
             </div>
           )}
 
-          {form.form_fields && form.form_fields.length > 0 && (
+          {form.fields && form.fields.length > 0 && (
             <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
               <button type="submit" className="btn-primary" disabled={submitting}>
                 {submitting ? 'Submitting...' : form.thank_you_screen?.submit_button_text || 'Submit'}

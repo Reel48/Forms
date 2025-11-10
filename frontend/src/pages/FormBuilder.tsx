@@ -57,7 +57,7 @@ function FormBuilder() {
         name: form.name,
         description: form.description || '',
         status: form.status,
-        fields: form.form_fields || [],
+        fields: form.fields || [],
       });
     } catch (error: any) {
       console.error('Failed to load form:', error);
@@ -209,7 +209,7 @@ function FormBuilder() {
         
         // Sync fields - get current form to see existing fields
         const currentForm = await formsAPI.getById(id);
-        const existingFields = currentForm.data.form_fields || [];
+        const existingFields = currentForm.data.fields || [];
         const currentFields = formData.fields || [];
         
         // Delete fields that are no longer in the form
@@ -255,7 +255,7 @@ function FormBuilder() {
         
         const response = await formsAPI.create(payload);
         console.log('Form created, response:', response.data);
-        console.log('Response fields count:', response.data.form_fields?.length || 0);
+        console.log('Response fields count:', response.data.fields?.length || 0);
         navigate('/forms');
       }
     } catch (error: any) {

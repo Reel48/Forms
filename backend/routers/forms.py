@@ -51,10 +51,14 @@ async def get_forms(
         response = query.execute()
         forms = response.data
         
-        # Sort fields by order_index
+        # Sort fields by order_index and map form_fields to fields
         for form in forms:
-            if form.get("form_fields"):
-                form["form_fields"] = sorted(form["form_fields"], key=lambda x: x.get("order_index", 0))
+            fields = form.get("form_fields", [])
+            if fields:
+                fields = sorted(fields, key=lambda x: x.get("order_index", 0))
+            form["fields"] = fields
+            if "form_fields" in form:
+                del form["form_fields"]
         
         return forms
     except HTTPException:
@@ -77,9 +81,14 @@ async def get_form_by_slug(slug: str):
         if form.get("status") != "published":
             raise HTTPException(status_code=404, detail="Form not found")
         
-        # Sort fields by order_index
-        if form.get("form_fields"):
-            form["form_fields"] = sorted(form["form_fields"], key=lambda x: x.get("order_index", 0))
+        # Sort fields by order_index and map form_fields to fields
+        fields = form.get("form_fields", [])
+        if fields:
+            fields = sorted(fields, key=lambda x: x.get("order_index", 0))
+        
+        form["fields"] = fields
+        if "form_fields" in form:
+            del form["form_fields"]
         
         return form
     except HTTPException:
@@ -98,9 +107,16 @@ async def get_form(form_id: str):
         
         form = response.data
         
-        # Sort fields by order_index
-        if form.get("form_fields"):
-            form["form_fields"] = sorted(form["form_fields"], key=lambda x: x.get("order_index", 0))
+        # Sort fields by order_index and map form_fields to fields for Pydantic model
+        fields = form.get("form_fields", [])
+        if fields:
+            fields = sorted(fields, key=lambda x: x.get("order_index", 0))
+        
+        # Map form_fields to fields for the Pydantic model
+        form["fields"] = fields
+        # Remove form_fields to avoid confusion
+        if "form_fields" in form:
+            del form["form_fields"]
         
         return form
     except HTTPException:

@@ -157,7 +157,7 @@ export interface Form {
   thank_you_screen?: Record<string, any>;
   created_at: string;
   updated_at: string;
-  form_fields?: FormField[];
+  fields?: FormField[]; // Backend returns 'fields', not 'form_fields'
 }
 
 export interface FormCreate {

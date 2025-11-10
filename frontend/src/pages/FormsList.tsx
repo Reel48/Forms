@@ -185,7 +185,7 @@ function FormsList() {
                   </td>
                   <td>
                     <span className="text-muted">
-                      {form.form_fields?.length || 0} {form.form_fields?.length === 1 ? 'field' : 'fields'}
+                      {form.fields?.length || 0} {form.fields?.length === 1 ? 'field' : 'fields'}
                     </span>
                   </td>
                   <td>
