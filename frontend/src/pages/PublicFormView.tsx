@@ -19,7 +19,7 @@ function PublicFormView() {
   const redirectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current);
+    console.log('[PublicFormView] useEffect triggered - slug:', slug, 'isLoadingRef:', isLoadingRef.current, 'loadedSlugRef:', loadedSlugRef.current, 'form exists:', !!form);
     
     if (!slug) {
       console.log('[PublicFormView] No slug, setting loading to false');
@@ -27,13 +27,13 @@ function PublicFormView() {
       return;
     }
 
-    // If we've already loaded this exact slug, don't load again
-    if (loadedSlugRef.current === slug) {
-      console.log('[PublicFormView] Already loaded this slug, skipping');
+    // If we've already successfully loaded this exact slug and have the form, don't load again
+    if (loadedSlugRef.current === slug && form?.id) {
+      console.log('[PublicFormView] Already loaded this slug and have form, skipping');
       return;
     }
 
-    // If we're already loading this exact slug, don't load again
+    // If we're already loading, don't start another load
     if (isLoadingRef.current) {
       console.log('[PublicFormView] Already loading, skipping');
       return;
@@ -47,7 +47,10 @@ function PublicFormView() {
     const loadForm = async () => {
       console.log('[PublicFormView] loadForm called');
       
-      setLoading(true);
+      // Only set loading if we're not already in a loading state
+      if (!form?.id) {
+        setLoading(true);
+      }
       setError(null);
       
       try {
@@ -63,16 +66,18 @@ function PublicFormView() {
         
         console.log('[PublicFormView] Setting form data');
         const formData = response.data;
-        setForm(formData);
         
-        // Store redirect URL in ref for later use
+        // Store redirect URL in ref for later use before setting form
         if (formData?.thank_you_screen?.redirect_url) {
           redirectUrlRef.current = formData.thank_you_screen.redirect_url;
         }
         
-        console.log('[PublicFormView] Setting loading to false');
+        // Use a single state update to set both form and loading
+        setForm(formData);
         setLoading(false);
         isLoadingRef.current = false;
+        
+        console.log('[PublicFormView] Form and loading state updated');
       } catch (error: any) {
         console.error('[PublicFormView] Failed to load form:', error);
         
