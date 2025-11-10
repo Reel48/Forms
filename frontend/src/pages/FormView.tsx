@@ -129,12 +129,15 @@ function FormView() {
             </button>
           )}
           {role === 'admin' && (
-            <button onClick={() => navigate(`/forms/${id}/edit`)} className="btn-primary">
-            Edit
-          </button>
-          <button onClick={handleDelete} className="btn-danger">
-            Delete
-          </button>
+            <>
+              <button onClick={() => navigate(`/forms/${id}/edit`)} className="btn-primary">
+                Edit
+              </button>
+              <button onClick={handleDelete} className="btn-danger">
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
