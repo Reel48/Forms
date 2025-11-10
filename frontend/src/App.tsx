@@ -20,19 +20,12 @@ function Navigation() {
   const navigate = useNavigate();
   const { user, role, signOut } = useAuth();
   
-  // Determine active section based on path
-  const isFormsSection = location.pathname.startsWith('/forms');
-  const isQuotesSection = !isFormsSection && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
+  // Determine active tab based on path
+  const isFormsActive = location.pathname.startsWith('/forms');
+  const isQuotesActive = !isFormsActive && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
+  const isClientsActive = location.pathname === '/clients';
+  const isSettingsActive = location.pathname === '/settings';
   const isAdmin = role === 'admin';
-  
-  // Handle toggle switch
-  const handleToggle = () => {
-    if (isFormsSection) {
-      navigate('/');
-    } else {
-      navigate('/forms');
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -45,62 +38,39 @@ function Navigation() {
   
   return (
     <nav>
-      {/* Section Toggle Switcher */}
-      <div className="section-switcher">
-        <span className={`toggle-label ${isFormsSection ? 'active forms-active' : ''}`}>Forms</span>
-        <button
-          type="button"
-          className={`toggle-switch ${isFormsSection ? 'forms-active' : 'quotes-active'}`}
-          onClick={handleToggle}
-          aria-label="Toggle between Forms and Quotes"
-        >
-          <span className="toggle-slider"></span>
-        </button>
-        <span className={`toggle-label ${isQuotesSection ? 'active quotes-active' : ''}`}>Quotes</span>
-      </div>
-      
-      {/* Section-specific Navigation */}
-      <ul>
-        {isFormsSection ? (
-          <>
-            <li>
-              <Link to="/forms" className={location.pathname === '/forms' ? 'active' : ''}>
-                Forms List
-              </Link>
-            </li>
-            {isAdmin && (
-              <li>
-                <Link to="/forms/new" className={location.pathname === '/forms/new' ? 'active' : ''}>
-                  New Form
-                </Link>
-              </li>
-            )}
-          </>
-        ) : (
-          <>
-            <li>
-              <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
-                Quotes List
-              </Link>
-            </li>
-            {isAdmin && (
-              <li>
-                <Link to="/quotes/new" className={location.pathname === '/quotes/new' ? 'active' : ''}>
-                  New Quote
-                </Link>
-              </li>
-            )}
-          </>
-        )}
+      {/* Main Navigation Tabs */}
+      <ul className="nav-tabs">
+        <li>
+          <Link 
+            to="/forms" 
+            className={`nav-tab ${isFormsActive ? 'active' : ''}`}
+          >
+            Forms
+          </Link>
+        </li>
+        <li>
+          <Link 
+            to="/" 
+            className={`nav-tab ${isQuotesActive ? 'active' : ''}`}
+          >
+            Quotes
+          </Link>
+        </li>
         {isAdmin && (
           <>
             <li>
-              <Link to="/clients" className={location.pathname === '/clients' ? 'active' : ''}>
+              <Link 
+                to="/clients" 
+                className={`nav-tab ${isClientsActive ? 'active' : ''}`}
+              >
                 Clients
               </Link>
             </li>
             <li>
-              <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>
+              <Link 
+                to="/settings" 
+                className={`nav-tab ${isSettingsActive ? 'active' : ''}`}
+              >
                 Settings
               </Link>
             </li>
