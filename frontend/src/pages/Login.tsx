@@ -63,6 +63,9 @@ export default function Login() {
         </form>
 
         <p className="signup-link">
+          <Link to="/forgot-password" style={{ display: 'block', marginBottom: '10px' }}>
+            Forgot your password?
+          </Link>
           Don't have an account? <Link to="/register">Sign up</Link>
         </p>
       </div>

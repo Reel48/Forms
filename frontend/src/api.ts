@@ -343,5 +343,11 @@ export const formsAPI = {
   createPaymentIntent: (formId: string, amount: number, currency?: string, metadata?: Record<string, any>) => api.post<{client_secret: string; payment_intent_id: string}>(`/api/forms/${formId}/create-payment-intent`, { amount, currency: currency || 'usd', metadata }),
 };
 
+// Auth API
+export const authAPI = {
+  requestPasswordReset: (email: string) => api.post<{ message: string }>('/api/auth/password-reset/request', { email }),
+  confirmPasswordReset: (token: string, newPassword: string) => api.post<{ message: string }>('/api/auth/password-reset/confirm', { token, new_password: newPassword }),
+};
+
 export default api;
 

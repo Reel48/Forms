@@ -103,3 +103,17 @@
   text-decoration: underline;
 }
 
+.success-message {
+  background-color: #efe;
+  color: #3c3;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #cfc;
+  text-align: center;
+}
+
+.success-message p {
+  margin: 0;
+}
+

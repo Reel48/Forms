@@ -15,6 +15,8 @@ import Profile from './pages/Profile';
 import CustomerDashboard from './pages/CustomerDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import './App.css';
 
 function Navigation() {
@@ -121,7 +123,7 @@ function HomePage() {
 function AppContent() {
   const location = useLocation();
   const isPublicForm = location.pathname.startsWith('/public/form/');
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || location.pathname === '/reset-password';
   
   return (
     <>
@@ -133,6 +135,8 @@ function AppContent() {
         {/* Auth routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         
         {/* Protected routes - require authentication */}
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
