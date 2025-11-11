@@ -12,6 +12,10 @@ import uuid
 from datetime import datetime, timedelta
 import requests
 import secrets
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -777,8 +781,15 @@ async def request_password_reset(request: PasswordResetRequest):
                 )
                 
                 if not email_sent:
-                    # Log but don't fail - email might be disabled in dev
-                    print(f"Warning: Failed to send password reset email to {user_email}")
+                    # Log detailed error - email might be disabled in dev
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to send password reset email to {user_email}")
+                    logger.error(f"Reset token generated: {reset_token[:20]}...")
+                    logger.error(f"Reset link would be: {os.getenv('FRONTEND_URL', 'http://localhost:5173')}/reset-password?token={reset_token}")
+                    print(f"ERROR: Failed to send password reset email to {user_email}")
+                    print(f"Check if SENDGRID_API_KEY is configured in environment variables")
+                    print(f"Reset token (for manual testing): {reset_token}")
                 
             except Exception as e:
                 print(f"Error storing reset token: {str(e)}")

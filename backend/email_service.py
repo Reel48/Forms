@@ -22,15 +22,27 @@ class EmailService:
     
     def __init__(self):
         """Initialize email service with SendGrid"""
+        # Log initialization details for debugging
+        logger.info(f"Initializing EmailService...")
+        logger.info(f"SENDGRID_API_KEY is {'SET' if SENDGRID_API_KEY else 'NOT SET'}")
+        logger.info(f"FROM_EMAIL: {FROM_EMAIL}")
+        logger.info(f"FROM_NAME: {FROM_NAME}")
+        logger.info(f"FRONTEND_URL: {FRONTEND_URL}")
+        
         if not SENDGRID_API_KEY:
             logger.warning("SENDGRID_API_KEY not configured. Email sending will be disabled.")
+            print("WARNING: SENDGRID_API_KEY not found in environment variables. Email sending disabled.")
             self.client = None
         else:
             try:
                 self.client = SendGridAPIClient(SENDGRID_API_KEY)
-                logger.info("Email service initialized successfully")
+                logger.info("Email service initialized successfully with SendGrid")
+                print("SUCCESS: Email service initialized with SendGrid")
             except Exception as e:
-                logger.error(f"Failed to initialize SendGrid client: {str(e)}")
+                logger.error(f"Failed to initialize SendGrid client: {str(e)}", exc_info=True)
+                print(f"ERROR: Failed to initialize SendGrid: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 self.client = None
     
     def _send_email(
@@ -53,7 +65,11 @@ class EmailService:
             True if email sent successfully, False otherwise
         """
         if not self.client:
-            logger.warning(f"Email service not configured. Would send email to {to_email} with subject: {subject}")
+            error_msg = f"Email service not configured. SENDGRID_API_KEY is {'set' if SENDGRID_API_KEY else 'NOT SET'}"
+            logger.error(error_msg)
+            logger.error(f"Would send email to {to_email} with subject: {subject}")
+            logger.error(f"FROM_EMAIL: {FROM_EMAIL}, FROM_NAME: {FROM_NAME}")
+            print(f"ERROR: {error_msg}")
             return False
         
         try:
@@ -67,17 +83,26 @@ class EmailService:
             if text_content:
                 message.add_content(Content("text/plain", text_content))
             
+            logger.info(f"Attempting to send email to {to_email} via SendGrid...")
             response = self.client.send(message)
             
             if response.status_code in [200, 201, 202]:
-                logger.info(f"Email sent successfully to {to_email}")
+                logger.info(f"Email sent successfully to {to_email} (Status: {response.status_code})")
+                print(f"SUCCESS: Email sent to {to_email}")
                 return True
             else:
-                logger.error(f"Failed to send email. Status code: {response.status_code}, Body: {response.body}")
+                error_body = response.body.decode('utf-8') if response.body else "No error body"
+                logger.error(f"Failed to send email. Status code: {response.status_code}")
+                logger.error(f"Response body: {error_body}")
+                print(f"ERROR: SendGrid returned status {response.status_code}: {error_body}")
                 return False
                 
         except Exception as e:
-            logger.error(f"Error sending email to {to_email}: {str(e)}")
+            error_msg = f"Exception sending email to {to_email}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            print(f"ERROR: {error_msg}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def send_password_reset_email(
