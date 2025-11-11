@@ -1,157 +1,63 @@
 """
-Email service for sending notifications and password reset emails
-Supports multiple email providers: AWS SES (recommended), SendGrid, Resend, Brevo
+Email service using AWS SES (Simple Email Service)
+Recommended for AWS App Runner deployments - free tier of 3,000 emails/month
 """
 import os
-from typing import Optional, Dict, Any
+from typing import Optional
+import boto3
+from botocore.exceptions import ClientError
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Get email provider from environment (defaults to AWS SES)
-EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "ses").lower()  # ses, sendgrid, resend, brevo
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@formsapp.com")  # Default sender email
-FROM_NAME = os.getenv("FROM_NAME", "Forms App")  # Default sender name
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")  # Frontend URL for password reset links
-
-# Provider-specific configuration
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+# Get configuration from environment
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@formsapp.com")
+FROM_NAME = os.getenv("FROM_NAME", "Forms App")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 class EmailService:
-    """Service for sending emails via multiple providers"""
+    """Service for sending emails via AWS SES"""
     
     def __init__(self):
-        """Initialize email service with the configured provider"""
-        logger.info(f"Initializing EmailService with provider: {EMAIL_PROVIDER}")
+        """Initialize email service with AWS SES"""
+        logger.info("Initializing EmailService with AWS SES...")
+        logger.info(f"AWS_REGION: {AWS_REGION}")
         logger.info(f"FROM_EMAIL: {FROM_EMAIL}")
         logger.info(f"FROM_NAME: {FROM_NAME}")
         logger.info(f"FRONTEND_URL: {FRONTEND_URL}")
         
-        self.provider = EMAIL_PROVIDER
-        self.client = None
-        self._initialize_provider()
-    
-    def _initialize_provider(self):
-        """Initialize the email provider based on EMAIL_PROVIDER setting"""
-        if self.provider == "ses":
-            self._initialize_aws_ses()
-        elif self.provider == "sendgrid":
-            self._initialize_sendgrid()
-        elif self.provider == "resend":
-            self._initialize_resend()
-        elif self.provider == "brevo":
-            self._initialize_brevo()
-        else:
-            logger.warning(f"Unknown email provider: {self.provider}. Defaulting to AWS SES.")
-            self.provider = "ses"
-            self._initialize_aws_ses()
-    
-    def _initialize_aws_ses(self):
-        """Initialize AWS SES (recommended for AWS deployments)"""
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-            
+            # Initialize SES client
+            # boto3 will use default AWS credentials from environment or IAM role
             self.ses_client = boto3.client('ses', region_name=AWS_REGION)
             
             # Verify SES is accessible
             try:
+                # Get send quota to verify access
                 response = self.ses_client.get_send_quota()
                 max_24_hour_send = response.get('Max24HourSend', 0)
-                logger.info(f"AWS SES initialized. Max 24h send: {max_24_hour_send}")
+                max_send_rate = response.get('MaxSendRate', 0)
+                logger.info(f"AWS SES initialized successfully. Max 24h send: {max_24_hour_send}, Max send rate: {max_send_rate}/sec")
                 print(f"SUCCESS: AWS SES initialized. Quota: {max_24_hour_send} emails/day")
-                self.client = self.ses_client
             except ClientError as e:
                 error_code = e.response.get('Error', {}).get('Code', 'Unknown')
                 if error_code == 'AccessDenied':
                     logger.warning("AWS SES access denied. Check IAM permissions.")
-                    print("WARNING: AWS SES access denied. App Runner service role needs ses:SendEmail permission.")
+                    print("WARNING: AWS SES access denied. The App Runner service role needs SES permissions.")
                 else:
                     logger.warning(f"AWS SES verification failed: {error_code}")
-                self.client = None
-        except ImportError:
-            logger.error("boto3 not installed. Install with: pip install boto3")
-            print("ERROR: boto3 not installed. Run: pip install boto3")
-            self.client = None
-        except Exception as e:
-            logger.error(f"Failed to initialize AWS SES: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize AWS SES: {str(e)}")
-            self.client = None
-    
-    def _initialize_sendgrid(self):
-        """Initialize SendGrid"""
-        if not SENDGRID_API_KEY:
-            logger.warning("SENDGRID_API_KEY not configured. Email sending will be disabled.")
-            print("WARNING: SENDGRID_API_KEY not found. Email sending disabled.")
-            self.client = None
-            return
-        
-        try:
-            from sendgrid import SendGridAPIClient
-            self.client = SendGridAPIClient(SENDGRID_API_KEY)
-            logger.info("Email service initialized successfully with SendGrid")
-            print("SUCCESS: Email service initialized with SendGrid")
-        except ImportError:
-            logger.error("sendgrid not installed. Install with: pip install sendgrid")
-            print("ERROR: sendgrid not installed. Run: pip install sendgrid")
-            self.client = None
-        except Exception as e:
-            logger.error(f"Failed to initialize SendGrid: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize SendGrid: {str(e)}")
-            self.client = None
-    
-    def _initialize_resend(self):
-        """Initialize Resend"""
-        if not RESEND_API_KEY:
-            logger.warning("RESEND_API_KEY not configured. Email sending will be disabled.")
-            print("WARNING: RESEND_API_KEY not found. Email sending disabled.")
-            self.client = None
-            return
-        
-        try:
-            import resend
-            resend.api_key = RESEND_API_KEY
-            self.client = resend
-            logger.info("Email service initialized successfully with Resend")
-            print("SUCCESS: Email service initialized with Resend")
-        except ImportError:
-            logger.error("resend not installed. Install with: pip install resend")
-            print("ERROR: resend not installed. Run: pip install resend")
-            self.client = None
-        except Exception as e:
-            logger.error(f"Failed to initialize Resend: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize Resend: {str(e)}")
-            self.client = None
-    
-    def _initialize_brevo(self):
-        """Initialize Brevo (formerly Sendinblue)"""
-        if not BREVO_API_KEY:
-            logger.warning("BREVO_API_KEY not configured. Email sending will be disabled.")
-            print("WARNING: BREVO_API_KEY not found. Email sending disabled.")
-            self.client = None
-            return
-        
-        try:
-            import sib_api_v3_sdk
-            from sib_api_v3_sdk.rest import ApiException
+                    print(f"WARNING: Could not verify AWS SES access: {error_code}")
             
-            configuration = sib_api_v3_sdk.Configuration()
-            configuration.api_key['api-key'] = BREVO_API_KEY
-            self.brevo_api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
-            self.client = self.brevo_api
-            logger.info("Email service initialized successfully with Brevo")
-            print("SUCCESS: Email service initialized with Brevo")
-        except ImportError:
-            logger.error("sib-api-v3-sdk not installed. Install with: pip install sib-api-v3-sdk")
-            print("ERROR: sib-api-v3-sdk not installed. Run: pip install sib-api-v3-sdk")
-            self.client = None
+            self.client = self.ses_client  # For compatibility
+            
         except Exception as e:
-            logger.error(f"Failed to initialize Brevo: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize Brevo: {str(e)}")
+            logger.error(f"Failed to initialize AWS SES client: {str(e)}", exc_info=True)
+            print(f"ERROR: Failed to initialize AWS SES: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            self.ses_client = None
             self.client = None
     
     def _send_email(
@@ -162,7 +68,7 @@ class EmailService:
         text_content: Optional[str] = None
     ) -> bool:
         """
-        Send an email using the configured provider
+        Send an email using AWS SES
         
         Args:
             to_email: Recipient email address
@@ -173,32 +79,13 @@ class EmailService:
         Returns:
             True if email sent successfully, False otherwise
         """
-        if not self.client:
-            error_msg = f"Email service not configured. Provider: {self.provider}"
-            logger.error(error_msg)
-            logger.error(f"Would send email to {to_email} with subject: {subject}")
-            logger.error(f"FROM_EMAIL: {FROM_EMAIL}, FROM_NAME: {FROM_NAME}")
-            print(f"ERROR: {error_msg}")
+        if not self.ses_client:
+            logger.error("AWS SES client not initialized. Email sending disabled.")
+            print("ERROR: AWS SES client not initialized")
             return False
         
-        # Route to appropriate provider
-        if self.provider == "ses":
-            return self._send_email_ses(to_email, subject, html_content, text_content)
-        elif self.provider == "sendgrid":
-            return self._send_email_sendgrid(to_email, subject, html_content, text_content)
-        elif self.provider == "resend":
-            return self._send_email_resend(to_email, subject, html_content, text_content)
-        elif self.provider == "brevo":
-            return self._send_email_brevo(to_email, subject, html_content, text_content)
-        else:
-            logger.error(f"Unknown email provider: {self.provider}")
-            return False
-    
-    def _send_email_ses(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via AWS SES"""
         try:
-            from botocore.exceptions import ClientError
-            
+            # Prepare email message
             message = {
                 'Subject': {'Data': subject, 'Charset': 'UTF-8'},
                 'Body': {
@@ -206,11 +93,13 @@ class EmailService:
                 }
             }
             
+            # Add text content if provided
             if text_content:
                 message['Body']['Text'] = {'Data': text_content, 'Charset': 'UTF-8'}
             
+            # Send email
             logger.info(f"Attempting to send email to {to_email} via AWS SES...")
-            response = self.client.send_email(
+            response = self.ses_client.send_email(
                 Source=f"{FROM_NAME} <{FROM_EMAIL}>",
                 Destination={'ToAddresses': [to_email]},
                 Message=message
@@ -218,109 +107,36 @@ class EmailService:
             
             message_id = response.get('MessageId')
             logger.info(f"Email sent successfully to {to_email} (MessageId: {message_id})")
-            print(f"SUCCESS: Email sent to {to_email} via AWS SES (MessageId: {message_id})")
+            print(f"SUCCESS: Email sent to {to_email} (MessageId: {message_id})")
             return True
             
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
             error_message = e.response.get('Error', {}).get('Message', str(e))
-            logger.error(f"AWS SES error - {error_code}: {error_message}")
-            print(f"ERROR: AWS SES - {error_code}: {error_message}")
             
+            logger.error(f"Failed to send email via AWS SES. Code: {error_code}, Message: {error_message}")
+            print(f"ERROR: AWS SES error - {error_code}: {error_message}")
+            
+            # Provide helpful error messages
             if error_code == 'MessageRejected':
                 print("  → Sender email may not be verified. Check AWS SES Console → Verified identities")
             elif error_code == 'MailFromDomainNotVerified':
                 print("  → Mail-from domain not verified. Verify your domain in AWS SES")
+            elif error_code == 'AccountSendingPausedException':
+                print("  → Account sending is paused. Check AWS SES Console")
+            elif error_code == 'ConfigurationSetDoesNotExist':
+                print("  → Configuration set doesn't exist (if using one)")
             elif error_code == 'AccessDenied':
                 print("  → IAM permissions issue. App Runner service role needs ses:SendEmail permission")
             
             return False
-        except Exception as e:
-            logger.error(f"Exception sending email via AWS SES: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
-            return False
-    
-    def _send_email_sendgrid(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via SendGrid"""
-        try:
-            from sendgrid.helpers.mail import Mail, Email, To, Content
-            
-            message = Mail(
-                from_email=Email(FROM_EMAIL, FROM_NAME),
-                to_emails=To(to_email),
-                subject=subject,
-                html_content=Content("text/html", html_content)
-            )
-            
-            if text_content:
-                message.add_content(Content("text/plain", text_content))
-            
-            logger.info(f"Attempting to send email to {to_email} via SendGrid...")
-            response = self.client.send(message)
-            
-            if response.status_code in [200, 201, 202]:
-                logger.info(f"Email sent successfully to {to_email} (Status: {response.status_code})")
-                print(f"SUCCESS: Email sent to {to_email} via SendGrid")
-                return True
-            else:
-                error_body = response.body.decode('utf-8') if response.body else "No error body"
-                logger.error(f"SendGrid error - Status: {response.status_code}, Body: {error_body}")
-                print(f"ERROR: SendGrid returned status {response.status_code}: {error_body}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Exception sending email via SendGrid: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
-            return False
-    
-    def _send_email_resend(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via Resend"""
-        try:
-            params = {
-                "from": f"{FROM_NAME} <{FROM_EMAIL}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content
-            }
-            
-            if text_content:
-                params["text"] = text_content
-            
-            logger.info(f"Attempting to send email to {to_email} via Resend...")
-            email = self.client.Emails.send(params)
-            
-            logger.info(f"Email sent successfully to {to_email} (ID: {email.get('id')})")
-            print(f"SUCCESS: Email sent to {to_email} via Resend")
-            return True
             
         except Exception as e:
-            logger.error(f"Exception sending email via Resend: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
-            return False
-    
-    def _send_email_brevo(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via Brevo"""
-        try:
-            from sib_api_v3_sdk import SendSmtpEmail, SendSmtpEmailTo
-            
-            send_smtp_email = SendSmtpEmail(
-                to=[SendSmtpEmailTo(email=to_email)],
-                subject=subject,
-                html_content=html_content,
-                text_content=text_content or html_content,
-                sender={"name": FROM_NAME, "email": FROM_EMAIL}
-            )
-            
-            logger.info(f"Attempting to send email to {to_email} via Brevo...")
-            response = self.client.send_transac_email(send_smtp_email)
-            
-            logger.info(f"Email sent successfully to {to_email} (MessageId: {response.message_id})")
-            print(f"SUCCESS: Email sent to {to_email} via Brevo")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Exception sending email via Brevo: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
+            error_msg = f"Exception sending email to {to_email}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            print(f"ERROR: {error_msg}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def send_password_reset_email(
@@ -329,17 +145,7 @@ class EmailService:
         reset_token: str,
         user_name: Optional[str] = None
     ) -> bool:
-        """
-        Send password reset email
-        
-        Args:
-            to_email: User's email address
-            reset_token: Password reset token
-            user_name: User's name (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send password reset email"""
         reset_link = f"{FRONTEND_URL}/reset-password?token={reset_token}"
         
         subject = "Reset Your Password"
@@ -398,22 +204,14 @@ class EmailService:
         user_name: Optional[str] = None,
         assigned_by: Optional[str] = None
     ) -> bool:
-        """
-        Send email notification when a form is assigned to a customer
-        
-        Args:
-            to_email: Customer's email address
-            form_name: Name of the assigned form
-            form_id: ID of the assigned form
-            user_name: Customer's name (optional)
-            assigned_by: Name of admin who assigned the form (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email notification when a form is assigned to a customer"""
         form_link = f"{FRONTEND_URL}/forms/{form_id}"
         
         subject = f"New Form Assigned: {form_name}"
+        
+        submitter_info = ""
+        if assigned_by:
+            submitter_info = f"<p style=\"color: #666; margin-bottom: 0;\">Assigned by: {assigned_by}</p>"
         
         html_content = f"""
         <!DOCTYPE html>
@@ -430,7 +228,7 @@ class EmailService:
                 <p>A new form has been assigned to you:</p>
                 <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
                     <h2 style="margin-top: 0; color: #007bff;">{form_name}</h2>
-                    {f'<p style="color: #666; margin-bottom: 0;">Assigned by: {assigned_by}</p>' if assigned_by else ''}
+                    {submitter_info}
                 </div>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{form_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Form</a>
@@ -471,23 +269,14 @@ class EmailService:
         user_name: Optional[str] = None,
         assigned_by: Optional[str] = None
     ) -> bool:
-        """
-        Send email notification when a quote is assigned to a customer
-        
-        Args:
-            to_email: Customer's email address
-            quote_title: Title of the assigned quote
-            quote_number: Quote number
-            quote_id: ID of the assigned quote
-            user_name: Customer's name (optional)
-            assigned_by: Name of admin who assigned the quote (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email notification when a quote is assigned to a customer"""
         quote_link = f"{FRONTEND_URL}/quotes/{quote_id}"
         
         subject = f"New Quote Assigned: {quote_title}"
+        
+        assigned_by_info = ""
+        if assigned_by:
+            assigned_by_info = f"<p style=\"color: #666; margin-bottom: 0;\">Assigned by: {assigned_by}</p>"
         
         html_content = f"""
         <!DOCTYPE html>
@@ -505,7 +294,7 @@ class EmailService:
                 <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
                     <h2 style="margin-top: 0; color: #28a745;">{quote_title}</h2>
                     <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
-                    {f'<p style="color: #666; margin-bottom: 0;">Assigned by: {assigned_by}</p>' if assigned_by else ''}
+                    {assigned_by_info}
                 </div>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{quote_link}" style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Quote</a>
@@ -548,20 +337,7 @@ class EmailService:
         submitter_email: Optional[str] = None,
         submission_id: str = None
     ) -> bool:
-        """
-        Send email notification to admin when a form is submitted
-        
-        Args:
-            to_email: Admin's email address
-            form_name: Name of the form that was submitted
-            form_id: ID of the form
-            submitter_name: Name of person who submitted (optional)
-            submitter_email: Email of person who submitted (optional)
-            submission_id: ID of the submission (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email notification to admin when a form is submitted"""
         submission_link = f"{FRONTEND_URL}/forms/{form_id}/submissions/{submission_id}" if submission_id else f"{FRONTEND_URL}/forms/{form_id}/submissions"
         
         subject = f"New Form Submission: {form_name}"
@@ -624,20 +400,7 @@ class EmailService:
         customer_name: Optional[str] = None,
         customer_email: Optional[str] = None
     ) -> bool:
-        """
-        Send email notification to admin when a quote is accepted
-        
-        Args:
-            to_email: Admin's email address
-            quote_title: Title of the accepted quote
-            quote_number: Quote number
-            quote_id: ID of the quote
-            customer_name: Name of customer who accepted (optional)
-            customer_email: Email of customer who accepted (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email notification to admin when a quote is accepted"""
         quote_link = f"{FRONTEND_URL}/quotes/{quote_id}"
         
         subject = f"Quote Accepted: {quote_title}"
@@ -709,21 +472,7 @@ class EmailService:
         invoice_url: Optional[str] = None,
         customer_name: Optional[str] = None
     ) -> bool:
-        """
-        Send email notification to customer when invoice is paid
-        
-        Args:
-            to_email: Customer's email address
-            quote_title: Title of the quote/invoice
-            quote_number: Quote number
-            invoice_number: Invoice number from Stripe (optional)
-            amount_paid: Amount that was paid (optional)
-            invoice_url: Link to view invoice (optional)
-            customer_name: Customer's name (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email notification to customer when invoice is paid"""
         subject = f"Payment Received: {quote_title}"
         
         invoice_info = ""
@@ -800,22 +549,7 @@ class EmailService:
         customer_email: Optional[str] = None,
         quote_id: str = None
     ) -> bool:
-        """
-        Send email notification to admin when invoice is paid
-        
-        Args:
-            to_email: Admin's email address
-            quote_title: Title of the quote/invoice
-            quote_number: Quote number
-            invoice_number: Invoice number from Stripe (optional)
-            amount_paid: Amount that was paid (optional)
-            customer_name: Customer's name (optional)
-            customer_email: Customer's email (optional)
-            quote_id: ID of the quote (optional)
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
+        """Send email notification to admin when invoice is paid"""
         quote_link = f"{FRONTEND_URL}/quotes/{quote_id}" if quote_id else None
         
         subject = f"Invoice Paid: {quote_title}"
