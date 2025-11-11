@@ -165,6 +165,7 @@ export interface QuoteCreate {
   tax_rate: string;
   currency?: string;
   status?: string;
+  priority?: string;
   line_items: LineItem[];
 }
 
@@ -234,6 +235,7 @@ export interface FormUpdate {
   name?: string;
   description?: string;
   status?: string;
+  priority?: string;
   theme?: Record<string, any>;
   settings?: Record<string, any>;
   welcome_screen?: Record<string, any>;
