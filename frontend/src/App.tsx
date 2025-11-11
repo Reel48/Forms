@@ -12,6 +12,7 @@ import PublicFormView from './pages/PublicFormView';
 import ClientsList from './pages/ClientsList';
 import CompanySettingsPage from './pages/CompanySettings';
 import Profile from './pages/Profile';
+import CustomerDashboard from './pages/CustomerDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import './App.css';
@@ -27,6 +28,7 @@ function Navigation() {
   const isClientsActive = location.pathname === '/clients';
   const isSettingsActive = location.pathname === '/settings';
   const isProfileActive = location.pathname === '/profile';
+  const isDashboardActive = location.pathname === '/dashboard';
   const isAdmin = role === 'admin';
 
   const handleLogout = async () => {
@@ -42,24 +44,24 @@ function Navigation() {
     <nav>
       {/* Main Navigation Tabs */}
       <ul className="nav-tabs">
-        <li>
-          <Link 
-            to="/forms" 
-            className={`nav-tab ${isFormsActive ? 'active' : ''}`}
-          >
-            Forms
-          </Link>
-        </li>
-        <li>
-          <Link 
-            to="/" 
-            className={`nav-tab ${isQuotesActive ? 'active' : ''}`}
-          >
-            Quotes
-          </Link>
-        </li>
-        {isAdmin && (
+        {isAdmin ? (
           <>
+            <li>
+              <Link 
+                to="/forms" 
+                className={`nav-tab ${isFormsActive ? 'active' : ''}`}
+              >
+                Forms
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/" 
+                className={`nav-tab ${isQuotesActive ? 'active' : ''}`}
+              >
+                Quotes
+              </Link>
+            </li>
             <li>
               <Link 
                 to="/clients" 
@@ -77,16 +79,25 @@ function Navigation() {
               </Link>
             </li>
           </>
-        )}
-        {!isAdmin && (
-          <li>
-            <Link 
-              to="/profile" 
-              className={`nav-tab ${isProfileActive ? 'active' : ''}`}
-            >
-              Profile
-            </Link>
-          </li>
+        ) : (
+          <>
+            <li>
+              <Link 
+                to="/dashboard" 
+                className={`nav-tab ${isDashboardActive ? 'active' : ''}`}
+              >
+                Dashboard
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/profile" 
+                className={`nav-tab ${isProfileActive ? 'active' : ''}`}
+              >
+                Profile
+              </Link>
+            </li>
+          </>
         )}
       </ul>
 
@@ -100,6 +111,11 @@ function Navigation() {
       )}
     </nav>
   );
+}
+
+function HomePage() {
+  const { role } = useAuth();
+  return role === 'admin' ? <QuotesList /> : <CustomerDashboard />;
 }
 
 function AppContent() {
@@ -119,7 +135,8 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         
         {/* Protected routes - require authentication */}
-        <Route path="/" element={<ProtectedRoute><QuotesList /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
         <Route path="/quotes/:id" element={<ProtectedRoute><QuoteView /></ProtectedRoute>} />
         <Route path="/forms" element={<ProtectedRoute><FormsList /></ProtectedRoute>} />
         <Route path="/forms/:id" element={<ProtectedRoute><FormView /></ProtectedRoute>} />
