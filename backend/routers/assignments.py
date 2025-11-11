@@ -343,15 +343,16 @@ async def get_customer_quotes(current_user: dict = Depends(get_current_user)):
     Get all quotes assigned to the current customer.
     """
     try:
+        # Use service role client to bypass RLS and ensure customers can see their assignments
         # Get all quote assignments for this user
-        assignments_response = supabase.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
+        assignments_response = supabase_storage.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
         quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
         
         if not quote_ids:
             return []
         
-        # Get the quotes
-        quotes_response = supabase.table("quotes").select("*, clients(*), line_items(*)").in_("id", quote_ids).order("created_at", desc=True).execute()
+        # Get the quotes - use service role client to bypass RLS
+        quotes_response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").in_("id", quote_ids).order("created_at", desc=True).execute()
         return quotes_response.data or []
         
     except Exception as e:
@@ -367,15 +368,16 @@ async def get_customer_forms(current_user: dict = Depends(get_current_user)):
     Get all forms assigned to the current customer.
     """
     try:
+        # Use service role client to bypass RLS and ensure customers can see their assignments
         # Get all form assignments for this user
-        assignments_response = supabase.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
+        assignments_response = supabase_storage.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
         form_ids = [a["form_id"] for a in (assignments_response.data or [])]
         
         if not form_ids:
             return []
         
-        # Get the forms
-        forms_response = supabase.table("forms").select("*, form_fields(*)").in_("id", form_ids).order("created_at", desc=True).execute()
+        # Get the forms - use service role client to bypass RLS
+        forms_response = supabase_storage.table("forms").select("*, form_fields(*)").in_("id", form_ids).order("created_at", desc=True).execute()
         
         # Sort fields by order_index
         forms = forms_response.data or []
