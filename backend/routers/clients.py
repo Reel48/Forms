@@ -82,11 +82,15 @@ async def get_clients():
                     user_name = user_data.get("user_metadata", {}).get("name", "") or user_email.split("@")[0]
                     
                     # Check if there's a client with the same email (admin-created, not linked)
-                    email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).is_("user_id", None).execute()
+                    # Fetch all clients with this email and filter for null user_id in Python
+                    email_client_response = supabase_storage.table("clients").select("*").eq("email", user_email).execute()
                     
-                    if email_client_response.data and len(email_client_response.data) > 0:
+                    # Filter for clients with null user_id
+                    unlinked_clients = [c for c in (email_client_response.data or []) if c.get("user_id") is None]
+                    
+                    if unlinked_clients and len(unlinked_clients) > 0:
                         # Found admin-created client with same email, link it
-                        existing_client = email_client_response.data[0]
+                        existing_client = unlinked_clients[0]
                         supabase_storage.table("clients").update({
                             "user_id": user_id,
                             "registration_source": "self_registered"

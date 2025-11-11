@@ -7,9 +7,12 @@ import logging
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from stripe_service import StripeService
-from database import supabase
+from database import supabase, supabase_url, supabase_service_role_key
+from email_service import email_service
+from email_utils import get_admin_emails
 import stripe
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
@@ -122,6 +125,70 @@ def handle_invoice_event(event_type: str, invoice_data: Dict[str, Any]) -> Optio
                 "status": "accepted"  # Keep as accepted when paid
             })
             logger.info(f"Invoice {invoice_id} paid for quote {quote_id}")
+            
+            # Send email notifications for payment
+            try:
+                # Get quote details with client info
+                quote_detail_response = supabase.table("quotes").select("*, clients(*)").eq("id", quote_id).execute()
+                if quote_detail_response.data:
+                    quote_data = quote_detail_response.data[0]
+                    quote_title = quote_data.get("title", "Quote")
+                    quote_number = quote_data.get("quote_number", "")
+                    client = quote_data.get("clients")
+                    
+                    customer_name = None
+                    customer_email = None
+                    if client:
+                        customer_name = client.get("name")
+                        customer_email = client.get("email")
+                    
+                    # Get invoice details from Stripe
+                    invoice_number = invoice_data.get("number")
+                    amount_total = invoice_data.get("amount_paid") or invoice_data.get("total")
+                    amount_formatted = None
+                    if amount_total:
+                        currency = invoice_data.get("currency", "usd").upper()
+                        amount_decimal = amount_total / 100
+                        amount_formatted = f"{currency} ${amount_decimal:,.2f}"
+                    
+                    invoice_url = invoice_data.get("hosted_invoice_url")
+                    
+                    # Send email to customer
+                    if customer_email:
+                        try:
+                            email_service.send_invoice_paid_customer_notification(
+                                to_email=customer_email,
+                                quote_title=quote_title,
+                                quote_number=quote_number,
+                                invoice_number=invoice_number,
+                                amount_paid=amount_formatted,
+                                invoice_url=invoice_url,
+                                customer_name=customer_name
+                            )
+                            logger.info(f"Sent payment confirmation email to customer: {customer_email}")
+                        except Exception as e:
+                            logger.error(f"Failed to send customer payment email: {str(e)}")
+                    
+                    # Send email to all admins
+                    admin_emails = get_admin_emails()
+                    for admin in admin_emails:
+                        try:
+                            email_service.send_invoice_paid_admin_notification(
+                                to_email=admin["email"],
+                                quote_title=quote_title,
+                                quote_number=quote_number,
+                                invoice_number=invoice_number,
+                                amount_paid=amount_formatted,
+                                customer_name=customer_name,
+                                customer_email=customer_email,
+                                quote_id=quote_id
+                            )
+                            logger.info(f"Sent payment notification email to admin: {admin['email']}")
+                        except Exception as e:
+                            logger.error(f"Failed to send admin payment email to {admin['email']}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error sending payment notification emails: {str(e)}")
+                # Don't fail the webhook if email sending fails
             
         elif event_type == "invoice.payment_failed":
             update_data["payment_status"] = "failed"

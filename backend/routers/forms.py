@@ -9,6 +9,8 @@ from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, For
 from pydantic import ValidationError
 from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin, get_optional_user
+from email_service import email_service
+from email_utils import get_admin_emails
 import uuid
 import secrets
 import string
@@ -604,6 +606,31 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate):
         # Remove form_submission_answers to avoid confusion
         if "form_submission_answers" in submission:
             del submission["form_submission_answers"]
+        
+        # Get form name for email notification
+        form_name = "Form"
+        try:
+            form_detail_response = supabase.table("forms").select("name").eq("id", form_id).single().execute()
+            if form_detail_response.data:
+                form_name = form_detail_response.data.get("name", "Form")
+        except Exception as e:
+            print(f"Warning: Could not fetch form name for notification: {str(e)}")
+        
+        # Send email notifications to all admins
+        admin_emails = get_admin_emails()
+        for admin in admin_emails:
+            try:
+                email_service.send_form_submission_admin_notification(
+                    to_email=admin["email"],
+                    form_name=form_name,
+                    form_id=form_id,
+                    submitter_name=submission.get("submitter_name"),
+                    submitter_email=submission.get("submitter_email"),
+                    submission_id=submission_id
+                )
+            except Exception as e:
+                # Log but don't fail the submission
+                print(f"Warning: Failed to send admin notification email to {admin['email']}: {str(e)}")
         
         return submission
         

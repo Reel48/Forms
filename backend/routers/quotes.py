@@ -6,10 +6,13 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Quote, QuoteCreate, QuoteUpdate, LineItem, LineItemCreate
-from database import supabase, supabase_storage
+from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from stripe_service import StripeService
 from auth import get_current_user, get_current_admin, get_optional_user
+from email_service import email_service
+from email_utils import get_admin_emails
 import uuid
+import requests
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 
@@ -248,7 +251,45 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
         
         # Fetch complete quote with relations
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
-        return response.data[0]
+        quote = response.data[0]
+        
+        # Get customer information for email notification
+        customer_name = None
+        customer_email = None
+        try:
+            # Get customer info from client record
+            client = quote.get("clients")
+            if client:
+                customer_name = client.get("name")
+                customer_email = client.get("email")
+            
+            # Also try to get from user if available
+            if current_user.get("role") == "customer":
+                customer_email = customer_email or current_user.get("email")
+                customer_name = customer_name or current_user.get("name")
+        except Exception as e:
+            print(f"Warning: Could not fetch customer info for notification: {str(e)}")
+        
+        # Send email notifications to all admins
+        admin_emails = get_admin_emails()
+        quote_title = quote.get("title", "Quote")
+        quote_number = quote.get("quote_number", "")
+        
+        for admin in admin_emails:
+            try:
+                email_service.send_quote_accepted_admin_notification(
+                    to_email=admin["email"],
+                    quote_title=quote_title,
+                    quote_number=quote_number,
+                    quote_id=quote_id,
+                    customer_name=customer_name,
+                    customer_email=customer_email
+                )
+            except Exception as e:
+                # Log but don't fail the acceptance
+                print(f"Warning: Failed to send admin notification email to {admin['email']}: {str(e)}")
+        
+        return quote
         
     except HTTPException:
         raise
