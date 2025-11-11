@@ -376,6 +376,7 @@ function QuotesList() {
                     <th>Total</th>
                     <th>Quote Status</th>
                     <th>Payment Status</th>
+                    {role === 'admin' && <th>Priority</th>}
                     {role === 'admin' && <th>Assigned To</th>}
                     <th>Created</th>
                     <th>Actions</th>
@@ -402,6 +403,32 @@ function QuotesList() {
                           <span className="text-muted">-</span>
                         )}
                       </td>
+                      {role === 'admin' && (
+                        <td>
+                          <select
+                            value={quote.priority || 'normal'}
+                            onChange={async (e) => {
+                              try {
+                                await quotesAPI.update(quote.id, { priority: e.target.value });
+                                loadQuotes();
+                              } catch (error) {
+                                console.error('Failed to update priority:', error);
+                                alert('Failed to update priority. Please try again.');
+                              }
+                            }}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.875rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.25rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                          </select>
+                        </td>
+                      )}
                       {role === 'admin' && (
                         <td>
                           <span className="text-muted" style={{ fontSize: '0.875rem' }}>

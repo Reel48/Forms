@@ -266,6 +266,7 @@ function FormsList() {
                 <th>Description</th>
                 <th>Fields</th>
                 <th>Status</th>
+                {role === 'admin' && <th>Priority</th>}
                 {role === 'admin' && <th>Assigned To</th>}
                 <th>Created</th>
                 <th>Actions</th>
@@ -294,6 +295,32 @@ function FormsList() {
                       {formatStatus(form.status)}
                     </span>
                   </td>
+                  {role === 'admin' && (
+                    <td>
+                      <select
+                        value={form.priority || 'normal'}
+                        onChange={async (e) => {
+                          try {
+                            await formsAPI.update(form.id, { priority: e.target.value });
+                            loadForms();
+                          } catch (error) {
+                            console.error('Failed to update priority:', error);
+                            alert('Failed to update priority. Please try again.');
+                          }
+                        }}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.875rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                      </select>
+                    </td>
+                  )}
                   {role === 'admin' && (
                     <td>
                       <span className="text-muted" style={{ fontSize: '0.875rem' }}>

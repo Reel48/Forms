@@ -10,6 +10,7 @@ interface TimelineItem {
   title: string;
   description?: string;
   status: string;
+  priority?: string;
   created_at: string;
   data: Quote | Form;
 }
@@ -53,6 +54,7 @@ function CustomerDashboard() {
         title: quote.title,
         description: `Quote #${quote.quote_number}`,
         status: quote.status,
+        priority: quote.priority || 'normal',
         created_at: quote.created_at,
         data: quote,
       })),
@@ -62,15 +64,20 @@ function CustomerDashboard() {
         title: form.name,
         description: form.description || '',
         status: form.status,
+        priority: form.priority || 'normal',
         created_at: form.created_at,
         data: form,
       })),
     ];
 
-    // Sort by created_at descending (newest first)
-    return items.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    // Sort by priority first (high priority first), then by created_at descending (newest first)
+    return items.sort((a, b) => {
+      // High priority items first
+      if (a.priority === 'high' && b.priority !== 'high') return -1;
+      if (a.priority !== 'high' && b.priority === 'high') return 1;
+      // Then by date (newest first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
   }, [quotes, forms]);
 
   // Filter timeline items by search term
@@ -186,6 +193,37 @@ function CustomerDashboard() {
     }
   };
 
+  const handleDownloadPDF = async (quote: Quote, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    try {
+      const response = await api.get(`/api/pdf/quote/${quote.id}`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${quote.quote_number || 'quote'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+      alert('Failed to download PDF. Please try again.');
+    }
+  };
+
+  const handleCompleteForm = (form: Form, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    // Navigate to public form view to complete it
+    if (form.public_url_slug) {
+      window.open(`/public/form/${form.public_url_slug}`, '_blank');
+    } else {
+      navigate(`/forms/${form.id}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container">
@@ -275,11 +313,14 @@ function CustomerDashboard() {
                     key={`${item.type}-${item.id}`}
                     className="card"
                     style={{
-                      cursor: 'pointer',
                       transition: 'all 0.2s',
                       borderLeft: `4px solid ${item.type === 'quote' ? '#667eea' : '#10b981'}`,
+                      ...(item.priority === 'high' ? {
+                        borderLeftWidth: '6px',
+                        borderLeftColor: '#ef4444',
+                        backgroundColor: '#fef2f2',
+                      } : {}),
                     }}
-                    onClick={() => handleItemClick(item)}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateX(4px)';
                       e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
@@ -317,6 +358,19 @@ function CustomerDashboard() {
                           }}>
                             {item.title}
                           </h3>
+                          {item.priority === 'high' && (
+                            <span style={{
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              backgroundColor: '#fee2e2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                            }}>
+                              🔥 High Priority
+                            </span>
+                          )}
                           {getStatusBadge(item.status, item.type)}
                         </div>
                         {item.description && (
@@ -334,20 +388,50 @@ function CustomerDashboard() {
                           gap: '1rem',
                           fontSize: '0.875rem',
                           color: '#9ca3af',
+                          marginBottom: '0.75rem',
                         }}>
                           <span>{formatDate(item.created_at)}</span>
                           <span>•</span>
                           <span>{item.type === 'quote' ? 'Quote' : 'Form'}</span>
                         </div>
-                      </div>
-
-                      {/* Arrow */}
-                      <div style={{
-                        color: '#9ca3af',
-                        fontSize: '1.5rem',
-                        flexShrink: 0,
-                      }}>
-                        →
+                        
+                        {/* Quick Actions */}
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleItemClick(item)}
+                            className="btn-outline"
+                            style={{
+                              padding: '0.375rem 0.75rem',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            View
+                          </button>
+                          {item.type === 'quote' && (
+                            <button
+                              onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
+                              className="btn-outline"
+                              style={{
+                                padding: '0.375rem 0.75rem',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              Download PDF
+                            </button>
+                          )}
+                          {item.type === 'form' && (
+                            <button
+                              onClick={(e) => handleCompleteForm(item.data as Form, e)}
+                              className="btn-primary"
+                              style={{
+                                padding: '0.375rem 0.75rem',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              Complete
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

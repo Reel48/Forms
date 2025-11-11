@@ -104,6 +104,7 @@ class QuoteBase(BaseModel):
     tax_rate: Decimal = Decimal("0")
     currency: str = "USD"
     status: str = "draft"  # draft, sent, viewed, accepted, declined
+    priority: Optional[str] = "normal"  # normal, high
     
     class Config:
         json_encoders = {
@@ -122,6 +123,7 @@ class QuoteUpdate(BaseModel):
     tax_rate: Optional[Decimal] = None
     currency: Optional[str] = None
     status: Optional[str] = None
+    priority: Optional[str] = None
 
 class Quote(QuoteBase):
     id: str
@@ -252,6 +254,7 @@ class FormBase(BaseModel):
     name: str
     description: Optional[str] = None
     status: str = "draft"  # draft, published, archived
+    priority: Optional[str] = "normal"  # normal, high
     public_url_slug: Optional[str] = None
     theme: Dict[str, Any] = {}
     settings: Dict[str, Any] = {}
@@ -265,6 +268,7 @@ class FormUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
+    priority: Optional[str] = None
     theme: Optional[Dict[str, Any]] = None
     settings: Optional[Dict[str, Any]] = None
     welcome_screen: Optional[Dict[str, Any]] = None

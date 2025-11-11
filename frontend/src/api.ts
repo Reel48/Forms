@@ -143,6 +143,7 @@ export interface Quote {
   tax_rate: string;
   currency: string;
   status: string;
+  priority?: string;
   subtotal: string;
   tax_amount: string;
   total: string;
@@ -206,6 +207,7 @@ export interface Form {
   name: string;
   description?: string;
   status: string; // draft, published, archived
+  priority?: string;
   public_url_slug?: string;
   theme?: Record<string, any>;
   settings?: Record<string, any>;
