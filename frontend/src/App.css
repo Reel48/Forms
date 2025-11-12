@@ -110,6 +110,33 @@ nav .nav-tabs li {
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  color: #6b7280;
+  padding: 1rem 1.5rem;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-tab-dropdown:hover {
+  color: #2563eb;
+  background-color: #f9fafb;
+}
+
+.nav-tab-dropdown.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background-color: transparent;
+}
+
+.nav-tab-dropdown.active:hover {
+  background-color: #f9fafb;
 }
 
 .dropdown-arrow {

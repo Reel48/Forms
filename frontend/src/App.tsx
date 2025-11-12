@@ -141,7 +141,7 @@ function Navigation() {
                       className={`nav-dropdown-item ${isSettingsActive ? 'active' : ''}`}
                       role="menuitem"
                     >
-                      Reel48 Settings
+                      Reel48 Info
                     </Link>
                   </li>
                   <li role="none">
