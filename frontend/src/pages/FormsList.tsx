@@ -463,6 +463,8 @@ function FormsList() {
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <select
+                id="bulk-status-select"
+                name="bulk-status-select"
                 onChange={(e) => {
                   if (e.target.value) {
                     handleBulkStatusChange(e.target.value);
@@ -531,6 +533,8 @@ function FormsList() {
                   <th style={{ width: '40px' }}>
                     <input
                       type="checkbox"
+                      id="select-all-forms"
+                      name="select-all-forms"
                       checked={selectedForms.size === forms.length && forms.length > 0}
                       onChange={handleSelectAll}
                       style={{ cursor: 'pointer' }}
@@ -555,6 +559,8 @@ function FormsList() {
                     <td>
                       <input
                         type="checkbox"
+                        id={`form-select-${form.id}`}
+                        name={`form-select-${form.id}`}
                         checked={selectedForms.has(form.id)}
                         onChange={() => handleSelectForm(form.id)}
                         onClick={(e) => e.stopPropagation()}
@@ -604,6 +610,8 @@ function FormsList() {
                   {role === 'admin' && (
                     <td>
                       <select
+                        id={`form-priority-${form.id}`}
+                        name={`form-priority-${form.id}`}
                         value={form.priority || 'normal'}
                         onChange={async (e) => {
                           try {
@@ -722,6 +730,8 @@ function FormsList() {
                     {role === 'admin' && (
                       <input
                         type="checkbox"
+                        id={`form-select-mobile-${form.id}`}
+                        name={`form-select-mobile-${form.id}`}
                         checked={selectedForms.has(form.id)}
                         onChange={() => handleSelectForm(form.id)}
                         onClick={(e) => e.stopPropagation()}

@@ -672,9 +672,9 @@ function QuotesList() {
 
           {/* Status Filter Chips */}
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+            <div style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
               Quote Status
-            </label>
+            </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 onClick={() => updateFilter('status', '')}
@@ -1105,6 +1105,8 @@ function QuotesList() {
                       {role === 'admin' && (
                         <input
                           type="checkbox"
+                          id={`quote-select-mobile-${quote.id}`}
+                          name={`quote-select-mobile-${quote.id}`}
                           checked={selectedQuotes.has(quote.id)}
                           onChange={() => toggleQuoteSelection(quote.id)}
                           style={{
@@ -1606,7 +1608,7 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote?: Quote; on
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+        <label htmlFor="send-email-to-list" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
           To Email *
         </label>
         <input
@@ -1620,7 +1622,7 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote?: Quote; on
         />
       </div>
       <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+        <label htmlFor="send-email-message-list" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
           Custom Message (optional)
         </label>
         <textarea
