@@ -420,7 +420,7 @@ function QuoteView() {
     });
   };
 
-  const getActivityIcon = (type: string) => {
+  const getActivityIcon = (_type: string) => {
     // Icons removed - using text labels instead
     return '';
   };
