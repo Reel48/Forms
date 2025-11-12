@@ -14,32 +14,11 @@ async def get_email_config():
     Debug endpoint to check email service configuration.
     Shows what's configured without exposing sensitive data.
     """
-    # Get provider-specific config
-    provider_config = {}
-    if EMAIL_PROVIDER == "sendgrid":
-        sendgrid_key = os.getenv("SENDGRID_API_KEY")
-        provider_config = {
-            "sendgrid_configured": bool(sendgrid_key),
-            "sendgrid_key_length": len(sendgrid_key) if sendgrid_key else 0,
-            "sendgrid_key_preview": (sendgrid_key[:10] + "..." + sendgrid_key[-4]) if sendgrid_key and len(sendgrid_key) > 14 else None,
-        }
-    elif EMAIL_PROVIDER == "resend":
-        resend_key = os.getenv("RESEND_API_KEY")
-        provider_config = {
-            "resend_configured": bool(resend_key),
-            "resend_key_length": len(resend_key) if resend_key else 0,
-        }
-    elif EMAIL_PROVIDER == "brevo":
-        brevo_key = os.getenv("BREVO_API_KEY")
-        provider_config = {
-            "brevo_configured": bool(brevo_key),
-            "brevo_key_length": len(brevo_key) if brevo_key else 0,
-        }
-    elif EMAIL_PROVIDER == "ses":
-        provider_config = {
-            "aws_region": os.getenv("AWS_REGION", "us-east-1"),
-            "ses_configured": True,  # SES uses IAM role, no API key needed
-        }
+    # Get provider-specific config (always SES)
+    provider_config = {
+        "aws_region": os.getenv("AWS_REGION", "us-east-1"),
+        "ses_configured": True,  # SES uses IAM role, no API key needed
+    }
     
     config = {
         "email_provider": EMAIL_PROVIDER,
@@ -49,14 +28,11 @@ async def get_email_config():
         "frontend_url": FRONTEND_URL,
         "email_service_client_initialized": email_service.client is not None,
         "environment_variables": {
-            "EMAIL_PROVIDER": os.getenv("EMAIL_PROVIDER", "ses"),
+            "EMAIL_PROVIDER": "ses",
             "FROM_EMAIL": os.getenv("FROM_EMAIL", "NOT SET"),
             "FROM_NAME": os.getenv("FROM_NAME", "NOT SET"),
             "FRONTEND_URL": os.getenv("FRONTEND_URL", "NOT SET"),
             "AWS_REGION": os.getenv("AWS_REGION", "NOT SET"),
-            "SENDGRID_API_KEY": "SET" if os.getenv("SENDGRID_API_KEY") else "NOT SET",
-            "RESEND_API_KEY": "SET" if os.getenv("RESEND_API_KEY") else "NOT SET",
-            "BREVO_API_KEY": "SET" if os.getenv("BREVO_API_KEY") else "NOT SET",
         }
     }
     return config

@@ -5,6 +5,7 @@ Handles JWT token verification and user role checking
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from database import supabase, supabase_storage
+from token_utils import is_token_revoked
 from typing import Optional
 import os
 from jose import JWTError, jwt
@@ -41,6 +42,14 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No token provided",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Check if token has been revoked
+    if is_token_revoked(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     

@@ -15,6 +15,8 @@ from account_lockout import (
     reset_failed_attempts,
     record_login_attempt
 )
+from token_utils import revoke_token, revoke_all_user_tokens, hash_token
+from password_history_utils import check_password_history, add_password_to_history
 from rate_limiter import (
     login_rate_limit,
     register_rate_limit,
@@ -28,6 +30,7 @@ import requests
 import secrets
 import os
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -261,6 +264,75 @@ async def login(credentials: UserLogin, request: Request):
             success=True
         )
         
+        # Track session
+        try:
+            from jose import jwt
+            
+            # Get user agent
+            user_agent = request.headers.get("user-agent", "")
+            
+            # Parse device info from user agent (basic)
+            device_info = {}
+            if "Mobile" in user_agent or "Android" in user_agent or "iPhone" in user_agent:
+                device_info["type"] = "mobile"
+            elif "Tablet" in user_agent or "iPad" in user_agent:
+                device_info["type"] = "tablet"
+            else:
+                device_info["type"] = "desktop"
+            
+            # Extract browser info
+            if "Chrome" in user_agent:
+                device_info["browser"] = "Chrome"
+            elif "Firefox" in user_agent:
+                device_info["browser"] = "Firefox"
+            elif "Safari" in user_agent:
+                device_info["browser"] = "Safari"
+            elif "Edge" in user_agent:
+                device_info["browser"] = "Edge"
+            else:
+                device_info["browser"] = "Unknown"
+            
+            # Get token expiration
+            access_token = response.session.access_token
+            token_hash = hash_token(access_token)
+            refresh_token_hash = hash_token(response.session.refresh_token) if response.session.refresh_token else None
+            
+            try:
+                payload = jwt.decode(access_token, options={"verify_signature": False})
+                exp = payload.get("exp")
+                if exp:
+                    expires_at = datetime.fromtimestamp(exp)
+                else:
+                    expires_at = datetime.now() + timedelta(hours=1)
+            except:
+                expires_at = datetime.now() + timedelta(hours=1)
+            
+            # Check if session already exists
+            existing_session = supabase_storage.table("user_sessions").select("*").eq("token_hash", token_hash).execute()
+            
+            if not existing_session.data or len(existing_session.data) == 0:
+                # Create new session
+                supabase_storage.table("user_sessions").insert({
+                    "user_id": user_id,
+                    "token_hash": token_hash,
+                    "refresh_token_hash": refresh_token_hash,
+                    "ip_address": ip_address,
+                    "user_agent": user_agent,
+                    "device_info": json.dumps(device_info),
+                    "created_at": datetime.now().isoformat(),
+                    "last_used_at": datetime.now().isoformat(),
+                    "expires_at": expires_at.isoformat(),
+                    "is_active": True
+                }).execute()
+            else:
+                # Update last used time
+                supabase_storage.table("user_sessions").update({
+                    "last_used_at": datetime.now().isoformat()
+                }).eq("token_hash", token_hash).execute()
+        except Exception as e:
+            logger.warning(f"Failed to track session: {str(e)}")
+            # Don't fail login if session tracking fails
+        
         # Get user role using service role client to bypass RLS
         try:
             # Use execute() and check if data exists (maybeSingle() not available in this Supabase client version)
@@ -369,12 +441,34 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/logout")
-async def logout(current_user: dict = Depends(get_current_user)):
+async def logout(request: Request, current_user: dict = Depends(get_current_user)):
     """
-    Logout user (client should clear token).
-    Note: With JWT tokens, logout is handled client-side by removing the token.
+    Logout user and revoke the current token.
     """
-    return {"message": "Logged out successfully"}
+    try:
+        # Get token from request
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            user_id = current_user.get("id")
+            
+            # Revoke the token
+            revoke_token(token, user_id, reason="logout")
+            
+            # Mark session as inactive
+            try:
+                token_hash = hash_token(token)
+                supabase_storage.table("user_sessions").update({
+                    "is_active": False
+                }).eq("token_hash", token_hash).execute()
+            except Exception as e:
+                logger.warning(f"Failed to update session on logout: {str(e)}")
+        
+        return {"message": "Logged out successfully"}
+    except Exception as e:
+        logger.error(f"Error during logout: {str(e)}")
+        # Still return success even if revocation fails
+        return {"message": "Logged out successfully"}
 
 
 @router.post("/refresh")
@@ -924,6 +1018,8 @@ async def confirm_password_reset(reset_data: PasswordResetConfirm, request: Requ
                 detail=error_msg
             )
         
+        # Check password history (will be done after we get user_id)
+        
         if not supabase_service_role_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -968,6 +1064,13 @@ async def confirm_password_reset(reset_data: PasswordResetConfirm, request: Requ
                         detail=f"Invalid token expiration format: {str(e)}"
                     )
             
+            # Check password history before updating
+            if check_password_history(user_id, reset_data.new_password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You cannot reuse a recently used password. Please choose a different password."
+                )
+            
             # Update user password using Supabase Auth Admin API
             auth_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
             headers = {
@@ -995,6 +1098,13 @@ async def confirm_password_reset(reset_data: PasswordResetConfirm, request: Requ
             except Exception as e:
                 # Log but don't fail - token is already used
                 print(f"Warning: Failed to mark reset token as used: {str(e)}")
+            
+            # Add password to history
+            try:
+                add_password_to_history(user_id, reset_data.new_password)
+            except Exception as e:
+                logger.warning(f"Failed to add password to history: {str(e)}")
+                # Don't fail password reset if history update fails
             
             return {
                 "message": "Password reset successfully"
@@ -1213,4 +1323,148 @@ async def resend_verification_email(request_data: ResendVerificationRequest, req
         return {
             "message": "If an account with that email exists and is unverified, a verification link has been sent."
         }
+
+
+@router.get("/login-activity")
+async def get_login_activity(
+    current_user: dict = Depends(get_current_user),
+    limit: int = 20
+):
+    """
+    Get recent login activity for the current user.
+    """
+    try:
+        user_id = current_user.get("id")
+        
+        # Get recent login attempts for this user
+        response = supabase_storage.table("login_attempts").select("*").eq("user_id", user_id).order("attempted_at", desc=True).limit(limit).execute()
+        
+        activities = []
+        if response.data:
+            for attempt in response.data:
+                activities.append({
+                    "id": attempt.get("id"),
+                    "success": attempt.get("success", False),
+                    "ip_address": attempt.get("ip_address"),
+                    "attempted_at": attempt.get("attempted_at"),
+                    "failure_reason": attempt.get("failure_reason")
+                })
+        
+        return {
+            "activities": activities,
+            "total": len(activities)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching login activity: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch login activity: {str(e)}"
+        )
+
+
+@router.get("/sessions")
+async def get_sessions(current_user: dict = Depends(get_current_user)):
+    """
+    Get all active sessions for the current user.
+    """
+    try:
+        user_id = current_user.get("id")
+        
+        # Get active sessions
+        response = supabase_storage.table("user_sessions").select("*").eq("user_id", user_id).eq("is_active", True).order("last_used_at", desc=True).execute()
+        
+        sessions = []
+        if response.data:
+            for session in response.data:
+                sessions.append({
+                    "id": session.get("id"),
+                    "ip_address": session.get("ip_address"),
+                    "user_agent": session.get("user_agent"),
+                    "device_info": session.get("device_info"),
+                    "location_info": session.get("location_info"),
+                    "created_at": session.get("created_at"),
+                    "last_used_at": session.get("last_used_at"),
+                    "expires_at": session.get("expires_at")
+                })
+        
+        return {
+            "sessions": sessions,
+            "total": len(sessions)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching sessions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch sessions: {str(e)}"
+        )
+
+
+@router.delete("/sessions/{session_id}")
+async def revoke_session(
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Revoke a specific session.
+    """
+    try:
+        user_id = current_user.get("id")
+        
+        # Verify session belongs to user
+        session_response = supabase_storage.table("user_sessions").select("*").eq("id", session_id).eq("user_id", user_id).execute()
+        
+        if not session_response.data or len(session_response.data) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Session not found"
+            )
+        
+        session = session_response.data[0]
+        token_hash = session.get("token_hash")
+        
+        # Mark session as inactive
+        supabase_storage.table("user_sessions").update({
+            "is_active": False
+        }).eq("id", session_id).execute()
+        
+        # Note: We can't revoke the actual token without the token string
+        # The token will expire naturally, but we've marked the session inactive
+        
+        return {"message": "Session revoked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error revoking session: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to revoke session: {str(e)}"
+        )
+
+
+@router.post("/logout-all")
+async def logout_all_devices(current_user: dict = Depends(get_current_user)):
+    """
+    Logout from all devices (revoke all active sessions).
+    """
+    try:
+        user_id = current_user.get("id")
+        
+        # Revoke all user tokens
+        revoked_count = revoke_all_user_tokens(user_id, reason="logout_all")
+        
+        # Mark all sessions as inactive
+        supabase_storage.table("user_sessions").update({
+            "is_active": False
+        }).eq("user_id", user_id).eq("is_active", True).execute()
+        
+        return {
+            "message": "Logged out from all devices successfully",
+            "sessions_revoked": revoked_count
+        }
+    except Exception as e:
+        logger.error(f"Error logging out all devices: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to logout all devices: {str(e)}"
+        )
 

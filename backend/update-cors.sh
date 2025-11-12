@@ -20,18 +20,14 @@ CURRENT_ENV=$(aws apprunner describe-service \
     --query 'Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables' \
     --output json)
 
-# Extract current values
-SUPABASE_URL=$(echo $CURRENT_ENV | jq -r '.SUPABASE_URL // empty')
-SUPABASE_KEY=$(echo $CURRENT_ENV | jq -r '.SUPABASE_KEY // empty')
+# Extract current ALLOWED_ORIGINS
 CURRENT_ORIGINS=$(echo $CURRENT_ENV | jq -r '.ALLOWED_ORIGINS // empty')
-STRIPE_SECRET_KEY=$(echo $CURRENT_ENV | jq -r '.STRIPE_SECRET_KEY // empty')
-STRIPE_WEBHOOK_SECRET=$(echo $CURRENT_ENV | jq -r '.STRIPE_WEBHOOK_SECRET // empty')
 
 echo "Current ALLOWED_ORIGINS: $CURRENT_ORIGINS"
 echo ""
 
-# Add the new Vercel domain
-NEW_DOMAIN="https://forms-ten-self.vercel.app"
+# Add the new domain (accept as parameter or use default)
+NEW_DOMAIN="${1:-https://reel48.app}"
 
 if [[ "$CURRENT_ORIGINS" == *"$NEW_DOMAIN"* ]]; then
     echo "✓ Domain $NEW_DOMAIN is already in ALLOWED_ORIGINS"
@@ -50,20 +46,9 @@ echo ""
 echo "Updating App Runner service with new CORS configuration..."
 echo "This will trigger a redeploy..."
 
-# Build the environment variables JSON
-ENV_VARS_JSON=$(jq -n \
-    --arg supabase_url "$SUPABASE_URL" \
-    --arg supabase_key "$SUPABASE_KEY" \
-    --arg allowed_origins "$ALLOWED_ORIGINS" \
-    --arg stripe_secret "$STRIPE_SECRET_KEY" \
-    --arg stripe_webhook "$STRIPE_WEBHOOK_SECRET" \
-    '{
-        "SUPABASE_URL": $supabase_url,
-        "SUPABASE_KEY": $supabase_key,
-        "ALLOWED_ORIGINS": $allowed_origins,
-        "STRIPE_SECRET_KEY": $stripe_secret,
-        "STRIPE_WEBHOOK_SECRET": $stripe_webhook
-    }')
+# Update ALLOWED_ORIGINS in the existing environment variables JSON
+# This preserves all other environment variables
+ENV_VARS_JSON=$(echo "$CURRENT_ENV" | jq --arg allowed_origins "$ALLOWED_ORIGINS" '. + {"ALLOWED_ORIGINS": $allowed_origins}')
 
 # Update the service
 aws apprunner update-service \
@@ -87,8 +72,11 @@ echo "✓ Service is redeploying with new ALLOWED_ORIGINS"
 echo ""
 echo "New ALLOWED_ORIGINS includes:"
 echo "  - $NEW_DOMAIN"
-echo "  - http://localhost:5173"
-echo "  - http://localhost:3000"
+if [[ "$ALLOWED_ORIGINS" == *"localhost"* ]]; then
+    echo "  - http://localhost:5173"
+    echo "  - http://localhost:3000"
+fi
 echo ""
-echo "Wait 2-3 minutes for the deployment to complete, then try creating a client again."
+echo "All other environment variables have been preserved."
+echo "Wait 2-3 minutes for the deployment to complete, then test your application."
 

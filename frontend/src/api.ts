@@ -349,6 +349,10 @@ export const authAPI = {
   confirmPasswordReset: (token: string, newPassword: string) => api.post<{ message: string }>('/api/auth/password-reset/confirm', { token, new_password: newPassword }),
   verifyEmail: (token: string) => api.post<{ message: string }>('/api/auth/verify-email', { token }),
   resendVerification: (email: string) => api.post<{ message: string }>('/api/auth/resend-verification', { email }),
+  getLoginActivity: (limit?: number) => api.get<{ activities: any[]; total: number }>('/api/auth/login-activity', { params: { limit } }),
+  getSessions: () => api.get<{ sessions: any[]; total: number }>('/api/auth/sessions'),
+  revokeSession: (sessionId: string) => api.delete<{ message: string }>(`/api/auth/sessions/${sessionId}`),
+  logoutAll: () => api.post<{ message: string; sessions_revoked: number }>('/api/auth/logout-all'),
 };
 
 export default api;
