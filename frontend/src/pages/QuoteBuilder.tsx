@@ -661,9 +661,11 @@ function QuoteBuilder() {
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Quote Title *</label>
+              <label htmlFor="quote-title">Quote Title *</label>
               <input
                 type="text"
+                id="quote-title"
+                name="quote-title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
@@ -680,8 +682,10 @@ function QuoteBuilder() {
 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <div className="form-group">
-                <label>Client</label>
+                <label htmlFor="quote-client">Client</label>
                 <select
+                  id="quote-client"
+                  name="quote-client"
                   value={formData.client_id}
                   onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
                 >
@@ -695,9 +699,11 @@ function QuoteBuilder() {
               </div>
 
               <div className="form-group">
-                <label>Tax Rate (%)</label>
+                <label htmlFor="quote-tax-rate">Tax Rate (%)</label>
                 <input
                   type="number"
+                  id="quote-tax-rate"
+                  name="quote-tax-rate"
                   step="0.01"
                   value={formData.tax_rate}
                   onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
@@ -713,8 +719,10 @@ function QuoteBuilder() {
               </div>
 
               <div className="form-group">
-                <label>Currency</label>
+                <label htmlFor="quote-currency">Currency</label>
                 <select
+                  id="quote-currency"
+                  name="quote-currency"
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 >
@@ -727,8 +735,10 @@ function QuoteBuilder() {
               </div>
 
               <div className="form-group">
-                <label>Status</label>
+                <label htmlFor="quote-status">Status</label>
                 <select
+                  id="quote-status"
+                  name="quote-status"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
@@ -806,6 +816,8 @@ function QuoteBuilder() {
                             <td>
                               <input
                                 type="checkbox"
+                                id={`line-item-checkbox-${index}`}
+                                name={`line-item-checkbox-${index}`}
                                 checked={selectedLineItems.has(index)}
                                 onChange={() => toggleLineItemSelection(index)}
                                 style={{ cursor: 'pointer' }}
@@ -816,6 +828,8 @@ function QuoteBuilder() {
                           <td>
                             <input
                               type="text"
+                              id={`line-item-description-${index}`}
+                              name={`line-item-description-${index}`}
                               value={item.description}
                               onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                               placeholder="Item description"
@@ -834,6 +848,8 @@ function QuoteBuilder() {
                           <td>
                             <input
                               type="number"
+                              id={`line-item-quantity-${index}`}
+                              name={`line-item-quantity-${index}`}
                               step="0.01"
                               value={item.quantity}
                               onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
@@ -854,6 +870,8 @@ function QuoteBuilder() {
                               <span>{currencySymbol}</span>
                               <input
                                 type="number"
+                                id={`line-item-unit-price-${index}`}
+                                name={`line-item-unit-price-${index}`}
                                 step="0.01"
                                 value={item.unit_price}
                                 onChange={(e) => updateLineItem(index, 'unit_price', e.target.value)}
@@ -873,6 +891,8 @@ function QuoteBuilder() {
                           <td>
                             <input
                               type="number"
+                              id={`line-item-discount-${index}`}
+                              name={`line-item-discount-${index}`}
                               step="0.01"
                               value={item.discount_percent || '0'}
                               onChange={(e) => updateLineItem(index, 'discount_percent', e.target.value)}
@@ -954,6 +974,8 @@ function QuoteBuilder() {
                 </button>
               </div>
               <textarea
+                id="quote-notes"
+                name="quote-notes"
                 value={formData.notes || ''}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Additional notes for the quote... Use [link text](url) format or paste URLs directly."
@@ -977,6 +999,8 @@ function QuoteBuilder() {
                 </button>
               </div>
               <textarea
+                id="quote-terms"
+                name="quote-terms"
                 value={formData.terms || ''}
                 onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
                 placeholder="Terms and conditions... Use [link text](url) format or paste URLs directly."
@@ -1251,9 +1275,11 @@ function SaveTemplateModal({ onSave, onClose }: any) {
         <h3 style={{ marginTop: 0 }}>Save as Template</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Template Name *</label>
+            <label htmlFor="template-name">Template Name *</label>
             <input
               type="text"
+              id="template-name"
+              name="template-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -1261,8 +1287,10 @@ function SaveTemplateModal({ onSave, onClose }: any) {
             />
           </div>
           <div className="form-group">
-            <label>Description (optional)</label>
+            <label htmlFor="template-description">Description (optional)</label>
             <textarea
+              id="template-description"
+              name="template-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe when to use this template..."
@@ -1270,9 +1298,11 @@ function SaveTemplateModal({ onSave, onClose }: any) {
             />
           </div>
           <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <label htmlFor="template-public" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
+                id="template-public"
+                name="template-public"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
               />
@@ -1321,8 +1351,10 @@ function LineItemTemplatesModal({ templates, categories, onAdd, onClose }: any) 
         <h3 style={{ marginTop: 0 }}>Quick Add Line Items</h3>
         {categories.length > 0 && (
           <div className="form-group">
-            <label>Filter by Category</label>
+            <label htmlFor="template-category-filter">Filter by Category</label>
             <select
+              id="template-category-filter"
+              name="template-category-filter"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
@@ -1411,17 +1443,19 @@ function BulkEditModal({ selectedCount, onEdit, onClose }: any) {
         <h3 style={{ marginTop: 0 }}>Bulk Edit {selectedCount} Item(s)</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Field to Edit</label>
-            <select value={field} onChange={(e) => setField(e.target.value as keyof LineItem)}>
+            <label htmlFor="bulk-edit-field">Field to Edit</label>
+            <select id="bulk-edit-field" name="bulk-edit-field" value={field} onChange={(e) => setField(e.target.value as keyof LineItem)}>
               <option value="discount_percent">Discount %</option>
               <option value="tax_rate">Tax Rate %</option>
               <option value="quantity">Quantity</option>
             </select>
           </div>
           <div className="form-group">
-            <label>New Value</label>
+            <label htmlFor="bulk-edit-value">New Value</label>
             <input
               type="number"
+              id="bulk-edit-value"
+              name="bulk-edit-value"
               step="0.01"
               value={value}
               onChange={(e) => setValue(e.target.value)}
@@ -1463,18 +1497,22 @@ function LinkDialog({ linkDialog, onUpdate, onInsert, onClose }: any) {
       >
         <h3 style={{ marginTop: 0 }}>Insert Link</h3>
         <div className="form-group">
-          <label>Link Text (optional)</label>
+          <label htmlFor="link-text">Link Text (optional)</label>
           <input
             type="text"
+            id="link-text"
+            name="link-text"
             value={linkDialog.linkText}
             onChange={(e) => onUpdate({ ...linkDialog, linkText: e.target.value })}
             placeholder="e.g., Terms of Service"
           />
         </div>
         <div className="form-group">
-          <label>URL *</label>
+          <label htmlFor="link-url">URL *</label>
           <input
             type="url"
+            id="link-url"
+            name="link-url"
             value={linkDialog.url}
             onChange={(e) => onUpdate({ ...linkDialog, url: e.target.value })}
             placeholder="https://example.com"

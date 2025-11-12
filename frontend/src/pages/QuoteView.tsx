@@ -942,6 +942,8 @@ function QuoteView() {
               <h2>Internal Comments</h2>
               <div className="mb-4" style={{ marginTop: '1rem' }}>
                 <textarea
+                  id="quote-comment"
+                  name="quote-comment"
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add an internal comment..."
@@ -1225,6 +1227,8 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote: Quote; onS
         </label>
         <input
           type="email"
+          id="send-email-to"
+          name="send-email-to"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -1236,6 +1240,8 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote: Quote; onS
           Custom Message (optional)
         </label>
         <textarea
+          id="send-email-message"
+          name="send-email-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Add a personal message..."
@@ -1246,6 +1252,8 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote: Quote; onS
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
           <input
             type="checkbox"
+            id="send-email-include-pdf"
+            name="send-email-include-pdf"
             checked={includePdf}
             onChange={(e) => setIncludePdf(e.target.checked)}
           />
@@ -1282,6 +1290,8 @@ function ShareLinkForm({ onCreate, onCancel }: { onCreate: (expiresAt?: string, 
         </label>
         <input
           type="datetime-local"
+          id="quote-expires-at"
+          name="quote-expires-at"
           value={expiresAt}
           onChange={(e) => setExpiresAt(e.target.value)}
           style={{ width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
@@ -1293,6 +1303,8 @@ function ShareLinkForm({ onCreate, onCancel }: { onCreate: (expiresAt?: string, 
         </label>
         <input
           type="number"
+          id="quote-max-views"
+          name="quote-max-views"
           value={maxViews}
           onChange={(e) => setMaxViews(e.target.value)}
           min="1"
@@ -1332,6 +1344,8 @@ function ReminderForm({ currentReminder, onSet, onCancel }: { currentReminder?: 
         </label>
         <input
           type="datetime-local"
+          id="quote-reminder-date"
+          name="quote-reminder-date"
           value={reminderDate}
           onChange={(e) => setReminderDate(e.target.value)}
           required

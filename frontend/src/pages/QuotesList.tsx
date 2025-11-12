@@ -619,6 +619,8 @@ function QuotesList() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <select
+              id="bulk-status-select"
+              name="bulk-status-select"
               onChange={(e) => {
                 if (e.target.value) {
                   handleBulkStatusUpdate(e.target.value);
@@ -659,6 +661,8 @@ function QuotesList() {
           <div>
             <input
               type="text"
+              id="quote-search"
+              name="quote-search"
               placeholder="Search quotes by title, number, or client..."
               value={searchTerm}
               onChange={handleSearchChange}
@@ -995,6 +999,8 @@ function QuotesList() {
                           <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
+                              id={`column-toggle-${key}`}
+                              name={`column-toggle-${key}`}
                               checked={visibleColumns[key as keyof typeof visibleColumns]}
                               onChange={() => toggleColumn(key as keyof typeof visibleColumns)}
                             />
@@ -1009,6 +1015,7 @@ function QuotesList() {
               <label htmlFor="sort-by" style={{ fontSize: '0.875rem', fontWeight: '500' }}>Sort by:</label>
               <select
                 id="sort-by"
+                name="sort-by"
                 value={sortBy}
                 onChange={(e) => updateFilter('sort_by', e.target.value)}
                 style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
@@ -1144,6 +1151,8 @@ function QuotesList() {
                               <div style={{ marginTop: '0.25rem' }}>
                                 <strong>Priority:</strong>{' '}
                                 <select
+                                  id={`quote-priority-${quote.id}`}
+                                  name={`quote-priority-${quote.id}`}
                                   value={quote.priority || 'normal'}
                                   onChange={async (e) => {
                                     try {
@@ -1211,6 +1220,8 @@ function QuotesList() {
                             <th style={{ width: '40px' }}>
                               <input
                                 type="checkbox"
+                                id="select-all-quotes"
+                                name="select-all-quotes"
                                 checked={selectedQuotes.size === quotes.length && quotes.length > 0}
                                 onChange={toggleAllQuotes}
                                 style={{ cursor: 'pointer' }}
@@ -1271,6 +1282,8 @@ function QuotesList() {
                               <td>
                                 <input
                                   type="checkbox"
+                                  id={`quote-select-${quote.id}`}
+                                  name={`quote-select-${quote.id}`}
                                   checked={selectedQuotes.has(quote.id)}
                                   onChange={() => toggleQuoteSelection(quote.id)}
                                   style={{ cursor: 'pointer' }}
@@ -1304,6 +1317,8 @@ function QuotesList() {
                             {role === 'admin' && visibleColumns.priority && (
                               <td>
                                 <select
+                                  id={`quote-priority-${quote.id}`}
+                                  name={`quote-priority-${quote.id}`}
                                   value={quote.priority || 'normal'}
                                   onChange={async (e) => {
                                     try {
@@ -1596,6 +1611,8 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote?: Quote; on
         </label>
         <input
           type="email"
+          id="send-email-to-list"
+          name="send-email-to-list"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -1607,6 +1624,8 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote?: Quote; on
           Custom Message (optional)
         </label>
         <textarea
+          id="send-email-message-list"
+          name="send-email-message-list"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Add a personal message..."
@@ -1617,6 +1636,8 @@ function SendEmailForm({ quote, onSend, onCancel, sending }: { quote?: Quote; on
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
           <input
             type="checkbox"
+            id="send-email-include-pdf-list"
+            name="send-email-include-pdf-list"
             checked={includePdf}
             onChange={(e) => setIncludePdf(e.target.checked)}
           />
