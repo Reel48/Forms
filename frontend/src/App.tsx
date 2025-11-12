@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
@@ -39,6 +39,8 @@ function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, signOut } = useAuth();
+  const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLLIElement>(null);
   
   // Determine active tab based on path
   const isFormsActive = location.pathname.startsWith('/forms');
@@ -48,7 +50,33 @@ function Navigation() {
   const isProfileActive = location.pathname === '/profile';
   const isDashboardActive = location.pathname === '/dashboard';
   const isEmailTemplatesActive = location.pathname === '/email-templates';
+  const isAnalyticsActive = location.pathname === '/analytics';
   const isAdmin = role === 'admin';
+
+  // Check if any settings-related page is active
+  const isSettingsSectionActive = isSettingsActive || isClientsActive || isEmailTemplatesActive || isAnalyticsActive;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsSettingsDropdownOpen(false);
+      }
+    };
+
+    if (isSettingsDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSettingsDropdownOpen]);
+
+  // Close dropdown when navigating
+  useEffect(() => {
+    setIsSettingsDropdownOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -82,37 +110,60 @@ function Navigation() {
                 Quotes
               </Link>
             </li>
-            <li>
-              <Link 
-                to="/clients" 
-                className={`nav-tab ${isClientsActive ? 'active' : ''}`}
-              >
-                Clients
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/settings" 
-                className={`nav-tab ${isSettingsActive ? 'active' : ''}`}
+            <li 
+              ref={dropdownRef}
+              className={`nav-dropdown ${isSettingsDropdownOpen ? 'open' : ''}`}
+            >
+              <button
+                type="button"
+                className={`nav-tab nav-tab-dropdown ${isSettingsSectionActive ? 'active' : ''}`}
+                onClick={() => setIsSettingsDropdownOpen(!isSettingsDropdownOpen)}
+                aria-expanded={isSettingsDropdownOpen}
+                aria-haspopup="true"
               >
                 Settings
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/analytics" 
-                className={`nav-tab ${location.pathname === '/analytics' ? 'active' : ''}`}
-              >
-                Analytics
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/email-templates" 
-                className={`nav-tab ${isEmailTemplatesActive ? 'active' : ''}`}
-              >
-                Email Templates
-              </Link>
+                <span className="dropdown-arrow">▼</span>
+              </button>
+              {isSettingsDropdownOpen && (
+                <ul className="nav-dropdown-menu" role="menu">
+                  <li role="none">
+                    <Link 
+                      to="/clients" 
+                      className={`nav-dropdown-item ${isClientsActive ? 'active' : ''}`}
+                      role="menuitem"
+                    >
+                      Clients
+                    </Link>
+                  </li>
+                  <li role="none">
+                    <Link 
+                      to="/settings" 
+                      className={`nav-dropdown-item ${isSettingsActive ? 'active' : ''}`}
+                      role="menuitem"
+                    >
+                      Reel48 Settings
+                    </Link>
+                  </li>
+                  <li role="none">
+                    <Link 
+                      to="/analytics" 
+                      className={`nav-dropdown-item ${isAnalyticsActive ? 'active' : ''}`}
+                      role="menuitem"
+                    >
+                      Analytics
+                    </Link>
+                  </li>
+                  <li role="none">
+                    <Link 
+                      to="/email-templates" 
+                      className={`nav-dropdown-item ${isEmailTemplatesActive ? 'active' : ''}`}
+                      role="menuitem"
+                    >
+                      Email Templates
+                    </Link>
+                  </li>
+                </ul>
+              )}
             </li>
           </>
         ) : (
