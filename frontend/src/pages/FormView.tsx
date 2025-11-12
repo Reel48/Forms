@@ -168,17 +168,17 @@ function FormView() {
         <h2 style={{ marginTop: 0 }}>Form Details</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+            <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
               Form Name
-            </label>
+            </div>
             <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
               {form.name || 'Untitled Form'}
             </p>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+            <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
               Status
-            </label>
+            </div>
             <p style={{ margin: 0 }}>
               <span className={`badge ${form.status === 'published' ? 'badge-sent' : form.status === 'archived' ? 'badge-declined' : 'badge-draft'}`}>
                 {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
@@ -187,35 +187,35 @@ function FormView() {
           </div>
           {form.description && (
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+              <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
                 Description
-              </label>
+              </div>
               <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
                 {form.description}
               </p>
             </div>
           )}
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+            <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
               Created
-            </label>
+            </div>
             <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
               {new Date(form.created_at).toLocaleString()}
             </p>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+            <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
               Last Updated
-            </label>
+            </div>
             <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
               {new Date(form.updated_at).toLocaleString()}
             </p>
           </div>
           {form.public_url_slug && (
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
+              <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
                 Public Form URL
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
                   <a
@@ -356,9 +356,9 @@ function FormView() {
               )}
               {showEmbedCode && form.public_url_slug && form.status === 'published' && (
                 <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.875rem' }}>
+                  <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.875rem' }}>
                     Embed Code
-                  </label>
+                  </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <textarea
                       readOnly
@@ -480,9 +480,9 @@ function FormView() {
                     )}
                     {(field.options && field.options.length > 0) && (
                       <div style={{ marginTop: '0.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500', color: '#6b7280' }}>
+                        <div style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500', color: '#6b7280' }}>
                           Options:
-                        </label>
+                        </div>
                         <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
                           {field.options.map((option: any, optIndex: number) => (
                             <li key={optIndex}>
@@ -888,8 +888,9 @@ function WebhooksSection({ formId }: WebhooksSectionProps) {
         <div style={{ padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '8px', marginBottom: '1rem' }}>
           <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>New Webhook</h3>
           <div className="form-group">
-            <label>Webhook URL *</label>
+            <label htmlFor="webhook-url-input">Webhook URL *</label>
             <input
+              id="webhook-url-input"
               type="url"
               value={newWebhookUrl}
               onChange={(e) => setNewWebhookUrl(e.target.value)}
@@ -898,8 +899,9 @@ function WebhooksSection({ formId }: WebhooksSectionProps) {
             />
           </div>
           <div className="form-group">
-            <label>Secret (optional)</label>
+            <label htmlFor="webhook-secret-input">Secret (optional)</label>
             <input
+              id="webhook-secret-input"
               type="text"
               value={newWebhookSecret}
               onChange={(e) => setNewWebhookSecret(e.target.value)}
@@ -911,10 +913,11 @@ function WebhooksSection({ formId }: WebhooksSectionProps) {
             </p>
           </div>
           <div className="form-group">
-            <label>Events</label>
+            <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Events</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <label htmlFor="webhook-event-submission-created" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                 <input
+                  id="webhook-event-submission-created"
                   type="checkbox"
                   checked={newWebhookEvents.includes('submission.created')}
                   onChange={(e) => {
@@ -1076,8 +1079,9 @@ function FormVersionsSection({ formId }: FormVersionsSectionProps) {
         <div style={{ padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '8px', marginBottom: '1rem' }}>
           <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>Create New Version</h3>
           <div className="form-group">
-            <label>Notes (optional)</label>
+            <label htmlFor="version-notes-input">Notes (optional)</label>
             <textarea
+              id="version-notes-input"
               value={versionNotes}
               onChange={(e) => setVersionNotes(e.target.value)}
               placeholder="e.g., Added new fields, updated validation rules"
