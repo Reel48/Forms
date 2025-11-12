@@ -1,6 +1,6 @@
 """
 Email service for sending notifications and password reset emails
-Supports multiple email providers: AWS SES (recommended), SendGrid, Resend, Brevo
+Uses AWS SES (Simple Email Service) for all email sending
 """
 import os
 from typing import Optional, Dict, Any
@@ -8,21 +8,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Get email provider from environment (defaults to AWS SES)
-EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "ses").lower()  # ses, sendgrid, resend, brevo
+# Get email configuration from environment
+EMAIL_PROVIDER = "ses"  # Always use SES
 FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@formsapp.com")  # Default sender email
 FROM_NAME = os.getenv("FROM_NAME", "Forms App")  # Default sender name
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")  # Frontend URL for password reset links
-
-# Provider-specific configuration
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
 
 class EmailService:
-    """Service for sending emails via multiple providers"""
+    """Service for sending emails via AWS SES"""
     
     def __init__(self):
         """Initialize email service with the configured provider"""
@@ -36,19 +31,9 @@ class EmailService:
         self._initialize_provider()
     
     def _initialize_provider(self):
-        """Initialize the email provider based on EMAIL_PROVIDER setting"""
-        if self.provider == "ses":
-            self._initialize_aws_ses()
-        elif self.provider == "sendgrid":
-            self._initialize_sendgrid()
-        elif self.provider == "resend":
-            self._initialize_resend()
-        elif self.provider == "brevo":
-            self._initialize_brevo()
-        else:
-            logger.warning(f"Unknown email provider: {self.provider}. Defaulting to AWS SES.")
-            self.provider = "ses"
-            self._initialize_aws_ses()
+        """Initialize the email provider - always uses AWS SES"""
+        self.provider = "ses"
+        self._initialize_aws_ses()
     
     def _initialize_aws_ses(self):
         """Initialize AWS SES (recommended for AWS deployments)"""
@@ -82,77 +67,6 @@ class EmailService:
             print(f"ERROR: Failed to initialize AWS SES: {str(e)}")
             self.client = None
     
-    def _initialize_sendgrid(self):
-        """Initialize SendGrid"""
-        if not SENDGRID_API_KEY:
-            logger.warning("SENDGRID_API_KEY not configured. Email sending will be disabled.")
-            print("WARNING: SENDGRID_API_KEY not found. Email sending disabled.")
-            self.client = None
-            return
-        
-        try:
-            from sendgrid import SendGridAPIClient
-            self.client = SendGridAPIClient(SENDGRID_API_KEY)
-            logger.info("Email service initialized successfully with SendGrid")
-            print("SUCCESS: Email service initialized with SendGrid")
-        except ImportError:
-            logger.error("sendgrid not installed. Install with: pip install sendgrid")
-            print("ERROR: sendgrid not installed. Run: pip install sendgrid")
-            self.client = None
-        except Exception as e:
-            logger.error(f"Failed to initialize SendGrid: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize SendGrid: {str(e)}")
-            self.client = None
-    
-    def _initialize_resend(self):
-        """Initialize Resend"""
-        if not RESEND_API_KEY:
-            logger.warning("RESEND_API_KEY not configured. Email sending will be disabled.")
-            print("WARNING: RESEND_API_KEY not found. Email sending disabled.")
-            self.client = None
-            return
-        
-        try:
-            import resend
-            resend.api_key = RESEND_API_KEY
-            self.client = resend
-            logger.info("Email service initialized successfully with Resend")
-            print("SUCCESS: Email service initialized with Resend")
-        except ImportError:
-            logger.error("resend not installed. Install with: pip install resend")
-            print("ERROR: resend not installed. Run: pip install resend")
-            self.client = None
-        except Exception as e:
-            logger.error(f"Failed to initialize Resend: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize Resend: {str(e)}")
-            self.client = None
-    
-    def _initialize_brevo(self):
-        """Initialize Brevo (formerly Sendinblue)"""
-        if not BREVO_API_KEY:
-            logger.warning("BREVO_API_KEY not configured. Email sending will be disabled.")
-            print("WARNING: BREVO_API_KEY not found. Email sending disabled.")
-            self.client = None
-            return
-        
-        try:
-            import sib_api_v3_sdk
-            from sib_api_v3_sdk.rest import ApiException
-            
-            configuration = sib_api_v3_sdk.Configuration()
-            configuration.api_key['api-key'] = BREVO_API_KEY
-            self.brevo_api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
-            self.client = self.brevo_api
-            logger.info("Email service initialized successfully with Brevo")
-            print("SUCCESS: Email service initialized with Brevo")
-        except ImportError:
-            logger.error("sib-api-v3-sdk not installed. Install with: pip install sib-api-v3-sdk")
-            print("ERROR: sib-api-v3-sdk not installed. Run: pip install sib-api-v3-sdk")
-            self.client = None
-        except Exception as e:
-            logger.error(f"Failed to initialize Brevo: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize Brevo: {str(e)}")
-            self.client = None
     
     def _send_email(
         self,
@@ -181,18 +95,8 @@ class EmailService:
             print(f"ERROR: {error_msg}")
             return False
         
-        # Route to appropriate provider
-        if self.provider == "ses":
-            return self._send_email_ses(to_email, subject, html_content, text_content)
-        elif self.provider == "sendgrid":
-            return self._send_email_sendgrid(to_email, subject, html_content, text_content)
-        elif self.provider == "resend":
-            return self._send_email_resend(to_email, subject, html_content, text_content)
-        elif self.provider == "brevo":
-            return self._send_email_brevo(to_email, subject, html_content, text_content)
-        else:
-            logger.error(f"Unknown email provider: {self.provider}")
-            return False
+        # Always use AWS SES
+        return self._send_email_ses(to_email, subject, html_content, text_content)
     
     def _send_email_ses(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
         """Send email via AWS SES"""
@@ -240,88 +144,6 @@ class EmailService:
             print(f"ERROR: {str(e)}")
             return False
     
-    def _send_email_sendgrid(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via SendGrid"""
-        try:
-            from sendgrid.helpers.mail import Mail, Email, To, Content
-            
-            message = Mail(
-                from_email=Email(FROM_EMAIL, FROM_NAME),
-                to_emails=To(to_email),
-                subject=subject,
-                html_content=Content("text/html", html_content)
-            )
-            
-            if text_content:
-                message.add_content(Content("text/plain", text_content))
-            
-            logger.info(f"Attempting to send email to {to_email} via SendGrid...")
-            response = self.client.send(message)
-            
-            if response.status_code in [200, 201, 202]:
-                logger.info(f"Email sent successfully to {to_email} (Status: {response.status_code})")
-                print(f"SUCCESS: Email sent to {to_email} via SendGrid")
-                return True
-            else:
-                error_body = response.body.decode('utf-8') if response.body else "No error body"
-                logger.error(f"SendGrid error - Status: {response.status_code}, Body: {error_body}")
-                print(f"ERROR: SendGrid returned status {response.status_code}: {error_body}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Exception sending email via SendGrid: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
-            return False
-    
-    def _send_email_resend(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via Resend"""
-        try:
-            params = {
-                "from": f"{FROM_NAME} <{FROM_EMAIL}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content
-            }
-            
-            if text_content:
-                params["text"] = text_content
-            
-            logger.info(f"Attempting to send email to {to_email} via Resend...")
-            email = self.client.Emails.send(params)
-            
-            logger.info(f"Email sent successfully to {to_email} (ID: {email.get('id')})")
-            print(f"SUCCESS: Email sent to {to_email} via Resend")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Exception sending email via Resend: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
-            return False
-    
-    def _send_email_brevo(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
-        """Send email via Brevo"""
-        try:
-            from sib_api_v3_sdk import SendSmtpEmail, SendSmtpEmailTo
-            
-            send_smtp_email = SendSmtpEmail(
-                to=[SendSmtpEmailTo(email=to_email)],
-                subject=subject,
-                html_content=html_content,
-                text_content=text_content or html_content,
-                sender={"name": FROM_NAME, "email": FROM_EMAIL}
-            )
-            
-            logger.info(f"Attempting to send email to {to_email} via Brevo...")
-            response = self.client.send_transac_email(send_smtp_email)
-            
-            logger.info(f"Email sent successfully to {to_email} (MessageId: {response.message_id})")
-            print(f"SUCCESS: Email sent to {to_email} via Brevo")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Exception sending email via Brevo: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
-            return False
     
     def send_password_reset_email(
         self,
@@ -886,7 +708,74 @@ class EmailService:
         """
         
         return self._send_email(to_email, subject, html_content, text_content)
-
+    
+    def send_email_verification(
+        self,
+        to_email: str,
+        verification_token: str,
+        user_name: Optional[str] = None
+    ) -> bool:
+        """
+        Send email verification email
+        
+        Args:
+            to_email: User's email address
+            verification_token: Email verification token
+            user_name: User's name (optional)
+            
+        Returns:
+            True if email sent successfully, False otherwise
+        """
+        verification_link = f"{FRONTEND_URL}/verify-email?token={verification_token}"
+        
+        subject = "Verify Your Email Address"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verify Your Email</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
+                <h1 style="color: #2c3e50; margin-top: 0;">Verify Your Email Address</h1>
+                <p>Hello{(' ' + user_name) if user_name else ''},</p>
+                <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email</a>
+                </div>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #007bff;">{verification_link}</p>
+                <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                    <strong>This link will expire in 24 hours.</strong><br>
+                    If you didn't create an account, please ignore this email.
+                </p>
+            </div>
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Verify Your Email Address
+        
+        Hello{(' ' + user_name) if user_name else ''},
+        
+        Thank you for signing up! Please verify your email address by clicking the link below:
+        
+        {verification_link}
+        
+        This link will expire in 24 hours.
+        
+        If you didn't create an account, please ignore this email.
+        """
+        
+        return self._send_email(to_email, subject, html_content, text_content)
+    
 
 # Create a singleton instance
 email_service = EmailService()

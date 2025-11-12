@@ -8,6 +8,20 @@ from typing import Optional
 from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from auth import get_current_user, get_current_admin
 from email_service import email_service
+from password_utils import validate_password_strength
+from account_lockout import (
+    check_account_locked,
+    increment_failed_attempts,
+    reset_failed_attempts,
+    record_login_attempt
+)
+from rate_limiter import (
+    login_rate_limit,
+    register_rate_limit,
+    password_reset_rate_limit,
+    password_reset_confirm_rate_limit
+)
+from fastapi import Request
 import uuid
 from datetime import datetime, timedelta
 import requests
@@ -38,17 +52,26 @@ class UserResponse(BaseModel):
 
 
 @router.post("/register", response_model=dict)
-async def register(user_data: UserRegister):
+@register_rate_limit()
+async def register(user_data: UserRegister, request: Request):
     """
     Register a new user (customer by default).
     Admin users must be created manually or through admin panel.
     """
     try:
-        # Create user in Supabase Auth
+        # Validate password strength
+        is_valid, error_msg = validate_password_strength(user_data.password)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_msg
+            )
+        
+        # Create user in Supabase Auth (email not confirmed - requires verification)
         auth_response = supabase_storage.auth.admin.create_user({
             "email": user_data.email,
             "password": user_data.password,
-            "email_confirm": True  # Auto-confirm email for now
+            "email_confirm": False  # Require email verification
         })
         
         if not auth_response or not auth_response.user:
@@ -103,34 +126,44 @@ async def register(user_data: UserRegister):
             # Log error but don't fail registration - client record can be created later
             print(f"Warning: Failed to create/update client record for user {user.id}: {str(e)}")
         
-        # Sign in the user to get session token
-        sign_in_response = supabase_storage.auth.sign_in_with_password({
-            "email": user_data.email,
-            "password": user_data.password
-        })
+        # Generate email verification token
+        verification_token = secrets.token_urlsafe(32)
+        expires_at = datetime.now() + timedelta(hours=24)
         
-        if not sign_in_response or not sign_in_response.session:
-            return {
-                "message": "User created successfully. Please log in.",
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "role": "customer"
-                }
-            }
+        # Store verification token
+        try:
+            supabase_storage.table("email_verification_tokens").insert({
+                "user_id": user.id,
+                "token": verification_token,
+                "expires_at": expires_at.isoformat(),
+                "verified": False
+            }).execute()
+        except Exception as e:
+            logger.error(f"Failed to create verification token: {str(e)}")
+            # Continue anyway - we can resend verification email
         
+        # Send verification email
+        try:
+            email_sent = email_service.send_email_verification(
+                to_email=user.email,
+                verification_token=verification_token,
+                user_name=user_data.name
+            )
+            if not email_sent:
+                logger.warning(f"Failed to send verification email to {user.email}")
+        except Exception as e:
+            logger.error(f"Error sending verification email: {str(e)}")
+        
+        # Don't sign in automatically - require email verification first
         return {
-            "message": "User registered successfully",
+            "message": "User registered successfully. Please check your email to verify your account.",
             "user": {
                 "id": user.id,
                 "email": user.email,
-                "role": "customer"
+                "role": "customer",
+                "email_verified": False
             },
-            "session": {
-                "access_token": sign_in_response.session.access_token,
-                "refresh_token": sign_in_response.session.refresh_token,
-                "expires_in": sign_in_response.session.expires_in
-            }
+            "requires_verification": True
         }
         
     except HTTPException:
@@ -149,13 +182,36 @@ async def register(user_data: UserRegister):
 
 
 @router.post("/login", response_model=dict)
-async def login(credentials: UserLogin):
+@login_rate_limit()
+async def login(credentials: UserLogin, request: Request):
     """
     Login user and return session token.
     Note: Frontend should use Supabase client for login in production.
     This endpoint is for backend token generation if needed.
     """
+    # Get IP address from request
+    ip_address = request.client.host if request.client else None
+    if request.headers.get("x-forwarded-for"):
+        ip_address = request.headers.get("x-forwarded-for").split(",")[0].strip()
+    
+    user_id = None
     try:
+        # Check if account is locked
+        is_locked, lockout_message = check_account_locked(credentials.email)
+        if is_locked:
+            # Record failed attempt (account locked)
+            record_login_attempt(
+                email=credentials.email,
+                user_id=None,
+                ip_address=ip_address,
+                success=False,
+                failure_reason="account_locked"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail=lockout_message or "Account is locked due to too many failed login attempts. Please try again later."
+            )
+        
         # Sign in with Supabase
         response = supabase_storage.auth.sign_in_with_password({
             "email": credentials.email,
@@ -163,12 +219,47 @@ async def login(credentials: UserLogin):
         })
         
         if not response or not response.user:
+            # Login failed - increment failed attempts
+            increment_failed_attempts(credentials.email, user_id)
+            record_login_attempt(
+                email=credentials.email,
+                user_id=None,
+                ip_address=ip_address,
+                success=False,
+                failure_reason="invalid_credentials"
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
         
         user = response.user
+        user_id = user.id
+        
+        # Check if email is verified
+        if not hasattr(user, 'email_confirmed_at') or not user.email_confirmed_at:
+            # Email not verified - increment failed attempts (treat as failed login)
+            increment_failed_attempts(credentials.email, user_id)
+            record_login_attempt(
+                email=credentials.email,
+                user_id=user_id,
+                ip_address=ip_address,
+                success=False,
+                failure_reason="email_not_verified"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Please verify your email address before logging in. Check your inbox for a verification link."
+            )
+        
+        # Login successful - reset failed attempts
+        reset_failed_attempts(credentials.email, user_id)
+        record_login_attempt(
+            email=credentials.email,
+            user_id=user_id,
+            ip_address=ip_address,
+            success=True
+        )
         
         # Get user role using service role client to bypass RLS
         try:
@@ -196,7 +287,16 @@ async def login(credentials: UserLogin):
         raise
     except Exception as e:
         error_msg = str(e)
-        if "invalid" in error_msg.lower() or "password" in error_msg.lower():
+        # If it's an auth error from Supabase, increment failed attempts
+        if "invalid" in error_msg.lower() or "password" in error_msg.lower() or "credentials" in error_msg.lower():
+            increment_failed_attempts(credentials.email, user_id)
+            record_login_attempt(
+                email=credentials.email,
+                user_id=user_id,
+                ip_address=ip_address,
+                success=False,
+                failure_reason="invalid_credentials"
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
@@ -698,8 +798,17 @@ class PasswordResetConfirm(BaseModel):
     new_password: str
 
 
+class EmailVerificationRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
 @router.post("/password-reset/request")
-async def request_password_reset(request: PasswordResetRequest):
+@password_reset_rate_limit()
+async def request_password_reset(request_data: PasswordResetRequest, request: Request):
     """
     Request a password reset. Sends an email with a reset link.
     """
@@ -727,7 +836,7 @@ async def request_password_reset(request: PasswordResetRequest):
             users_data = response.json()
             users = users_data.get("users", [])
             for u in users:
-                if u.get("email", "").lower() == request.email.lower():
+                if u.get("email", "").lower() == request_data.email.lower():
                     user = u
                     break
         
@@ -746,53 +855,43 @@ async def request_password_reset(request: PasswordResetRequest):
             expires_at = datetime.now() + timedelta(hours=1)
             
             # Create or update password_reset_tokens table entry
-            # First, check if table exists, if not we'll create it via migration
-            # For now, we'll use a simple approach: store in a table
             try:
-                # Check if password_reset_tokens table exists by trying to query it
+                # Insert token into password_reset_tokens table
+                # Note: id and created_at are auto-generated by the database
                 token_data = {
-                    "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "token": reset_token,
                     "expires_at": expires_at.isoformat(),
-                    "used": False,
-                    "created_at": datetime.now().isoformat()
+                    "used": False
                 }
                 
-                # Try to insert (table might not exist yet, that's okay - we'll create it)
-                try:
-                    supabase_storage.table("password_reset_tokens").insert(token_data).execute()
-                except Exception as table_error:
-                    # Table might not exist - we'll log this and use Supabase's built-in reset
-                    # For now, we'll use a simpler approach with Supabase's password reset
-                    print(f"Note: password_reset_tokens table may not exist. Using alternative method: {str(table_error)}")
-                    
-                    # Alternative: Use Supabase's built-in password reset
-                    # Generate reset link using Supabase's password reset endpoint
-                    # We'll create a custom token and send it via email
-                    # The frontend will call our reset endpoint with the token
-                    pass
+                # Insert the token
+                supabase_storage.table("password_reset_tokens").insert(token_data).execute()
+                logger.info(f"Password reset token created for user {user_id}")
                 
                 # Send password reset email
+                logger.info(f"Attempting to send password reset email to {user_email}")
                 email_sent = email_service.send_password_reset_email(
                     to_email=user_email,
                     reset_token=reset_token,
                     user_name=user_name
                 )
                 
-                if not email_sent:
+                if email_sent:
+                    logger.info(f"Password reset email sent successfully to {user_email}")
+                    print(f"SUCCESS: Password reset email sent to {user_email}")
+                else:
                     # Log detailed error - email might be disabled in dev
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.error(f"Failed to send password reset email to {user_email}")
                     logger.error(f"Reset token generated: {reset_token[:20]}...")
                     logger.error(f"Reset link would be: {os.getenv('FRONTEND_URL', 'http://localhost:5173')}/reset-password?token={reset_token}")
                     print(f"ERROR: Failed to send password reset email to {user_email}")
-                    print(f"Check if SENDGRID_API_KEY is configured in environment variables")
+                    print(f"Check if AWS SES is configured correctly (IAM permissions, FROM_EMAIL, etc.)")
                     print(f"Reset token (for manual testing): {reset_token}")
                 
             except Exception as e:
-                print(f"Error storing reset token: {str(e)}")
+                logger.error(f"Error in password reset flow: {str(e)}", exc_info=True)
+                print(f"Error storing reset token or sending email: {str(e)}")
                 # Continue anyway - we'll still try to send email
         
         # Always return success to prevent email enumeration attacks
@@ -811,11 +910,20 @@ async def request_password_reset(request: PasswordResetRequest):
 
 
 @router.post("/password-reset/confirm")
-async def confirm_password_reset(reset_data: PasswordResetConfirm):
+@password_reset_confirm_rate_limit()
+async def confirm_password_reset(reset_data: PasswordResetConfirm, request: Request):
     """
     Confirm password reset with token and new password.
     """
     try:
+        # Validate password strength
+        is_valid, error_msg = validate_password_strength(reset_data.new_password)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_msg
+            )
+        
         if not supabase_service_role_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -914,4 +1022,195 @@ async def confirm_password_reset(reset_data: PasswordResetConfirm):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset password: {str(e)}"
         )
+
+
+@router.post("/verify-email")
+async def verify_email(verification_data: EmailVerificationRequest):
+    """
+    Verify email address using verification token.
+    """
+    try:
+        if not supabase_service_role_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Service role key not configured"
+            )
+        
+        # Verify verification token
+        try:
+            token_response = supabase_storage.table("email_verification_tokens").select("*").eq("token", verification_data.token).eq("verified", False).execute()
+            
+            if not token_response.data or len(token_response.data) == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired verification token"
+                )
+            
+            token_record = token_response.data[0]
+            user_id = token_record.get("user_id")
+            expires_at_str = token_record.get("expires_at")
+            
+            # Check if token is expired
+            if expires_at_str:
+                try:
+                    if expires_at_str.endswith('Z'):
+                        expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
+                    else:
+                        expires_at = datetime.fromisoformat(expires_at_str)
+                    
+                    now = datetime.now(expires_at.tzinfo) if expires_at.tzinfo else datetime.now()
+                    if now > expires_at:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Verification token has expired. Please request a new verification email."
+                        )
+                except ValueError as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid token expiration format: {str(e)}"
+                    )
+            
+            # Update user email to confirmed in Supabase Auth
+            auth_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
+            headers = {
+                "apikey": supabase_service_role_key,
+                "Authorization": f"Bearer {supabase_service_role_key}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "email_confirm": True
+            }
+            
+            response = requests.put(auth_url, json=payload, headers=headers, timeout=10)
+            
+            if response.status_code not in [200, 201]:
+                error_data = response.json() if response.content else {}
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to verify email: {error_data.get('msg', 'Unknown error')}"
+                )
+            
+            # Mark token as verified
+            try:
+                supabase_storage.table("email_verification_tokens").update({"verified": True}).eq("id", token_record["id"]).execute()
+            except Exception as e:
+                logger.warning(f"Failed to mark verification token as verified: {str(e)}")
+            
+            return {
+                "message": "Email verified successfully. You can now log in."
+            }
+            
+        except HTTPException:
+            raise
+        except Exception as token_error:
+            error_msg = str(token_error)
+            if "relation" in error_msg.lower() and "does not exist" in error_msg.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Email verification system not fully configured. Please run database migration."
+                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid or expired verification token: {error_msg}"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify email: {str(e)}"
+        )
+
+
+@router.post("/resend-verification")
+@password_reset_rate_limit()  # Use same rate limit as password reset
+async def resend_verification_email(request_data: ResendVerificationRequest, request: Request):
+    """
+    Resend email verification link.
+    """
+    try:
+        if not supabase_service_role_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Service role key not configured"
+            )
+        
+        # Find user by email
+        auth_url = f"{supabase_url}/auth/v1/admin/users"
+        headers = {
+            "apikey": supabase_service_role_key,
+            "Authorization": f"Bearer {supabase_service_role_key}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(auth_url, headers=headers, params={"per_page": 1000}, timeout=10)
+        user = None
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            for u in users:
+                if u.get("email", "").lower() == request_data.email.lower():
+                    user = u
+                    break
+        
+        # Always return success to prevent email enumeration
+        if user:
+            user_id = user.get("id")
+            user_email = user.get("email")
+            user_metadata = user.get("user_metadata", {})
+            user_name = user_metadata.get("name")
+            
+            # Check if email is already verified
+            if user.get("email_confirmed_at"):
+                # Email already verified, but return success anyway
+                return {
+                    "message": "If an account with that email exists and is unverified, a verification link has been sent."
+                }
+            
+            # Generate new verification token
+            verification_token = secrets.token_urlsafe(32)
+            expires_at = datetime.now() + timedelta(hours=24)
+            
+            # Invalidate old tokens for this user
+            try:
+                supabase_storage.table("email_verification_tokens").update({"verified": True}).eq("user_id", user_id).eq("verified", False).execute()
+            except:
+                pass
+            
+            # Store new verification token
+            try:
+                supabase_storage.table("email_verification_tokens").insert({
+                    "user_id": user_id,
+                    "token": verification_token,
+                    "expires_at": expires_at.isoformat(),
+                    "verified": False
+                }).execute()
+                
+                # Send verification email
+                email_sent = email_service.send_email_verification(
+                    to_email=user_email,
+                    verification_token=verification_token,
+                    user_name=user_name
+                )
+                
+                if email_sent:
+                    logger.info(f"Verification email resent to {user_email}")
+            except Exception as e:
+                logger.error(f"Error resending verification email: {str(e)}")
+        
+        # Always return success
+        return {
+            "message": "If an account with that email exists and is unverified, a verification link has been sent."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Always return success to prevent email enumeration
+        logger.error(f"Error in resend verification: {str(e)}")
+        return {
+            "message": "If an account with that email exists and is unverified, a verification link has been sent."
+        }
 

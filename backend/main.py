@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug
+from rate_limiter import limiter
+from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
 import os
 
@@ -9,6 +12,26 @@ load_dotenv()
 
 # FastAPI JSON encoder for Decimal (converts to string for JSON serialization)
 app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal: str})
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+
+# Add rate limit exception handler
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """
+    Custom handler for rate limit exceeded errors
+    """
+    response = JSONResponse(
+        status_code=429,
+        content={
+            "detail": f"Rate limit exceeded: {exc.detail}. Please try again later."
+        }
+    )
+    response = request.app.state.limiter._inject_headers(
+        response, request.state.view_rate_limit
+    )
+    return response
 
 # Get allowed origins from environment or use defaults
 # In production, set ALLOWED_ORIGINS to include your Vercel domain(s)

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import QuotesList from './pages/QuotesList';
 import QuoteBuilder from './pages/QuoteBuilder';
 import QuoteView from './pages/QuoteView';
@@ -17,6 +18,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
+import ResendVerification from './pages/ResendVerification';
 import './App.css';
 
 function Navigation() {
@@ -123,11 +126,12 @@ function HomePage() {
 function AppContent() {
   const location = useLocation();
   const isPublicForm = location.pathname.startsWith('/public/form/');
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || location.pathname === '/reset-password';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || location.pathname === '/reset-password' || location.pathname === '/verify-email' || location.pathname === '/resend-verification';
   
   return (
     <>
       {!isPublicForm && !isAuthPage && <Navigation />}
+      <SessionTimeoutWarning />
       <Routes>
         {/* Public routes */}
         <Route path="/public/form/:slug" element={<PublicFormView />} />
@@ -137,6 +141,8 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/resend-verification" element={<ResendVerification />} />
         
         {/* Protected routes - require authentication */}
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />

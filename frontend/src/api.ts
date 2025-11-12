@@ -347,6 +347,8 @@ export const formsAPI = {
 export const authAPI = {
   requestPasswordReset: (email: string) => api.post<{ message: string }>('/api/auth/password-reset/request', { email }),
   confirmPasswordReset: (token: string, newPassword: string) => api.post<{ message: string }>('/api/auth/password-reset/confirm', { token, new_password: newPassword }),
+  verifyEmail: (token: string) => api.post<{ message: string }>('/api/auth/verify-email', { token }),
+  resendVerification: (email: string) => api.post<{ message: string }>('/api/auth/resend-verification', { email }),
 };
 
 export default api;

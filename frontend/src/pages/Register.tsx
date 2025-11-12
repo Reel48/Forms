@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { validatePassword, getPasswordStrengthScore, getPasswordStrengthLabel } from '../utils/passwordValidation';
 import './Login.css';
 
 export default function Register() {
@@ -12,6 +13,9 @@ export default function Register() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
+  const passwordStrength = password ? getPasswordStrengthScore(password) : 0;
+  const passwordStrengthLabel = password ? getPasswordStrengthLabel(passwordStrength) : '';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -21,8 +25,10 @@ export default function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // Validate password strength
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      setError(validation.errors.join('. '));
       return;
     }
 
@@ -32,7 +38,7 @@ export default function Register() {
       await signUp(email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up');
+      setError(err.response?.data?.detail || err.message || 'Failed to sign up');
     } finally {
       setLoading(false);
     }
@@ -66,8 +72,33 @@ export default function Register() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
-              minLength={6}
+              minLength={12}
+              placeholder="At least 12 characters with uppercase, lowercase, number, and special character"
             />
+            {password && (
+              <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                <div style={{ marginBottom: '4px' }}>
+                  Strength: <strong>{passwordStrengthLabel}</strong> ({passwordStrength}/10)
+                </div>
+                <div style={{ 
+                  width: '100%', 
+                  height: '4px', 
+                  backgroundColor: '#e0e0e0', 
+                  borderRadius: '2px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${(passwordStrength / 10) * 100}%`,
+                    height: '100%',
+                    backgroundColor: passwordStrength <= 3 ? '#f44336' : passwordStrength <= 6 ? '#ff9800' : passwordStrength <= 8 ? '#2196f3' : '#4caf50',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>
+              Password must be at least 12 characters and contain uppercase, lowercase, number, and special character
+            </div>
           </div>
 
           <div className="form-group">
@@ -79,7 +110,7 @@ export default function Register() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={loading}
-              minLength={6}
+              minLength={12}
             />
           </div>
 

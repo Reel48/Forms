@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authAPI } from '../api';
+import { validatePassword } from '../utils/passwordValidation';
 import './Login.css';
 
 export default function ResetPassword() {
@@ -35,8 +36,9 @@ export default function ResetPassword() {
     }
 
     // Validate password strength
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      setError(validation.errors.join('. '));
       return;
     }
 
@@ -122,8 +124,8 @@ export default function ResetPassword() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={loading}
-                      placeholder="Enter new password (min 8 characters)"
-                      minLength={8}
+                      placeholder="At least 12 characters with uppercase, lowercase, number, and special character"
+                      minLength={12}
                     />
                   </div>
 
@@ -137,7 +139,7 @@ export default function ResetPassword() {
                       required
                       disabled={loading}
                       placeholder="Confirm new password"
-                      minLength={8}
+                      minLength={12}
                     />
                   </div>
 
