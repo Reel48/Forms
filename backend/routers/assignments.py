@@ -260,9 +260,17 @@ async def unassign_quote(
     Remove a quote assignment (admin only).
     """
     try:
-        supabase.table("quote_assignments").delete().eq("id", assignment_id).eq("quote_id", quote_id).execute()
+        # Use service role client to bypass RLS for admin operations (consistent with assign endpoint)
+        result = supabase_storage.table("quote_assignments").delete().eq("id", assignment_id).eq("quote_id", quote_id).execute()
+        
+        # Verify the assignment was deleted
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        
         return {"message": "Assignment removed successfully"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -497,9 +505,17 @@ async def unassign_form(
     Remove a form assignment (admin only).
     """
     try:
-        supabase.table("form_assignments").delete().eq("id", assignment_id).eq("form_id", form_id).execute()
+        # Use service role client to bypass RLS for admin operations (consistent with assign endpoint)
+        result = supabase_storage.table("form_assignments").delete().eq("id", assignment_id).eq("form_id", form_id).execute()
+        
+        # Verify the assignment was deleted
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        
         return {"message": "Assignment removed successfully"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
