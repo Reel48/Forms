@@ -722,6 +722,8 @@ function FormBuilder() {
                 {formData.settings?.captcha_enabled && (
                   <input
                     type="text"
+                    id="captcha-site-key"
+                    name="captcha-site-key"
                     value={formData.settings.captcha_site_key || ''}
                     onChange={(e) => {
                       const settings = formData.settings || {};
@@ -759,6 +761,8 @@ function FormBuilder() {
                 {formData.settings?.rate_limit_per_hour !== undefined && (
                   <input
                     type="number"
+                    id="rate-limit-per-hour"
+                    name="rate-limit-per-hour"
                     min="1"
                     max="100"
                     value={formData.settings.rate_limit_per_hour || 10}
@@ -802,6 +806,8 @@ function FormBuilder() {
                 {formData.settings?.slack_webhook_url !== undefined && (
                   <input
                     type="url"
+                    id="slack-webhook-url"
+                    name="slack-webhook-url"
                     value={formData.settings.slack_webhook_url || ''}
                     onChange={(e) => {
                       const settings = formData.settings || {};
@@ -838,6 +844,8 @@ function FormBuilder() {
                 />
                 <input
                   type="text"
+                  id="theme-primary-color-text"
+                  name="theme-primary-color-text"
                   value={formData.theme?.primaryColor || '#667eea'}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -864,6 +872,8 @@ function FormBuilder() {
                 />
                 <input
                   type="text"
+                  id="theme-secondary-color-text"
+                  name="theme-secondary-color-text"
                   value={formData.theme?.secondaryColor || '#764ba2'}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -906,6 +916,8 @@ function FormBuilder() {
                   />
                   <input
                     type="text"
+                    id="theme-background-color-text"
+                    name="theme-background-color-text"
                     value={formData.theme?.backgroundColor || '#667eea'}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -1176,9 +1188,11 @@ function FormBuilder() {
                   {['text', 'textarea', 'email', 'phone', 'url'].includes(selectedField.field_type) && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div className="form-group">
-                        <label>Min Length</label>
+                        <label htmlFor={`field-${selectedFieldIndex}-min-length`}>Min Length</label>
                         <input
                           type="number"
+                          id={`field-${selectedFieldIndex}-min-length`}
+                          name={`field-${selectedFieldIndex}-min-length`}
                           min="0"
                           value={selectedField.validation_rules?.minLength || ''}
                           onChange={(e) => updateField(selectedFieldIndex!, {
@@ -1191,9 +1205,11 @@ function FormBuilder() {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Max Length</label>
+                        <label htmlFor={`field-${selectedFieldIndex}-max-length`}>Max Length</label>
                         <input
                           type="number"
+                          id={`field-${selectedFieldIndex}-max-length`}
+                          name={`field-${selectedFieldIndex}-max-length`}
                           min="1"
                           value={selectedField.validation_rules?.maxLength || ''}
                           onChange={(e) => updateField(selectedFieldIndex!, {
@@ -1212,9 +1228,11 @@ function FormBuilder() {
                   {selectedField.field_type === 'number' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div className="form-group">
-                        <label>Min Value</label>
+                        <label htmlFor={`field-${selectedFieldIndex}-min-value`}>Min Value</label>
                         <input
                           type="number"
+                          id={`field-${selectedFieldIndex}-min-value`}
+                          name={`field-${selectedFieldIndex}-min-value`}
                           value={selectedField.validation_rules?.min || ''}
                           onChange={(e) => updateField(selectedFieldIndex!, {
                             validation_rules: {
@@ -1226,9 +1244,11 @@ function FormBuilder() {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Max Value</label>
+                        <label htmlFor={`field-${selectedFieldIndex}-max-value`}>Max Value</label>
                         <input
                           type="number"
+                          id={`field-${selectedFieldIndex}-max-value`}
+                          name={`field-${selectedFieldIndex}-max-value`}
                           value={selectedField.validation_rules?.max || ''}
                           onChange={(e) => updateField(selectedFieldIndex!, {
                             validation_rules: {
@@ -1245,9 +1265,11 @@ function FormBuilder() {
                   {/* Pattern/Regex Validation */}
                   {['text', 'textarea', 'email', 'phone', 'url'].includes(selectedField.field_type) && (
                     <div className="form-group" style={{ marginBottom: '1rem' }}>
-                      <label>Pattern (Regex)</label>
+                      <label htmlFor={`field-${selectedFieldIndex}-pattern`}>Pattern (Regex)</label>
                       <input
                         type="text"
+                        id={`field-${selectedFieldIndex}-pattern`}
+                        name={`field-${selectedFieldIndex}-pattern`}
                         value={selectedField.validation_rules?.pattern || ''}
                         onChange={(e) => updateField(selectedFieldIndex!, {
                           validation_rules: {
@@ -1266,9 +1288,11 @@ function FormBuilder() {
 
                   {/* Custom Error Messages */}
                   <div className="form-group">
-                    <label>Custom Error Message</label>
+                    <label htmlFor={`field-${selectedFieldIndex}-error-message`}>Custom Error Message</label>
                     <input
                       type="text"
+                      id={`field-${selectedFieldIndex}-error-message`}
+                      name={`field-${selectedFieldIndex}-error-message`}
                       value={selectedField.validation_rules?.errorMessage || ''}
                       onChange={(e) => updateField(selectedFieldIndex!, {
                         validation_rules: {
@@ -1404,6 +1428,7 @@ function FormBuilder() {
                       <input
                         type="text"
                         id={`field-${selectedFieldIndex}-matrix-columns`}
+                        name={`field-${selectedFieldIndex}-matrix-columns`}
                         placeholder="Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"
                         value={selectedField.validation_rules?.matrixColumns?.join(', ') || ''}
                         onChange={(e) => updateField(selectedFieldIndex!, {
@@ -1456,6 +1481,7 @@ function FormBuilder() {
                       <input
                         type="number"
                         id={`field-${selectedFieldIndex}-payment-amount`}
+                        name={`field-${selectedFieldIndex}-payment-amount`}
                         step="0.01"
                         min="0.01"
                         value={selectedField.validation_rules?.paymentAmount || ''}
