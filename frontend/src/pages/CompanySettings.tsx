@@ -110,9 +110,11 @@ function CompanySettingsPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Company Name *</label>
+            <label htmlFor="company-name">Company Name *</label>
             <input
               type="text"
+              id="company-name"
+              name="company-name"
               value={formData.company_name}
               onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
               placeholder="Your Company Name"
@@ -121,9 +123,11 @@ function CompanySettingsPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="company-email">Email</label>
               <input
                 type="email"
+                id="company-email"
+                name="company-email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="contact@company.com"
@@ -131,9 +135,11 @@ function CompanySettingsPage() {
             </div>
 
             <div className="form-group">
-              <label>Phone</label>
+              <label htmlFor="company-phone">Phone</label>
               <input
                 type="tel"
+                id="company-phone"
+                name="company-phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+1 (555) 123-4567"
@@ -142,8 +148,10 @@ function CompanySettingsPage() {
           </div>
 
           <div className="form-group">
-            <label>Address</label>
+            <label htmlFor="company-address">Address</label>
             <textarea
+              id="company-address"
+              name="company-address"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               placeholder="123 Main St, City, State ZIP"
@@ -154,7 +162,7 @@ function CompanySettingsPage() {
           <div className="form-row">
             <div className="form-group">
               <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
-                <label style={{ marginBottom: 0 }}>Website</label>
+                <label htmlFor="company-website" style={{ marginBottom: 0 }}>Website</label>
                 <button
                   type="button"
                   onClick={openLinkDialog}
@@ -165,6 +173,8 @@ function CompanySettingsPage() {
                 </button>
               </div>
               <textarea
+                id="company-website"
+                name="company-website"
                 value={formData.website || ''}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                 placeholder="https://www.company.com or use markdown format [link text](url)"
@@ -176,9 +186,11 @@ function CompanySettingsPage() {
             </div>
 
             <div className="form-group">
-              <label>Tax ID</label>
+              <label htmlFor="company-tax-id">Tax ID</label>
               <input
                 type="text"
+                id="company-tax-id"
+                name="company-tax-id"
                 value={formData.tax_id}
                 onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
                 placeholder="EIN, VAT, etc."
@@ -187,9 +199,11 @@ function CompanySettingsPage() {
           </div>
 
           <div className="form-group">
-            <label>Logo URL</label>
+            <label htmlFor="company-logo-url">Logo URL</label>
             <input
               type="url"
+              id="company-logo-url"
+              name="company-logo-url"
               value={formData.logo_url}
               onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
               placeholder="https://example.com/logo.png"
@@ -223,9 +237,11 @@ function CompanySettingsPage() {
               >
                 <h3 style={{ marginTop: 0 }}>Insert Link</h3>
                 <div className="form-group">
-                  <label>Link Text (optional)</label>
+                  <label htmlFor="link-text-dialog">Link Text (optional)</label>
                   <input
                     type="text"
+                    id="link-text-dialog"
+                    name="link-text-dialog"
                     value={linkDialog.linkText}
                     onChange={(e) => setLinkDialog({ ...linkDialog, linkText: e.target.value })}
                     placeholder="e.g., Visit Our Website"
@@ -235,9 +251,11 @@ function CompanySettingsPage() {
                   </small>
                 </div>
                 <div className="form-group">
-                  <label>URL *</label>
+                  <label htmlFor="link-url-dialog">URL *</label>
                   <input
                     type="url"
+                    id="link-url-dialog"
+                    name="link-url-dialog"
                     value={linkDialog.url}
                     onChange={(e) => setLinkDialog({ ...linkDialog, url: e.target.value })}
                     placeholder="https://example.com"
