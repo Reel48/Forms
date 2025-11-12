@@ -26,8 +26,13 @@ async def list_files(
     """List files with optional filters. Admins see all files, users see files in their folders."""
     try:
         # Check if user is admin
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        is_admin = False
+        try:
+            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            # User doesn't have a role record, default to customer
+            is_admin = False
         
         query = supabase.table("files").select("*")
         
@@ -84,8 +89,13 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
     """Get file details by ID."""
     try:
         # Check if user is admin
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        is_admin = False
+        try:
+            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            # User doesn't have a role record, default to customer
+            is_admin = False
         
         response = supabase.table("files").select("*").eq("id", file_id).single().execute()
         
