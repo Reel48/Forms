@@ -333,8 +333,13 @@ function CustomerDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Search Input */}
           <div style={{ position: 'relative' }}>
+            <label htmlFor="customer-dashboard-search" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+              Search
+            </label>
             <input
               type="text"
+              id="customer-dashboard-search"
+              name="customer-dashboard-search"
               placeholder="Search quotes and forms..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -382,6 +387,7 @@ function CustomerDashboard() {
               </label>
               <select
                 id="type-filter"
+                name="type-filter"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as 'all' | 'quote' | 'form')}
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
@@ -398,6 +404,7 @@ function CustomerDashboard() {
               </label>
               <select
                 id="status-filter"
+                name="status-filter"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
@@ -417,6 +424,7 @@ function CustomerDashboard() {
               </label>
               <select
                 id="sort-by"
+                name="sort-by"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}

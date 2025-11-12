@@ -49,17 +49,21 @@ function QuoteAnalytics() {
         <h2>Date Range</h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div className="form-group">
-            <label>Start Date</label>
+            <label htmlFor="analytics-start-date">Start Date</label>
             <input
               type="date"
+              id="analytics-start-date"
+              name="analytics-start-date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
           </div>
           <div className="form-group">
-            <label>End Date</label>
+            <label htmlFor="analytics-end-date">End Date</label>
             <input
               type="date"
+              id="analytics-end-date"
+              name="analytics-end-date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />

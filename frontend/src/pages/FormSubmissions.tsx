@@ -632,10 +632,12 @@ function FormSubmissions() {
                       </p>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                      <label htmlFor="submission-review-status" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
                         Review Status
                       </label>
                       <select
+                        id="submission-review-status"
+                        name="submission-review-status"
                         value={selectedSubmission.review_status || 'new'}
                         onChange={(e) => {
                           if (id) {
@@ -697,7 +699,12 @@ function FormSubmissions() {
                   
                   {/* Add Note */}
                   <div style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="submission-new-note" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                      Add Note
+                    </label>
                     <textarea
+                      id="submission-new-note"
+                      name="submission-new-note"
                       value={newNote}
                       onChange={(e) => setNewNote(e.target.value)}
                       placeholder="Add a note or comment..."
@@ -739,7 +746,12 @@ function FormSubmissions() {
                         >
                           {editingNoteId === note.id ? (
                             <div>
+                              <label htmlFor={`edit-note-${note.id}`} style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                                Edit Note
+                              </label>
                               <textarea
+                                id={`edit-note-${note.id}`}
+                                name={`edit-note-${note.id}`}
                                 value={editingNoteText}
                                 onChange={(e) => setEditingNoteText(e.target.value)}
                                 rows={3}
@@ -894,11 +906,13 @@ function FormSubmissions() {
                   <div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
                       <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                        <label htmlFor="submission-tag-name" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>
                           Tag Name
                         </label>
                         <input
                           type="text"
+                          id="submission-tag-name"
+                          name="submission-tag-name"
                           value={newTagName}
                           onChange={(e) => setNewTagName(e.target.value)}
                           placeholder="e.g., Urgent, Follow-up"
@@ -912,11 +926,13 @@ function FormSubmissions() {
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                        <label htmlFor="submission-tag-color" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>
                           Color
                         </label>
                         <input
                           type="color"
+                          id="submission-tag-color"
+                          name="submission-tag-color"
                           value={newTagColor}
                           onChange={(e) => setNewTagColor(e.target.value)}
                           style={{ width: '50px', height: '38px', cursor: 'pointer' }}

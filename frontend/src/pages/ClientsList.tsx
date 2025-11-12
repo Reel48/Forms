@@ -151,18 +151,22 @@ function ClientsList() {
           <form onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">
-                <label>Name *</label>
+                <label htmlFor="client-name">Name *</label>
                 <input
                   type="text"
+                  id="client-name"
+                  name="client-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Email</label>
+                <label htmlFor="client-email">Email</label>
                 <input
                   type="email"
+                  id="client-email"
+                  name="client-email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
@@ -171,17 +175,21 @@ function ClientsList() {
 
             <div className="form-row">
               <div className="form-group">
-                <label>Company</label>
+                <label htmlFor="client-company">Company</label>
                 <input
                   type="text"
+                  id="client-company"
+                  name="client-company"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 />
               </div>
               <div className="form-group">
-                <label>Phone</label>
+                <label htmlFor="client-phone">Phone</label>
                 <input
                   type="tel"
+                  id="client-phone"
+                  name="client-phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
@@ -196,8 +204,10 @@ function ClientsList() {
             </div>
 
             <div className="form-group">
-              <label>Notes</label>
+              <label htmlFor="client-notes">Notes</label>
               <textarea
+                id="client-notes"
+                name="client-notes"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />

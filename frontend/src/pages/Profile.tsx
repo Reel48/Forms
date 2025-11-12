@@ -255,18 +255,22 @@ function Profile() {
             <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">
-              <label>Name *</label>
+              <label htmlFor="profile-name">Name *</label>
               <input
                 type="text"
+                id="profile-name"
+                name="profile-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="profile-email">Email</label>
               <input
                 type="email"
+                id="profile-email"
+                name="profile-email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -275,17 +279,21 @@ function Profile() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Company</label>
+              <label htmlFor="profile-company">Company</label>
               <input
                 type="text"
+                id="profile-company"
+                name="profile-company"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
               />
             </div>
             <div className="form-group">
-              <label>Phone</label>
+              <label htmlFor="profile-phone">Phone</label>
               <input
                 type="tel"
+                id="profile-phone"
+                name="profile-phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
@@ -300,8 +308,10 @@ function Profile() {
           </div>
 
           <div className="form-group">
-            <label>Notes</label>
+            <label htmlFor="profile-notes">Notes</label>
             <textarea
+              id="profile-notes"
+              name="profile-notes"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />

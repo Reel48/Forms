@@ -109,10 +109,12 @@ function EmailTemplates() {
 
       {/* Filter by Type */}
       <div className="card mb-4">
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+        <label htmlFor="template-filter-type" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
           Filter by Type
         </label>
         <select
+          id="template-filter-type"
+          name="template-filter-type"
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
           style={{ width: '100%', maxWidth: '400px' }}
@@ -289,9 +291,11 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
         </div>
 
         <div className="form-group">
-          <label>Template Name *</label>
+          <label htmlFor="template-name">Template Name *</label>
           <input
             type="text"
+            id="template-name"
+            name="template-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Custom Form Submission Notification"
@@ -300,8 +304,10 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
 
         {!template && (
           <div className="form-group">
-            <label>Template Type *</label>
+            <label htmlFor="template-type">Template Type *</label>
             <select
+              id="template-type"
+              name="template-type"
               value={templateType}
               onChange={(e) => setTemplateType(e.target.value)}
             >
@@ -313,9 +319,11 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
         )}
 
         <div className="form-group">
-          <label>Email Subject *</label>
+          <label htmlFor="template-subject">Email Subject *</label>
           <input
             type="text"
+            id="template-subject"
+            name="template-subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="e.g., New Submission: {{form_name}}"
@@ -340,8 +348,10 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
         )}
 
         <div className="form-group">
-          <label>HTML Body *</label>
+          <label htmlFor="template-html-body">HTML Body *</label>
           <textarea
+            id="template-html-body"
+            name="template-html-body"
             value={htmlBody}
             onChange={(e) => setHtmlBody(e.target.value)}
             rows={12}
@@ -351,8 +361,10 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
         </div>
 
         <div className="form-group">
-          <label>Text Body (optional)</label>
+          <label htmlFor="template-text-body">Text Body (optional)</label>
           <textarea
+            id="template-text-body"
+            name="template-text-body"
             value={textBody}
             onChange={(e) => setTextBody(e.target.value)}
             rows={6}
@@ -362,9 +374,11 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
         </div>
 
         <div className="form-group">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <label htmlFor="template-is-default" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
             <input
               type="checkbox"
+              id="template-is-default"
+              name="template-is-default"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
             />

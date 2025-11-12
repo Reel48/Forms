@@ -963,7 +963,7 @@ function QuoteBuilder() {
 
             <div className="form-group">
               <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
-                <label style={{ marginBottom: 0 }}>Notes</label>
+                <label htmlFor="quote-notes" style={{ marginBottom: 0 }}>Notes</label>
                 <button
                   type="button"
                   onClick={() => openLinkDialog('notes')}
@@ -988,7 +988,7 @@ function QuoteBuilder() {
 
             <div className="form-group">
               <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
-                <label style={{ marginBottom: 0 }}>Terms & Conditions</label>
+                <label htmlFor="quote-terms" style={{ marginBottom: 0 }}>Terms & Conditions</label>
                 <button
                   type="button"
                   onClick={() => openLinkDialog('terms')}
