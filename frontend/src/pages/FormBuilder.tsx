@@ -7,6 +7,7 @@ import { formsAPI } from '../api';
 import type { FormField, FormCreate } from '../api';
 
 const FIELD_TYPES = [
+  { value: 'section', label: 'Section Divider' },
   { value: 'text', label: 'Short Text' },
   { value: 'textarea', label: 'Long Text' },
   { value: 'email', label: 'Email' },
@@ -27,6 +28,62 @@ const FIELD_TYPES = [
   { value: 'ranking', label: 'Ranking' },
   { value: 'payment', label: 'Payment' },
   { value: 'file_upload', label: 'File Upload' },
+];
+
+const FORM_TEMPLATES = [
+  {
+    name: 'Contact Form',
+    description: 'Basic contact form with name, email, and message',
+    fields: [
+      { field_type: 'text', label: 'Name', required: true, placeholder: 'Enter your name', order_index: 0 },
+      { field_type: 'email', label: 'Email', required: true, placeholder: 'Enter your email', order_index: 1 },
+      { field_type: 'phone', label: 'Phone', required: false, placeholder: 'Enter your phone number', order_index: 2 },
+      { field_type: 'textarea', label: 'Message', required: true, placeholder: 'Enter your message', order_index: 3 },
+    ],
+  },
+  {
+    name: 'Customer Feedback',
+    description: 'Collect customer feedback with rating and comments',
+    fields: [
+      { field_type: 'text', label: 'Your Name', required: true, placeholder: 'Enter your name', order_index: 0 },
+      { field_type: 'email', label: 'Email', required: true, placeholder: 'Enter your email', order_index: 1 },
+      { field_type: 'rating', label: 'Overall Rating', required: true, validation_rules: { min: 1, max: 5 }, order_index: 2 },
+      { field_type: 'textarea', label: 'Comments', required: false, placeholder: 'Tell us about your experience', order_index: 3 },
+    ],
+  },
+  {
+    name: 'Event Registration',
+    description: 'Register for events with contact and preferences',
+    fields: [
+      { field_type: 'text', label: 'Full Name', required: true, placeholder: 'Enter your full name', order_index: 0 },
+      { field_type: 'email', label: 'Email', required: true, placeholder: 'Enter your email', order_index: 1 },
+      { field_type: 'phone', label: 'Phone', required: true, placeholder: 'Enter your phone number', order_index: 2 },
+      { field_type: 'date', label: 'Event Date', required: true, order_index: 3 },
+      { field_type: 'multiple_choice', label: 'Dietary Restrictions', required: false, options: [{ label: 'None', value: 'none' }, { label: 'Vegetarian', value: 'vegetarian' }, { label: 'Vegan', value: 'vegan' }, { label: 'Gluten-Free', value: 'gluten-free' }], order_index: 4 },
+    ],
+  },
+  {
+    name: 'Survey Form',
+    description: 'General survey with multiple question types',
+    fields: [
+      { field_type: 'text', label: 'Name', required: true, placeholder: 'Enter your name', order_index: 0 },
+      { field_type: 'multiple_choice', label: 'How did you hear about us?', required: true, options: [{ label: 'Social Media', value: 'social' }, { label: 'Search Engine', value: 'search' }, { label: 'Friend/Colleague', value: 'friend' }, { label: 'Other', value: 'other' }], order_index: 1 },
+      { field_type: 'opinion_scale', label: 'How likely are you to recommend us?', required: true, validation_rules: { min: 1, max: 10 }, options: [{ label: 'Not Likely', value: 'low' }, { label: 'Very Likely', value: 'high' }], order_index: 2 },
+      { field_type: 'textarea', label: 'Additional Comments', required: false, placeholder: 'Any other feedback?', order_index: 3 },
+    ],
+  },
+  {
+    name: 'Job Application',
+    description: 'Job application form with resume upload',
+    fields: [
+      { field_type: 'text', label: 'Full Name', required: true, placeholder: 'Enter your full name', order_index: 0 },
+      { field_type: 'email', label: 'Email', required: true, placeholder: 'Enter your email', order_index: 1 },
+      { field_type: 'phone', label: 'Phone', required: true, placeholder: 'Enter your phone number', order_index: 2 },
+      { field_type: 'url', label: 'LinkedIn Profile', required: false, placeholder: 'https://linkedin.com/in/yourprofile', order_index: 3 },
+      { field_type: 'file_upload', label: 'Resume', required: true, order_index: 4 },
+      { field_type: 'textarea', label: 'Cover Letter', required: false, placeholder: 'Tell us why you\'re interested', order_index: 5 },
+    ],
+  },
 ];
 
 function FormBuilder() {
@@ -53,6 +110,16 @@ function FormBuilder() {
   const [error, setError] = useState<string | null>(null);
   const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(!isEditMode);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -88,6 +155,23 @@ function FormBuilder() {
     }
   };
 
+  const applyTemplate = (template: typeof FORM_TEMPLATES[0]) => {
+    setFormData({
+      ...formData,
+      name: template.name,
+      description: template.description,
+      fields: template.fields.map((field, index) => ({
+        ...field,
+        description: '',
+        validation_rules: field.validation_rules || {},
+        options: field.options || [],
+        conditional_logic: {},
+        order_index: index,
+      })),
+    });
+    setShowTemplates(false);
+  };
+
   const addField = (fieldType: string) => {
     const validationRules = fieldType === 'rating' 
       ? { min: 1, max: 5 }
@@ -97,7 +181,7 @@ function FormBuilder() {
     
     const newField: FormField = {
       field_type: fieldType,
-      label: '',
+      label: fieldType === 'section' ? 'Section Title' : '',
       description: '',
       placeholder: '',
       required: false,
@@ -324,8 +408,58 @@ function FormBuilder() {
 
       {previewMode ? (
         <FormPreview form={formData} />
+      ) : showTemplates && !isEditMode ? (
+        <div className="card" style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ marginTop: 0 }}>Choose a Template</h2>
+            <p className="text-muted">Start with a pre-built template or create from scratch</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+            {FORM_TEMPLATES.map((template, index) => (
+              <div
+                key={index}
+                className="card"
+                style={{
+                  border: '2px solid #e5e7eb',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#667eea';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onClick={() => applyTemplate(template)}
+              >
+                <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.125rem' }}>{template.name}</h3>
+                <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>{template.description}</p>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  {template.fields.length} {template.fields.length === 1 ? 'field' : 'fields'}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', paddingTop: '2rem', borderTop: '1px solid #e5e7eb' }}>
+            <button
+              onClick={() => setShowTemplates(false)}
+              className="btn-outline"
+              style={{ padding: '0.75rem 2rem' }}
+            >
+              Start from Scratch
+            </button>
+          </div>
+        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', 
+          gap: '2rem' 
+        }}>
         {/* Left Sidebar - Form Info & Field Types */}
         <div>
           {/* Form Basic Info */}
@@ -363,6 +497,315 @@ function FormBuilder() {
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
               </select>
+            </div>
+
+            {/* Form Scheduling */}
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>Schedule Publishing</h3>
+              
+              <div className="form-group">
+                <label htmlFor="publish-date" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.settings?.publish_date}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.publish_date = new Date().toISOString().split('T')[0];
+                      } else {
+                        delete settings.publish_date;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Schedule Publish Date
+                </label>
+                {formData.settings?.publish_date && (
+                  <input
+                    id="publish-date"
+                    type="datetime-local"
+                    value={formData.settings.publish_date ? new Date(formData.settings.publish_date).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      settings.publish_date = e.target.value ? new Date(e.target.value).toISOString() : null;
+                      setFormData({ ...formData, settings });
+                    }}
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Form will automatically become published at this date/time
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="unpublish-date" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.settings?.unpublish_date}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.unpublish_date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      } else {
+                        delete settings.unpublish_date;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Schedule Unpublish Date
+                </label>
+                {formData.settings?.unpublish_date && (
+                  <input
+                    id="unpublish-date"
+                    type="datetime-local"
+                    value={formData.settings.unpublish_date ? new Date(formData.settings.unpublish_date).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      settings.unpublish_date = e.target.value ? new Date(e.target.value).toISOString() : null;
+                      setFormData({ ...formData, settings });
+                    }}
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Form will automatically be archived at this date/time
+                </p>
+              </div>
+
+              {/* Form Expiration */}
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label htmlFor="expiration-date" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.settings?.expiration_date}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.expiration_date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      } else {
+                        delete settings.expiration_date;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Form Expiration Date
+                </label>
+                {formData.settings?.expiration_date && (
+                  <input
+                    id="expiration-date"
+                    type="date"
+                    value={formData.settings.expiration_date ? new Date(formData.settings.expiration_date).toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      settings.expiration_date = e.target.value ? new Date(e.target.value).toISOString() : null;
+                      setFormData({ ...formData, settings });
+                    }}
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Form will stop accepting submissions after this date
+                </p>
+              </div>
+
+              {/* Response Limits */}
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label htmlFor="max-submissions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.settings?.max_submissions}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.max_submissions = 100;
+                      } else {
+                        delete settings.max_submissions;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Maximum Submissions
+                </label>
+                {formData.settings?.max_submissions !== undefined && (
+                  <input
+                    id="max-submissions"
+                    type="number"
+                    min="1"
+                    value={formData.settings.max_submissions || ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      const value = parseInt(e.target.value);
+                      if (value > 0) {
+                        settings.max_submissions = value;
+                      } else {
+                        delete settings.max_submissions;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Stop accepting submissions after reaching this limit
+                </p>
+              </div>
+
+              {/* Password Protection */}
+              <div className="form-group">
+                <label htmlFor="form-password" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.settings?.password}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.password = '';
+                      } else {
+                        delete settings.password;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Password Protection
+                </label>
+                {formData.settings?.password !== undefined && (
+                  <input
+                    id="form-password"
+                    type="password"
+                    value={formData.settings.password || ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      settings.password = e.target.value;
+                      setFormData({ ...formData, settings });
+                    }}
+                    placeholder="Enter password to protect this form"
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Require a password to access this form
+                </p>
+              </div>
+
+              {/* CAPTCHA Protection */}
+              <div className="form-group">
+                <label htmlFor="form-captcha" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="form-captcha"
+                    checked={!!formData.settings?.captcha_enabled}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.captcha_enabled = true;
+                        settings.captcha_site_key = '';
+                      } else {
+                        delete settings.captcha_enabled;
+                        delete settings.captcha_site_key;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  CAPTCHA Protection
+                </label>
+                {formData.settings?.captcha_enabled && (
+                  <input
+                    type="text"
+                    value={formData.settings.captcha_site_key || ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      settings.captcha_site_key = e.target.value;
+                      setFormData({ ...formData, settings });
+                    }}
+                    placeholder="reCAPTCHA Site Key (from Google)"
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Require CAPTCHA verification before submission. Get your keys from <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener noreferrer">Google reCAPTCHA</a>
+                </p>
+              </div>
+
+              {/* Rate Limiting */}
+              <div className="form-group">
+                <label htmlFor="rate-limit" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="rate-limit"
+                    checked={formData.settings?.rate_limit_per_hour !== undefined}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.rate_limit_per_hour = 10;
+                      } else {
+                        delete settings.rate_limit_per_hour;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Rate Limiting (per IP)
+                </label>
+                {formData.settings?.rate_limit_per_hour !== undefined && (
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formData.settings.rate_limit_per_hour || 10}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      const value = parseInt(e.target.value);
+                      if (value > 0) {
+                        settings.rate_limit_per_hour = value;
+                      } else {
+                        delete settings.rate_limit_per_hour;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                    style={{ marginTop: '0.5rem', width: '150px' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Maximum submissions per IP address per hour (default: 10)
+                </p>
+              </div>
+
+              {/* Slack/Teams Notifications */}
+              <div className="form-group">
+                <label htmlFor="slack-webhook" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="slack-webhook"
+                    checked={!!formData.settings?.slack_webhook_url}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      if (e.target.checked) {
+                        settings.slack_webhook_url = '';
+                      } else {
+                        delete settings.slack_webhook_url;
+                      }
+                      setFormData({ ...formData, settings });
+                    }}
+                  />
+                  Slack/Teams Notifications
+                </label>
+                {formData.settings?.slack_webhook_url !== undefined && (
+                  <input
+                    type="url"
+                    value={formData.settings.slack_webhook_url || ''}
+                    onChange={(e) => {
+                      const settings = formData.settings || {};
+                      settings.slack_webhook_url = e.target.value;
+                      setFormData({ ...formData, settings });
+                    }}
+                    placeholder="https://hooks.slack.com/services/..."
+                    style={{ marginTop: '0.5rem' }}
+                  />
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Get notified in Slack/Teams when forms are submitted. <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer">Get webhook URL</a>
+                </p>
+              </div>
             </div>
           </div>
 
@@ -567,33 +1010,70 @@ function FormBuilder() {
           {/* Field Editor */}
           {selectedField && (
             <div className="card">
-              <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Edit Field</h2>
-              
-              <div className="form-group">
-                <label htmlFor={`field-type-${selectedFieldIndex}`}>Field Type</label>
-                <select
-                  id={`field-type-${selectedFieldIndex}`}
-                  name={`field-type-${selectedFieldIndex}`}
-                  value={selectedField.field_type}
-                  onChange={(e) => updateField(selectedFieldIndex!, { field_type: e.target.value, options: e.target.value === 'dropdown' || e.target.value === 'multiple_choice' || e.target.value === 'checkbox' ? [{ label: '', value: '' }] : [] })}
-                >
-                  {FIELD_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2 style={{ marginTop: 0, marginBottom: 0 }}>
+                  {selectedField.field_type === 'section' ? 'Edit Section' : 'Edit Field'}
+                </h2>
+                {selectedField.field_type !== 'section' && selectedField.label && (
+                  <button
+                    onClick={async () => {
+                      const name = prompt('Enter a name for this field template:');
+                      if (!name || !name.trim()) return;
+                      try {
+                        await formsAPI.saveFieldToLibrary({
+                          name: name.trim(),
+                          field_type: selectedField.field_type,
+                          label: selectedField.label,
+                          description: selectedField.description,
+                          placeholder: selectedField.placeholder,
+                          required: selectedField.required,
+                          validation_rules: selectedField.validation_rules,
+                          options: selectedField.options,
+                          conditional_logic: selectedField.conditional_logic,
+                        });
+                        alert('Field saved to library!');
+                      } catch (error: any) {
+                        console.error('Failed to save field:', error);
+                        alert(error?.response?.data?.detail || 'Failed to save field to library');
+                      }
+                    }}
+                    className="btn-outline"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  >
+                    Save to Library
+                  </button>
+                )}
               </div>
+              
+              {selectedField.field_type !== 'section' && (
+                <div className="form-group">
+                  <label htmlFor={`field-type-${selectedFieldIndex}`}>Field Type</label>
+                  <select
+                    id={`field-type-${selectedFieldIndex}`}
+                    name={`field-type-${selectedFieldIndex}`}
+                    value={selectedField.field_type}
+                    onChange={(e) => updateField(selectedFieldIndex!, { field_type: e.target.value, options: e.target.value === 'dropdown' || e.target.value === 'multiple_choice' || e.target.value === 'checkbox' ? [{ label: '', value: '' }] : [] })}
+                  >
+                    {FIELD_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="form-group">
-                <label htmlFor={`field-label-${selectedFieldIndex}`}>Label *</label>
+                <label htmlFor={`field-label-${selectedFieldIndex}`}>
+                  {selectedField.field_type === 'section' ? 'Section Title *' : 'Label *'}
+                </label>
                 <input
                   type="text"
                   id={`field-label-${selectedFieldIndex}`}
                   name={`field-label-${selectedFieldIndex}`}
                   value={selectedField.label}
                   onChange={(e) => updateField(selectedFieldIndex!, { label: e.target.value })}
-                  placeholder="Field label"
+                  placeholder={selectedField.field_type === 'section' ? 'Section title' : 'Field label'}
                 />
               </div>
 
@@ -674,6 +1154,126 @@ function FormBuilder() {
                   Required field
                 </label>
               </div>
+
+              {/* Advanced Validation Rules */}
+              {selectedField.field_type !== 'section' && (
+                <div className="card" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9fafb' }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>
+                    Advanced Validation
+                  </h3>
+                  
+                  {/* Text/Email/Textarea: Min/Max Length */}
+                  {['text', 'textarea', 'email', 'phone', 'url'].includes(selectedField.field_type) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div className="form-group">
+                        <label>Min Length</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={selectedField.validation_rules?.minLength || ''}
+                          onChange={(e) => updateField(selectedFieldIndex!, {
+                            validation_rules: {
+                              ...selectedField.validation_rules,
+                              minLength: e.target.value ? parseInt(e.target.value) : undefined,
+                            },
+                          })}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Max Length</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={selectedField.validation_rules?.maxLength || ''}
+                          onChange={(e) => updateField(selectedFieldIndex!, {
+                            validation_rules: {
+                              ...selectedField.validation_rules,
+                              maxLength: e.target.value ? parseInt(e.target.value) : undefined,
+                            },
+                          })}
+                          placeholder="Unlimited"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Number: Min/Max Value */}
+                  {selectedField.field_type === 'number' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div className="form-group">
+                        <label>Min Value</label>
+                        <input
+                          type="number"
+                          value={selectedField.validation_rules?.min || ''}
+                          onChange={(e) => updateField(selectedFieldIndex!, {
+                            validation_rules: {
+                              ...selectedField.validation_rules,
+                              min: e.target.value ? parseFloat(e.target.value) : undefined,
+                            },
+                          })}
+                          placeholder="No minimum"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Max Value</label>
+                        <input
+                          type="number"
+                          value={selectedField.validation_rules?.max || ''}
+                          onChange={(e) => updateField(selectedFieldIndex!, {
+                            validation_rules: {
+                              ...selectedField.validation_rules,
+                              max: e.target.value ? parseFloat(e.target.value) : undefined,
+                            },
+                          })}
+                          placeholder="No maximum"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pattern/Regex Validation */}
+                  {['text', 'textarea', 'email', 'phone', 'url'].includes(selectedField.field_type) && (
+                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                      <label>Pattern (Regex)</label>
+                      <input
+                        type="text"
+                        value={selectedField.validation_rules?.pattern || ''}
+                        onChange={(e) => updateField(selectedFieldIndex!, {
+                          validation_rules: {
+                            ...selectedField.validation_rules,
+                            pattern: e.target.value || undefined,
+                          },
+                        })}
+                        placeholder="e.g., ^[A-Za-z]+$ (letters only)"
+                        style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}
+                      />
+                      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Regular expression pattern for validation
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Custom Error Messages */}
+                  <div className="form-group">
+                    <label>Custom Error Message</label>
+                    <input
+                      type="text"
+                      value={selectedField.validation_rules?.errorMessage || ''}
+                      onChange={(e) => updateField(selectedFieldIndex!, {
+                        validation_rules: {
+                          ...selectedField.validation_rules,
+                          errorMessage: e.target.value || undefined,
+                        },
+                      })}
+                      placeholder="Custom error message (optional)"
+                    />
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Override default validation error message
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {needsOptions && (
                 <div className="form-group">
@@ -1633,6 +2233,90 @@ function SortableFieldItem({
     cursor: 'pointer',
     backgroundColor: isDragging ? '#f3f4f6' : 'white',
   };
+
+  // Special rendering for section dividers
+  if (field.field_type === 'section') {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          ...style,
+          border: isSelected ? '2px solid #2563eb' : '2px dashed #d1d5db',
+          backgroundColor: isDragging ? '#f3f4f6' : '#f9fafb',
+          padding: '1.5rem',
+          margin: '1rem 0',
+          textAlign: 'center',
+        }}
+        className="card"
+        onClick={onSelect}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            {...attributes}
+            {...listeners}
+            style={{
+              cursor: 'grab',
+              padding: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#6b7280',
+              fontSize: '1.25rem',
+            }}
+            title="Drag to reorder"
+          >
+            ⋮⋮
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ margin: 0, marginBottom: '0.5rem', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>
+              {field.label || 'Section Divider'}
+            </h3>
+            {field.description && (
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>
+                {field.description}
+              </p>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMove(index, 'up');
+              }}
+              disabled={index === 0}
+              className="btn-outline"
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+              title="Move up"
+            >
+              ↑
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMove(index, 'down');
+              }}
+              disabled={false}
+              className="btn-outline"
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+              title="Move down"
+            >
+              ↓
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(index);
+              }}
+              className="btn-danger"
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+              title="Delete section"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
@@ -21,19 +21,27 @@ function FormsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
   const [users, setUsers] = useState<Record<string, User>>({});
+  const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
+  const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const { role } = useAuth();
 
   useEffect(() => {
     loadForms();
-  }, [statusFilter]);
+  }, [statusFilter, searchQuery, dateFrom, dateTo]);
 
   // Load users for assignment display (admin only)
   useEffect(() => {
     if (role === 'admin' && forms.length > 0) {
       loadUsers();
       loadAllAssignments();
+      loadSubmissionCounts();
     }
   }, [forms, role]);
 
@@ -93,16 +101,51 @@ function FormsList() {
     }
   };
 
+  const loadSubmissionCounts = async () => {
+    try {
+      const countsMap: Record<string, number> = {};
+      await Promise.all(
+        forms.map(async (form) => {
+          try {
+            const response = await formsAPI.getSubmissions(form.id);
+            countsMap[form.id] = response.data?.length || 0;
+          } catch (error) {
+            console.error(`Failed to load submission count for form ${form.id}:`, error);
+            countsMap[form.id] = 0;
+          }
+        })
+      );
+      setSubmissionCounts(countsMap);
+    } catch (error) {
+      console.error('Failed to load submission counts:', error);
+    }
+  };
+
   const loadForms = async () => {
     setLoading(true);
     setError(null);
     try {
-      const filters: { status?: string } = {};
+      const filters: { status?: string; search?: string } = {};
       if (statusFilter) {
         filters.status = statusFilter;
       }
+      if (searchQuery.trim()) {
+        filters.search = searchQuery.trim();
+      }
       const response = await formsAPI.getAll(filters);
-      setForms(response.data);
+      let filteredForms = response.data;
+      
+      // Apply date filters on frontend (backend doesn't support date filtering yet)
+      if (dateFrom || dateTo) {
+        filteredForms = filteredForms.filter(form => {
+          const formDate = new Date(form.created_at).toISOString().split('T')[0];
+          if (dateFrom && formDate < dateFrom) return false;
+          if (dateTo && formDate > dateTo) return false;
+          return true;
+        });
+      }
+      
+      setForms(filteredForms);
     } catch (error: any) {
       console.error('Failed to load forms:', error);
       setError(error?.response?.data?.detail || error?.message || 'Failed to load forms. Please try again.');
@@ -163,6 +206,68 @@ function FormsList() {
     }
   };
 
+  const handleDuplicate = async (formId: string, formName: string) => {
+    try {
+      await formsAPI.duplicate(formId);
+      loadForms(); // Reload the list
+    } catch (error: any) {
+      alert(error?.response?.data?.detail || error?.message || 'Failed to duplicate form. Please try again.');
+    }
+  };
+
+  const handleSelectForm = (formId: string) => {
+    setSelectedForms(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(formId)) {
+        newSet.delete(formId);
+      } else {
+        newSet.add(formId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedForms.size === forms.length) {
+      setSelectedForms(new Set());
+    } else {
+      setSelectedForms(new Set(forms.map(f => f.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedForms.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedForms.size} form${selectedForms.size > 1 ? 's' : ''}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(Array.from(selectedForms).map(formId => formsAPI.delete(formId)));
+      setSelectedForms(new Set());
+      loadForms();
+    } catch (error: any) {
+      alert(error?.response?.data?.detail || error?.message || 'Failed to delete forms. Please try again.');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedForms.size === 0) return;
+
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(Array.from(selectedForms).map(formId => formsAPI.update(formId, { status: newStatus as any })));
+      setSelectedForms(new Set());
+      loadForms();
+    } catch (error: any) {
+      alert(error?.response?.data?.detail || error?.message || 'Failed to update forms. Please try again.');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   if (loading && forms.length === 0) {
     return <div className="container">Loading...</div>;
   }
@@ -171,41 +276,118 @@ function FormsList() {
     <div className="container">
       <div className="flex-between mb-4">
         <h1>Forms</h1>
-        {role === 'admin' && (
-          <button onClick={() => navigate('/forms/new')} className="btn-primary">
-            Create New Form
-          </button>
-        )}
-      </div>
-
-      {/* Status Filter */}
-      <div className="card mb-4">
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-          <div style={{ flex: '1', minWidth: '200px' }}>
-            <label htmlFor="status-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-              Status
-            </label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-            >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          {statusFilter && (
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', overflow: 'hidden' }}>
             <button
-              onClick={() => setStatusFilter('')}
-              className="btn-secondary"
-              style={{ whiteSpace: 'nowrap' }}
+              onClick={() => setViewMode('table')}
+              style={{
+                padding: '0.5rem 1rem',
+                border: 'none',
+                backgroundColor: viewMode === 'table' ? '#667eea' : 'transparent',
+                color: viewMode === 'table' ? 'white' : '#374151',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
             >
-              Clear Filter
+              Table
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              style={{
+                padding: '0.5rem 1rem',
+                border: 'none',
+                backgroundColor: viewMode === 'card' ? '#667eea' : 'transparent',
+                color: viewMode === 'card' ? 'white' : '#374151',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              Cards
+            </button>
+          </div>
+          {role === 'admin' && (
+            <button onClick={() => navigate('/forms/new')} className="btn-primary">
+              Create New Form
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="card mb-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1', minWidth: '250px' }}>
+              <label htmlFor="search-input" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Search Forms
+              </label>
+              <input
+                id="search-input"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name or description..."
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              />
+            </div>
+            <div style={{ flex: '1', minWidth: '200px' }}>
+              <label htmlFor="status-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Status
+              </label>
+              <select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              >
+                <option value="">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1', minWidth: '150px' }}>
+              <label htmlFor="date-from" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Created From
+              </label>
+              <input
+                id="date-from"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              />
+            </div>
+            <div style={{ flex: '1', minWidth: '150px' }}>
+              <label htmlFor="date-to" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Created To
+              </label>
+              <input
+                id="date-to"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                min={dateFrom || undefined}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              />
+            </div>
+            {(statusFilter || searchQuery || dateFrom || dateTo) && (
+              <button
+                onClick={() => {
+                  setStatusFilter('');
+                  setSearchQuery('');
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+                className="btn-secondary"
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -232,14 +414,66 @@ function FormsList() {
         </div>
       )}
 
+      {/* Bulk Actions Toolbar */}
+      {role === 'admin' && selectedForms.size > 0 && (
+        <div className="card mb-4" style={{ backgroundColor: '#eff6ff', borderColor: '#3b82f6', padding: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ fontWeight: '500', color: '#1e40af' }}>
+                {selectedForms.size} form{selectedForms.size > 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={() => setSelectedForms(new Set())}
+                className="btn-outline"
+                style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
+              >
+                Clear Selection
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleBulkStatusChange(e.target.value);
+                    e.target.value = '';
+                  }
+                }}
+                disabled={bulkActionLoading}
+                style={{
+                  padding: '0.5rem',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '0.375rem',
+                  backgroundColor: 'white',
+                  cursor: bulkActionLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <option value="">Change Status...</option>
+                <option value="draft">Set to Draft</option>
+                <option value="published">Set to Published</option>
+                <option value="archived">Archive</option>
+              </select>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkActionLoading}
+                className="btn-danger"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', whiteSpace: 'nowrap' }}
+              >
+                {bulkActionLoading ? 'Deleting...' : `Delete ${selectedForms.size}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {forms.length === 0 ? (
         <div className="card">
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <h2 style={{ color: '#374151', marginBottom: '1rem' }}>
-              {statusFilter ? 'No forms found' : 'No forms yet'}
+              {(statusFilter || searchQuery || dateFrom || dateTo) ? 'No forms found' : 'No forms yet'}
             </h2>
             <p className="text-muted" style={{ marginBottom: '2rem' }}>
-              {statusFilter
+              {(statusFilter || searchQuery || dateFrom || dateTo)
                 ? 'Try adjusting your filters or create a new form.'
                 : role === 'admin'
                 ? 'Create your first form to get started!'
@@ -252,7 +486,7 @@ function FormsList() {
             )}
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'table' ? (
         <div className="card">
           {loading && forms.length > 0 && (
             <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
@@ -262,9 +496,20 @@ function FormsList() {
           <table>
             <thead>
               <tr>
+                {role === 'admin' && (
+                  <th style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedForms.size === forms.length && forms.length > 0}
+                      onChange={handleSelectAll}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
+                )}
                 <th>Form Name</th>
                 <th>Description</th>
                 <th>Fields</th>
+                <th>Submissions</th>
                 <th>Status</th>
                 {role === 'admin' && <th>Priority</th>}
                 {role === 'admin' && <th>Assigned To</th>}
@@ -275,6 +520,17 @@ function FormsList() {
             <tbody>
               {forms.map((form) => (
                 <tr key={form.id}>
+                  {role === 'admin' && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedForms.has(form.id)}
+                        onChange={() => handleSelectForm(form.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
+                  )}
                   <td>
                     <Link to={`/forms/${form.id}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
                       {form.name || 'Untitled Form'}
@@ -289,6 +545,25 @@ function FormsList() {
                     <span className="text-muted">
                       {form.fields?.length || 0} {form.fields?.length === 1 ? 'field' : 'fields'}
                     </span>
+                  </td>
+                  <td>
+                    {role === 'admin' && submissionCounts[form.id] !== undefined ? (
+                      <span
+                        className="badge"
+                        style={{
+                          backgroundColor: submissionCounts[form.id] > 0 ? '#22c55e' : '#9ca3af',
+                          color: 'white',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                        }}
+                      >
+                        {submissionCounts[form.id]} {submissionCounts[form.id] === 1 ? 'submission' : 'submissions'}
+                      </span>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                    )}
                   </td>
                   <td>
                     <span className={`badge ${getStatusBadgeClass(form.status)}`}>
@@ -340,6 +615,14 @@ function FormsList() {
                             Edit
                           </Link>
                           <button
+                            onClick={() => handleDuplicate(form.id, form.name)}
+                            className="btn-outline"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            title="Duplicate form"
+                          >
+                            Duplicate
+                          </button>
+                          <button
                             onClick={() => handleDelete(form.id, form.name)}
                             className="btn-danger"
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
@@ -367,10 +650,129 @@ function FormsList() {
             </tbody>
           </table>
         </div>
+      ) : (
+        <div className="card">
+          {loading && forms.length > 0 && (
+            <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
+              Updating...
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            {forms.map((form) => (
+              <div
+                key={form.id}
+                className="card"
+                style={{
+                  border: selectedForms.has(form.id) ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer',
+                  backgroundColor: selectedForms.has(form.id) ? '#eff6ff' : 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                onClick={() => {
+                  if (role === 'admin') {
+                    handleSelectForm(form.id);
+                  } else {
+                    navigate(`/forms/${form.id}`);
+                  }
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                    {role === 'admin' && (
+                      <input
+                        type="checkbox"
+                        checked={selectedForms.has(form.id)}
+                        onChange={() => handleSelectForm(form.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    )}
+                    <Link
+                      to={`/forms/${form.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600', fontSize: '1.125rem', flex: 1 }}
+                    >
+                      {form.name || 'Untitled Form'}
+                    </Link>
+                  </div>
+                  <span className={`badge ${getStatusBadgeClass(form.status)}`} style={{ fontSize: '0.75rem' }}>
+                    {formatStatus(form.status)}
+                  </span>
+                </div>
+                
+                {form.description && (
+                  <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '1rem', minHeight: '2.5rem' }}>
+                    {form.description.length > 100 ? `${form.description.substring(0, 100)}...` : form.description}
+                  </p>
+                )}
+                
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <span>📋</span>
+                    <span>{form.fields?.length || 0} {form.fields?.length === 1 ? 'field' : 'fields'}</span>
+                  </div>
+                  {role === 'admin' && submissionCounts[form.id] !== undefined && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                      <span>📊</span>
+                      <span
+                        style={{
+                          color: submissionCounts[form.id] > 0 ? '#22c55e' : '#9ca3af',
+                          fontWeight: '500',
+                        }}
+                      >
+                        {submissionCounts[form.id]} {submissionCounts[form.id] === 1 ? 'submission' : 'submissions'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                  <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                    {formatDate(form.created_at)}
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                    <Link to={`/forms/${form.id}`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                      View
+                    </Link>
+                    {role === 'admin' && (
+                      <>
+                        <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                          Edit
+                        </Link>
+                        {form.public_url_slug && form.status === 'published' && (
+                          <a
+                            href={`/public/form/${form.public_url_slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-primary"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none' }}
+                            title="Open public form"
+                          >
+                            Open
+                          </a>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-export default FormsList;
+export default memo(FormsList);
 

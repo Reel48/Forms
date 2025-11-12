@@ -1,28 +1,39 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
-import QuotesList from './pages/QuotesList';
-import QuoteBuilder from './pages/QuoteBuilder';
-import QuoteView from './pages/QuoteView';
-import FormsList from './pages/FormsList';
-import FormBuilder from './pages/FormBuilder';
-import FormView from './pages/FormView';
-import FormSubmissions from './pages/FormSubmissions';
-import PublicFormView from './pages/PublicFormView';
-import ClientsList from './pages/ClientsList';
-import CompanySettingsPage from './pages/CompanySettings';
-import Profile from './pages/Profile';
-import CustomerDashboard from './pages/CustomerDashboard';
-import QuoteAnalytics from './pages/QuoteAnalytics';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import VerifyEmail from './pages/VerifyEmail';
-import ResendVerification from './pages/ResendVerification';
 import { NotificationProvider } from './components/NotificationSystem';
 import './App.css';
+
+// Lazy load components for better performance
+const QuotesList = lazy(() => import('./pages/QuotesList'));
+const QuoteBuilder = lazy(() => import('./pages/QuoteBuilder'));
+const QuoteView = lazy(() => import('./pages/QuoteView'));
+const FormsList = lazy(() => import('./pages/FormsList'));
+const FormBuilder = lazy(() => import('./pages/FormBuilder'));
+const FormView = lazy(() => import('./pages/FormView'));
+const FormSubmissions = lazy(() => import('./pages/FormSubmissions'));
+const PublicFormView = lazy(() => import('./pages/PublicFormView'));
+const ClientsList = lazy(() => import('./pages/ClientsList'));
+const CompanySettingsPage = lazy(() => import('./pages/CompanySettings'));
+const Profile = lazy(() => import('./pages/Profile'));
+const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
+const QuoteAnalytics = lazy(() => import('./pages/QuoteAnalytics'));
+const EmailTemplates = lazy(() => import('./pages/EmailTemplates'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ResendVerification = lazy(() => import('./pages/ResendVerification'));
+
+// Loading component
+const LoadingFallback = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+    <div>Loading...</div>
+  </div>
+);
 
 function Navigation() {
   const location = useLocation();
@@ -36,6 +47,7 @@ function Navigation() {
   const isSettingsActive = location.pathname === '/settings';
   const isProfileActive = location.pathname === '/profile';
   const isDashboardActive = location.pathname === '/dashboard';
+  const isEmailTemplatesActive = location.pathname === '/email-templates';
   const isAdmin = role === 'admin';
 
   const handleLogout = async () => {
@@ -48,9 +60,10 @@ function Navigation() {
   };
   
   return (
-    <nav>
+    <nav role="navigation" aria-label="Main navigation">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       {/* Main Navigation Tabs */}
-      <ul className="nav-tabs">
+      <ul className="nav-tabs" role="menubar">
         {isAdmin ? (
           <>
             <li>
@@ -91,6 +104,14 @@ function Navigation() {
                 className={`nav-tab ${location.pathname === '/analytics' ? 'active' : ''}`}
               >
                 Analytics
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/email-templates" 
+                className={`nav-tab ${isEmailTemplatesActive ? 'active' : ''}`}
+              >
+                Email Templates
               </Link>
             </li>
           </>
@@ -142,36 +163,40 @@ function AppContent() {
     <>
       {!isPublicForm && !isAuthPage && <Navigation />}
       <SessionTimeoutWarning />
-      <Routes>
-        {/* Public routes */}
-        <Route path="/public/form/:slug" element={<PublicFormView />} />
-        
-        {/* Auth routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/resend-verification" element={<ResendVerification />} />
-        
-        {/* Protected routes - require authentication */}
-        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
-        <Route path="/quotes/:id" element={<ProtectedRoute><QuoteView /></ProtectedRoute>} />
-        <Route path="/forms" element={<ProtectedRoute><FormsList /></ProtectedRoute>} />
-        <Route path="/forms/:id" element={<ProtectedRoute><FormView /></ProtectedRoute>} />
-        
-        {/* Admin-only routes */}
-        <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><QuoteBuilder /></ProtectedRoute>} />
-        <Route path="/quotes/:id/edit" element={<ProtectedRoute requireAdmin><QuoteBuilder /></ProtectedRoute>} />
-        <Route path="/forms/new" element={<ProtectedRoute requireAdmin><FormBuilder /></ProtectedRoute>} />
-        <Route path="/forms/:id/edit" element={<ProtectedRoute requireAdmin><FormBuilder /></ProtectedRoute>} />
-        <Route path="/forms/:id/submissions" element={<ProtectedRoute requireAdmin><FormSubmissions /></ProtectedRoute>} />
-        <Route path="/clients" element={<ProtectedRoute requireAdmin><ClientsList /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute requireAdmin><CompanySettingsPage /></ProtectedRoute>} />
-        <Route path="/analytics" element={<ProtectedRoute requireAdmin><QuoteAnalytics /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      </Routes>
+      <main id="main-content" role="main">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/public/form/:slug" element={<Suspense fallback={<LoadingFallback />}><PublicFormView /></Suspense>} />
+          <Route path="/s/:short_code" element={<Suspense fallback={<LoadingFallback />}><PublicFormView /></Suspense>} />
+          
+          {/* Auth routes */}
+          <Route path="/login" element={<Suspense fallback={<LoadingFallback />}><Login /></Suspense>} />
+          <Route path="/register" element={<Suspense fallback={<LoadingFallback />}><Register /></Suspense>} />
+          <Route path="/forgot-password" element={<Suspense fallback={<LoadingFallback />}><ForgotPassword /></Suspense>} />
+          <Route path="/reset-password" element={<Suspense fallback={<LoadingFallback />}><ResetPassword /></Suspense>} />
+          <Route path="/verify-email" element={<Suspense fallback={<LoadingFallback />}><VerifyEmail /></Suspense>} />
+          <Route path="/resend-verification" element={<Suspense fallback={<LoadingFallback />}><ResendVerification /></Suspense>} />
+          
+          {/* Protected routes - require authentication */}
+          <Route path="/" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><HomePage /></Suspense></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerDashboard /></Suspense></ProtectedRoute>} />
+          <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteView /></Suspense></ProtectedRoute>} />
+          <Route path="/forms" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormsList /></Suspense></ProtectedRoute>} />
+          <Route path="/forms/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormView /></Suspense></ProtectedRoute>} />
+          
+          {/* Admin-only routes */}
+          <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />
+          <Route path="/quotes/:id/edit" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />
+          <Route path="/forms/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><FormBuilder /></Suspense></ProtectedRoute>} />
+          <Route path="/forms/:id/edit" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><FormBuilder /></Suspense></ProtectedRoute>} />
+          <Route path="/forms/:id/submissions" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><FormSubmissions /></Suspense></ProtectedRoute>} />
+          <Route path="/clients" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><ClientsList /></Suspense></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><CompanySettingsPage /></Suspense></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteAnalytics /></Suspense></ProtectedRoute>} />
+          <Route path="/email-templates" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><EmailTemplates /></Suspense></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Profile /></Suspense></ProtectedRoute>} />
+        </Routes>
+      </main>
     </>
   );
 }

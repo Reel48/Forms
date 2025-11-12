@@ -353,6 +353,7 @@ class FormSubmissionBase(BaseModel):
 
 class FormSubmissionCreate(FormSubmissionBase):
     answers: List[FormSubmissionAnswerCreate] = []
+    captcha_token: Optional[str] = None  # For CAPTCHA verification
 
 class FormSubmission(FormSubmissionBase):
     id: str

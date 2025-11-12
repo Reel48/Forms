@@ -4,7 +4,9 @@ Uses AWS SES (Simple Email Service) for all email sending
 """
 import os
 from typing import Optional, Dict, Any
+from datetime import datetime
 import logging
+from template_service import template_service
 
 logger = logging.getLogger(__name__)
 
@@ -386,54 +388,87 @@ class EmailService:
         """
         submission_link = f"{FRONTEND_URL}/forms/{form_id}/submissions/{submission_id}" if submission_id else f"{FRONTEND_URL}/forms/{form_id}/submissions"
         
-        subject = f"New Form Submission: {form_name}"
+        # Try to load custom template
+        template = template_service.get_template("form_submission_admin")
         
-        submitter_info = ""
-        if submitter_name or submitter_email:
-            submitter_info = f"""
-            <p><strong>Submitted by:</strong></p>
-            <ul style="margin: 10px 0; padding-left: 20px;">
-                {f'<li>Name: {submitter_name}</li>' if submitter_name else ''}
-                {f'<li>Email: {submitter_email}</li>' if submitter_email else ''}
-            </ul>
+        if template:
+            # Use custom template
+            variables = {
+                "form_name": form_name,
+                "form_id": form_id,
+                "submission_id": submission_id or "",
+                "submitter_name": submitter_name or "",
+                "submitter_email": submitter_email or "",
+                "submission_link": submission_link,
+                "submission_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            
+            subject = template_service.render_template(template.get("subject", ""), variables)
+            html_content = template_service.render_template(template.get("html_body", ""), variables)
+            text_content = template.get("text_body")
+            if text_content:
+                text_content = template_service.render_template(text_content, variables)
+            else:
+                # Generate text from HTML if not provided
+                text_content = f"""
+                New Form Submission
+                
+                A new submission has been received for the form: {form_name}
+                
+                {f'Submitted by: {submitter_name} ({submitter_email})' if submitter_name or submitter_email else ''}
+                
+                View the submission here: {submission_link}
+                """
+        else:
+            # Use default template
+            subject = f"New Form Submission: {form_name}"
+            
+            submitter_info = ""
+            if submitter_name or submitter_email:
+                submitter_info = f"""
+                <p><strong>Submitted by:</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    {f'<li>Name: {submitter_name}</li>' if submitter_name else ''}
+                    {f'<li>Email: {submitter_email}</li>' if submitter_email else ''}
+                </ul>
+                """
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>New Form Submission</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
+                    <h1 style="color: #2c3e50; margin-top: 0;">New Form Submission</h1>
+                    <p>A new submission has been received for the form:</p>
+                    <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
+                        <h2 style="margin-top: 0; color: #007bff;">{form_name}</h2>
+                        {submitter_info}
+                    </div>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{submission_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Submission</a>
+                    </div>
+                </div>
+                <p style="color: #999; font-size: 12px; text-align: center;">
+                    This is an automated message. Please do not reply to this email.
+                </p>
+            </body>
+            </html>
             """
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>New Form Submission</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">New Form Submission</h1>
-                <p>A new submission has been received for the form:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
-                    <h2 style="margin-top: 0; color: #007bff;">{form_name}</h2>
-                    {submitter_info}
-                </div>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{submission_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Submission</a>
-                </div>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
-        """
-        
-        text_content = f"""
-        New Form Submission
-        
-        A new submission has been received for the form: {form_name}
-        
-        {f'Submitted by: {submitter_name} ({submitter_email})' if submitter_name or submitter_email else ''}
-        
-        View the submission here: {submission_link}
-        """
+            
+            text_content = f"""
+            New Form Submission
+            
+            A new submission has been received for the form: {form_name}
+            
+            {f'Submitted by: {submitter_name} ({submitter_email})' if submitter_name or submitter_email else ''}
+            
+            View the submission here: {submission_link}
+            """
         
         return self._send_email(to_email, subject, html_content, text_content)
     

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile, Depends
+from fastapi import APIRouter, HTTPException, Query, File, UploadFile, Depends, Request
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
+from io import BytesIO
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,10 +12,14 @@ from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin, get_optional_user
 from email_service import email_service
 from email_utils import get_admin_emails
+from webhook_service import webhook_service
 import uuid
 import secrets
 import string
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/forms", tags=["forms"])
 
@@ -90,6 +95,8 @@ async def get_forms(
 async def get_form_by_slug(slug: str):
     """Get a form by public URL slug (for public access)"""
     try:
+        from datetime import datetime
+        
         response = supabase.table("forms").select("*, form_fields(*)").eq("public_url_slug", slug).single().execute()
         
         if not response.data:
@@ -101,6 +108,50 @@ async def get_form_by_slug(slug: str):
         if form.get("status") != "published":
             raise HTTPException(status_code=404, detail="Form not found")
         
+        # Check scheduling dates
+        settings = form.get("settings") or {}
+        now = datetime.utcnow()
+        
+        # Check publish_date - form should not be accessible before publish_date
+        if settings.get("publish_date"):
+            try:
+                publish_date = datetime.fromisoformat(settings["publish_date"].replace("Z", "+00:00"))
+                if now < publish_date.replace(tzinfo=None):
+                    raise HTTPException(status_code=404, detail="Form not yet published")
+            except (ValueError, TypeError):
+                pass  # Invalid date format, ignore
+        
+        # Check unpublish_date - form should not be accessible after unpublish_date
+        if settings.get("unpublish_date"):
+            try:
+                unpublish_date = datetime.fromisoformat(settings["unpublish_date"].replace("Z", "+00:00"))
+                if now > unpublish_date.replace(tzinfo=None):
+                    raise HTTPException(status_code=404, detail="Form is no longer available")
+            except (ValueError, TypeError):
+                pass  # Invalid date format, ignore
+        
+        # Check expiration date
+        if settings.get("expiration_date"):
+            try:
+                expiration_date = datetime.fromisoformat(settings["expiration_date"].replace("Z", "+00:00"))
+                if now > expiration_date.replace(tzinfo=None):
+                    raise HTTPException(status_code=404, detail="This form has expired and is no longer accepting submissions")
+            except (ValueError, TypeError):
+                pass  # Invalid date format, ignore
+        
+        # Check response limits
+        if settings.get("max_submissions"):
+            try:
+                max_submissions = int(settings["max_submissions"])
+                # Count completed submissions
+                count_response = supabase.table("form_submissions").select("id", count="exact").eq("form_id", form.get("id")).eq("status", "completed").execute()
+                current_count = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
+                
+                if current_count >= max_submissions:
+                    raise HTTPException(status_code=404, detail=f"This form has reached its maximum submission limit of {max_submissions}")
+            except (ValueError, TypeError):
+                pass  # Invalid max_submissions value, ignore
+        
         # Sort fields by order_index and map form_fields to fields
         fields = form.get("form_fields", [])
         if fields:
@@ -109,6 +160,15 @@ async def get_form_by_slug(slug: str):
         form["fields"] = fields
         if "form_fields" in form:
             del form["form_fields"]
+        
+        # Don't return password in public endpoint (security)
+        if "settings" in form and form["settings"]:
+            settings = form["settings"].copy() if isinstance(form["settings"], dict) else {}
+            if "password" in settings:
+                # Indicate password is required but don't return the actual password
+                settings["password_required"] = True
+                del settings["password"]
+            form["settings"] = settings
         
         return form
     except HTTPException:
@@ -538,18 +598,1369 @@ async def get_form_submission(form_id: str, submission_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/{form_id}/short-url", response_model=dict)
+async def create_short_url(form_id: str, request: Request, current_admin: dict = Depends(get_current_admin)):
+    """Create a short URL for a form (admin only)"""
+    try:
+        import random
+        
+        # Verify form exists
+        form_check = supabase.table("forms").select("id, public_url_slug").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        form = form_check.data[0]
+        if not form.get("public_url_slug"):
+            raise HTTPException(status_code=400, detail="Form must have a public URL slug to create a short URL")
+        
+        # Generate a unique short code (6 characters)
+        def generate_short_code():
+            chars = string.ascii_letters + string.digits
+            return ''.join(secrets.choice(chars) for _ in range(6))
+        
+        # Try to generate a unique code (max 10 attempts)
+        short_code = None
+        for _ in range(10):
+            code = generate_short_code()
+            existing = supabase.table("form_short_urls").select("id").eq("short_code", code).execute()
+            if not existing.data:
+                short_code = code
+                break
+        
+        if not short_code:
+            raise HTTPException(status_code=500, detail="Failed to generate unique short code")
+        
+        # Create short URL record
+        short_url_data = {
+            "id": str(uuid.uuid4()),
+            "form_id": form_id,
+            "short_code": short_code,
+            "click_count": 0,
+            "created_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("form_short_urls").insert(short_url_data).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create short URL")
+        
+        base_url = str(request.base_url).rstrip('/')
+        return {
+            "short_code": short_code,
+            "short_url": f"/api/forms/short/{short_code}",
+            "full_url": f"{base_url}/api/forms/short/{short_code}",
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/short-url/{short_code}", response_model=dict)
+async def get_short_url_info(short_code: str):
+    """Get information about a short URL (public)"""
+    try:
+        response = supabase.table("form_short_urls").select("*, forms(id, name, public_url_slug)").eq("short_code", short_code).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+        
+        short_url = response.data
+        form = short_url.get("forms")
+        
+        if not form or not form.get("public_url_slug"):
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        return {
+            "short_code": short_code,
+            "form_id": short_url["form_id"],
+            "form_slug": form["public_url_slug"],
+            "redirect_url": f"/public/form/{form['public_url_slug']}",
+            "click_count": short_url.get("click_count", 0),
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/short/{short_code}")
+async def redirect_short_url(short_code: str):
+    """Redirect short URL to the actual form (public endpoint)"""
+    try:
+        from fastapi.responses import RedirectResponse
+        
+        # Get short URL info
+        response = supabase.table("form_short_urls").select("*, forms(public_url_slug)").eq("short_code", short_code).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+        
+        short_url = response.data
+        form = short_url.get("forms")
+        
+        if not form or not form.get("public_url_slug"):
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Increment click count
+        current_count = short_url.get("click_count", 0)
+        supabase.table("form_short_urls").update({"click_count": current_count + 1}).eq("id", short_url["id"]).execute()
+        
+        # Redirect to the form
+        redirect_url = f"/public/form/{form['public_url_slug']}"
+        return RedirectResponse(url=redirect_url, status_code=302)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/short-urls", response_model=list)
+async def get_form_short_urls(form_id: str, current_admin: dict = Depends(get_current_admin)):
+    """Get all short URLs for a form (admin only)"""
+    try:
+        response = supabase.table("form_short_urls").select("*").eq("form_id", form_id).order("created_at", desc=True).execute()
+        
+        return response.data or []
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/submissions/export-pdf")
+async def export_submissions_pdf(form_id: str, current_admin: dict = Depends(get_current_admin)):
+    """Export form submissions as PDF (admin only)"""
+    try:
+        from fastapi.responses import Response
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        
+        # Get form and submissions
+        form_response = supabase.table("forms").select("*").eq("id", form_id).single().execute()
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        form = form_response.data
+        
+        submissions_response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
+        submissions = submissions_response.data or []
+        
+        if not submissions:
+            raise HTTPException(status_code=400, detail="No submissions to export")
+        
+        # Create PDF buffer
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch,
+            title=f"{form.get('name', 'Form')} - Submissions"
+        )
+        
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'Title',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.HexColor('#1a1a1a'),
+            spaceAfter=12,
+        )
+        elements.append(Paragraph(form.get('name', 'Form Submissions'), title_style))
+        elements.append(Paragraph(f"Total Submissions: {len(submissions)}", styles['Normal']))
+        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Process each submission
+        for idx, submission in enumerate(submissions):
+            if idx > 0:
+                elements.append(PageBreak())
+            
+            # Submission header
+            header_style = ParagraphStyle(
+                'SubmissionHeader',
+                parent=styles['Heading2'],
+                fontSize=14,
+                textColor=colors.HexColor('#333333'),
+                spaceAfter=8,
+            )
+            elements.append(Paragraph(f"Submission #{idx + 1}", header_style))
+            
+            # Submission metadata
+            metadata_data = [
+                ['Field', 'Value'],
+                ['Submission ID', submission.get('id', 'N/A')],
+                ['Submitted At', submission.get('submitted_at', 'N/A')],
+                ['Started At', submission.get('started_at', 'N/A') or 'N/A'],
+                ['Submitter Name', submission.get('submitter_name', 'N/A') or 'N/A'],
+                ['Submitter Email', submission.get('submitter_email', 'N/A') or 'N/A'],
+                ['Time Spent', f"{submission.get('time_spent_seconds', 0) or 0} seconds"],
+                ['Status', submission.get('status', 'N/A')],
+                ['Review Status', submission.get('review_status', 'new') or 'new'],
+            ]
+            
+            metadata_table = Table(metadata_data, colWidths=[2*inch, 4*inch])
+            metadata_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ]))
+            elements.append(metadata_table)
+            elements.append(Spacer(1, 0.2*inch))
+            
+            # Get form fields for reference
+            fields_response = supabase.table("form_fields").select("*").eq("form_id", form_id).order("order_index").execute()
+            fields = {f['id']: f for f in (fields_response.data or [])}
+            
+            # Answers
+            answers = submission.get('form_submission_answers', [])
+            if answers:
+                elements.append(Paragraph("Responses:", styles['Heading3']))
+                
+                answers_data = [['Field', 'Answer']]
+                for answer in answers:
+                    field_id = answer.get('field_id')
+                    field = fields.get(field_id, {})
+                    field_label = field.get('label', f"Field {field_id[:8]}...") if field_id else 'Unknown Field'
+                    
+                    answer_text = answer.get('answer_text', '')
+                    if not answer_text and answer.get('answer_value'):
+                        answer_value = answer.get('answer_value', {})
+                        if isinstance(answer_value, dict) and answer_value.get('value'):
+                            answer_text = str(answer_value['value'])
+                        else:
+                            answer_text = str(answer_value)
+                    
+                    if not answer_text:
+                        answer_text = 'N/A'
+                    
+                    # Truncate long answers for table display
+                    if len(answer_text) > 100:
+                        answer_text = answer_text[:100] + '...'
+                    
+                    answers_data.append([field_label, answer_text])
+                
+                answers_table = Table(answers_data, colWidths=[2.5*inch, 3.5*inch])
+                answers_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ]))
+                elements.append(answers_table)
+        
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.read(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{form.get("name", "submissions").replace(" ", "_")}_submissions_{datetime.now().strftime("%Y%m%d")}.pdf"'
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/submissions/{submission_id}/notes", response_model=list)
+async def get_submission_notes(
+    form_id: str,
+    submission_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all notes for a submission (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        # Get notes
+        response = supabase.table("form_submission_notes").select("*").eq("submission_id", submission_id).order("created_at", desc=True).execute()
+        
+        return response.data or []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{form_id}/submissions/{submission_id}/notes", response_model=dict)
+async def create_submission_note(
+    form_id: str,
+    submission_id: str,
+    note_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a note for a submission (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        note_text = note_data.get("note_text", "").strip()
+        if not note_text:
+            raise HTTPException(status_code=400, detail="Note text is required")
+        
+        # Create note
+        note_data_db = {
+            "id": str(uuid.uuid4()),
+            "submission_id": submission_id,
+            "user_id": current_admin.get("sub"),
+            "note_text": note_text,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("form_submission_notes").insert(note_data_db).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create note")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/{form_id}/submissions/{submission_id}/notes/{note_id}", response_model=dict)
+async def update_submission_note(
+    form_id: str,
+    submission_id: str,
+    note_id: str,
+    note_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update a submission note (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        # Verify note exists and belongs to submission
+        note_check = supabase.table("form_submission_notes").select("id").eq("id", note_id).eq("submission_id", submission_id).execute()
+        if not note_check.data:
+            raise HTTPException(status_code=404, detail="Note not found")
+        
+        note_text = note_data.get("note_text", "").strip()
+        if not note_text:
+            raise HTTPException(status_code=400, detail="Note text is required")
+        
+        # Update note
+        response = supabase.table("form_submission_notes").update({
+            "note_text": note_text,
+            "updated_at": datetime.now().isoformat(),
+        }).eq("id", note_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to update note")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{form_id}/submissions/{submission_id}/notes/{note_id}")
+async def delete_submission_note(
+    form_id: str,
+    submission_id: str,
+    note_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete a submission note (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        # Verify note exists and belongs to submission
+        note_check = supabase.table("form_submission_notes").select("id").eq("id", note_id).eq("submission_id", submission_id).execute()
+        if not note_check.data:
+            raise HTTPException(status_code=404, detail="Note not found")
+        
+        # Delete note
+        supabase.table("form_submission_notes").delete().eq("id", note_id).execute()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Webhook Management Endpoints
+@router.post("/{form_id}/webhooks", response_model=dict)
+async def create_webhook(
+    form_id: str,
+    webhook_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a webhook for a form (admin only)"""
+    try:
+        # Verify form exists
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        url = webhook_data.get("url", "").strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="Webhook URL is required")
+        
+        # Validate URL format
+        if not url.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="Webhook URL must start with http:// or https://")
+        
+        events = webhook_data.get("events", ["submission.created"])
+        if not isinstance(events, list) or len(events) == 0:
+            events = ["submission.created"]
+        
+        # Create webhook
+        webhook_db_data = {
+            "id": str(uuid.uuid4()),
+            "form_id": form_id,
+            "url": url,
+            "secret": webhook_data.get("secret", "").strip() or None,
+            "events": events,
+            "is_active": webhook_data.get("is_active", True),
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("form_webhooks").insert(webhook_db_data).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create webhook")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/webhooks", response_model=list)
+async def get_form_webhooks(
+    form_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all webhooks for a form (admin only)"""
+    try:
+        # Verify form exists
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        response = supabase.table("form_webhooks").select("*").eq("form_id", form_id).order("created_at", desc=True).execute()
+        
+        # Don't return secret in response
+        webhooks = response.data or []
+        for webhook in webhooks:
+            if "secret" in webhook:
+                webhook["secret"] = "***" if webhook.get("secret") else None
+        
+        return webhooks
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/{form_id}/webhooks/{webhook_id}", response_model=dict)
+async def update_webhook(
+    form_id: str,
+    webhook_id: str,
+    webhook_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update a webhook (admin only)"""
+    try:
+        # Verify form and webhook exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        webhook_check = supabase.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
+        if not webhook_check.data:
+            raise HTTPException(status_code=404, detail="Webhook not found")
+        
+        # Prepare update data
+        update_data = {
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        if "url" in webhook_data:
+            url = webhook_data["url"].strip()
+            if not url:
+                raise HTTPException(status_code=400, detail="Webhook URL cannot be empty")
+            if not url.startswith(("http://", "https://")):
+                raise HTTPException(status_code=400, detail="Webhook URL must start with http:// or https://")
+            update_data["url"] = url
+        
+        if "events" in webhook_data:
+            events = webhook_data["events"]
+            if isinstance(events, list) and len(events) > 0:
+                update_data["events"] = events
+        
+        if "is_active" in webhook_data:
+            update_data["is_active"] = bool(webhook_data["is_active"])
+        
+        if "secret" in webhook_data:
+            secret = webhook_data["secret"].strip()
+            # Only update if new secret provided (not masked)
+            if secret and secret != "***":
+                update_data["secret"] = secret if secret else None
+        
+        response = supabase.table("form_webhooks").update(update_data).eq("id", webhook_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to update webhook")
+        
+        webhook = response.data[0]
+        if "secret" in webhook:
+            webhook["secret"] = "***" if webhook.get("secret") else None
+        
+        return webhook
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{form_id}/webhooks/{webhook_id}")
+async def delete_webhook(
+    form_id: str,
+    webhook_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete a webhook (admin only)"""
+    try:
+        # Verify form and webhook exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        webhook_check = supabase.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
+        if not webhook_check.data:
+            raise HTTPException(status_code=404, detail="Webhook not found")
+        
+        # Delete webhook
+        supabase.table("form_webhooks").delete().eq("id", webhook_id).execute()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/webhooks/{webhook_id}/deliveries", response_model=list)
+async def get_webhook_deliveries(
+    form_id: str,
+    webhook_id: str,
+    current_admin: dict = Depends(get_current_admin),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """Get delivery history for a webhook (admin only)"""
+    try:
+        # Verify form and webhook exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        webhook_check = supabase.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
+        if not webhook_check.data:
+            raise HTTPException(status_code=404, detail="Webhook not found")
+        
+        response = supabase.table("form_webhook_deliveries").select("*").eq("webhook_id", webhook_id).order("created_at", desc=True).limit(limit).execute()
+        
+        return response.data or []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Email Template Management Endpoints
+@router.post("/email-templates", response_model=dict)
+async def create_email_template(
+    template_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create an email template (admin only)"""
+    try:
+        name = template_data.get("name", "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Template name is required")
+        
+        template_type = template_data.get("template_type", "").strip()
+        if not template_type:
+            raise HTTPException(status_code=400, detail="Template type is required")
+        
+        subject = template_data.get("subject", "").strip()
+        if not subject:
+            raise HTTPException(status_code=400, detail="Email subject is required")
+        
+        html_body = template_data.get("html_body", "").strip()
+        if not html_body:
+            raise HTTPException(status_code=400, detail="HTML body is required")
+        
+        # If this is marked as default, unset other defaults of the same type
+        is_default = template_data.get("is_default", False)
+        if is_default:
+            supabase.table("email_templates").update({"is_default": False}).eq("template_type", template_type).execute()
+        
+        template_db_data = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "template_type": template_type,
+            "subject": subject,
+            "html_body": html_body,
+            "text_body": template_data.get("text_body", "").strip() or None,
+            "variables": template_data.get("variables", {}),
+            "is_default": is_default,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("email_templates").insert(template_db_data).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create template")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/email-templates", response_model=list)
+async def get_email_templates(
+    template_type: Optional[str] = Query(None),
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all email templates (admin only)"""
+    try:
+        query = supabase.table("email_templates").select("*")
+        
+        if template_type:
+            query = query.eq("template_type", template_type)
+        
+        response = query.order("template_type", desc=False).order("is_default", desc=True).order("created_at", desc=True).execute()
+        
+        return response.data or []
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/email-templates/{template_id}", response_model=dict)
+async def get_email_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get a specific email template (admin only)"""
+    try:
+        response = supabase.table("email_templates").select("*").eq("id", template_id).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        return response.data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/email-templates/{template_id}", response_model=dict)
+async def update_email_template(
+    template_id: str,
+    template_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update an email template (admin only)"""
+    try:
+        # Verify template exists
+        template_check = supabase.table("email_templates").select("id, template_type").eq("id", template_id).single().execute()
+        if not template_check.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        existing_template = template_check.data
+        template_type = existing_template["template_type"]
+        
+        # Prepare update data
+        update_data = {
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        if "name" in template_data:
+            name = template_data["name"].strip()
+            if not name:
+                raise HTTPException(status_code=400, detail="Template name cannot be empty")
+            update_data["name"] = name
+        
+        if "subject" in template_data:
+            subject = template_data["subject"].strip()
+            if not subject:
+                raise HTTPException(status_code=400, detail="Email subject cannot be empty")
+            update_data["subject"] = subject
+        
+        if "html_body" in template_data:
+            html_body = template_data["html_body"].strip()
+            if not html_body:
+                raise HTTPException(status_code=400, detail="HTML body cannot be empty")
+            update_data["html_body"] = html_body
+        
+        if "text_body" in template_data:
+            update_data["text_body"] = template_data["text_body"].strip() or None
+        
+        if "variables" in template_data:
+            update_data["variables"] = template_data["variables"]
+        
+        if "is_default" in template_data:
+            is_default = bool(template_data["is_default"])
+            # If setting as default, unset other defaults of the same type
+            if is_default:
+                supabase.table("email_templates").update({"is_default": False}).eq("template_type", template_type).neq("id", template_id).execute()
+            update_data["is_default"] = is_default
+        
+        response = supabase.table("email_templates").update(update_data).eq("id", template_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to update template")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/email-templates/{template_id}")
+async def delete_email_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete an email template (admin only)"""
+    try:
+        # Verify template exists
+        template_check = supabase.table("email_templates").select("id").eq("id", template_id).execute()
+        if not template_check.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        # Delete template
+        supabase.table("email_templates").delete().eq("id", template_id).execute()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/email-templates/types/{template_type}/variables", response_model=dict)
+async def get_template_variables(
+    template_type: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get available variables for a template type (admin only)"""
+    try:
+        from template_service import template_service
+        variables = template_service.get_default_variables(template_type)
+        return {"template_type": template_type, "variables": variables}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Password Protection Endpoint
+@router.post("/public/{slug}/verify-password")
+async def verify_form_password(slug: str, password_data: dict):
+    """Verify password for a password-protected form (public endpoint)"""
+    try:
+        # Get form
+        response = supabase.table("forms").select("id, settings").eq("public_url_slug", slug).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        form = response.data
+        settings = form.get("settings") or {}
+        form_password = settings.get("password")
+        
+        if not form_password:
+            # Form doesn't have password protection
+            return {"success": True, "message": "Form does not require password"}
+        
+        # Verify password
+        provided_password = password_data.get("password", "").strip()
+        if provided_password == form_password:
+            return {"success": True, "message": "Password correct"}
+        else:
+            raise HTTPException(status_code=401, detail="Incorrect password")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Submission Tags Endpoints
+@router.post("/{form_id}/submissions/{submission_id}/tags", response_model=dict)
+async def add_submission_tag(
+    form_id: str,
+    submission_id: str,
+    tag_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Add a tag to a submission (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        tag_name = tag_data.get("tag_name", "").strip()
+        if not tag_name:
+            raise HTTPException(status_code=400, detail="Tag name is required")
+        
+        if len(tag_name) > 50:
+            raise HTTPException(status_code=400, detail="Tag name must be 50 characters or less")
+        
+        color = tag_data.get("color", "#667eea").strip()
+        if not color.startswith("#") or len(color) != 7:
+            color = "#667eea"
+        
+        # Create tag
+        tag_db_data = {
+            "id": str(uuid.uuid4()),
+            "submission_id": submission_id,
+            "tag_name": tag_name,
+            "color": color,
+            "created_at": datetime.now().isoformat(),
+        }
+        
+        try:
+            response = supabase.table("form_submission_tags").insert(tag_db_data).execute()
+            return response.data[0] if response.data else tag_db_data
+        except Exception as e:
+            # Check if it's a duplicate
+            if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+                raise HTTPException(status_code=400, detail="Tag already exists on this submission")
+            raise
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/submissions/{submission_id}/tags", response_model=list)
+async def get_submission_tags(
+    form_id: str,
+    submission_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all tags for a submission (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        response = supabase.table("form_submission_tags").select("*").eq("submission_id", submission_id).order("created_at", desc=True).execute()
+        
+        return response.data or []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{form_id}/submissions/{submission_id}/tags/{tag_id}")
+async def delete_submission_tag(
+    form_id: str,
+    submission_id: str,
+    tag_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete a tag from a submission (admin only)"""
+    try:
+        # Verify form and submission exist
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        # Verify tag exists and belongs to submission
+        tag_check = supabase.table("form_submission_tags").select("id").eq("id", tag_id).eq("submission_id", submission_id).execute()
+        if not tag_check.data:
+            raise HTTPException(status_code=404, detail="Tag not found")
+        
+        # Delete tag
+        supabase.table("form_submission_tags").delete().eq("id", tag_id).execute()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/submissions/tags/all", response_model=list)
+async def get_all_submission_tags(
+    form_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all unique tags used in a form's submissions (admin only)"""
+    try:
+        # Verify form exists
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Get all submissions for this form
+        submissions_response = supabase.table("form_submissions").select("id").eq("form_id", form_id).execute()
+        submission_ids = [s["id"] for s in (submissions_response.data or [])]
+        
+        if not submission_ids:
+            return []
+        
+        # Get all tags for these submissions
+        response = supabase.table("form_submission_tags").select("tag_name, color").in_("submission_id", submission_ids).execute()
+        
+        # Get unique tags
+        unique_tags = {}
+        for tag in (response.data or []):
+            tag_name = tag["tag_name"]
+            if tag_name not in unique_tags:
+                unique_tags[tag_name] = tag["color"]
+        
+        return [{"tag_name": name, "color": color} for name, color in unique_tags.items()]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Field Library Endpoints
+@router.post("/field-library", response_model=dict)
+async def save_field_to_library(
+    field_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Save a field to the library for reuse (admin only)"""
+    try:
+        name = field_data.get("name", "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Field name is required")
+        
+        field_type = field_data.get("field_type", "").strip()
+        if not field_type:
+            raise HTTPException(status_code=400, detail="Field type is required")
+        
+        label = field_data.get("label", "").strip()
+        if not label:
+            raise HTTPException(status_code=400, detail="Field label is required")
+        
+        library_field_data = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "field_type": field_type,
+            "label": label,
+            "description": field_data.get("description"),
+            "placeholder": field_data.get("placeholder"),
+            "required": field_data.get("required", False),
+            "validation_rules": field_data.get("validation_rules", {}),
+            "options": field_data.get("options", []),
+            "conditional_logic": field_data.get("conditional_logic", {}),
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("field_library").insert(library_field_data).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to save field to library")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/field-library", response_model=list)
+async def get_field_library(
+    field_type: Optional[str] = Query(None),
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all fields from the library (admin only)"""
+    try:
+        query = supabase.table("field_library").select("*")
+        
+        if field_type:
+            query = query.eq("field_type", field_type)
+        
+        response = query.order("created_at", desc=True).execute()
+        
+        return response.data or []
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/field-library/{field_id}")
+async def delete_field_from_library(
+    field_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete a field from the library (admin only)"""
+    try:
+        # Verify field exists
+        field_check = supabase.table("field_library").select("id").eq("id", field_id).execute()
+        if not field_check.data:
+            raise HTTPException(status_code=404, detail="Field not found in library")
+        
+        # Delete field
+        supabase.table("field_library").delete().eq("id", field_id).execute()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Form Versioning Endpoints
+@router.post("/{form_id}/versions", response_model=dict)
+async def create_form_version(
+    form_id: str,
+    version_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a new version snapshot of a form (admin only)"""
+    try:
+        # Verify form exists
+        form_response = supabase.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        form = form_response.data
+        
+        # Get current max version number
+        versions_response = supabase.table("form_versions").select("version_number").eq("form_id", form_id).order("version_number", desc=True).limit(1).execute()
+        max_version = 0
+        if versions_response.data and len(versions_response.data) > 0:
+            max_version = versions_response.data[0].get("version_number", 0)
+        
+        # Prepare form data snapshot
+        form_snapshot = {
+            "name": form.get("name"),
+            "description": form.get("description"),
+            "status": form.get("status"),
+            "theme": form.get("theme"),
+            "settings": form.get("settings"),
+            "welcome_screen": form.get("welcome_screen"),
+            "thank_you_screen": form.get("thank_you_screen"),
+            "fields": sorted(form.get("form_fields", []), key=lambda x: x.get("order_index", 0)),
+        }
+        
+        version_db_data = {
+            "id": str(uuid.uuid4()),
+            "form_id": form_id,
+            "version_number": max_version + 1,
+            "form_data": form_snapshot,
+            "notes": version_data.get("notes", "").strip() or None,
+            "created_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("form_versions").insert(version_db_data).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create version")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{form_id}/versions", response_model=list)
+async def get_form_versions(
+    form_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all versions of a form (admin only)"""
+    try:
+        # Verify form exists
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        response = supabase.table("form_versions").select("*").eq("form_id", form_id).order("version_number", desc=True).execute()
+        
+        return response.data or []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{form_id}/versions/{version_id}/restore", response_model=dict)
+async def restore_form_version(
+    form_id: str,
+    version_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Restore a form to a previous version (admin only)"""
+    try:
+        # Verify form exists
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Get version
+        version_response = supabase.table("form_versions").select("*").eq("id", version_id).eq("form_id", form_id).single().execute()
+        if not version_response.data:
+            raise HTTPException(status_code=404, detail="Version not found")
+        
+        version = version_response.data
+        form_data = version.get("form_data", {})
+        
+        # Update form with version data
+        update_data = {
+            "name": form_data.get("name"),
+            "description": form_data.get("description"),
+            "theme": form_data.get("theme", {}),
+            "settings": form_data.get("settings", {}),
+            "welcome_screen": form_data.get("welcome_screen"),
+            "thank_you_screen": form_data.get("thank_you_screen"),
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        supabase.table("forms").update(update_data).eq("id", form_id).execute()
+        
+        # Restore fields
+        fields_data = form_data.get("fields", [])
+        if fields_data:
+            # Delete existing fields
+            supabase.table("form_fields").delete().eq("form_id", form_id).execute()
+            
+            # Insert restored fields
+            for idx, field in enumerate(fields_data):
+                field_db_data = {
+                    "id": str(uuid.uuid4()),
+                    "form_id": form_id,
+                    "field_type": field.get("field_type"),
+                    "label": field.get("label", ""),
+                    "description": field.get("description"),
+                    "placeholder": field.get("placeholder"),
+                    "required": field.get("required", False),
+                    "validation_rules": field.get("validation_rules", {}),
+                    "options": field.get("options", []),
+                    "order_index": idx,
+                    "conditional_logic": field.get("conditional_logic", {}),
+                    "created_at": datetime.now().isoformat(),
+                }
+                supabase.table("form_fields").insert(field_db_data).execute()
+        
+        return {"success": True, "message": f"Form restored to version {version.get('version_number')}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/{form_id}/submissions/{submission_id}/review-status", response_model=FormSubmission)
+async def update_submission_review_status(
+    form_id: str, 
+    submission_id: str, 
+    review_status: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update the review status of a submission (admin only)"""
+    try:
+        # Verify form exists
+        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Verify submission exists
+        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        if not submission_check.data:
+            raise HTTPException(status_code=404, detail="Submission not found")
+        
+        # Validate review_status
+        new_status = review_status.get("review_status")
+        if new_status not in ["new", "reviewed", "archived"]:
+            raise HTTPException(status_code=400, detail="Invalid review_status. Must be 'new', 'reviewed', or 'archived'")
+        
+        # Update submission
+        response = supabase.table("form_submissions").update({"review_status": new_status}).eq("id", submission_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to update submission")
+        
+        # Fetch complete submission with answers
+        full_response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).single().execute()
+        
+        if not full_response.data:
+            raise HTTPException(status_code=500, detail="Failed to fetch updated submission")
+        
+        submission = full_response.data
+        
+        # Map form_submission_answers to answers for Pydantic model
+        answers = submission.get("form_submission_answers", [])
+        submission["answers"] = answers
+        if "form_submission_answers" in submission:
+            del submission["form_submission_answers"]
+        
+        return submission
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/{form_id}/submit", response_model=FormSubmission)
-async def submit_form(form_id: str, submission: FormSubmissionCreate):
+async def submit_form(form_id: str, submission: FormSubmissionCreate, request: Request):
     """Submit a form response"""
     try:
+        from datetime import datetime
+        import requests as http_requests
+        
         # Check if form exists and is published
-        form_response = supabase.table("forms").select("id, status").eq("id", form_id).single().execute()
+        form_response = supabase.table("forms").select("id, status, settings").eq("id", form_id).single().execute()
         
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        if form_response.data.get("status") != "published":
+        form = form_response.data
+        
+        if form.get("status") != "published":
             raise HTTPException(status_code=400, detail="Form is not published")
+        
+        # Check expiration date
+        settings = form.get("settings") or {}
+        if settings.get("expiration_date"):
+            try:
+                expiration_date = datetime.fromisoformat(settings["expiration_date"].replace("Z", "+00:00"))
+                if datetime.utcnow() > expiration_date.replace(tzinfo=None):
+                    raise HTTPException(status_code=400, detail="This form has expired and is no longer accepting submissions")
+            except (ValueError, TypeError):
+                pass  # Invalid date format, ignore
+        
+        # Check response limits
+        if settings.get("max_submissions"):
+            try:
+                max_submissions = int(settings["max_submissions"])
+                # Count completed submissions
+                count_response = supabase.table("form_submissions").select("id", count="exact").eq("form_id", form_id).eq("status", "completed").execute()
+                current_count = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
+                
+                if current_count >= max_submissions:
+                    raise HTTPException(status_code=400, detail=f"This form has reached its maximum submission limit of {max_submissions}")
+            except (ValueError, TypeError):
+                pass  # Invalid max_submissions value, ignore
+        
+        # Verify CAPTCHA if enabled
+        if settings.get("captcha_enabled"):
+            captcha_secret = os.getenv("RECAPTCHA_SECRET_KEY")
+            if not captcha_secret:
+                logger.warning("CAPTCHA enabled but RECAPTCHA_SECRET_KEY not configured")
+            else:
+                # Get CAPTCHA token from submission
+                captcha_token = None
+                if hasattr(submission, 'captcha_token'):
+                    captcha_token = submission.captcha_token
+                elif isinstance(submission, dict):
+                    captcha_token = submission.get("captcha_token")
+                
+                if not captcha_token:
+                    raise HTTPException(status_code=400, detail="CAPTCHA verification required")
+                
+                # Verify with Google
+                verify_url = "https://www.google.com/recaptcha/api/siteverify"
+                verify_data = {
+                    "secret": captcha_secret,
+                    "response": captcha_token,
+                    "remoteip": request.client.host if request.client else None,
+                }
+                
+                try:
+                    verify_response = http_requests.post(verify_url, data=verify_data, timeout=5)
+                    verify_result = verify_response.json()
+                    
+                    if not verify_result.get("success", False):
+                        raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Please try again.")
+                except Exception as e:
+                    logger.error(f"CAPTCHA verification error: {str(e)}")
+                    raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Please try again.")
+        
+        # Rate limiting: Check IP-based submission limits
+        client_ip = request.client.host if request.client else None
+        if client_ip:
+            # Check submissions from this IP in the last hour
+            one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+            recent_submissions = supabase.table("form_submissions").select("id").eq("form_id", form_id).eq("ip_address", client_ip).gte("submitted_at", one_hour_ago).execute()
+            submission_count = len(recent_submissions.data or [])
+            
+            # Default limit: 10 submissions per hour per IP
+            rate_limit = settings.get("rate_limit_per_hour", 10)
+            if submission_count >= rate_limit:
+                raise HTTPException(status_code=429, detail=f"Too many submissions. Please try again later. (Limit: {rate_limit} per hour)")
         
         # Create submission
         submission_id = str(uuid.uuid4())
@@ -565,6 +1976,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate):
             "started_at": submission.started_at.isoformat() if hasattr(submission.started_at, 'isoformat') else (submission.started_at if isinstance(submission.started_at, str) else now),
             "time_spent_seconds": submission.time_spent_seconds,
             "status": submission.status,
+            "review_status": "new",  # Default to 'new' for new submissions
             "submitted_at": now,
         }
         
@@ -615,6 +2027,17 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate):
                 form_name = form_detail_response.data.get("name", "Form")
         except Exception as e:
             print(f"Warning: Could not fetch form name for notification: {str(e)}")
+        
+        # Trigger webhooks (async, don't block submission)
+        try:
+            webhook_service.trigger_submission_webhooks(
+                form_id=form_id,
+                submission=submission,
+                event_type="submission.created"
+            )
+        except Exception as e:
+            logger.error(f"Error triggering webhooks: {str(e)}")
+            # Don't fail submission if webhook fails
         
         # Send email notifications to all admins
         admin_emails = get_admin_emails()

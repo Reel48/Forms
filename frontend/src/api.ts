@@ -272,6 +272,7 @@ export interface FormSubmission {
   submitted_at: string;
   time_spent_seconds?: number;
   status: string; // completed, abandoned
+  review_status?: string; // new, reviewed, archived
   answers: FormSubmissionAnswer[];
 }
 
@@ -371,6 +372,32 @@ export const formsAPI = {
   create: (form: FormCreate) => api.post<Form>('/api/forms', form),
   update: (id: string, form: Partial<FormUpdate>) => api.put<Form>(`/api/forms/${id}`, form),
   delete: (id: string) => api.delete(`/api/forms/${id}`),
+  duplicate: async (id: string) => {
+    // Get the original form
+    const original = await formsAPI.getById(id);
+    const form = original.data;
+    
+    // Create a new form with duplicated data
+    const duplicatedForm: FormCreate = {
+      name: `${form.name} (Copy)`,
+      description: form.description || '',
+      status: 'draft', // Always duplicate as draft
+      fields: (form.fields || []).map((field: any) => ({
+        field_type: field.field_type,
+        label: field.label,
+        description: field.description,
+        placeholder: field.placeholder,
+        required: field.required,
+        validation_rules: field.validation_rules || {},
+        options: field.options || [],
+        order_index: field.order_index,
+        conditional_logic: field.conditional_logic || {},
+      })),
+      theme: form.theme || {},
+    };
+    
+    return formsAPI.create(duplicatedForm);
+  },
   // Field management
   createField: (formId: string, field: FormField) => api.post<FormField>(`/api/forms/${formId}/fields`, field),
   updateField: (formId: string, fieldId: string, field: Partial<FormField>) => api.put<FormField>(`/api/forms/${formId}/fields/${fieldId}`, field),
@@ -380,6 +407,44 @@ export const formsAPI = {
   submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
   getSubmissions: (formId: string) => api.get<FormSubmission[]>(`/api/forms/${formId}/submissions`),
   getSubmission: (formId: string, submissionId: string) => api.get<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}`),
+  updateSubmissionReviewStatus: (formId: string, submissionId: string, reviewStatus: string) => 
+    api.patch<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}/review-status`, { review_status: reviewStatus }),
+  // Short URLs
+  createShortUrl: (formId: string) => api.post<{short_code: string; short_url: string; full_url: string}>(`/api/forms/${formId}/short-url`, {}),
+  getShortUrls: (formId: string) => api.get<Array<{id: string; short_code: string; click_count: number; created_at: string}>>(`/api/forms/${formId}/short-urls`),
+  // Submission Notes
+  getSubmissionNotes: (formId: string, submissionId: string) => api.get<Array<{id: string; note_text: string; user_id?: string; created_at: string; updated_at: string}>>(`/api/forms/${formId}/submissions/${submissionId}/notes`),
+  createSubmissionNote: (formId: string, submissionId: string, noteText: string) => api.post<{id: string; note_text: string; user_id?: string; created_at: string; updated_at: string}>(`/api/forms/${formId}/submissions/${submissionId}/notes`, { note_text: noteText }),
+  updateSubmissionNote: (formId: string, submissionId: string, noteId: string, noteText: string) => api.put<{id: string; note_text: string; user_id?: string; created_at: string; updated_at: string}>(`/api/forms/${formId}/submissions/${submissionId}/notes/${noteId}`, { note_text: noteText }),
+  deleteSubmissionNote: (formId: string, submissionId: string, noteId: string) => api.delete(`/api/forms/${formId}/submissions/${submissionId}/notes/${noteId}`),
+  // Webhooks
+  getWebhooks: (formId: string) => api.get<Array<{id: string; url: string; events: string[]; is_active: boolean; created_at: string}>>(`/api/forms/${formId}/webhooks`),
+  createWebhook: (formId: string, webhook: {url: string; secret?: string; events: string[]; is_active?: boolean}) => api.post<{id: string; url: string; events: string[]; is_active: boolean}>(`/api/forms/${formId}/webhooks`, webhook),
+  updateWebhook: (formId: string, webhookId: string, webhook: {url?: string; secret?: string; events?: string[]; is_active?: boolean}) => api.put<{id: string; url: string; events: string[]; is_active: boolean}>(`/api/forms/${formId}/webhooks/${webhookId}`, webhook),
+  deleteWebhook: (formId: string, webhookId: string) => api.delete(`/api/forms/${formId}/webhooks/${webhookId}`),
+  getWebhookDeliveries: (formId: string, webhookId: string, limit?: number) => api.get<Array<{id: string; event_type: string; response_status?: number; error_message?: string; delivered_at?: string; created_at: string}>>(`/api/forms/${formId}/webhooks/${webhookId}/deliveries${limit ? `?limit=${limit}` : ''}`),
+  // Email Templates
+  getEmailTemplates: (templateType?: string) => api.get<Array<{id: string; name: string; template_type: string; subject: string; html_body: string; text_body?: string; is_default: boolean; created_at: string}>>(`/api/forms/email-templates${templateType ? `?template_type=${templateType}` : ''}`),
+  getEmailTemplate: (templateId: string) => api.get<{id: string; name: string; template_type: string; subject: string; html_body: string; text_body?: string; is_default: boolean; variables: Record<string, string>}>(`/api/forms/email-templates/${templateId}`),
+  createEmailTemplate: (template: {name: string; template_type: string; subject: string; html_body: string; text_body?: string; is_default?: boolean; variables?: Record<string, string>}) => api.post<{id: string}>(`/api/forms/email-templates`, template),
+  updateEmailTemplate: (templateId: string, template: {name?: string; subject?: string; html_body?: string; text_body?: string; is_default?: boolean; variables?: Record<string, string>}) => api.put<{id: string}>(`/api/forms/email-templates/${templateId}`, template),
+  deleteEmailTemplate: (templateId: string) => api.delete(`/api/forms/email-templates/${templateId}`),
+  getTemplateVariables: (templateType: string) => api.get<{template_type: string; variables: Record<string, string>}>(`/api/forms/email-templates/types/${templateType}/variables`),
+  // Submission Tags
+  getSubmissionTags: (formId: string, submissionId: string) => api.get<Array<{id: string; tag_name: string; color: string; created_at: string}>>(`/api/forms/${formId}/submissions/${submissionId}/tags`),
+  addSubmissionTag: (formId: string, submissionId: string, tag: {tag_name: string; color?: string}) => api.post<{id: string; tag_name: string; color: string}>(`/api/forms/${formId}/submissions/${submissionId}/tags`, tag),
+  deleteSubmissionTag: (formId: string, submissionId: string, tagId: string) => api.delete(`/api/forms/${formId}/submissions/${submissionId}/tags/${tagId}`),
+  getAllSubmissionTags: (formId: string) => api.get<Array<{tag_name: string; color: string}>>(`/api/forms/${formId}/submissions/tags/all`),
+  // Password Protection
+  verifyFormPassword: (slug: string, password: string) => api.post<{success: boolean; message: string}>(`/api/forms/public/${slug}/verify-password`, { password }),
+  // Field Library
+  getFieldLibrary: (fieldType?: string) => api.get<Array<{id: string; name: string; field_type: string; label: string; description?: string; placeholder?: string; required: boolean; validation_rules: Record<string, any>; options: Array<any>}>>(`/api/forms/field-library${fieldType ? `?field_type=${fieldType}` : ''}`),
+  saveFieldToLibrary: (field: {name: string; field_type: string; label: string; description?: string; placeholder?: string; required?: boolean; validation_rules?: Record<string, any>; options?: Array<any>; conditional_logic?: Record<string, any>}) => api.post<{id: string}>(`/api/forms/field-library`, field),
+  deleteFieldFromLibrary: (fieldId: string) => api.delete(`/api/forms/field-library/${fieldId}`),
+  // Form Versioning
+  getFormVersions: (formId: string) => api.get<Array<{id: string; version_number: number; notes?: string; created_at: string}>>(`/api/forms/${formId}/versions`),
+  createFormVersion: (formId: string, notes?: string) => api.post<{id: string; version_number: number}>(`/api/forms/${formId}/versions`, { notes: notes || '' }),
+  restoreFormVersion: (formId: string, versionId: string) => api.post<{success: boolean; message: string}>(`/api/forms/${formId}/versions/${versionId}/restore`, {}),
   // File upload
   uploadFile: (formId: string, file: File) => {
     const formData = new FormData();

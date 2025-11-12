@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
 
 function PublicFormView() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState<Form | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,19 @@ function PublicFormView() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [visibleFields, setVisibleFields] = useState<FormField[]>([]);
+  
+  // Multi-page support: group fields by sections into pages
+  const [pages, setPages] = useState<Array<{section?: FormField; fields: FormField[]}>>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  
+  // Password protection
+  const [passwordEntered, setPasswordEntered] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  
+  // CAPTCHA
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HTMLDivElement>(null);
   
   // Touch gesture support for mobile
   const touchStartX = useRef<number | null>(null);
@@ -94,6 +108,110 @@ function PublicFormView() {
         
         // Set form and loading together - React will batch these
         setForm(formData);
+        
+        // Check if form has password protection
+        const passwordRequired = formData?.settings?.password_required;
+        if (passwordRequired) {
+          // Check if password is already verified in sessionStorage
+          const isVerified = sessionStorage.getItem(`form_password_verified_${formData.id}`);
+          if (isVerified === 'true') {
+            setPasswordEntered(true);
+          } else {
+            setPasswordEntered(false);
+            setLoading(false);
+            return;
+          }
+        } else {
+          setPasswordEntered(true);
+        }
+        
+        // Load CAPTCHA if enabled
+        if (formData?.settings?.captcha_enabled && formData?.settings?.captcha_site_key) {
+          // CAPTCHA will be loaded when form is ready
+          const loadCaptcha = () => {
+            if (typeof window !== 'undefined' && (window as any).grecaptcha && captchaRef.current) {
+              try {
+                (window as any).grecaptcha.render(captchaRef.current, {
+                  sitekey: formData.settings.captcha_site_key,
+                  callback: (token: string) => {
+                    setCaptchaToken(token);
+                  },
+                  'expired-callback': () => {
+                    setCaptchaToken(null);
+                  },
+                });
+              } catch (e) {
+                console.error('Failed to render CAPTCHA:', e);
+              }
+            }
+          };
+          
+          // Try to load immediately, or wait for grecaptcha to be available
+          if ((window as any).grecaptcha) {
+            setTimeout(loadCaptcha, 100);
+          } else {
+            const checkInterval = setInterval(() => {
+              if ((window as any).grecaptcha) {
+                clearInterval(checkInterval);
+                loadCaptcha();
+              }
+            }, 100);
+            setTimeout(() => clearInterval(checkInterval), 10000); // Give up after 10 seconds
+          }
+        }
+        
+        // Pre-fill from URL parameters first (takes precedence over saved progress)
+        const urlPrefilledValues: Record<string, any> = {};
+        if (formData?.fields) {
+          formData.fields.forEach((field: FormField) => {
+            const paramValue = searchParams.get(field.id || '');
+            if (paramValue !== null) {
+              // Handle different field types
+              if (['checkbox', 'multiple_choice'].includes(field.field_type)) {
+                // For checkboxes, support comma-separated values
+                urlPrefilledValues[field.id!] = paramValue.split(',').map(v => v.trim()).filter(v => v);
+              } else if (field.field_type === 'yes_no') {
+                urlPrefilledValues[field.id!] = paramValue.toLowerCase() === 'true' || paramValue.toLowerCase() === 'yes' || paramValue === '1';
+              } else if (field.field_type === 'number') {
+                const numValue = parseFloat(paramValue);
+                if (!isNaN(numValue)) {
+                  urlPrefilledValues[field.id!] = numValue;
+                }
+              } else {
+                urlPrefilledValues[field.id!] = paramValue;
+              }
+            }
+          });
+        }
+
+        // Try to restore saved progress (only if no URL params were used)
+        const hasUrlParams = Object.keys(urlPrefilledValues).length > 0;
+        if (!hasUrlParams && formData?.id) {
+          const storageKey = `form_progress_${formData.id}`;
+          try {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              // Only restore if saved within last 30 days
+              const daysSinceSave = (Date.now() - parsed.timestamp) / (1000 * 60 * 60 * 24);
+              if (daysSinceSave < 30) {
+                setFormValues(parsed.formValues || {});
+                if (parsed.currentQuestionIndex !== undefined) {
+                  setCurrentQuestionIndex(parsed.currentQuestionIndex);
+                }
+              } else {
+                // Clear old saved progress
+                localStorage.removeItem(storageKey);
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to restore progress from localStorage:', e);
+          }
+        } else if (hasUrlParams) {
+          // Use URL pre-filled values
+          setFormValues(urlPrefilledValues);
+        }
+        
         setLoading(false);
       } catch (error: any) {
         if (!isMounted) {
@@ -142,9 +260,25 @@ function PublicFormView() {
     };
   }, [submitted]);
 
-  const handleFieldChange = (fieldId: string, value: any) => {
-    setFormValues((prev) => ({ ...prev, [fieldId]: value }));
-  };
+  const handleFieldChange = useCallback((fieldId: string, value: any) => {
+    setFormValues((prev) => {
+      const updated = { ...prev, [fieldId]: value };
+      // Save progress to localStorage
+      if (form?.id) {
+        const storageKey = `form_progress_${form.id}`;
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({
+            formValues: updated,
+            currentQuestionIndex,
+            timestamp: Date.now(),
+          }));
+        } catch (e) {
+          console.warn('Failed to save progress to localStorage:', e);
+        }
+      }
+      return updated;
+    });
+  }, [form?.id, currentQuestionIndex, validateField]);
 
   const evaluateConditionalLogic = (field: FormField): boolean => {
     if (!field.conditional_logic || !field.conditional_logic.enabled) {
@@ -178,48 +312,143 @@ function PublicFormView() {
     }
   };
 
-  // Calculate visible fields based on conditional logic
+  // Calculate visible fields and group into pages based on sections
   useEffect(() => {
     if (!form || !form.fields) {
       setVisibleFields([]);
+      setPages([]);
       return;
     }
 
     const visible: FormField[] = [];
+    const visibleSections: FormField[] = [];
+    
+    // First pass: collect all visible fields and sections
     for (const field of form.fields) {
       if (evaluateConditionalLogic(field)) {
-        visible.push(field);
+        if (field.field_type === 'section') {
+          visibleSections.push(field);
+        } else {
+          visible.push(field);
+        }
       }
     }
+    
     setVisibleFields(visible);
     
-    // Reset to first question when visible fields change
+    // Group fields into pages based on sections
+    const pagesData: Array<{section?: FormField; fields: FormField[]}> = [];
+    let currentPageFields: FormField[] = [];
+    let currentSection: FormField | undefined;
+    let fieldIndex = 0;
+    
+    for (const field of form.fields) {
+      if (!evaluateConditionalLogic(field)) continue;
+      
+      if (field.field_type === 'section') {
+        // Save current page if it has fields
+        if (currentPageFields.length > 0) {
+          pagesData.push({ section: currentSection, fields: currentPageFields });
+        }
+        // Start new page
+        currentSection = field;
+        currentPageFields = [];
+      } else {
+        // Add field to current page
+        currentPageFields.push(field);
+      }
+    }
+    
+    // Add final page
+    if (currentPageFields.length > 0) {
+      pagesData.push({ section: currentSection, fields: currentPageFields });
+    }
+    
+    // If no sections, create a single page with all fields
+    if (pagesData.length === 0 && visible.length > 0) {
+      pagesData.push({ fields: visible });
+    }
+    
+    setPages(pagesData);
+    
+    // Reset to first question/page when visible fields change
     if (visible.length > 0 && currentQuestionIndex >= visible.length) {
       setCurrentQuestionIndex(0);
+      setCurrentPageIndex(0);
     }
-  }, [form, formValues, currentQuestionIndex]);
+  }, [form, formValues]);
+  
+  // Update current page index based on current question
+  useEffect(() => {
+    if (pages.length === 0 || visibleFields.length === 0) return;
+    
+    // Find which page the current question belongs to
+    let fieldCount = 0;
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      if (currentQuestionIndex >= fieldCount && currentQuestionIndex < fieldCount + page.fields.length) {
+        if (currentPageIndex !== i) {
+          setCurrentPageIndex(i);
+        }
+        break;
+      }
+      fieldCount += page.fields.length;
+    }
+  }, [currentQuestionIndex, pages, visibleFields.length]);
 
   const handleNext = useCallback(() => {
     setCurrentQuestionIndex(prev => {
       if (prev < visibleFields.length - 1) {
         setDirection('forward');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        return prev + 1;
+        const newIndex = prev + 1;
+        // Save current question index
+        if (form?.id) {
+          const storageKey = `form_progress_${form.id}`;
+          try {
+            const existing = localStorage.getItem(storageKey);
+            const parsed = existing ? JSON.parse(existing) : { formValues: {} };
+            localStorage.setItem(storageKey, JSON.stringify({
+              ...parsed,
+              currentQuestionIndex: newIndex,
+              timestamp: Date.now(),
+            }));
+          } catch (e) {
+            console.warn('Failed to save progress:', e);
+          }
+        }
+        return newIndex;
       }
       return prev;
     });
-  }, [visibleFields.length]);
+  }, [visibleFields.length, form?.id]);
 
   const handlePrevious = useCallback(() => {
     setCurrentQuestionIndex(prev => {
       if (prev > 0) {
         setDirection('backward');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        return prev - 1;
+        const newIndex = prev - 1;
+        // Save current question index
+        if (form?.id) {
+          const storageKey = `form_progress_${form.id}`;
+          try {
+            const existing = localStorage.getItem(storageKey);
+            const parsed = existing ? JSON.parse(existing) : { formValues: {} };
+            localStorage.setItem(storageKey, JSON.stringify({
+              ...parsed,
+              currentQuestionIndex: newIndex,
+              timestamp: Date.now(),
+            }));
+          } catch (e) {
+            console.warn('Failed to save progress:', e);
+          }
+        }
+        return newIndex;
       }
       return prev;
     });
-  }, []);
+  }, [form?.id]);
 
   const handleSubmit = useCallback(async () => {
     if (!form) return;
@@ -231,8 +460,16 @@ function PublicFormView() {
       // Calculate time spent
       const timeSpent = Math.floor((Date.now() - startTime) / 1000);
 
+      // Check if CAPTCHA is required
+      const captchaEnabled = form.settings?.captcha_enabled;
+      if (captchaEnabled && !captchaToken) {
+        setError('Please complete the CAPTCHA verification');
+        setSubmitting(false);
+        return;
+      }
+
       // Prepare submission data
-      const submissionData = {
+      const submissionData: any = {
         form_id: form.id,
         started_at: new Date(startTime).toISOString(),
         time_spent_seconds: timeSpent,
@@ -250,9 +487,24 @@ function PublicFormView() {
           };
         }).filter(answer => answer && answer.field_id) || [],
       };
+      
+      // Add CAPTCHA token if enabled
+      if (captchaEnabled && captchaToken) {
+        submissionData.captcha_token = captchaToken;
+      }
 
       // Submit form
       await formsAPI.submitForm(form.id, submissionData);
+      
+      // Clear saved progress after successful submission
+      if (form.id) {
+        const storageKey = `form_progress_${form.id}`;
+        try {
+          localStorage.removeItem(storageKey);
+        } catch (e) {
+          console.warn('Failed to clear saved progress:', e);
+        }
+      }
       
       setSubmitted(true);
     } catch (error: any) {
@@ -443,6 +695,7 @@ function PublicFormView() {
   const renderField = (field: FormField, index: number) => {
     const fieldId = (field.id && field.id.trim()) ? field.id : `field-${index}`;
     const value = formValues[fieldId] || '';
+    const error = fieldErrors[fieldId];
 
     // Check conditional logic
     if (!evaluateConditionalLogic(field)) {
@@ -475,7 +728,20 @@ function PublicFormView() {
               placeholder={field.placeholder}
               required={field.required}
               autoComplete="off"
+              minLength={field.validation_rules?.minLength}
+              maxLength={field.validation_rules?.maxLength}
+              pattern={field.validation_rules?.pattern}
+              style={{ borderColor: error ? '#ef4444' : undefined }}
+              aria-required={field.required}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${fieldId}-error` : field.description ? `${fieldId}-description` : undefined}
             />
+            {field.description && (
+              <p id={`${fieldId}-description`} className="sr-only">{field.description}</p>
+            )}
+            {error && (
+              <p id={`${fieldId}-error`} role="alert" style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+            )}
           </div>
         );
 
@@ -501,7 +767,13 @@ function PublicFormView() {
               required={field.required}
               rows={4}
               autoComplete="off"
+              minLength={field.validation_rules?.minLength}
+              maxLength={field.validation_rules?.maxLength}
+              style={{ borderColor: error ? '#ef4444' : undefined }}
             />
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+            )}
           </div>
         );
 
@@ -527,7 +799,14 @@ function PublicFormView() {
               placeholder={field.placeholder}
               required={field.required}
               autoComplete="email"
+              minLength={field.validation_rules?.minLength}
+              maxLength={field.validation_rules?.maxLength}
+              pattern={field.validation_rules?.pattern}
+              style={{ borderColor: error ? '#ef4444' : undefined }}
             />
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+            )}
           </div>
         );
 
@@ -553,7 +832,13 @@ function PublicFormView() {
               placeholder={field.placeholder}
               required={field.required}
               autoComplete="off"
+              min={field.validation_rules?.min}
+              max={field.validation_rules?.max}
+              style={{ borderColor: error ? '#ef4444' : undefined }}
             />
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+            )}
           </div>
         );
 
@@ -579,7 +864,14 @@ function PublicFormView() {
               placeholder={field.placeholder}
               required={field.required}
               autoComplete="tel"
+              minLength={field.validation_rules?.minLength}
+              maxLength={field.validation_rules?.maxLength}
+              pattern={field.validation_rules?.pattern}
+              style={{ borderColor: error ? '#ef4444' : undefined }}
             />
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+            )}
           </div>
         );
 
@@ -605,7 +897,14 @@ function PublicFormView() {
               placeholder={field.placeholder || 'https://example.com'}
               required={field.required}
               autoComplete="url"
+              minLength={field.validation_rules?.minLength}
+              maxLength={field.validation_rules?.maxLength}
+              pattern={field.validation_rules?.pattern}
+              style={{ borderColor: error ? '#ef4444' : undefined }}
             />
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+            )}
           </div>
         );
 
@@ -1634,6 +1933,20 @@ function PublicFormView() {
   const currentField = visibleFields[currentQuestionIndex];
   const progress = visibleFields.length > 0 ? ((currentQuestionIndex + 1) / visibleFields.length) * 100 : 0;
   const isLastQuestion = currentQuestionIndex === visibleFields.length - 1;
+  
+  // Multi-page: Get current page info
+  const currentPage = pages[currentPageIndex];
+  const isLastPage = currentPageIndex === pages.length - 1;
+  const isFirstPage = currentPageIndex === 0;
+  const pageProgress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
+  
+  // Check if we're at the last question of current page
+  let fieldCount = 0;
+  for (let i = 0; i < currentPageIndex; i++) {
+    fieldCount += pages[i].fields.length;
+  }
+  const isLastQuestionInPage = currentQuestionIndex === fieldCount + (currentPage?.fields.length || 0) - 1;
+  const isFirstQuestionInPage = currentQuestionIndex === fieldCount;
 
   // Apply theme
   const theme = form?.theme || {};
@@ -1653,6 +1966,87 @@ function PublicFormView() {
     containerStyle.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
   } else {
     containerStyle.background = backgroundColor;
+  }
+
+  // Password protection check
+  const passwordRequired = form?.settings?.password_required;
+  if (passwordRequired && !passwordEntered) {
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!slug || !passwordInput.trim()) return;
+      
+      setPasswordError(null);
+      try {
+        const response = await formsAPI.verifyFormPassword(slug, passwordInput);
+        if (response.data.success) {
+          // Store verification in sessionStorage for this session
+          if (form?.id) {
+            sessionStorage.setItem(`form_password_verified_${form.id}`, 'true');
+          }
+          setPasswordEntered(true);
+          setPasswordError(null);
+        }
+      } catch (error: any) {
+        setPasswordError(error?.response?.data?.detail || 'Incorrect password. Please try again.');
+        setPasswordInput('');
+      }
+    };
+
+    return (
+      <div className="typeform-container" style={containerStyle}>
+        <div className="typeform-content">
+          <div style={{ maxWidth: '400px', margin: '0 auto', padding: '2rem' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'white' }}>
+              {form?.name || 'Protected Form'}
+            </h2>
+            <p style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '2rem' }}>
+              This form is password protected. Please enter the password to continue.
+            </p>
+            <form onSubmit={handlePasswordSubmit}>
+              <div className="form-group">
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setPasswordError(null);
+                  }}
+                  placeholder="Enter password"
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    fontSize: '1rem',
+                    borderRadius: '8px',
+                    border: passwordError ? '2px solid #ef4444' : '2px solid rgba(255, 255, 255, 0.3)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
+                  }}
+                />
+                {passwordError && (
+                  <p style={{ color: '#fecaca', fontSize: '0.875rem', marginTop: '0.5rem', textAlign: 'center' }}>
+                    {passwordError}
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="typeform-btn typeform-btn-primary"
+                style={{
+                  width: '100%',
+                  marginTop: '1rem',
+                  background: backgroundType === 'gradient' 
+                    ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                    : primaryColor,
+                }}
+              >
+                Access Form
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!currentField && visibleFields.length === 0) {
@@ -1708,8 +2102,16 @@ function PublicFormView() {
               style={{ background: 'white' }}
             />
           </div>
-          <div className="typeform-progress-text">
-            {currentQuestionIndex + 1} of {visibleFields.length}
+          <div className="typeform-progress-text" aria-live="polite" aria-atomic="true">
+            {pages.length > 1 ? (
+              <>
+                Page {currentPageIndex + 1} of {pages.length} • Question {currentQuestionIndex + 1} of {visibleFields.length}
+              </>
+            ) : (
+              <>
+                {currentQuestionIndex + 1} of {visibleFields.length}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1717,76 +2119,167 @@ function PublicFormView() {
       {/* Question Container with Animation */}
       <div className="typeform-content">
         <AnimatePresence mode="wait">
-          {currentField && (
-            <motion.div
-              key={currentQuestionIndex}
-              initial={{ 
-                opacity: 0, 
-                x: direction === 'forward' ? 50 : -50,
-                scale: 0.95
-              }}
-              animate={{ 
-                opacity: 1, 
-                x: 0,
-                scale: 1
-              }}
-              exit={{ 
-                opacity: 0, 
-                x: direction === 'forward' ? -50 : 50,
-                scale: 0.95
-              }}
-              transition={{ 
-                duration: 0.3, 
-                ease: [0.4, 0, 0.2, 1]
-              }}
-              className="typeform-question"
-            >
-              {renderField(currentField, currentQuestionIndex)}
+          {currentField && (() => {
+            // Find the section that should be displayed before this question
+            const currentFieldIndex = form?.fields?.findIndex(f => f.id === currentField.id) ?? -1;
+            let currentSection: FormField | null = null;
+            if (form?.fields && currentFieldIndex >= 0) {
+              // Look backwards from current field to find the most recent section
+              for (let i = currentFieldIndex - 1; i >= 0; i--) {
+                const field = form.fields[i];
+                if (field.field_type === 'section' && evaluateConditionalLogic(field)) {
+                  currentSection = field;
+                  break;
+                }
+                // Stop if we hit a non-visible field
+                if (!evaluateConditionalLogic(field)) {
+                  break;
+                }
+              }
+            }
+
+            return (
+              <motion.div
+                key={currentQuestionIndex}
+                initial={{ 
+                  opacity: 0, 
+                  x: direction === 'forward' ? 50 : -50,
+                  scale: 0.95
+                }}
+                animate={{ 
+                  opacity: 1, 
+                  x: 0,
+                  scale: 1
+                }}
+                exit={{ 
+                  opacity: 0, 
+                  x: direction === 'forward' ? -50 : 50,
+                  scale: 0.95
+                }}
+                transition={{ 
+                  duration: 0.3, 
+                  ease: [0.4, 0, 0.2, 1]
+                }}
+                className="typeform-question"
+              >
+                {/* Display section divider if there's one before this question */}
+                {currentSection && (
+                  <div style={{
+                    marginBottom: '2rem',
+                    padding: '1.5rem',
+                    textAlign: 'center',
+                    border: '2px dashed rgba(255, 255, 255, 0.5)',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }}>
+                    <h2 style={{ 
+                      margin: 0, 
+                      marginBottom: currentSection.description ? '0.5rem' : 0,
+                      fontSize: '1.5rem',
+                      fontWeight: '600',
+                      color: 'white',
+                    }}>
+                      {currentSection.label}
+                    </h2>
+                    {currentSection.description && (
+                      <p style={{ 
+                        margin: 0, 
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '0.875rem',
+                      }}>
+                        {currentSection.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {renderField(currentField, currentQuestionIndex)}
               
               {/* Navigation Buttons */}
               <div className="typeform-navigation">
-                {currentQuestionIndex > 0 && (
+                {(currentQuestionIndex > 0 || (!isFirstPage && isFirstQuestionInPage)) && (
                   <button
                     type="button"
-                    onClick={handlePrevious}
+                    onClick={() => {
+                      if (isFirstQuestionInPage && !isFirstPage) {
+                        // Go to previous page
+                        setCurrentPageIndex(prev => Math.max(0, prev - 1));
+                        // Set to last question of previous page
+                        let prevFieldCount = 0;
+                        for (let i = 0; i < currentPageIndex - 1; i++) {
+                          prevFieldCount += pages[i].fields.length;
+                        }
+                        setCurrentQuestionIndex(prevFieldCount + pages[currentPageIndex - 1].fields.length - 1);
+                        setDirection('backward');
+                      } else {
+                        handlePrevious();
+                      }
+                    }}
                     className="typeform-btn typeform-btn-secondary"
+                    aria-label={isFirstQuestionInPage && !isFirstPage ? 'Go to previous page' : 'Go to previous question'}
                   >
-                    ← Previous
+                    ← {isFirstQuestionInPage && !isFirstPage ? 'Previous Page' : 'Previous'}
                   </button>
                 )}
                 <div style={{ flex: 1 }} />
                 {!isLastQuestion ? (
                   <button
                     type="button"
-                    onClick={handleNext}
+                    onClick={() => {
+                      if (isLastQuestionInPage && !isLastPage) {
+                        // Go to next page
+                        setCurrentPageIndex(prev => Math.min(pages.length - 1, prev + 1));
+                        // Set to first question of next page
+                        let nextFieldCount = 0;
+                        for (let i = 0; i <= currentPageIndex; i++) {
+                          nextFieldCount += pages[i].fields.length;
+                        }
+                        setCurrentQuestionIndex(nextFieldCount);
+                        setDirection('forward');
+                      } else {
+                        handleNext();
+                      }
+                    }}
                     className="typeform-btn typeform-btn-primary"
-                    disabled={currentField.required && !formValues[currentField.id || '']}
+                    disabled={currentField.required && !formValues[currentField.id || ''] || !!fieldErrors[currentField.id || '']}
                     style={{
                       background: backgroundType === 'gradient' 
                         ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
                         : primaryColor,
                     }}
+                    aria-label={isLastQuestionInPage && !isLastPage ? 'Go to next page' : 'Go to next question'}
                   >
-                    Next →
+                    {isLastQuestionInPage && !isLastPage ? 'Next Page →' : 'Next →'}
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="typeform-btn typeform-btn-primary"
-                    disabled={submitting || (currentField.required && !formValues[currentField.id || ''])}
-                    style={{
-                      background: backgroundType === 'gradient' 
-                        ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                        : primaryColor,
-                    }}
-                  >
-                    {submitting ? 'Submitting...' : (form.thank_you_screen?.submit_button_text || 'Submit')}
-                  </button>
+                  <>
+                    {/* CAPTCHA */}
+                    {form.settings?.captcha_enabled && form.settings?.captcha_site_key && (
+                      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                        <div ref={captchaRef}></div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="typeform-btn typeform-btn-primary"
+                      disabled={submitting || (currentField.required && !formValues[currentField.id || '']) || (form.settings?.captcha_enabled && !captchaToken) || !!fieldErrors[currentField.id || '']}
+                      style={{
+                        background: backgroundType === 'gradient' 
+                          ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                          : primaryColor,
+                      }}
+                    >
+                      {submitting ? 'Submitting...' : (form.thank_you_screen?.submit_button_text || 'Submit')}
+                    </button>
+                    <span className="sr-only" aria-live="polite" aria-atomic="true">
+                      {submitting ? 'Submitting form, please wait' : 'Ready to submit'}
+                    </span>
+                  </>
                 )}
-              </div>
-            </motion.div>
-          )}
+                </div>
+              </motion.div>
+            );
+          })()}
         </AnimatePresence>
 
         {/* Error Message */}
