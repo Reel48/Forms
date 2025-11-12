@@ -145,7 +145,7 @@ function CustomerDashboard() {
     try {
       await quotesAPI.accept(quoteId);
       await loadData();
-      alert('Quote accepted successfully!');
+      alert('Quote accepted successfully! An invoice has been created for payment.');
     } catch (error: any) {
       console.error('Failed to accept quote:', error);
       const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to accept quote. Please try again.';

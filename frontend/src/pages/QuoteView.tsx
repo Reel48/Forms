@@ -280,6 +280,12 @@ function QuoteView() {
       await quotesAPI.accept(id!);
       await loadQuote();
       await loadActivities();
+      // Show different message based on role
+      if (role === 'customer') {
+        alert('Quote accepted successfully! An invoice has been created for payment.');
+      } else {
+        alert('Quote accepted successfully!');
+      }
     } catch (error: any) {
       console.error('Failed to accept quote:', error);
       const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to accept quote. Please try again.';
@@ -732,7 +738,12 @@ function QuoteView() {
                       Accept Quote
                     </button>
                   </div>
-                  {quote.status === 'draft' && (
+                  {quote.status === 'draft' && role === 'customer' && (
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                      Accept this quote to proceed with payment.
+                    </p>
+                  )}
+                  {quote.status === 'draft' && role === 'admin' && (
                     <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
                       Accept this quote to create a Stripe invoice for payment collection.
                     </p>

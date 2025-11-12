@@ -422,6 +422,48 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
             description="Quote accepted"
         )
         
+        # If customer accepts, automatically create Stripe invoice
+        if current_user.get("role") == "customer" and not quote.get("stripe_invoice_id"):
+            try:
+                client = quote.get("clients")
+                if client:
+                    # Get or create Stripe customer
+                    customer_id = StripeService.create_or_get_customer(
+                        client,
+                        client.get("stripe_customer_id")
+                    )
+                    
+                    # Update client with Stripe customer ID if not set
+                    if not client.get("stripe_customer_id"):
+                        supabase.table("clients").update({
+                            "stripe_customer_id": customer_id
+                        }).eq("id", client["id"]).execute()
+                    
+                    # Get line items
+                    line_items = quote.get("line_items", [])
+                    if line_items:
+                        # Create invoice
+                        invoice_data = StripeService.create_invoice_from_quote(
+                            quote,
+                            line_items,
+                            customer_id,
+                            quote.get("quote_number")
+                        )
+                        
+                        # Update quote with invoice information
+                        supabase.table("quotes").update({
+                            "stripe_invoice_id": invoice_data["invoice_id"],
+                            "updated_at": datetime.now().isoformat()
+                        }).eq("id", quote_id).execute()
+                        
+                        # Refresh quote data to include invoice
+                        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+                        quote = response.data[0]
+            except Exception as e:
+                # Log error but don't fail the acceptance
+                print(f"Warning: Failed to automatically create invoice for customer acceptance: {str(e)}")
+                # Continue with acceptance even if invoice creation fails
+        
         # Get customer information for email notification
         customer_name = None
         customer_email = None
