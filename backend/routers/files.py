@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends, UploadFile, File, Request
+from fastapi import APIRouter, HTTPException, Query, Depends, UploadFile, File as FastAPIFile, Request
 from fastapi.responses import Response, StreamingResponse
 from typing import List, Optional
 import sys
@@ -43,13 +43,24 @@ async def list_files(
         
         # If not admin, filter by folder assignments
         if not is_admin:
-            # Get folders user has access to
-            folder_assignments = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
-            accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
+            # Get folders user has access to (if folder_assignments table exists)
+            accessible_folder_ids = []
+            try:
+                folder_assignments = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
+                accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
+            except Exception:
+                # folder_assignments table doesn't exist yet, skip folder filtering
+                pass
             
             # Also get files through many-to-many assignments
-            file_assignments = supabase.table("file_folder_assignments").select("file_id").in_("folder_id", accessible_folder_ids).execute()
-            accessible_file_ids = [fa["file_id"] for fa in file_assignments.data] if file_assignments.data else []
+            accessible_file_ids = []
+            if accessible_folder_ids:
+                try:
+                    file_assignments = supabase.table("file_folder_assignments").select("file_id").in_("folder_id", accessible_folder_ids).execute()
+                    accessible_file_ids = [fa["file_id"] for fa in file_assignments.data] if file_assignments.data else []
+                except Exception:
+                    # file_folder_assignments might not have data yet
+                    pass
             
             # Filter: files in accessible folders OR files user uploaded OR files in accessible folders via assignments
             if accessible_folder_ids or accessible_file_ids:
@@ -90,17 +101,25 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
                 # Check if file is in accessible folder
                 folder_id = file_data.get("folder_id")
                 if folder_id:
-                    folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
-                    if not folder_assignment.data:
-                        # Check many-to-many assignments
-                        file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
-                        if file_assignment.data:
-                            accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
-                            user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
-                            if not user_folders.data:
+                    try:
+                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        if not folder_assignment.data:
+                            # Check many-to-many assignments
+                            try:
+                                file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
+                                if file_assignment.data:
+                                    accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
+                                    user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
+                                    if not user_folders.data:
+                                        raise HTTPException(status_code=403, detail="Access denied")
+                                else:
+                                    raise HTTPException(status_code=403, detail="Access denied")
+                            except Exception:
+                                # Tables might not exist yet, deny access if user didn't upload
                                 raise HTTPException(status_code=403, detail="Access denied")
-                        else:
-                            raise HTTPException(status_code=403, detail="Access denied")
+                    except Exception:
+                        # folder_assignments table doesn't exist yet, deny access if user didn't upload
+                        raise HTTPException(status_code=403, detail="Access denied")
         
         return file_data
     except HTTPException:
@@ -111,7 +130,7 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
 
 @router.post("/upload", response_model=File)
 async def upload_file(
-    file: UploadFile = File(...),
+    file: UploadFile = FastAPIFile(...),
     folder_id: Optional[str] = None,
     quote_id: Optional[str] = None,
     form_id: Optional[str] = None,
@@ -296,16 +315,22 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
             if file_data.get("uploaded_by") != user["id"]:
                 folder_id = file_data.get("folder_id")
                 if folder_id:
-                    folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
-                    if not folder_assignment.data:
-                        file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
-                        if file_assignment.data:
-                            accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
-                            user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
-                            if not user_folders.data:
+                    try:
+                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        if not folder_assignment.data:
+                            try:
+                                file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
+                                if file_assignment.data:
+                                    accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
+                                    user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
+                                    if not user_folders.data:
+                                        raise HTTPException(status_code=403, detail="Access denied")
+                                else:
+                                    raise HTTPException(status_code=403, detail="Access denied")
+                            except Exception:
                                 raise HTTPException(status_code=403, detail="Access denied")
-                        else:
-                            raise HTTPException(status_code=403, detail="Access denied")
+                    except Exception:
+                        raise HTTPException(status_code=403, detail="Access denied")
         
         # Get signed URL (expires in 1 hour)
         storage_path = file_data.get("storage_path")
@@ -355,16 +380,22 @@ async def get_file_preview(file_id: str, user = Depends(get_current_user)):
             if file_data.get("uploaded_by") != user["id"]:
                 folder_id = file_data.get("folder_id")
                 if folder_id:
-                    folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
-                    if not folder_assignment.data:
-                        file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
-                        if file_assignment.data:
-                            accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
-                            user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
-                            if not user_folders.data:
+                    try:
+                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        if not folder_assignment.data:
+                            try:
+                                file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
+                                if file_assignment.data:
+                                    accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
+                                    user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
+                                    if not user_folders.data:
+                                        raise HTTPException(status_code=403, detail="Access denied")
+                                else:
+                                    raise HTTPException(status_code=403, detail="Access denied")
+                            except Exception:
                                 raise HTTPException(status_code=403, detail="Access denied")
-                        else:
-                            raise HTTPException(status_code=403, detail="Access denied")
+                    except Exception:
+                        raise HTTPException(status_code=403, detail="Access denied")
         
         # Get signed URL (expires in 1 hour)
         storage_path = file_data.get("storage_path")
