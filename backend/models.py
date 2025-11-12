@@ -383,3 +383,96 @@ class FormSubmission(FormSubmissionBase):
     class Config:
         from_attributes = True
 
+# File Models
+class FileBase(BaseModel):
+    name: str
+    original_filename: str
+    file_type: str  # MIME type
+    file_size: int  # Size in bytes
+    storage_path: str
+    storage_url: Optional[str] = None
+    folder_id: Optional[str] = None
+    quote_id: Optional[str] = None
+    form_id: Optional[str] = None
+    esignature_document_id: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = []
+    is_reusable: bool = False
+
+class FileCreate(FileBase):
+    uploaded_by: Optional[str] = None
+
+class FileUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+    is_reusable: Optional[bool] = None
+    folder_id: Optional[str] = None
+    quote_id: Optional[str] = None
+    form_id: Optional[str] = None
+
+class File(FileBase):
+    id: str
+    uploaded_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+# File Folder Assignment Models
+class FileFolderAssignmentBase(BaseModel):
+    file_id: str
+    folder_id: str
+
+class FileFolderAssignmentCreate(FileFolderAssignmentBase):
+    assigned_by: Optional[str] = None
+
+class FileFolderAssignment(FileFolderAssignmentBase):
+    id: str
+    assigned_at: datetime
+    assigned_by: Optional[str] = None
+    
+    @field_validator('assigned_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+

@@ -16,6 +16,8 @@ const FormView = lazy(() => import('./pages/FormView'));
 const FormSubmissions = lazy(() => import('./pages/FormSubmissions'));
 const PublicFormView = lazy(() => import('./pages/PublicFormView'));
 const ClientsList = lazy(() => import('./pages/ClientsList'));
+const FilesList = lazy(() => import('./pages/FilesList'));
+const FileView = lazy(() => import('./pages/FileView'));
 const CompanySettingsPage = lazy(() => import('./pages/CompanySettings'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
@@ -45,6 +47,7 @@ function Navigation() {
   // Determine active tab based on path
   const isFormsActive = location.pathname.startsWith('/forms');
   const isQuotesActive = !isFormsActive && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
+  const isFilesActive = location.pathname.startsWith('/files');
   const isClientsActive = location.pathname === '/clients';
   const isSettingsActive = location.pathname === '/settings';
   const isProfileActive = location.pathname === '/profile';
@@ -108,6 +111,14 @@ function Navigation() {
                 className={`nav-tab ${isQuotesActive ? 'active' : ''}`}
               >
                 Quotes
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/files" 
+                className={`nav-tab ${isFilesActive ? 'active' : ''}`}
+              >
+                Files
               </Link>
             </li>
             <li 
@@ -234,6 +245,8 @@ function AppContent() {
           <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteView /></Suspense></ProtectedRoute>} />
           <Route path="/forms" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormsList /></Suspense></ProtectedRoute>} />
           <Route path="/forms/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormView /></Suspense></ProtectedRoute>} />
+          <Route path="/files" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FilesList /></Suspense></ProtectedRoute>} />
+          <Route path="/files/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FileView /></Suspense></ProtectedRoute>} />
           
           {/* Admin-only routes */}
           <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />

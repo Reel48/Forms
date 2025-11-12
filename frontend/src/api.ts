@@ -276,6 +276,44 @@ export interface FormSubmission {
   answers: FormSubmissionAnswer[];
 }
 
+export interface File {
+  id: string;
+  name: string;
+  original_filename: string;
+  file_type: string; // MIME type
+  file_size: number; // Size in bytes
+  storage_path: string;
+  storage_url?: string;
+  folder_id?: string;
+  quote_id?: string;
+  form_id?: string;
+  esignature_document_id?: string;
+  description?: string;
+  tags?: string[];
+  is_reusable: boolean;
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FileUpdate {
+  name?: string;
+  description?: string;
+  tags?: string[];
+  is_reusable?: boolean;
+  folder_id?: string;
+  quote_id?: string;
+  form_id?: string;
+}
+
+export interface FileFolderAssignment {
+  id: string;
+  file_id: string;
+  folder_id: string;
+  assigned_at: string;
+  assigned_by?: string;
+}
+
 // Quotes API
 export const quotesAPI = {
   getAll: (filters?: QuoteFilters) => {
@@ -464,6 +502,41 @@ export const formsAPI = {
   },
   // Payment intent
   createPaymentIntent: (formId: string, amount: number, currency?: string, metadata?: Record<string, any>) => api.post<{client_secret: string; payment_intent_id: string}>(`/api/forms/${formId}/create-payment-intent`, { amount, currency: currency || 'usd', metadata }),
+};
+
+// Files API
+export const filesAPI = {
+  getAll: (filters?: { folder_id?: string; quote_id?: string; form_id?: string; is_reusable?: boolean }) => {
+    const params = new URLSearchParams();
+    if (filters?.folder_id) params.append('folder_id', filters.folder_id);
+    if (filters?.quote_id) params.append('quote_id', filters.quote_id);
+    if (filters?.form_id) params.append('form_id', filters.form_id);
+    if (filters?.is_reusable !== undefined) params.append('is_reusable', filters.is_reusable.toString());
+    const queryString = params.toString();
+    return api.get<File[]>(`/api/files${queryString ? `?${queryString}` : ''}`);
+  },
+  getById: (id: string) => api.get<File>(`/api/files/${id}`),
+  upload: (file: globalThis.File, options?: { folder_id?: string; quote_id?: string; form_id?: string; description?: string; is_reusable?: boolean }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options?.folder_id) formData.append('folder_id', options.folder_id);
+    if (options?.quote_id) formData.append('quote_id', options.quote_id);
+    if (options?.form_id) formData.append('form_id', options.form_id);
+    if (options?.description) formData.append('description', options.description);
+    if (options?.is_reusable !== undefined) formData.append('is_reusable', options.is_reusable.toString());
+    return api.post<File>('/api/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  update: (id: string, fileUpdate: FileUpdate) => api.put<File>(`/api/files/${id}`, fileUpdate),
+  delete: (id: string) => api.delete<{ message: string }>(`/api/files/${id}`),
+  download: (id: string) => api.get(`/api/files/${id}/download`, { responseType: 'blob' }),
+  getPreview: (id: string) => api.get<{ preview_url: string }>(`/api/files/${id}/preview`),
+  assignToFolder: (fileId: string, folderId: string) => api.post<FileFolderAssignment>(`/api/files/${fileId}/assign-to-folder`, { folder_id: folderId }),
+  removeFromFolder: (fileId: string, folderId: string) => api.delete<{ message: string }>(`/api/files/${fileId}/assign-to-folder/${folderId}`),
+  getFolders: (fileId: string) => api.get<FileFolderAssignment[]>(`/api/files/${fileId}/folders`),
 };
 
 // Auth API
