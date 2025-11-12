@@ -1,5 +1,5 @@
 import { useState, useEffect, memo, useCallback, useRef, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,7 @@ interface Assignment {
 
 function FormsList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,9 @@ function FormsList() {
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const { role } = useAuth();
+  
+  // Track previous location to detect navigation back to forms list
+  const prevLocationRef = useRef<string>(location.pathname);
 
   // Use ref to track if we've loaded forms initially
   const hasLoadedFormsRef = useRef(false);
@@ -162,6 +166,20 @@ function FormsList() {
     return () => window.removeEventListener('focus', handleFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formsIds, role]);
+
+  // Refresh assignments when navigating back to forms list from a form detail page
+  useEffect(() => {
+    const isFormsListPage = location.pathname === '/forms';
+    const wasOnFormDetail = prevLocationRef.current && prevLocationRef.current.match(/^\/forms\/[^/]+$/);
+    
+    // If we navigated from a form detail page (e.g., /forms/123) back to the forms list (/forms), refresh assignments
+    if (wasOnFormDetail && isFormsListPage && role === 'admin' && forms.length > 0) {
+      loadAllAssignments();
+    }
+    
+    prevLocationRef.current = location.pathname;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, role, forms.length]);
 
   const getAssignedToText = (formId: string): string => {
     const formAssignments = assignments[formId] || [];
