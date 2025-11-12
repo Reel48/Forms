@@ -1692,6 +1692,8 @@ function PublicFormView() {
                                   <input
                                     type="checkbox"
                                     id={cellId}
+                                    name={`${fieldId}-${rowIdx}`}
+                                    value={col}
                                     checked={isChecked}
                                     onChange={(e) => {
                                       const currentRowValue = Array.isArray(rowValue) ? [...rowValue] : [];
@@ -2089,6 +2091,8 @@ function PublicFormView() {
               <div className="form-group">
                 <input
                   type="password"
+                  id="form-password-input"
+                  name="form-password"
                   value={passwordInput}
                   onChange={(e) => {
                     setPasswordInput(e.target.value);

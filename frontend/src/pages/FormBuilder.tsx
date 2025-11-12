@@ -504,9 +504,11 @@ function FormBuilder() {
               <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>Schedule Publishing</h3>
               
               <div className="form-group">
-                <label htmlFor="publish-date" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label htmlFor="publish-date-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="checkbox"
+                    id="publish-date-checkbox"
+                    name="publish-date-checkbox"
                     checked={!!formData.settings?.publish_date}
                     onChange={(e) => {
                       const settings = formData.settings || {};
@@ -539,9 +541,11 @@ function FormBuilder() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="unpublish-date" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label htmlFor="unpublish-date-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="checkbox"
+                    id="unpublish-date-checkbox"
+                    name="unpublish-date-checkbox"
                     checked={!!formData.settings?.unpublish_date}
                     onChange={(e) => {
                       const settings = formData.settings || {};
@@ -575,9 +579,11 @@ function FormBuilder() {
 
               {/* Form Expiration */}
               <div className="form-group" style={{ marginTop: '1rem' }}>
-                <label htmlFor="expiration-date" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label htmlFor="expiration-date-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="checkbox"
+                    id="expiration-date-checkbox"
+                    name="expiration-date-checkbox"
                     checked={!!formData.settings?.expiration_date}
                     onChange={(e) => {
                       const settings = formData.settings || {};
@@ -611,9 +617,11 @@ function FormBuilder() {
 
               {/* Response Limits */}
               <div className="form-group" style={{ marginTop: '1rem' }}>
-                <label htmlFor="max-submissions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label htmlFor="max-submissions-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="checkbox"
+                    id="max-submissions-checkbox"
+                    name="max-submissions-checkbox"
                     checked={!!formData.settings?.max_submissions}
                     onChange={(e) => {
                       const settings = formData.settings || {};
@@ -653,9 +661,11 @@ function FormBuilder() {
 
               {/* Password Protection */}
               <div className="form-group">
-                <label htmlFor="form-password" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label htmlFor="form-password-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="checkbox"
+                    id="form-password-checkbox"
+                    name="form-password-checkbox"
                     checked={!!formData.settings?.password}
                     onChange={(e) => {
                       const settings = formData.settings || {};
