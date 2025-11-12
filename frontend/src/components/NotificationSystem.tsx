@@ -1,4 +1,5 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 
 interface Notification {
   id: string;
@@ -34,10 +35,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     
     setNotifications(prev => [...prev, newNotification]);
     
-    if (newNotification.duration > 0) {
+    const duration = newNotification.duration ?? 5000;
+    if (duration > 0) {
       setTimeout(() => {
         removeNotification(id);
-      }, newNotification.duration);
+      }, duration);
     }
   };
 

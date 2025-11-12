@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { quotesAPI, clientsAPI } from '../api';
 import type { QuoteCreate, Client, LineItem } from '../api';
 import { renderTextWithLinks } from '../utils/textUtils';
@@ -24,7 +24,7 @@ function QuoteBuilder() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const isEdit = !!id;
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>('');
   
   const [clients, setClients] = useState<Client[]>([]);
@@ -390,7 +390,7 @@ function QuoteBuilder() {
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent, _index: number) => {
     e.preventDefault();
   };
 
@@ -547,7 +547,7 @@ function QuoteBuilder() {
   };
 
   const { subtotal, taxAmount, total } = calculateTotals();
-  const currencySymbol = CURRENCY_SYMBOLS[formData.currency] || formData.currency;
+  const currencySymbol = formData.currency ? (CURRENCY_SYMBOLS[formData.currency] || formData.currency) : 'USD';
 
   const openLinkDialog = (field: 'notes' | 'terms') => {
     setLinkDialog({
@@ -1023,7 +1023,7 @@ function QuoteBuilder() {
         <LineItemTemplatesModal
           templates={lineItemTemplates}
           categories={lineItemCategories}
-          onAdd={(template) => {
+          onAdd={(template: any) => {
             addLineItem(template);
             setShowLineItemTemplates(false);
           }}

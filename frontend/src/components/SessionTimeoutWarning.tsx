@@ -15,7 +15,7 @@ export const SessionTimeoutWarning: React.FC = () => {
     if (!session?.expires_at) return;
 
     const checkSessionExpiry = () => {
-      const expiresAt = session.expires_at * 1000; // Convert to milliseconds
+      const expiresAt = (session.expires_at ?? 0) * 1000; // Convert to milliseconds
       const now = Date.now();
       const timeUntilExpiry = expiresAt - now;
       const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds

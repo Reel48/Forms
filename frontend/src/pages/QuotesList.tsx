@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { quotesAPI, clientsAPI } from '../api';
 import type { Quote, QuoteFilters, Client } from '../api';
@@ -56,7 +56,6 @@ function QuotesList() {
   const [users, setUsers] = useState<Record<string, User>>({});
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedQuotes, setSelectedQuotes] = useState<Set<string>>(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState<string | null>(null);
   const [showSendEmailModal, setShowSendEmailModal] = useState<string | null>(null);
@@ -312,10 +311,6 @@ function QuotesList() {
     updateFilter('search', value);
   };
 
-  // Handle status filter change
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateFilter('status', e.target.value);
-  };
 
   // Handle payment status filter change
   const handlePaymentStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
