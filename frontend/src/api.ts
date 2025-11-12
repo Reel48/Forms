@@ -276,7 +276,7 @@ export interface FormSubmission {
   answers: FormSubmissionAnswer[];
 }
 
-export interface File {
+export interface FileItem {
   id: string;
   name: string;
   original_filename: string;
@@ -513,9 +513,9 @@ export const filesAPI = {
     if (filters?.form_id) params.append('form_id', filters.form_id);
     if (filters?.is_reusable !== undefined) params.append('is_reusable', filters.is_reusable.toString());
     const queryString = params.toString();
-    return api.get<File[]>(`/api/files${queryString ? `?${queryString}` : ''}`);
+    return api.get<FileItem[]>(`/api/files${queryString ? `?${queryString}` : ''}`);
   },
-  getById: (id: string) => api.get<File>(`/api/files/${id}`),
+  getById: (id: string) => api.get<FileItem>(`/api/files/${id}`),
   upload: (file: globalThis.File, options?: { folder_id?: string; quote_id?: string; form_id?: string; description?: string; is_reusable?: boolean }) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -524,13 +524,13 @@ export const filesAPI = {
     if (options?.form_id) formData.append('form_id', options.form_id);
     if (options?.description) formData.append('description', options.description);
     if (options?.is_reusable !== undefined) formData.append('is_reusable', options.is_reusable.toString());
-    return api.post<File>('/api/files/upload', formData, {
+    return api.post<FileItem>('/api/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
   },
-  update: (id: string, fileUpdate: FileUpdate) => api.put<File>(`/api/files/${id}`, fileUpdate),
+  update: (id: string, fileUpdate: FileUpdate) => api.put<FileItem>(`/api/files/${id}`, fileUpdate),
   delete: (id: string) => api.delete<{ message: string }>(`/api/files/${id}`),
   download: (id: string) => api.get(`/api/files/${id}/download`, { responseType: 'blob' }),
   getPreview: (id: string) => api.get<{ preview_url: string }>(`/api/files/${id}/preview`),

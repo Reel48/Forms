@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { filesAPI } from '../api';
-import type { File as FileType } from '../api';
+import type { FileItem } from '../api';
 import './FileCard.css';
 
 interface FileCardProps {
-  file: FileType;
+  file: FileItem;
   onDelete?: (fileId: string) => void;
-  onView?: (file: FileType) => void;
+  onView?: (file: FileItem) => void;
   showActions?: boolean;
 }
 

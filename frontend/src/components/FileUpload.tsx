@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
 import { filesAPI } from '../api';
-import type { File as FileType } from '../api';
+import type { FileItem } from '../api';
 import './FileUpload.css';
 
 interface FileUploadProps {
-  onUploadSuccess?: (file: FileType) => void;
+  onUploadSuccess?: (file: FileItem) => void;
   onUploadError?: (error: string) => void;
   folderId?: string;
   quoteId?: string;

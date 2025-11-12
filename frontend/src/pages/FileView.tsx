@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { filesAPI } from '../api';
-import type { File as FileType } from '../api';
+import type { FileItem } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import './FileView.css';
 
@@ -9,7 +9,7 @@ function FileView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { role } = useAuth();
-  const [file, setFile] = useState<FileType | null>(null);
+  const [file, setFile] = useState<FileItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);

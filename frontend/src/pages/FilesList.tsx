@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { filesAPI } from '../api';
-import type { File as FileType } from '../api';
+import type { FileItem } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
 import FileCard from '../components/FileCard';
@@ -10,7 +10,7 @@ import './FilesList.css';
 function FilesList() {
   const navigate = useNavigate();
   const { role } = useAuth();
-  const [files, setFiles] = useState<FileType[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +38,7 @@ function FilesList() {
     loadFiles();
   }, [loadFiles]);
 
-  const handleUploadSuccess = (file: FileType) => {
+  const handleUploadSuccess = (file: FileItem) => {
     setFiles((prev) => [file, ...prev]);
     setShowUpload(false);
   };
@@ -51,7 +51,7 @@ function FilesList() {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
-  const handleView = (file: FileType) => {
+  const handleView = (file: FileItem) => {
     navigate(`/files/${file.id}`);
   };
 
