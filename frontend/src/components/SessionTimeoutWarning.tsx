@@ -10,6 +10,7 @@ export const SessionTimeoutWarning: React.FC = () => {
   const { session, refreshUser } = useAuth();
   const [showWarning, setShowWarning] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
 
   useEffect(() => {
     if (!session?.expires_at) return;
@@ -20,11 +21,20 @@ export const SessionTimeoutWarning: React.FC = () => {
       const timeUntilExpiry = expiresAt - now;
       const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-      if (timeUntilExpiry > 0 && timeUntilExpiry <= fiveMinutes) {
+      // If user dismissed the warning, don't show it again for at least 2 minutes
+      const twoMinutes = 2 * 60 * 1000;
+      const shouldRespectDismissal = dismissedAt && (now - dismissedAt) < twoMinutes;
+
+      if (timeUntilExpiry > 0 && timeUntilExpiry <= fiveMinutes && !shouldRespectDismissal) {
         setShowWarning(true);
         setTimeRemaining(Math.floor(timeUntilExpiry / 1000)); // Convert to seconds
-      } else {
+      } else if (timeUntilExpiry <= 0) {
+        // Session expired, hide warning
         setShowWarning(false);
+      } else if (timeUntilExpiry > fiveMinutes) {
+        // Session is not expiring soon, hide warning and reset dismissal
+        setShowWarning(false);
+        setDismissedAt(null);
       }
     };
 
@@ -52,15 +62,21 @@ export const SessionTimeoutWarning: React.FC = () => {
       clearInterval(interval);
       clearInterval(countdownInterval);
     };
-  }, [session, showWarning]);
+  }, [session, dismissedAt]); // Removed showWarning from dependencies
 
   const handleRefresh = async () => {
     try {
       await refreshUser();
       setShowWarning(false);
+      setDismissedAt(null); // Reset dismissal on successful refresh
     } catch (error) {
       console.error('Failed to refresh session:', error);
     }
+  };
+
+  const handleDismiss = () => {
+    setShowWarning(false);
+    setDismissedAt(Date.now()); // Record when user dismissed
   };
 
   const formatTime = (seconds: number): string => {
@@ -108,7 +124,7 @@ export const SessionTimeoutWarning: React.FC = () => {
           Refresh Session
         </button>
         <button
-          onClick={() => setShowWarning(false)}
+          onClick={handleDismiss}
           style={{
             backgroundColor: 'transparent',
             color: '#856404',
