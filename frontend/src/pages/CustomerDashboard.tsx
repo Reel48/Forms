@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../api';
+import api, { quotesAPI } from '../api';
 import type { Quote, Form } from '../api';
 
 interface TimelineItem {
@@ -15,6 +15,14 @@ interface TimelineItem {
   data: Quote | Form;
 }
 
+const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined'] as const;
+const SORT_OPTIONS = [
+  { value: 'priority', label: 'Priority' },
+  { value: 'date', label: 'Date (Newest)' },
+  { value: 'date_oldest', label: 'Date (Oldest)' },
+  { value: 'status', label: 'Status' },
+] as const;
+
 function CustomerDashboard() {
   const navigate = useNavigate();
   const { role } = useAuth();
@@ -22,6 +30,11 @@ function CustomerDashboard() {
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'quote' | 'form'>('all');
+  const [sortBy, setSortBy] = useState<string>('priority');
+  const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
+  const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
 
   useEffect(() => {
     if (role === 'customer') {
@@ -45,14 +58,14 @@ function CustomerDashboard() {
     }
   };
 
-  // Combine and sort timeline items
+  // Combine timeline items
   const timelineItems = useMemo(() => {
     const items: TimelineItem[] = [
       ...quotes.map(quote => ({
         id: quote.id,
         type: 'quote' as const,
         title: quote.title,
-        description: `Quote #${quote.quote_number}`,
+        description: `Quote #${quote.quote_number}${quote.total ? ` • $${parseFloat(quote.total).toFixed(2)}` : ''}`,
         status: quote.status,
         priority: quote.priority || 'normal',
         created_at: quote.created_at,
@@ -70,15 +83,47 @@ function CustomerDashboard() {
       })),
     ];
 
-    // Sort by priority first (high priority first), then by created_at descending (newest first)
-    return items.sort((a, b) => {
-      // High priority items first
-      if (a.priority === 'high' && b.priority !== 'high') return -1;
-      if (a.priority !== 'high' && b.priority === 'high') return 1;
-      // Then by date (newest first)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    // Apply type filter
+    let filtered = items;
+    if (typeFilter !== 'all') {
+      filtered = items.filter(item => item.type === typeFilter);
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter(item => {
+        if (item.type === 'quote') {
+          return item.status === statusFilter;
+        }
+        // For forms, map status filter if needed
+        return true;
+      });
+    }
+
+    // Sort items
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'priority':
+          // High priority items first
+          if (a.priority === 'high' && b.priority !== 'high') return -1;
+          if (a.priority !== 'high' && b.priority === 'high') return 1;
+          // Then by date (newest first)
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'date':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'date_oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'status':
+          const statusOrder = { 'accepted': 0, 'sent': 1, 'viewed': 2, 'draft': 3, 'declined': 4 };
+          const aOrder = statusOrder[a.status as keyof typeof statusOrder] ?? 5;
+          const bOrder = statusOrder[b.status as keyof typeof statusOrder] ?? 5;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        default:
+          return 0;
+      }
     });
-  }, [quotes, forms]);
+  }, [quotes, forms, typeFilter, statusFilter, sortBy]);
 
   // Filter timeline items by search term
   const filteredItems = useMemo(() => {
@@ -93,6 +138,40 @@ function CustomerDashboard() {
       (item.type === 'quote' && (item.data as Quote).quote_number?.toLowerCase().includes(searchLower))
     );
   }, [timelineItems, searchTerm]);
+
+  // Handle accept quote
+  const handleAcceptQuote = async (quoteId: string) => {
+    setAcceptingQuote(quoteId);
+    try {
+      await quotesAPI.accept(quoteId);
+      await loadData();
+      alert('Quote accepted successfully!');
+    } catch (error: any) {
+      console.error('Failed to accept quote:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to accept quote. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setAcceptingQuote(null);
+    }
+  };
+
+  // Handle decline quote
+  const handleDeclineQuote = async (quoteId: string) => {
+    if (!confirm('Are you sure you want to decline this quote?')) return;
+    
+    setDecliningQuote(quoteId);
+    try {
+      await quotesAPI.update(quoteId, { status: 'declined' });
+      await loadData();
+      alert('Quote declined.');
+    } catch (error: any) {
+      console.error('Failed to decline quote:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to decline quote. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setDecliningQuote(null);
+    }
+  };
 
   // Group items by date
   const groupedItems = useMemo(() => {
@@ -152,37 +231,50 @@ function CustomerDashboard() {
   const getStatusBadge = (status: string, type: 'quote' | 'form') => {
     const statusLower = status.toLowerCase();
     let badgeClass = 'badge-draft';
-    let label = status.charAt(0).toUpperCase() + status.slice(1);
+    let label = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+    let icon = '';
 
     if (type === 'quote') {
       switch (statusLower) {
         case 'accepted':
           badgeClass = 'badge-accepted';
+          icon = '✅ ';
           break;
         case 'declined':
           badgeClass = 'badge-declined';
+          icon = '❌ ';
           break;
         case 'sent':
+          badgeClass = 'badge-sent';
+          icon = '📤 ';
+          break;
         case 'viewed':
           badgeClass = 'badge-sent';
+          icon = '👁️ ';
           break;
         default:
           badgeClass = 'badge-draft';
+          icon = '📝 ';
       }
     } else {
       switch (statusLower) {
         case 'published':
           badgeClass = 'badge-sent';
+          icon = '📋 ';
           break;
         case 'archived':
           badgeClass = 'badge-declined';
+          icon = '📦 ';
           break;
         default:
           badgeClass = 'badge-draft';
+          icon = '📝 ';
       }
     }
 
-    return <span className={`badge ${badgeClass}`}>{label}</span>;
+    return <span className={`badge ${badgeClass}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+      {icon}{label}
+    </span>;
   };
 
   const handleItemClick = (item: TimelineItem) => {
@@ -236,48 +328,130 @@ function CustomerDashboard() {
 
   return (
     <div className="container">
-      {/* Large Search Box */}
+      {/* Filters and Search */}
       <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="Search quotes and forms..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '1rem 1.5rem',
-              fontSize: '1.125rem',
-              border: '2px solid #e0e0e0',
-              borderRadius: '8px',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#667eea';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e0e0e0';
-            }}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Search Input */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              placeholder="Search quotes and forms..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                position: 'absolute',
-                right: '1rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: '#666',
+                width: '100%',
+                padding: '1rem 1.5rem',
+                fontSize: '1.125rem',
+                border: '2px solid #e0e0e0',
+                borderRadius: '8px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
               }}
-            >
-              ×
-            </button>
-          )}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#667eea';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e0e0e0';
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#666',
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* Filter Row */}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: '1', minWidth: '150px' }}>
+              <label htmlFor="type-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Type
+              </label>
+              <select
+                id="type-filter"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'quote' | 'form')}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              >
+                <option value="all">All Types</option>
+                <option value="quote">Quotes Only</option>
+                <option value="form">Forms Only</option>
+              </select>
+            </div>
+
+            <div style={{ flex: '1', minWidth: '150px' }}>
+              <label htmlFor="status-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Status
+              </label>
+              <select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              >
+                <option value="">All Statuses</option>
+                {QUOTE_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ flex: '1', minWidth: '150px' }}>
+              <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Sort By
+              </label>
+              <select
+                id="sort-by"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {(statusFilter || typeFilter !== 'all' || searchTerm) && (
+              <div>
+                <button
+                  onClick={() => {
+                    setStatusFilter('');
+                    setTypeFilter('all');
+                    setSearchTerm('');
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -408,16 +582,52 @@ function CustomerDashboard() {
                             View
                           </button>
                           {item.type === 'quote' && (
-                            <button
-                              onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
-                              className="btn-outline"
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                fontSize: '0.875rem',
-                              }}
-                            >
-                              Download PDF
-                            </button>
+                            <>
+                              <button
+                                onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
+                                className="btn-outline"
+                                style={{
+                                  padding: '0.375rem 0.75rem',
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                Download PDF
+                              </button>
+                              {(item.status === 'draft' || item.status === 'sent' || item.status === 'viewed') && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAcceptQuote(item.id);
+                                    }}
+                                    disabled={acceptingQuote === item.id}
+                                    className="btn-primary"
+                                    style={{
+                                      padding: '0.375rem 0.75rem',
+                                      fontSize: '0.875rem',
+                                      opacity: acceptingQuote === item.id ? 0.6 : 1,
+                                    }}
+                                  >
+                                    {acceptingQuote === item.id ? 'Accepting...' : '✅ Accept'}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeclineQuote(item.id);
+                                    }}
+                                    disabled={decliningQuote === item.id}
+                                    className="btn-danger"
+                                    style={{
+                                      padding: '0.375rem 0.75rem',
+                                      fontSize: '0.875rem',
+                                      opacity: decliningQuote === item.id ? 0.6 : 1,
+                                    }}
+                                  >
+                                    {decliningQuote === item.id ? 'Declining...' : '❌ Decline'}
+                                  </button>
+                                </>
+                              )}
+                            </>
                           )}
                           {item.type === 'form' && (
                             <button

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -83,8 +83,29 @@ def convert_links_to_pdf_format(text: str) -> str:
     return text
 
 @router.get("/quote/{quote_id}")
-async def generate_quote_pdf(quote_id: str):
-    """Generate PDF for a quote"""
+async def generate_quote_pdf(
+    quote_id: str,
+    show_logo: bool = Query(True, description="Include company logo"),
+    show_company_info: bool = Query(True, description="Include company/seller information"),
+    show_client_info: bool = Query(True, description="Include client/bill-to information"),
+    show_notes: bool = Query(True, description="Include notes section"),
+    show_terms: bool = Query(True, description="Include terms & conditions"),
+    page_size: str = Query("letter", description="PDF page size (letter or A4)"),
+    font_size: int = Query(10, description="Base font size (8-14)"),
+    color_scheme: str = Query("default", description="Color scheme (default, minimal, colorful)")
+):
+    """
+    Generate PDF for a quote with customization options.
+    
+    - show_logo: Include company logo
+    - show_company_info: Include company/seller information
+    - show_client_info: Include client/bill-to information
+    - show_notes: Include notes section
+    - show_terms: Include terms & conditions
+    - page_size: PDF page size (letter or A4)
+    - font_size: Base font size (8-14)
+    - color_scheme: Color scheme (default, minimal, colorful)
+    """
     try:
         # Fetch quote with all relations
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
@@ -93,12 +114,15 @@ async def generate_quote_pdf(quote_id: str):
         
         quote = response.data[0]
         
+        # Determine page size
+        pagesize = A4 if page_size.lower() == "a4" else letter
+        
         # Create PDF buffer
         buffer = BytesIO()
         # Set document title to quote title (shows in PDF tab)
         doc = SimpleDocTemplate(
             buffer, 
-            pagesize=letter, 
+            pagesize=pagesize, 
             topMargin=0.75*inch, 
             bottomMargin=0.75*inch,
             title=quote.get('title', quote['quote_number'])  # Set PDF document title
@@ -126,7 +150,7 @@ async def generate_quote_pdf(quote_id: str):
         )
         
         normal_style = styles['Normal']
-        normal_style.fontSize = 10
+        normal_style.fontSize = max(8, min(14, font_size))  # Clamp between 8 and 14
         
         # Fetch company settings
         company_settings = None
@@ -137,8 +161,8 @@ async def generate_quote_pdf(quote_id: str):
         except Exception:
             pass  # Continue without company settings if fetch fails
         
-        # Logo at top left (if available)
-        if company_settings and company_settings.get('logo_url'):
+        # Logo at top left (if available and enabled)
+        if show_logo and company_settings and company_settings.get('logo_url'):
             try:
                 import requests
                 # Fetch and add logo image
@@ -207,7 +231,7 @@ async def generate_quote_pdf(quote_id: str):
         company_client_data = []
         
         # Company/Seller Information
-        if company_settings and (company_settings.get('company_name') or company_settings.get('email') or company_settings.get('phone') or company_settings.get('address')):
+        if show_company_info and company_settings and (company_settings.get('company_name') or company_settings.get('email') or company_settings.get('phone') or company_settings.get('address')):
             company_info = []
             company_info.append(["From:", ""])
             if company_settings.get('company_name'):
@@ -236,7 +260,7 @@ async def generate_quote_pdf(quote_id: str):
             company_client_data.append(company_table)
         
         # Client information
-        if quote.get('clients'):
+        if show_client_info and quote.get('clients'):
             client = quote['clients']
             client_info = []
             client_info.append(["Bill To:", ""])
@@ -326,13 +350,13 @@ async def generate_quote_pdf(quote_id: str):
         elements.append(Spacer(1, 0.3*inch))
         
         # Notes and terms
-        if quote.get('notes'):
+        if show_notes and quote.get('notes'):
             elements.append(Paragraph("Notes:", heading_style))
             notes_with_links = convert_links_to_pdf_format(quote['notes'])
             elements.append(Paragraph(notes_with_links, normal_style))
             elements.append(Spacer(1, 0.2*inch))
         
-        if quote.get('terms'):
+        if show_terms and quote.get('terms'):
             elements.append(Paragraph("Terms & Conditions:", heading_style))
             terms_with_links = convert_links_to_pdf_format(quote['terms'])
             elements.append(Paragraph(terms_with_links, normal_style))

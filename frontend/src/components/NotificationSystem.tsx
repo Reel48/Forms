@@ -1,0 +1,135 @@
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  duration?: number;
+}
+
+interface NotificationContextType {
+  showNotification: (notification: Omit<Notification, 'id'>) => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | null>(null);
+
+export const useNotifications = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within NotificationProvider');
+  }
+  return context;
+};
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const showNotification = (notification: Omit<Notification, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newNotification: Notification = {
+      ...notification,
+      id,
+      duration: notification.duration || 5000,
+    };
+    
+    setNotifications(prev => [...prev, newNotification]);
+    
+    if (newNotification.duration > 0) {
+      setTimeout(() => {
+        removeNotification(id);
+      }, newNotification.duration);
+    }
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  return (
+    <NotificationContext.Provider value={{ showNotification }}>
+      {children}
+      <div
+        style={{
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 10000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
+          maxWidth: '400px',
+        }}
+      >
+        {notifications.map(notification => (
+          <div
+            key={notification.id}
+            style={{
+              padding: '1rem',
+              borderRadius: '0.375rem',
+              backgroundColor: 
+                notification.type === 'success' ? '#d1fae5' :
+                notification.type === 'error' ? '#fee2e2' :
+                notification.type === 'warning' ? '#fef3c7' :
+                '#dbeafe',
+              border: `1px solid ${
+                notification.type === 'success' ? '#10b981' :
+                notification.type === 'error' ? '#ef4444' :
+                notification.type === 'warning' ? '#f59e0b' :
+                '#3b82f6'
+              }`,
+              color: 
+                notification.type === 'success' ? '#065f46' :
+                notification.type === 'error' ? '#991b1b' :
+                notification.type === 'warning' ? '#92400e' :
+                '#1e40af',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '1rem',
+              animation: 'slideIn 0.3s ease-out',
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                {notification.type === 'success' && '✓ '}
+                {notification.type === 'error' && '✕ '}
+                {notification.type === 'warning' && '⚠ '}
+                {notification.type === 'info' && 'ℹ '}
+                {notification.message}
+              </div>
+            </div>
+            <button
+              onClick={() => removeNotification(notification.id)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1.25rem',
+                color: 'inherit',
+                opacity: 0.7,
+                padding: '0',
+                lineHeight: '1',
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </NotificationContext.Provider>
+  );
+}
+

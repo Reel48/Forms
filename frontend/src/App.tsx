@@ -14,12 +14,14 @@ import ClientsList from './pages/ClientsList';
 import CompanySettingsPage from './pages/CompanySettings';
 import Profile from './pages/Profile';
 import CustomerDashboard from './pages/CustomerDashboard';
+import QuoteAnalytics from './pages/QuoteAnalytics';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import ResendVerification from './pages/ResendVerification';
+import { NotificationProvider } from './components/NotificationSystem';
 import './App.css';
 
 function Navigation() {
@@ -81,6 +83,14 @@ function Navigation() {
                 className={`nav-tab ${isSettingsActive ? 'active' : ''}`}
               >
                 Settings
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/analytics" 
+                className={`nav-tab ${location.pathname === '/analytics' ? 'active' : ''}`}
+              >
+                Analytics
               </Link>
             </li>
           </>
@@ -159,6 +169,7 @@ function AppContent() {
         <Route path="/forms/:id/submissions" element={<ProtectedRoute requireAdmin><FormSubmissions /></ProtectedRoute>} />
         <Route path="/clients" element={<ProtectedRoute requireAdmin><ClientsList /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute requireAdmin><CompanySettingsPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute requireAdmin><QuoteAnalytics /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Routes>
     </>
@@ -169,7 +180,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );

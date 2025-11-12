@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 import sys
 import os
@@ -16,22 +16,80 @@ import requests
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 
-def calculate_line_item_total(item: LineItemCreate) -> Decimal:
-    """Calculate total for a line item"""
+def calculate_line_item_total(item: LineItemCreate, use_line_tax: bool = True, quote_tax_rate: Decimal = Decimal("0")) -> Decimal:
+    """Calculate total for a line item with flexible tax calculation"""
     subtotal = item.quantity * item.unit_price
     discount_amount = subtotal * (item.discount_percent or Decimal("0")) / Decimal("100")
     after_discount = subtotal - discount_amount
-    tax = after_discount * (item.tax_rate or Decimal("0")) / Decimal("100")
+    
+    # Use line-item specific tax rate if provided and use_line_tax is True, otherwise use quote-level tax
+    if use_line_tax and item.tax_rate:
+        line_tax_rate = item.tax_rate
+    else:
+        line_tax_rate = quote_tax_rate
+    
+    tax = after_discount * line_tax_rate / Decimal("100")
     return after_discount + tax
 
-def calculate_quote_totals(line_items: List[dict], tax_rate: Decimal) -> dict:
-    """Calculate subtotal, tax, and total for a quote"""
-    subtotal = sum(
-        Decimal(item["quantity"]) * Decimal(item["unit_price"]) 
-        - (Decimal(item["quantity"]) * Decimal(item["unit_price"]) * Decimal(item.get("discount_percent", 0)) / Decimal("100"))
-        for item in line_items
-    )
-    tax_amount = subtotal * tax_rate / Decimal("100")
+def calculate_quote_totals(line_items: List[dict], tax_rate: Decimal, tax_method: str = "after_discount") -> dict:
+    """
+    Calculate subtotal, tax, and total for a quote with flexible tax calculation.
+    
+    tax_method options:
+    - "after_discount": Tax applied to amount after discount (default)
+    - "before_discount": Tax applied to subtotal before discount
+    - "line_item": Use individual line item tax rates (ignores quote-level tax_rate)
+    """
+    subtotal = Decimal("0")
+    tax_amount = Decimal("0")
+    
+    for item in line_items:
+        qty = Decimal(item["quantity"])
+        price = Decimal(item["unit_price"])
+        discount_pct = Decimal(item.get("discount_percent", 0))
+        
+        line_subtotal = qty * price
+        discount_amount = line_subtotal * discount_pct / Decimal("100")
+        after_discount = line_subtotal - discount_amount
+        
+        subtotal += after_discount
+        
+        # Calculate tax based on method
+        if tax_method == "line_item":
+            # Use line item's own tax rate
+            line_tax_rate = Decimal(item.get("tax_rate", 0))
+            if tax_method == "before_discount":
+                taxable_amount = line_subtotal
+            else:
+                taxable_amount = after_discount
+            line_tax = taxable_amount * line_tax_rate / Decimal("100")
+            tax_amount += line_tax
+        else:
+            # Use quote-level tax rate
+            if tax_method == "before_discount":
+                taxable_amount = line_subtotal
+            else:  # after_discount
+                taxable_amount = after_discount
+            # Don't add here, we'll calculate total tax at the end
+    
+    # If not using line_item method, calculate tax on total subtotal
+    if tax_method != "line_item":
+        if tax_method == "before_discount":
+            # Recalculate subtotal before discount for tax calculation
+            subtotal_before_discount = sum(
+                Decimal(item["quantity"]) * Decimal(item["unit_price"])
+                for item in line_items
+            )
+            tax_amount = subtotal_before_discount * tax_rate / Decimal("100")
+            # Recalculate subtotal after discount for display
+            subtotal = sum(
+                Decimal(item["quantity"]) * Decimal(item["unit_price"]) 
+                - (Decimal(item["quantity"]) * Decimal(item["unit_price"]) * Decimal(item.get("discount_percent", 0)) / Decimal("100"))
+                for item in line_items
+            )
+        else:  # after_discount
+            tax_amount = subtotal * tax_rate / Decimal("100")
+    
     total = subtotal + tax_amount
     return {
         "subtotal": str(subtotal),
@@ -44,15 +102,26 @@ async def get_quotes(
     search: Optional[str] = Query(None, description="Search by title, quote number, or client name"),
     status: Optional[str] = Query(None, description="Filter by quote status (draft, sent, viewed, accepted, declined)"),
     payment_status: Optional[str] = Query(None, description="Filter by payment status (unpaid, paid, partially_paid, refunded, failed, voided, uncollectible)"),
+    client_id: Optional[str] = Query(None, description="Filter by client ID"),
+    created_from: Optional[str] = Query(None, description="Filter quotes created from this date (YYYY-MM-DD)"),
+    created_to: Optional[str] = Query(None, description="Filter quotes created to this date (YYYY-MM-DD)"),
+    expiration_from: Optional[str] = Query(None, description="Filter quotes expiring from this date (YYYY-MM-DD)"),
+    expiration_to: Optional[str] = Query(None, description="Filter quotes expiring to this date (YYYY-MM-DD)"),
+    sort_by: Optional[str] = Query("created_at", description="Sort by field (created_at, total, status, quote_number)"),
+    sort_order: Optional[str] = Query("desc", description="Sort order (asc, desc)"),
+    limit: Optional[int] = Query(None, description="Limit number of results"),
+    offset: Optional[int] = Query(0, description="Offset for pagination"),
     current_user: Optional[dict] = Depends(get_optional_user)
 ):
-    """Get all quotes with optional filtering.
+    """Get all quotes with optional filtering, sorting, and pagination.
     Admins see all quotes. Customers see only assigned quotes.
     """
     try:
         # Valid status values
         valid_statuses = {"draft", "sent", "viewed", "accepted", "declined"}
         valid_payment_statuses = {"unpaid", "paid", "partially_paid", "refunded", "failed", "voided", "uncollectible"}
+        valid_sort_fields = {"created_at", "total", "status", "quote_number", "title"}
+        valid_sort_orders = {"asc", "desc"}
         
         # Validate status values
         if status is not None and status not in valid_statuses:
@@ -65,6 +134,18 @@ async def get_quotes(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid payment_status. Must be one of: {', '.join(sorted(valid_payment_statuses))}"
+            )
+        
+        if sort_by not in valid_sort_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid sort_by. Must be one of: {', '.join(sorted(valid_sort_fields))}"
+            )
+        
+        if sort_order not in valid_sort_orders:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid sort_order. Must be one of: {', '.join(sorted(valid_sort_orders))}"
             )
         
         # Start building query
@@ -81,6 +162,10 @@ async def get_quotes(
             
             query = query.in_("id", assigned_quote_ids)
         
+        # Apply client filter
+        if client_id:
+            query = query.eq("client_id", client_id)
+        
         # Apply status filter
         if status:
             query = query.eq("status", status)
@@ -91,6 +176,38 @@ async def get_quotes(
         if payment_status and payment_status != "unpaid":
             query = query.eq("payment_status", payment_status)
         
+        # Apply date range filters
+        if created_from:
+            try:
+                created_from_date = datetime.strptime(created_from, "%Y-%m-%d")
+                query = query.gte("created_at", created_from_date.isoformat())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid created_from date format. Use YYYY-MM-DD")
+        
+        if created_to:
+            try:
+                created_to_date = datetime.strptime(created_to, "%Y-%m-%d")
+                # Add one day to include the entire day
+                created_to_date = created_to_date + timedelta(days=1)
+                query = query.lt("created_at", created_to_date.isoformat())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid created_to date format. Use YYYY-MM-DD")
+        
+        if expiration_from:
+            try:
+                expiration_from_date = datetime.strptime(expiration_from, "%Y-%m-%d")
+                query = query.gte("expiration_date", expiration_from_date.isoformat())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid expiration_from date format. Use YYYY-MM-DD")
+        
+        if expiration_to:
+            try:
+                expiration_to_date = datetime.strptime(expiration_to, "%Y-%m-%d")
+                expiration_to_date = expiration_to_date + timedelta(days=1)
+                query = query.lt("expiration_date", expiration_to_date.isoformat())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid expiration_to date format. Use YYYY-MM-DD")
+        
         # Apply text search - search across title and quote_number
         # Note: We'll filter client name in memory after fetching since Supabase
         # doesn't easily support filtering on joined table fields
@@ -100,14 +217,37 @@ async def get_quotes(
             # For quote_number, we'll also search in memory for better control
             query = query.ilike("title", f"%{search_term}%")
         
-        # Order by created_at descending
-        query = query.order("created_at", desc=True)
+        # Apply sorting
+        desc = sort_order == "desc"
+        query = query.order(sort_by, desc=desc)
         
-        # Execute query
+        # Apply pagination
+        if limit:
+            query = query.limit(limit)
+        if offset:
+            query = query.offset(offset)
+        
+        # Execute query - include line_items for search
         response = query.execute()
         quotes = response.data
         
+        # Load line items for each quote if we're searching
+        if search and search.strip():
+            quote_ids = [q["id"] for q in quotes]
+            if quote_ids:
+                line_items_response = supabase_storage.table("line_items").select("quote_id, description").in_("quote_id", quote_ids).execute()
+                line_items_map = {}
+                for item in line_items_response.data or []:
+                    if item["quote_id"] not in line_items_map:
+                        line_items_map[item["quote_id"]] = []
+                    line_items_map[item["quote_id"]].append(item.get("description", ""))
+                
+                # Attach line items to quotes
+                for quote in quotes:
+                    quote["_line_items_descriptions"] = " ".join(line_items_map.get(quote["id"], []))
+        
         # Apply additional filters in memory for cases Supabase can't handle easily
+        # Enhanced search across all fields: title, quote_number, client name, notes, terms, line items
         if search and search.strip():
             search_term_lower = search.strip().lower()
             quotes = [
@@ -115,7 +255,14 @@ async def get_quotes(
                 if (
                     search_term_lower in quote.get("title", "").lower() or
                     search_term_lower in quote.get("quote_number", "").lower() or
-                    (quote.get("clients") and search_term_lower in quote.get("clients", {}).get("name", "").lower())
+                    (quote.get("clients") and search_term_lower in quote.get("clients", {}).get("name", "").lower()) or
+                    (quote.get("clients") and search_term_lower in quote.get("clients", {}).get("email", "").lower()) or
+                    (quote.get("clients") and search_term_lower in quote.get("clients", {}).get("company", "").lower()) or
+                    search_term_lower in (quote.get("notes", "") or "").lower() or
+                    search_term_lower in (quote.get("terms", "") or "").lower() or
+                    search_term_lower in (quote.get("_line_items_descriptions", "") or "").lower() or
+                    search_term_lower in str(quote.get("total", "")).lower() or
+                    search_term_lower in str(quote.get("subtotal", "")).lower()
                 )
             ]
         
@@ -180,7 +327,7 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
                     item_dict[key] = str(value)
             line_items_data.append(item_dict)
         
-        totals = calculate_quote_totals(line_items_data, quote.tax_rate)
+        totals = calculate_quote_totals(line_items_data, quote.tax_rate, "after_discount")
         
         # Create quote - convert Decimal fields to strings for JSON serialization
         quote_data = quote.model_dump(exclude={"line_items"}) if hasattr(quote, 'model_dump') else quote.dict(exclude={"line_items"})
@@ -223,7 +370,19 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
         
         # Fetch complete quote with relations
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", created_quote["id"]).execute()
-        return response.data[0]
+        created_quote_full = response.data[0]
+        
+        # Log creation activity
+        log_quote_activity(
+            quote_id=created_quote["id"],
+            activity_type="created",
+            user_id=current_admin.get("id"),
+            user_name=current_admin.get("name") or current_admin.get("email"),
+            user_email=current_admin.get("email"),
+            description="Quote created"
+        )
+        
+        return created_quote_full
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -252,6 +411,16 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
         # Fetch complete quote with relations
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
         quote = response.data[0]
+        
+        # Log acceptance activity
+        log_quote_activity(
+            quote_id=quote_id,
+            activity_type="accepted",
+            user_id=current_user.get("id"),
+            user_name=current_user.get("name") or current_user.get("email"),
+            user_email=current_user.get("email"),
+            description="Quote accepted"
+        )
         
         # Get customer information for email notification
         customer_name = None
@@ -300,6 +469,14 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
 async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
     """Update a quote (admin only)"""
     try:
+        # Get current quote for comparison
+        current_response = supabase.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
+        if not current_response.data:
+            raise HTTPException(status_code=404, detail="Quote not found")
+        
+        current_quote = current_response.data[0]
+        old_status = current_quote.get("status")
+        
         # Convert to dict, ensuring Decimal fields are strings
         update_data = quote_update.model_dump(exclude_unset=True) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
         # Convert any Decimal fields to strings
@@ -310,23 +487,72 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         update_data["updated_at"] = datetime.now().isoformat()
         
         # If line items are being updated, recalculate totals
+        line_items = current_quote.get("line_items", [])
         if update_data.get("tax_rate") is not None or "line_items" in update_data:
-            # Fetch current quote with line items
-            current_response = supabase.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
-            if not current_response.data:
-                raise HTTPException(status_code=404, detail="Quote not found")
-            
-            current_quote = current_response.data[0]
-            line_items = current_response.data[0].get("line_items", [])
+            if "line_items" in update_data:
+                line_items = update_data["line_items"]
             
             # Recalculate totals
             tax_rate = Decimal(update_data.get("tax_rate", current_quote.get("tax_rate", 0)))
-            totals = calculate_quote_totals(line_items, tax_rate)
+            totals = calculate_quote_totals(line_items, tax_rate, "after_discount")
             update_data.update(totals)
         
+        # Create version before updating
+        try:
+            # Get latest version number
+            versions_response = supabase_storage.table("quote_versions").select("version_number").eq("quote_id", quote_id).order("version_number", desc=True).limit(1).execute()
+            next_version = 1
+            if versions_response.data:
+                next_version = versions_response.data[0].get("version_number", 0) + 1
+            
+            # Create version record
+            version_data = {
+                "quote_id": quote_id,
+                "version_number": next_version,
+                "title": current_quote.get("title"),
+                "client_id": current_quote.get("client_id"),
+                "notes": current_quote.get("notes"),
+                "terms": current_quote.get("terms"),
+                "expiration_date": current_quote.get("expiration_date"),
+                "tax_rate": str(current_quote.get("tax_rate", 0)),
+                "currency": current_quote.get("currency", "USD"),
+                "status": current_quote.get("status"),
+                "subtotal": str(current_quote.get("subtotal", 0)),
+                "tax_amount": str(current_quote.get("tax_amount", 0)),
+                "total": str(current_quote.get("total", 0)),
+                "line_items": line_items,
+                "changed_by": current_admin.get("id"),
+                "change_description": "Quote updated"
+            }
+            supabase_storage.table("quote_versions").insert(version_data).execute()
+        except Exception as e:
+            print(f"Warning: Failed to create version: {str(e)}")
+        
+        # Update quote
         response = supabase.table("quotes").update(update_data).eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
+        
+        # Log status change activity
+        new_status = update_data.get("status")
+        if new_status and new_status != old_status:
+            log_quote_activity(
+                quote_id=quote_id,
+                activity_type="status_changed",
+                user_id=current_admin.get("id"),
+                user_name=current_admin.get("name") or current_admin.get("email"),
+                description=f"Status changed from {old_status} to {new_status}",
+                metadata={"old_status": old_status, "new_status": new_status}
+            )
+        else:
+            # Log general update
+            log_quote_activity(
+                quote_id=quote_id,
+                activity_type="updated",
+                user_id=current_admin.get("id"),
+                user_name=current_admin.get("name") or current_admin.get("email"),
+                description="Quote updated"
+            )
         
         # Fetch complete quote with relations
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
@@ -350,6 +576,814 @@ async def delete_quote(quote_id: str, current_admin: dict = Depends(get_current_
             raise HTTPException(status_code=404, detail="Quote not found")
         
         return {"message": "Quote deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Bulk action endpoints
+from pydantic import BaseModel as PydanticBaseModel
+
+class BulkDeleteRequest(PydanticBaseModel):
+    quote_ids: List[str]
+
+class BulkStatusUpdateRequest(PydanticBaseModel):
+    quote_ids: List[str]
+    status: str
+
+class BulkAssignRequest(PydanticBaseModel):
+    quote_ids: List[str]
+    user_ids: List[str]
+
+@router.post("/bulk/delete")
+async def bulk_delete_quotes(request: BulkDeleteRequest, current_admin: dict = Depends(get_current_admin)):
+    """Bulk delete quotes (admin only)"""
+    try:
+        if not request.quote_ids:
+            raise HTTPException(status_code=400, detail="No quote IDs provided")
+        
+        # Delete line items first
+        supabase.table("line_items").delete().in_("quote_id", request.quote_ids).execute()
+        
+        # Delete quotes
+        response = supabase.table("quotes").delete().in_("id", request.quote_ids).execute()
+        
+        return {"message": f"Deleted {len(response.data)} quote(s) successfully", "deleted_count": len(response.data)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/bulk/update-status")
+async def bulk_update_status(request: BulkStatusUpdateRequest, current_admin: dict = Depends(get_current_admin)):
+    """Bulk update quote status (admin only)"""
+    try:
+        if not request.quote_ids:
+            raise HTTPException(status_code=400, detail="No quote IDs provided")
+        
+        valid_statuses = {"draft", "sent", "viewed", "accepted", "declined"}
+        if request.status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(sorted(valid_statuses))}")
+        
+        update_data = {
+            "status": request.status,
+            "updated_at": datetime.now().isoformat()
+        }
+        
+        response = supabase.table("quotes").update(update_data).in_("id", request.quote_ids).execute()
+        
+        return {"message": f"Updated {len(response.data)} quote(s) successfully", "updated_count": len(response.data)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/bulk/assign")
+async def bulk_assign_quotes(request: BulkAssignRequest, current_admin: dict = Depends(get_current_admin)):
+    """Bulk assign quotes to users (admin only)"""
+    try:
+        if not request.quote_ids:
+            raise HTTPException(status_code=400, detail="No quote IDs provided")
+        if not request.user_ids:
+            raise HTTPException(status_code=400, detail="No user IDs provided")
+        
+        # Get admin name for assignment tracking
+        admin_name = current_admin.get("name") or current_admin.get("email", "Admin")
+        
+        assignments_to_create = []
+        for quote_id in request.quote_ids:
+            for user_id in request.user_ids:
+                # Check if assignment already exists
+                existing = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", user_id).execute()
+                if not existing.data:
+                    assignments_to_create.append({
+                        "quote_id": quote_id,
+                        "user_id": user_id,
+                        "assigned_by": admin_name,
+                        "assigned_at": datetime.now().isoformat()
+                    })
+        
+        if assignments_to_create:
+            supabase_storage.table("quote_assignments").insert(assignments_to_create).execute()
+        
+        # Send email notifications
+        for assignment in assignments_to_create:
+            try:
+                # Get quote info
+                quote_response = supabase.table("quotes").select("title, quote_number").eq("id", assignment["quote_id"]).execute()
+                if quote_response.data:
+                    quote = quote_response.data[0]
+                    quote_title = quote.get("title", "Quote")
+                    quote_number = quote.get("quote_number", "")
+                    
+                    # Get user email
+                    if supabase_service_role_key:
+                        auth_url = f"{supabase_url}/auth/v1/admin/users/{assignment['user_id']}"
+                        headers = {
+                            "apikey": supabase_service_role_key,
+                            "Authorization": f"Bearer {supabase_service_role_key}",
+                            "Content-Type": "application/json"
+                        }
+                        user_response = requests.get(auth_url, headers=headers, timeout=10)
+                        if user_response.status_code == 200:
+                            user_data = user_response.json()
+                            user_email = user_data.get("email")
+                            user_metadata = user_data.get("user_metadata", {})
+                            user_name = user_metadata.get("name")
+                            
+                            if user_email:
+                                email_service.send_quote_assignment_notification(
+                                    to_email=user_email,
+                                    quote_title=quote_title,
+                                    quote_number=quote_number,
+                                    quote_id=assignment["quote_id"],
+                                    user_name=user_name,
+                                    assigned_by=admin_name
+                                )
+            except Exception as e:
+                print(f"Warning: Failed to send email notification for assignment: {str(e)}")
+        
+        return {"message": f"Assigned {len(assignments_to_create)} quote(s) successfully", "assigned_count": len(assignments_to_create)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Helper function to log activity
+def log_quote_activity(
+    quote_id: str,
+    activity_type: str,
+    user_id: Optional[str] = None,
+    user_name: Optional[str] = None,
+    user_email: Optional[str] = None,
+    description: Optional[str] = None,
+    metadata: Optional[dict] = None
+):
+    """Log an activity for a quote"""
+    try:
+        activity_data = {
+            "quote_id": quote_id,
+            "activity_type": activity_type,
+            "description": description,
+            "metadata": metadata or {}
+        }
+        if user_id:
+            activity_data["user_id"] = user_id
+        if user_name:
+            activity_data["user_name"] = user_name
+        if user_email:
+            activity_data["user_email"] = user_email
+        
+        supabase_storage.table("quote_activities").insert(activity_data).execute()
+    except Exception as e:
+        print(f"Warning: Failed to log activity: {str(e)}")
+
+# Send quote via email
+class SendQuoteEmailRequest(PydanticBaseModel):
+    to_email: str
+    custom_message: Optional[str] = None
+    include_pdf: bool = False
+
+@router.post("/{quote_id}/send-email")
+async def send_quote_email(
+    quote_id: str,
+    request: SendQuoteEmailRequest,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Send quote via email (admin only)"""
+    try:
+        # Get quote
+        response = supabase.table("quotes").select("*, clients(*)").eq("id", quote_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Quote not found")
+        
+        quote = response.data[0]
+        client = quote.get("clients", {})
+        
+        # Generate share link if needed
+        share_link = None
+        if quote.get("share_token"):
+            share_link = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/share/quote/{quote.get('share_token')}"
+        
+        # Generate PDF URL if requested
+        pdf_url = None
+        if request.include_pdf:
+            pdf_url = f"{os.getenv('BACKEND_URL', 'http://localhost:8000')}/api/pdf/quote/{quote_id}"
+        
+        # Send email
+        sender_name = current_admin.get("name") or current_admin.get("email", "Admin")
+        success = email_service.send_quote_email(
+            to_email=request.to_email,
+            quote_title=quote.get("title", "Quote"),
+            quote_number=quote.get("quote_number", ""),
+            quote_id=quote_id,
+            share_link=share_link,
+            pdf_url=pdf_url,
+            customer_name=client.get("name"),
+            sender_name=sender_name,
+            custom_message=request.custom_message
+        )
+        
+        if success:
+            # Log activity
+            log_quote_activity(
+                quote_id=quote_id,
+                activity_type="sent",
+                user_id=current_admin.get("id"),
+                user_name=sender_name,
+                user_email=current_admin.get("email"),
+                description=f"Quote sent via email to {request.to_email}"
+            )
+            return {"message": "Quote sent successfully", "sent": True}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send email")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Share link endpoints
+class CreateShareLinkRequest(PydanticBaseModel):
+    expires_at: Optional[str] = None  # ISO format datetime
+    max_views: Optional[int] = None
+
+@router.post("/{quote_id}/share-link")
+async def create_share_link(
+    quote_id: str,
+    request: CreateShareLinkRequest,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a shareable link for a quote (admin only)"""
+    try:
+        # Generate unique token
+        share_token = str(uuid.uuid4())
+        
+        # Create share link record
+        share_link_data = {
+            "quote_id": quote_id,
+            "share_token": share_token,
+            "created_by": current_admin.get("id"),
+            "is_active": True
+        }
+        if request.expires_at:
+            share_link_data["expires_at"] = request.expires_at
+        if request.max_views:
+            share_link_data["max_views"] = request.max_views
+        
+        supabase_storage.table("quote_share_links").insert(share_link_data).execute()
+        
+        # Update quote with share token
+        supabase.table("quotes").update({"share_token": share_token}).eq("id", quote_id).execute()
+        
+        share_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/share/quote/{share_token}"
+        
+        # Log activity
+        log_quote_activity(
+            quote_id=quote_id,
+            activity_type="share_link_created",
+            user_id=current_admin.get("id"),
+            user_name=current_admin.get("name") or current_admin.get("email"),
+            description="Share link created"
+        )
+        
+        return {"share_token": share_token, "share_url": share_url}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{quote_id}/share-link")
+async def get_share_link(
+    quote_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get share link for a quote (admin only)"""
+    try:
+        response = supabase_storage.table("quote_share_links").select("*").eq("quote_id", quote_id).eq("is_active", True).order("created_at", desc=True).limit(1).execute()
+        if response.data:
+            share_link = response.data[0]
+            share_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/share/quote/{share_link['share_token']}"
+            return {"share_token": share_link["share_token"], "share_url": share_url, **share_link}
+        return {"share_token": None, "share_url": None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Activity timeline endpoints
+@router.get("/{quote_id}/activities")
+async def get_quote_activities(
+    quote_id: str,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Get activity timeline for a quote"""
+    try:
+        response = supabase_storage.table("quote_activities").select("*").eq("quote_id", quote_id).order("created_at", desc=True).execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Comments endpoints
+class CreateCommentRequest(PydanticBaseModel):
+    comment: str
+    is_internal: bool = True
+
+@router.post("/{quote_id}/comments")
+async def create_comment(
+    quote_id: str,
+    request: CreateCommentRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a comment on a quote"""
+    try:
+        comment_data = {
+            "quote_id": quote_id,
+            "user_id": current_user.get("id"),
+            "user_name": current_user.get("name") or current_user.get("email"),
+            "user_email": current_user.get("email"),
+            "comment": request.comment,
+            "is_internal": request.is_internal
+        }
+        
+        response = supabase_storage.table("quote_comments").insert(comment_data).execute()
+        
+        # Log activity
+        log_quote_activity(
+            quote_id=quote_id,
+            activity_type="commented",
+            user_id=current_user.get("id"),
+            user_name=current_user.get("name") or current_user.get("email"),
+            description="Comment added"
+        )
+        
+        return response.data[0] if response.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{quote_id}/comments")
+async def get_quote_comments(
+    quote_id: str,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Get comments for a quote"""
+    try:
+        # If customer, only show non-internal comments
+        query = supabase_storage.table("quote_comments").select("*").eq("quote_id", quote_id)
+        if current_user and current_user.get("role") != "admin":
+            query = query.eq("is_internal", False)
+        
+        response = query.order("created_at", desc=True).execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Version history endpoints
+@router.get("/{quote_id}/versions")
+async def get_quote_versions(
+    quote_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get version history for a quote (admin only)"""
+    try:
+        response = supabase_storage.table("quote_versions").select("*").eq("quote_id", quote_id).order("version_number", desc=True).execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Reminder endpoints
+class SetReminderRequest(PydanticBaseModel):
+    reminder_date: str  # ISO format datetime
+
+@router.post("/{quote_id}/reminder")
+async def set_reminder(
+    quote_id: str,
+    request: SetReminderRequest,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Set a reminder for a quote (admin only)"""
+    try:
+        supabase.table("quotes").update({
+            "reminder_date": request.reminder_date,
+            "reminder_sent": False
+        }).eq("id", quote_id).execute()
+        
+        return {"message": "Reminder set successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{quote_id}/reminder")
+async def delete_reminder(
+    quote_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete reminder for a quote (admin only)"""
+    try:
+        supabase.table("quotes").update({
+            "reminder_date": None,
+            "reminder_sent": False
+        }).eq("id", quote_id).execute()
+        
+        return {"message": "Reminder deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Template endpoints
+class QuoteTemplateCreate(PydanticBaseModel):
+    name: str
+    description: Optional[str] = None
+    title: Optional[str] = None
+    notes: Optional[str] = None
+    terms: Optional[str] = None
+    tax_rate: Decimal = Decimal("0")
+    currency: str = "USD"
+    line_items: List[LineItemCreate] = []
+    is_public: bool = False
+
+class QuoteTemplateUpdate(PydanticBaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    title: Optional[str] = None
+    notes: Optional[str] = None
+    terms: Optional[str] = None
+    tax_rate: Optional[Decimal] = None
+    currency: Optional[str] = None
+    line_items: Optional[List[LineItemCreate]] = None
+    is_public: Optional[bool] = None
+
+@router.get("/templates", response_model=List[dict])
+async def get_quote_templates(
+    current_admin: dict = Depends(get_current_admin),
+    include_public: bool = Query(True, description="Include public templates")
+):
+    """Get all quote templates (admin only)"""
+    try:
+        query = supabase_storage.table("quote_templates").select("*")
+        
+        if include_public:
+            query = query.or_("created_by.eq." + current_admin["id"] + ",is_public.eq.true")
+        else:
+            query = query.eq("created_by", current_admin["id"])
+        
+        response = query.order("created_at", desc=True).execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/templates", response_model=dict)
+async def create_quote_template(
+    template: QuoteTemplateCreate,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a quote template (admin only)"""
+    try:
+        # Convert line items to JSON
+        line_items_data = []
+        for item in template.line_items:
+            item_dict = item.model_dump() if hasattr(item, 'model_dump') else item.dict()
+            for key, value in item_dict.items():
+                if isinstance(value, Decimal):
+                    item_dict[key] = str(value)
+            line_items_data.append(item_dict)
+        
+        template_data = {
+            "name": template.name,
+            "description": template.description,
+            "title": template.title,
+            "notes": template.notes,
+            "terms": template.terms,
+            "tax_rate": str(template.tax_rate),
+            "currency": template.currency,
+            "line_items": line_items_data,
+            "created_by": current_admin["id"],
+            "is_public": template.is_public,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }
+        
+        response = supabase_storage.table("quote_templates").insert(template_data).execute()
+        return response.data[0] if response.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/templates/{template_id}", response_model=dict)
+async def get_quote_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get a specific quote template (admin only)"""
+    try:
+        response = supabase_storage.table("quote_templates").select("*").eq("id", template_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        template = response.data[0]
+        # Check access
+        if not template.get("is_public") and template.get("created_by") != current_admin["id"]:
+            raise HTTPException(status_code=403, detail="You don't have access to this template")
+        
+        return template
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/templates/{template_id}", response_model=dict)
+async def update_quote_template(
+    template_id: str,
+    template: QuoteTemplateUpdate,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update a quote template (admin only)"""
+    try:
+        # Check ownership
+        existing = supabase_storage.table("quote_templates").select("created_by").eq("id", template_id).execute()
+        if not existing.data or existing.data[0].get("created_by") != current_admin["id"]:
+            raise HTTPException(status_code=403, detail="You can only update your own templates")
+        
+        update_data = {}
+        if template.name is not None:
+            update_data["name"] = template.name
+        if template.description is not None:
+            update_data["description"] = template.description
+        if template.title is not None:
+            update_data["title"] = template.title
+        if template.notes is not None:
+            update_data["notes"] = template.notes
+        if template.terms is not None:
+            update_data["terms"] = template.terms
+        if template.tax_rate is not None:
+            update_data["tax_rate"] = str(template.tax_rate)
+        if template.currency is not None:
+            update_data["currency"] = template.currency
+        if template.is_public is not None:
+            update_data["is_public"] = template.is_public
+        if template.line_items is not None:
+            line_items_data = []
+            for item in template.line_items:
+                item_dict = item.model_dump() if hasattr(item, 'model_dump') else item.dict()
+                for key, value in item_dict.items():
+                    if isinstance(value, Decimal):
+                        item_dict[key] = str(value)
+                line_items_data.append(item_dict)
+            update_data["line_items"] = line_items_data
+        
+        update_data["updated_at"] = datetime.now().isoformat()
+        
+        response = supabase_storage.table("quote_templates").update(update_data).eq("id", template_id).execute()
+        return response.data[0] if response.data else {}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/templates/{template_id}")
+async def delete_quote_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete a quote template (admin only)"""
+    try:
+        # Check ownership
+        existing = supabase_storage.table("quote_templates").select("created_by").eq("id", template_id).execute()
+        if not existing.data or existing.data[0].get("created_by") != current_admin["id"]:
+            raise HTTPException(status_code=403, detail="You can only delete your own templates")
+        
+        supabase_storage.table("quote_templates").delete().eq("id", template_id).execute()
+        return {"message": "Template deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Line item category endpoints
+class LineItemCategoryCreate(PydanticBaseModel):
+    name: str
+    description: Optional[str] = None
+
+@router.get("/line-item-categories", response_model=List[dict])
+async def get_line_item_categories(
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all line item categories (admin only)"""
+    try:
+        response = supabase_storage.table("line_item_categories").select("*").order("name").execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/line-item-categories", response_model=dict)
+async def create_line_item_category(
+    category: LineItemCategoryCreate,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a line item category (admin only)"""
+    try:
+        category_data = {
+            "name": category.name,
+            "description": category.description,
+            "created_by": current_admin["id"],
+            "created_at": datetime.now().isoformat()
+        }
+        response = supabase_storage.table("line_item_categories").insert(category_data).execute()
+        return response.data[0] if response.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Line item template endpoints
+class LineItemTemplateCreate(PydanticBaseModel):
+    category_id: Optional[str] = None
+    name: str
+    description: str
+    default_quantity: Decimal = Decimal("1")
+    default_unit_price: Decimal = Decimal("0")
+    default_discount_percent: Decimal = Decimal("0")
+    default_tax_rate: Decimal = Decimal("0")
+    is_public: bool = False
+
+@router.get("/line-item-templates", response_model=List[dict])
+async def get_line_item_templates(
+    current_admin: dict = Depends(get_current_admin),
+    category_id: Optional[str] = Query(None, description="Filter by category ID"),
+    include_public: bool = Query(True, description="Include public templates")
+):
+    """Get all line item templates (admin only)"""
+    try:
+        query = supabase_storage.table("line_item_templates").select("*, line_item_categories(*)")
+        
+        if category_id:
+            query = query.eq("category_id", category_id)
+        
+        if include_public:
+            query = query.or_("created_by.eq." + current_admin["id"] + ",is_public.eq.true")
+        else:
+            query = query.eq("created_by", current_admin["id"])
+        
+        response = query.order("name").execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/line-item-templates", response_model=dict)
+async def create_line_item_template(
+    template: LineItemTemplateCreate,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a line item template (admin only)"""
+    try:
+        template_data = {
+            "category_id": template.category_id,
+            "name": template.name,
+            "description": template.description,
+            "default_quantity": str(template.default_quantity),
+            "default_unit_price": str(template.default_unit_price),
+            "default_discount_percent": str(template.default_discount_percent),
+            "default_tax_rate": str(template.default_tax_rate),
+            "created_by": current_admin["id"],
+            "is_public": template.is_public,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }
+        response = supabase_storage.table("line_item_templates").insert(template_data).execute()
+        return response.data[0] if response.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/line-item-templates/{template_id}")
+async def delete_line_item_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete a line item template (admin only)"""
+    try:
+        # Check ownership
+        existing = supabase_storage.table("line_item_templates").select("created_by").eq("id", template_id).execute()
+        if not existing.data or existing.data[0].get("created_by") != current_admin["id"]:
+            raise HTTPException(status_code=403, detail="You can only delete your own templates")
+        
+        supabase_storage.table("line_item_templates").delete().eq("id", template_id).execute()
+        return {"message": "Line item template deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Auto-save endpoint
+class AutoSaveRequest(PydanticBaseModel):
+    draft_data: dict
+
+@router.post("/{quote_id}/auto-save")
+async def auto_save_quote(
+    quote_id: str,
+    request: AutoSaveRequest,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Auto-save a quote draft (admin only)"""
+    try:
+        supabase.table("quotes").update({
+            "draft_auto_save": request.draft_data,
+            "last_auto_saved_at": datetime.now().isoformat()
+        }).eq("id", quote_id).execute()
+        
+        return {"message": "Draft auto-saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{quote_id}/auto-save")
+async def get_auto_saved_draft(
+    quote_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get auto-saved draft for a quote (admin only)"""
+    try:
+        response = supabase.table("quotes").select("draft_auto_save, last_auto_saved_at").eq("id", quote_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Quote not found")
+        
+        return {
+            "draft_data": response.data[0].get("draft_auto_save"),
+            "last_auto_saved_at": response.data[0].get("last_auto_saved_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Client quote history endpoint
+@router.get("/client/{client_id}/history")
+async def get_client_quote_history(
+    client_id: str,
+    current_user: Optional[dict] = Depends(get_optional_user)
+):
+    """Get quote history for a specific client"""
+    try:
+        query = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("client_id", client_id)
+        
+        # If customer, only show assigned quotes
+        if current_user and current_user.get("role") == "customer":
+            assignments_response = supabase_storage.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
+            assigned_quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
+            if assigned_quote_ids:
+                query = query.in_("id", assigned_quote_ids)
+            else:
+                return []
+        
+        response = query.order("created_at", desc=True).execute()
+        return response.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Analytics endpoints
+@router.get("/analytics/summary")
+async def get_quote_analytics(
+    current_admin: dict = Depends(get_current_admin),
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Get quote analytics summary (admin only)"""
+    try:
+        query = supabase.table("quotes").select("*")
+        
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d")
+                query = query.gte("created_at", start.isoformat())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+                query = query.lt("created_at", end.isoformat())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
+        response = query.execute()
+        quotes = response.data or []
+        
+        total_quotes = len(quotes)
+        total_value = sum(Decimal(q.get("total", "0")) for q in quotes)
+        accepted_quotes = [q for q in quotes if q.get("status") == "accepted"]
+        accepted_value = sum(Decimal(q.get("total", "0")) for q in accepted_quotes)
+        conversion_rate = (len(accepted_quotes) / total_quotes * 100) if total_quotes > 0 else 0
+        
+        status_counts = {}
+        for quote in quotes:
+            status = quote.get("status", "unknown")
+            status_counts[status] = status_counts.get(status, 0) + 1
+        
+        payment_status_counts = {}
+        for quote in quotes:
+            payment_status = quote.get("payment_status") or "unpaid"
+            payment_status_counts[payment_status] = payment_status_counts.get(payment_status, 0) + 1
+        
+        return {
+            "total_quotes": total_quotes,
+            "total_value": str(total_value),
+            "accepted_quotes": len(accepted_quotes),
+            "accepted_value": str(accepted_value),
+            "conversion_rate": round(conversion_rate, 2),
+            "average_quote_value": str(total_value / total_quotes) if total_quotes > 0 else "0",
+            "status_counts": status_counts,
+            "payment_status_counts": payment_status_counts,
+        }
     except HTTPException:
         raise
     except Exception as e:

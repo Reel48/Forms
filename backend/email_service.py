@@ -776,6 +776,106 @@ class EmailService:
         
         return self._send_email(to_email, subject, html_content, text_content)
     
+    def send_quote_email(
+        self,
+        to_email: str,
+        quote_title: str,
+        quote_number: str,
+        quote_id: str,
+        share_link: Optional[str] = None,
+        pdf_url: Optional[str] = None,
+        customer_name: Optional[str] = None,
+        sender_name: Optional[str] = None,
+        custom_message: Optional[str] = None
+    ) -> bool:
+        """
+        Send quote via email to a customer
+        
+        Args:
+            to_email: Recipient's email address
+            quote_title: Title of the quote
+            quote_number: Quote number
+            quote_id: ID of the quote
+            share_link: Shareable link to view quote (optional)
+            pdf_url: URL to download PDF (optional)
+            customer_name: Customer's name (optional)
+            sender_name: Name of person sending (optional)
+            custom_message: Custom message to include (optional)
+            
+        Returns:
+            True if email sent successfully, False otherwise
+        """
+        quote_link = share_link or f"{FRONTEND_URL}/quotes/{quote_id}"
+        
+        subject = f"Quote: {quote_title}"
+        
+        custom_message_html = ""
+        if custom_message:
+            custom_message_html = f"""
+            <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2196f3;">
+                <p style="margin: 0; color: #1565c0; font-style: italic;">{custom_message}</p>
+            </div>
+            """
+        
+        sender_info = ""
+        if sender_name:
+            sender_info = f"<p style=\"color: #666; margin-bottom: 0;\">From: {sender_name}</p>"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Quote: {quote_title}</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
+                <h1 style="color: #2c3e50; margin-top: 0;">Quote: {quote_title}</h1>
+                <p>Hello{(' ' + customer_name) if customer_name else ''},</p>
+                <p>Please find your quote below:</p>
+                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #667eea;">
+                    <h2 style="margin-top: 0; color: #667eea;">{quote_title}</h2>
+                    <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
+                    {sender_info}
+                </div>
+                {custom_message_html}
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{quote_link}" style="background-color: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; margin: 5px;">View Quote</a>
+                    {f'<a href="{pdf_url}" style="background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; margin: 5px;">Download PDF</a>' if pdf_url else ''}
+                </div>
+                <p style="color: #666; font-size: 14px;">
+                    Please review this quote and let us know if you have any questions.
+                </p>
+            </div>
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Quote: {quote_title}
+        
+        Hello{(' ' + customer_name) if customer_name else ''},
+        
+        Please find your quote below:
+        
+        Quote: {quote_title}
+        Quote Number: {quote_number}
+        {f'From: {sender_name}' if sender_name else ''}
+        
+        {custom_message if custom_message else ''}
+        
+        View the quote here: {quote_link}
+        {f'Download PDF: {pdf_url}' if pdf_url else ''}
+        
+        Please review this quote and let us know if you have any questions.
+        """
+        
+        return self._send_email(to_email, subject, html_content, text_content)
+    
 
 # Create a singleton instance
 email_service = EmailService()

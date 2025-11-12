@@ -186,6 +186,15 @@ export interface QuoteFilters {
   search?: string;
   status?: string;
   payment_status?: string;
+  client_id?: string;
+  created_from?: string;
+  created_to?: string;
+  expiration_from?: string;
+  expiration_to?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
 }
 
 export interface FormField {
@@ -272,6 +281,15 @@ export const quotesAPI = {
     if (filters?.search) params.append('search', filters.search);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.payment_status) params.append('payment_status', filters.payment_status);
+    if (filters?.client_id) params.append('client_id', filters.client_id);
+    if (filters?.created_from) params.append('created_from', filters.created_from);
+    if (filters?.created_to) params.append('created_to', filters.created_to);
+    if (filters?.expiration_from) params.append('expiration_from', filters.expiration_from);
+    if (filters?.expiration_to) params.append('expiration_to', filters.expiration_to);
+    if (filters?.sort_by) params.append('sort_by', filters.sort_by);
+    if (filters?.sort_order) params.append('sort_order', filters.sort_order);
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.offset) params.append('offset', filters.offset.toString());
     const queryString = params.toString();
     return api.get<Quote[]>(`/api/quotes${queryString ? `?${queryString}` : ''}`);
   },
@@ -281,6 +299,38 @@ export const quotesAPI = {
   delete: (id: string) => api.delete(`/api/quotes/${id}`),
   generatePDF: (id: string) => api.get(`/api/pdf/quote/${id}`, { responseType: 'blob' }),
   accept: (id: string) => api.put<Quote>(`/api/quotes/${id}/accept`),
+  bulkDelete: (quoteIds: string[]) => api.post<{ message: string; deleted_count: number }>('/api/quotes/bulk/delete', { quote_ids: quoteIds }),
+  bulkUpdateStatus: (quoteIds: string[], status: string) => api.post<{ message: string; updated_count: number }>('/api/quotes/bulk/update-status', { quote_ids: quoteIds, status }),
+  bulkAssign: (quoteIds: string[], userIds: string[]) => api.post<{ message: string; assigned_count: number }>('/api/quotes/bulk/assign', { quote_ids: quoteIds, user_ids: userIds }),
+  sendEmail: (quoteId: string, toEmail: string, customMessage?: string, includePdf?: boolean) => api.post<{ message: string; sent: boolean }>(`/api/quotes/${quoteId}/send-email`, { to_email: toEmail, custom_message: customMessage, include_pdf: includePdf }),
+  createShareLink: (quoteId: string, expiresAt?: string, maxViews?: number) => api.post<{ share_token: string; share_url: string }>(`/api/quotes/${quoteId}/share-link`, { expires_at: expiresAt, max_views: maxViews }),
+  getShareLink: (quoteId: string) => api.get<{ share_token: string; share_url: string }>(`/api/quotes/${quoteId}/share-link`),
+  getActivities: (quoteId: string) => api.get<any[]>(`/api/quotes/${quoteId}/activities`),
+  createComment: (quoteId: string, comment: string, isInternal?: boolean) => api.post<any>(`/api/quotes/${quoteId}/comments`, { comment, is_internal: isInternal ?? true }),
+  getComments: (quoteId: string) => api.get<any[]>(`/api/quotes/${quoteId}/comments`),
+  getVersions: (quoteId: string) => api.get<any[]>(`/api/quotes/${quoteId}/versions`),
+  setReminder: (quoteId: string, reminderDate: string) => api.post<{ message: string }>(`/api/quotes/${quoteId}/reminder`, { reminder_date: reminderDate }),
+  deleteReminder: (quoteId: string) => api.delete<{ message: string }>(`/api/quotes/${quoteId}/reminder`),
+  // Templates
+  getTemplates: () => api.get<any[]>('/api/quotes/templates'),
+  getTemplate: (templateId: string) => api.get<any>(`/api/quotes/templates/${templateId}`),
+  createTemplate: (template: any) => api.post<any>('/api/quotes/templates', template),
+  updateTemplate: (templateId: string, template: any) => api.put<any>(`/api/quotes/templates/${templateId}`, template),
+  deleteTemplate: (templateId: string) => api.delete<{ message: string }>(`/api/quotes/templates/${templateId}`),
+  // Line item categories
+  getLineItemCategories: () => api.get<any[]>('/api/quotes/line-item-categories'),
+  createLineItemCategory: (category: any) => api.post<any>('/api/quotes/line-item-categories', category),
+  // Line item templates
+  getLineItemTemplates: (categoryId?: string) => api.get<any[]>(`/api/quotes/line-item-templates${categoryId ? `?category_id=${categoryId}` : ''}`),
+  createLineItemTemplate: (template: any) => api.post<any>('/api/quotes/line-item-templates', template),
+  deleteLineItemTemplate: (templateId: string) => api.delete<{ message: string }>(`/api/quotes/line-item-templates/${templateId}`),
+  // Auto-save
+  autoSaveQuote: (quoteId: string, draftData: any) => api.post<{ message: string }>(`/api/quotes/${quoteId}/auto-save`, { draft_data: draftData }),
+  getAutoSavedDraft: (quoteId: string) => api.get<{ draft_data: any; last_auto_saved_at: string }>(`/api/quotes/${quoteId}/auto-save`),
+  // Client history
+  getClientHistory: (clientId: string) => api.get<Quote[]>(`/api/quotes/client/${clientId}/history`),
+  // Analytics
+  getAnalytics: (startDate?: string, endDate?: string) => api.get<any>(`/api/quotes/analytics/summary${startDate || endDate ? `?${startDate ? `start_date=${startDate}` : ''}${startDate && endDate ? '&' : ''}${endDate ? `end_date=${endDate}` : ''}` : ''}`),
 };
 
 // Stripe API
