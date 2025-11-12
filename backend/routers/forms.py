@@ -32,6 +32,207 @@ def generate_url_slug() -> str:
         if not existing.data:
             return slug
 
+# Email Template Management Endpoints (must come before /{form_id} route)
+@router.post("/email-templates", response_model=dict)
+async def create_email_template(
+    template_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create an email template (admin only)"""
+    try:
+        name = template_data.get("name", "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Template name is required")
+        
+        template_type = template_data.get("template_type", "").strip()
+        if not template_type:
+            raise HTTPException(status_code=400, detail="Template type is required")
+        
+        subject = template_data.get("subject", "").strip()
+        if not subject:
+            raise HTTPException(status_code=400, detail="Email subject is required")
+        
+        html_body = template_data.get("html_body", "").strip()
+        if not html_body:
+            raise HTTPException(status_code=400, detail="HTML body is required")
+        
+        # If this is marked as default, unset other defaults of the same type
+        is_default = template_data.get("is_default", False)
+        if is_default:
+            supabase.table("email_templates").update({"is_default": False}).eq("template_type", template_type).execute()
+        
+        template_db_data = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "template_type": template_type,
+            "subject": subject,
+            "html_body": html_body,
+            "text_body": template_data.get("text_body", "").strip() or None,
+            "variables": template_data.get("variables", {}),
+            "is_default": is_default,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        response = supabase.table("email_templates").insert(template_db_data).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create template")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/email-templates", response_model=list)
+async def get_email_templates(
+    template_type: Optional[str] = Query(None),
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get all email templates (admin only)"""
+    try:
+        query = supabase.table("email_templates").select("*")
+        
+        if template_type:
+            query = query.eq("template_type", template_type)
+        
+        # Execute query and sort in Python since Supabase client doesn't support chained order() calls
+        response = query.execute()
+        templates = response.data or []
+        
+        # Sort by: template_type (asc), then is_default (desc), then created_at (desc)
+        # Python's sort is stable, so we sort by least important first, then more important
+        templates.sort(key=lambda x: x.get("created_at", ""), reverse=True)  # Most recent first
+        templates.sort(key=lambda x: not x.get("is_default", False), reverse=True)  # Defaults first
+        templates.sort(key=lambda x: x.get("template_type", ""), reverse=False)  # Group by type
+        
+        return templates
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/email-templates/{template_id}", response_model=dict)
+async def get_email_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get a specific email template (admin only)"""
+    try:
+        response = supabase.table("email_templates").select("*").eq("id", template_id).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        return response.data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/email-templates/{template_id}", response_model=dict)
+async def update_email_template(
+    template_id: str,
+    template_data: dict,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update an email template (admin only)"""
+    try:
+        # Verify template exists
+        template_check = supabase.table("email_templates").select("id, template_type").eq("id", template_id).single().execute()
+        if not template_check.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        existing_template = template_check.data
+        template_type = existing_template["template_type"]
+        
+        # Prepare update data
+        update_data = {
+            "updated_at": datetime.now().isoformat(),
+        }
+        
+        if "name" in template_data:
+            name = template_data["name"].strip()
+            if not name:
+                raise HTTPException(status_code=400, detail="Template name cannot be empty")
+            update_data["name"] = name
+        
+        if "subject" in template_data:
+            subject = template_data["subject"].strip()
+            if not subject:
+                raise HTTPException(status_code=400, detail="Email subject cannot be empty")
+            update_data["subject"] = subject
+        
+        if "html_body" in template_data:
+            html_body = template_data["html_body"].strip()
+            if not html_body:
+                raise HTTPException(status_code=400, detail="HTML body cannot be empty")
+            update_data["html_body"] = html_body
+        
+        if "text_body" in template_data:
+            update_data["text_body"] = template_data["text_body"].strip() or None
+        
+        if "variables" in template_data:
+            update_data["variables"] = template_data["variables"]
+        
+        # Handle is_default flag
+        if "is_default" in template_data:
+            is_default = template_data["is_default"]
+            if is_default:
+                # Unset other defaults of the same type
+                supabase.table("email_templates").update({"is_default": False}).eq("template_type", template_type).neq("id", template_id).execute()
+            update_data["is_default"] = is_default
+        
+        response = supabase.table("email_templates").update(update_data).eq("id", template_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to update template")
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/email-templates/{template_id}")
+async def delete_email_template(
+    template_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete an email template (admin only)"""
+    try:
+        # Verify template exists
+        template_check = supabase.table("email_templates").select("id").eq("id", template_id).execute()
+        if not template_check.data:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        # Delete template
+        supabase.table("email_templates").delete().eq("id", template_id).execute()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/email-templates/types/{template_type}/variables", response_model=dict)
+async def get_template_variables(
+    template_type: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get available variables for a template type (admin only)"""
+    try:
+        from template_service import template_service
+        variables = template_service.get_default_variables(template_type)
+        return {"template_type": template_type, "variables": variables}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("", response_model=List[Form])
 async def get_forms(
     status: Optional[str] = Query(None, description="Filter by status (draft, published, archived)"),
