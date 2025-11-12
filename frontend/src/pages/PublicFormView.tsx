@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formsAPI } from '../api';
@@ -36,6 +36,9 @@ function PublicFormView() {
   // CAPTCHA
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captchaRef = useRef<HTMLDivElement>(null);
+  
+  // Field validation errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   // Touch gesture support for mobile
   const touchStartX = useRef<number | null>(null);
@@ -132,7 +135,7 @@ function PublicFormView() {
             if (typeof window !== 'undefined' && (window as any).grecaptcha && captchaRef.current) {
               try {
                 (window as any).grecaptcha.render(captchaRef.current, {
-                  sitekey: formData.settings.captcha_site_key,
+                  sitekey: formData.settings?.captcha_site_key || '',
                   callback: (token: string) => {
                     setCaptchaToken(token);
                   },
@@ -260,6 +263,74 @@ function PublicFormView() {
     };
   }, [submitted]);
 
+  const validateField = useCallback((field: FormField, value: any): string | null => {
+    const rules = field.validation_rules || {};
+    
+    // Required validation
+    if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
+      return rules.errorMessage || `${field.label} is required`;
+    }
+    
+    if (value === undefined || value === null || value === '') {
+      return null; // Empty values pass if not required
+    }
+    
+    const valueStr = String(value);
+    
+    // Min/Max length validation
+    if (rules.minLength !== undefined && valueStr.length < rules.minLength) {
+      return rules.errorMessage || `${field.label} must be at least ${rules.minLength} characters`;
+    }
+    if (rules.maxLength !== undefined && valueStr.length > rules.maxLength) {
+      return rules.errorMessage || `${field.label} must be no more than ${rules.maxLength} characters`;
+    }
+    
+    // Pattern/Regex validation
+    if (rules.pattern) {
+      try {
+        const regex = new RegExp(rules.pattern);
+        if (!regex.test(valueStr)) {
+          return rules.errorMessage || `${field.label} format is invalid`;
+        }
+      } catch (e) {
+        console.warn('Invalid regex pattern:', rules.pattern);
+      }
+    }
+    
+    // Number min/max validation
+    if (field.field_type === 'number') {
+      const numValue = parseFloat(valueStr);
+      if (isNaN(numValue)) {
+        return rules.errorMessage || `${field.label} must be a valid number`;
+      }
+      if (rules.min !== undefined && numValue < rules.min) {
+        return rules.errorMessage || `${field.label} must be at least ${rules.min}`;
+      }
+      if (rules.max !== undefined && numValue > rules.max) {
+        return rules.errorMessage || `${field.label} must be no more than ${rules.max}`;
+      }
+    }
+    
+    // Email validation
+    if (field.field_type === 'email' && valueStr) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(valueStr)) {
+        return rules.errorMessage || 'Please enter a valid email address';
+      }
+    }
+    
+    // URL validation
+    if (field.field_type === 'url' && valueStr) {
+      try {
+        new URL(valueStr);
+      } catch (e) {
+        return rules.errorMessage || 'Please enter a valid URL';
+      }
+    }
+    
+    return null; // Validation passed
+  }, []);
+
   const handleFieldChange = useCallback((fieldId: string, value: any) => {
     setFormValues((prev) => {
       const updated = { ...prev, [fieldId]: value };
@@ -276,9 +347,23 @@ function PublicFormView() {
           console.warn('Failed to save progress to localStorage:', e);
         }
       }
+      // Validate field
+      const field = form?.fields?.find(f => (f.id || '') === fieldId);
+      if (field) {
+        const error = validateField(field, value);
+        setFieldErrors(prevErrors => {
+          if (error) {
+            return { ...prevErrors, [fieldId]: error };
+          } else {
+            const { [fieldId]: _, ...rest } = prevErrors;
+            return rest;
+          }
+        });
+      }
+      
       return updated;
     });
-  }, [form?.id, currentQuestionIndex, validateField]);
+  }, [form?.id, form?.fields, currentQuestionIndex, validateField]);
 
   const evaluateConditionalLogic = (field: FormField): boolean => {
     if (!field.conditional_logic || !field.conditional_logic.enabled) {
@@ -340,7 +425,6 @@ function PublicFormView() {
     const pagesData: Array<{section?: FormField; fields: FormField[]}> = [];
     let currentPageFields: FormField[] = [];
     let currentSection: FormField | undefined;
-    let fieldIndex = 0;
     
     for (const field of form.fields) {
       if (!evaluateConditionalLogic(field)) continue;
@@ -1938,7 +2022,6 @@ function PublicFormView() {
   const currentPage = pages[currentPageIndex];
   const isLastPage = currentPageIndex === pages.length - 1;
   const isFirstPage = currentPageIndex === 0;
-  const pageProgress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
   
   // Check if we're at the last question of current page
   let fieldCount = 0;

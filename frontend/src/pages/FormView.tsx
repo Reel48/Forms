@@ -698,7 +698,7 @@ function FormAnalytics({ form, submissions, loading }: FormAnalyticsProps) {
       <div style={{ marginBottom: '2rem' }}>
         <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.125rem' }}>Submissions (Last 7 Days)</h3>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: '150px', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-          {analytics.submissionsByDate.map(({ date, count }, index) => {
+          {analytics.submissionsByDate.map(({ date, count }) => {
             const maxCount = Math.max(...analytics.submissionsByDate.map(d => d.count), 1);
             const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
             const dateObj = new Date(date);
@@ -802,7 +802,7 @@ function WebhooksSection({ formId }: WebhooksSectionProps) {
   const [newWebhookUrl, setNewWebhookUrl] = useState('');
   const [newWebhookSecret, setNewWebhookSecret] = useState('');
   const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>(['submission.created']);
-  const [editingWebhookId, setEditingWebhookId] = useState<string | null>(null);
+  // const [editingWebhookId, setEditingWebhookId] = useState<string | null>(null);
 
   useEffect(() => {
     if (formId) {

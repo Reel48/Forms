@@ -163,8 +163,8 @@ function FormBuilder() {
       fields: template.fields.map((field, index) => ({
         ...field,
         description: '',
-        validation_rules: field.validation_rules || {},
-        options: field.options || [],
+        validation_rules: (field as any).validation_rules || {},
+        options: (field as any).options || [],
         conditional_logic: {},
         order_index: index,
       })),

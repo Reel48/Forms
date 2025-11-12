@@ -20,7 +20,7 @@ function FormSubmissions() {
   const [tags, setTags] = useState<Array<{id: string; tag_name: string; color: string; created_at: string}>>([]);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#667eea');
-  const [loadingTags, setLoadingTags] = useState(false);
+  const [, setLoadingTags] = useState(false);
   const [availableTags, setAvailableTags] = useState<Array<{tag_name: string; color: string}>>([]);
 
   useEffect(() => {
@@ -198,7 +198,7 @@ function FormSubmissions() {
         tag_name: newTagName.trim(),
         color: newTagColor,
       });
-      setTags(prev => [...prev, response.data]);
+      setTags(prev => [...prev, { ...response.data, created_at: new Date().toISOString() }]);
       setNewTagName('');
       setNewTagColor('#667eea');
       loadAvailableTags();
@@ -227,7 +227,7 @@ function FormSubmissions() {
         tag_name: tagName,
         color: color,
       });
-      setTags(prev => [...prev, response.data]);
+      setTags(prev => [...prev, { ...response.data, created_at: new Date().toISOString() }]);
       loadAvailableTags();
     } catch (error: any) {
       // Tag might already exist, that's okay

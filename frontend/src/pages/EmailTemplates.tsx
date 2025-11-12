@@ -23,7 +23,7 @@ const TEMPLATE_TYPES = [
 
 function EmailTemplates() {
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -227,7 +227,7 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
 
   useEffect(() => {
     if (templateType) {
-      formsAPI.getTemplateVariables(templateType).then(response => {
+      formsAPI.getTemplateVariables(templateType).then(() => {
         // Variables are already loaded in parent
       }).catch(console.error);
     }
@@ -321,7 +321,7 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
             placeholder="e.g., New Submission: {{form_name}}"
           />
           <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-            Use {{variable_name}} for dynamic content
+            Use {'{{'}variable_name{'}}'} for dynamic content
           </p>
         </div>
 

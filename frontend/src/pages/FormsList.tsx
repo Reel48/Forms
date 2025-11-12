@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
@@ -206,7 +206,7 @@ function FormsList() {
     }
   };
 
-  const handleDuplicate = async (formId: string, formName: string) => {
+  const handleDuplicate = async (formId: string) => {
     try {
       await formsAPI.duplicate(formId);
       loadForms(); // Reload the list
@@ -615,7 +615,7 @@ function FormsList() {
                             Edit
                           </Link>
                           <button
-                            onClick={() => handleDuplicate(form.id, form.name)}
+                            onClick={() => handleDuplicate(form.id)}
                             className="btn-outline"
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                             title="Duplicate form"
