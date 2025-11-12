@@ -1293,16 +1293,11 @@ async def get_email_templates(
         response = query.execute()
         templates = response.data or []
         
-        # Sort by template_type (asc), then is_default (desc), then created_at (desc)
-        templates.sort(key=lambda x: (
-            x.get("template_type", ""),
-            not x.get("is_default", False),  # False (default) comes before True (non-default)
-            x.get("created_at", "") if isinstance(x.get("created_at"), str) else ""
-        ), reverse=False)
-        # Then reverse for created_at descending within each group
-        templates.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        templates.sort(key=lambda x: not x.get("is_default", False), reverse=True)
-        templates.sort(key=lambda x: x.get("template_type", ""), reverse=False)
+        # Sort by: template_type (asc), then is_default (desc), then created_at (desc)
+        # Python's sort is stable, so we sort by least important first, then more important
+        templates.sort(key=lambda x: x.get("created_at", ""), reverse=True)  # Most recent first
+        templates.sort(key=lambda x: not x.get("is_default", False), reverse=True)  # Defaults first
+        templates.sort(key=lambda x: x.get("template_type", ""), reverse=False)  # Group by type
         
         return templates
         
