@@ -598,7 +598,7 @@ function QuoteBuilder() {
               <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Saving...</span>
             )}
             {autoSaveStatus === 'saved' && (
-              <span style={{ fontSize: '0.875rem', color: '#10b981' }}>✓ Saved</span>
+              <span style={{ fontSize: '0.875rem', color: '#10b981' }}>Saved</span>
             )}
             {role === 'admin' && (
               <>
@@ -608,7 +608,7 @@ function QuoteBuilder() {
                   className="btn-outline"
                   style={{ fontSize: '0.875rem' }}
                 >
-                  📋 Templates
+                  Templates
                 </button>
                 {isEdit && (
                   <button
@@ -617,7 +617,7 @@ function QuoteBuilder() {
                     className="btn-outline"
                     style={{ fontSize: '0.875rem' }}
                   >
-                    📋 Duplicate
+                    Duplicate
                   </button>
                 )}
                 <button
@@ -626,7 +626,7 @@ function QuoteBuilder() {
                   className="btn-outline"
                   style={{ fontSize: '0.875rem' }}
                 >
-                  💾 Save as Template
+                  Save as Template
                 </button>
               </>
             )}
@@ -636,7 +636,7 @@ function QuoteBuilder() {
               className="btn-outline"
               style={{ fontSize: '0.875rem' }}
             >
-              {showPreview ? '✏️ Edit' : '👁️ Preview'}
+              {showPreview ? 'Edit' : 'Preview'}
             </button>
             <button
               type="button"
@@ -762,7 +762,7 @@ function QuoteBuilder() {
                       className="btn-outline"
                       style={{ fontSize: '0.875rem' }}
                     >
-                      ✏️ Bulk Edit ({selectedLineItems.size})
+                      Bulk Edit ({selectedLineItems.size})
                     </button>
                   )}
                   <button type="button" onClick={() => addLineItem()} className="btn-primary" style={{ fontSize: '0.875rem' }}>
@@ -900,7 +900,7 @@ function QuoteBuilder() {
                                   style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                                   title="Duplicate"
                                 >
-                                  📋
+                                  Copy
                                 </button>
                               )}
                               <button

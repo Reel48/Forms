@@ -238,37 +238,37 @@ function CustomerDashboard() {
       switch (statusLower) {
         case 'accepted':
           badgeClass = 'badge-accepted';
-          icon = '✅ ';
+          icon = '';
           break;
         case 'declined':
           badgeClass = 'badge-declined';
-          icon = '❌ ';
+          icon = '';
           break;
         case 'sent':
           badgeClass = 'badge-sent';
-          icon = '📤 ';
+          icon = '';
           break;
         case 'viewed':
           badgeClass = 'badge-sent';
-          icon = '👁️ ';
+          icon = '';
           break;
         default:
           badgeClass = 'badge-draft';
-          icon = '📝 ';
+          icon = '';
       }
     } else {
       switch (statusLower) {
         case 'published':
           badgeClass = 'badge-sent';
-          icon = '📋 ';
+          icon = '';
           break;
         case 'archived':
           badgeClass = 'badge-declined';
-          icon = '📦 ';
+          icon = '';
           break;
         default:
           badgeClass = 'badge-draft';
-          icon = '📝 ';
+          icon = '';
       }
     }
 
@@ -518,7 +518,7 @@ function CustomerDashboard() {
                         fontSize: '1.5rem',
                         flexShrink: 0,
                       }}>
-                        {item.type === 'quote' ? '💰' : '📝'}
+                        {item.type === 'quote' ? 'Quote' : 'Form'}
                       </div>
 
                       {/* Content */}
@@ -608,7 +608,7 @@ function CustomerDashboard() {
                                       opacity: acceptingQuote === item.id ? 0.6 : 1,
                                     }}
                                   >
-                                    {acceptingQuote === item.id ? 'Accepting...' : '✅ Accept'}
+                                    {acceptingQuote === item.id ? 'Accepting...' : 'Accept'}
                                   </button>
                                   <button
                                     onClick={(e) => {
@@ -623,7 +623,7 @@ function CustomerDashboard() {
                                       opacity: decliningQuote === item.id ? 0.6 : 1,
                                     }}
                                   >
-                                    {decliningQuote === item.id ? 'Declining...' : '❌ Decline'}
+                                    {decliningQuote === item.id ? 'Declining...' : 'Decline'}
                                   </button>
                                 </>
                               )}

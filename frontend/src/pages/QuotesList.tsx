@@ -544,7 +544,7 @@ function QuotesList() {
 
   // Get sort icon
   const getSortIcon = (field: string) => {
-    if (sortBy !== field) return '↕️';
+    if (sortBy !== field) return '';
     return sortOrder === 'asc' ? '↑' : '↓';
   };
 
@@ -589,7 +589,7 @@ function QuotesList() {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {role === 'admin' && quotes.length > 0 && (
             <button onClick={handleExportCSV} className="btn-outline" style={{ fontSize: '0.875rem' }}>
-              📥 Export CSV
+              Export CSV
             </button>
           )}
           {role === 'admin' && (
@@ -769,7 +769,7 @@ function QuotesList() {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    📋 Presets
+                    Presets
                   </button>
                   {showFilterPresets && (
                     <>
@@ -890,7 +890,7 @@ function QuotesList() {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  💾 Save Filters
+                  Save Filters
                 </button>
               )}
             </div>
@@ -949,7 +949,7 @@ function QuotesList() {
                       fontSize: '0.875rem'
                     }}
                   >
-                    ⚙️ Columns
+                    Columns
                   </button>
                   {showColumnSettings && (
                     <>
@@ -1066,7 +1066,6 @@ function QuotesList() {
           {quotes.length === 0 ? (
             <div className="card">
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
                 <h2 style={{ marginBottom: '0.5rem' }}>
                   {hasActiveFilters ? 'No quotes found' : 'No quotes yet'}
                 </h2>
@@ -1420,7 +1419,7 @@ function QuotesList() {
                                                 borderTop: '1px solid #e5e7eb'
                                               }}
                                             >
-                                              📧 Send Email
+                                              Send Email
                                             </button>
                                             <button
                                               onClick={() => {

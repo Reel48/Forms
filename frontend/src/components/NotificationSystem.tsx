@@ -94,10 +94,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           >
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                {notification.type === 'success' && '✓ '}
-                {notification.type === 'error' && '✕ '}
-                {notification.type === 'warning' && '⚠ '}
-                {notification.type === 'info' && 'ℹ '}
                 {notification.message}
               </div>
             </div>

@@ -837,7 +837,7 @@ function PublicFormView() {
                 </div>
               ) : value?.file_url ? (
                 <div>
-                  <p style={{ margin: 0, color: '#22c55e', fontWeight: '500' }}>✓ {value.file_name}</p>
+                  <p style={{ margin: 0, color: '#22c55e', fontWeight: '500' }}>{value.file_name}</p>
                   <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
                     {(value.file_size / 1024).toFixed(2)} KB
                   </p>
@@ -865,7 +865,7 @@ function PublicFormView() {
                 </div>
               ) : value?.upload_error ? (
                 <div>
-                  <p style={{ margin: 0, color: '#dc2626', fontWeight: '500' }}>⚠ Upload failed: {value.upload_error}</p>
+                  <p style={{ margin: 0, color: '#dc2626', fontWeight: '500' }}>Upload failed: {value.upload_error}</p>
                   <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
                     File: {value.file_name} ({(value.file_size / 1024).toFixed(2)} KB)
                   </p>
@@ -1525,11 +1525,11 @@ function PublicFormView() {
                         transition: 'all 0.2s'
                       }}
                     >
-                      {isProcessing ? 'Processing...' : value?.status === 'succeeded' ? '✓ Payment Complete' : 'Pay Now'}
+                      {isProcessing ? 'Processing...' : value?.status === 'succeeded' ? 'Payment Complete' : 'Pay Now'}
                     </button>
                     {value?.status === 'succeeded' && (
                       <p style={{ fontSize: '0.875rem', color: '#22c55e', marginTop: '1rem', fontWeight: '500' }}>
-                        ✓ Payment successful
+                        Payment successful
                       </p>
                     )}
                   </div>
@@ -1590,7 +1590,7 @@ function PublicFormView() {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ color: '#22c55e', marginBottom: '1rem' }}>✓ {thankYouMessage}</h1>
+          <h1 style={{ color: '#22c55e', marginBottom: '1rem' }}>{thankYouMessage}</h1>
           <p className="text-muted" style={{ marginBottom: '2rem' }}>{thankYouDescription}</p>
           {redirectUrl && (
             <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>

@@ -357,7 +357,7 @@ function FormsList() {
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none' }}
                           title="Open public form"
                         >
-                          🔗
+                          Open
                         </a>
                       )}
                     </div>

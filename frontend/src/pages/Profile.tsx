@@ -332,7 +332,7 @@ function Profile() {
                 marginBottom: '1rem'
               }}>
                 <p><strong>Email:</strong> {user?.email}</p>
-                <p><strong>Email Verified:</strong> {user?.email_confirmed_at ? '✅ Yes' : '❌ No'}</p>
+                <p><strong>Email Verified:</strong> {user?.email_confirmed_at ? 'Yes' : 'No'}</p>
                 {!user?.email_confirmed_at && (
                   <p style={{ marginTop: '0.5rem' }}>
                     <a href="/resend-verification" style={{ color: '#007bff' }}>
@@ -452,7 +452,7 @@ function Profile() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <p style={{ margin: '0 0 0.25rem 0', fontWeight: 'bold' }}>
-                          {activity.success ? '✅ Successful Login' : '❌ Failed Login'}
+                          {activity.success ? 'Successful Login' : 'Failed Login'}
                         </p>
                         <p style={{ margin: '0 0 0.25rem 0', fontSize: '14px', color: '#666' }}>
                           <strong>IP Address:</strong> {activity.ip_address || 'Unknown'}

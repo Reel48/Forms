@@ -247,7 +247,7 @@ function FormView() {
                   }}
                   title="Copy URL to clipboard"
                 >
-                  📋 Copy
+                  Copy
                 </button>
                 <a
                   href={`/public/form/${form.public_url_slug}`}
@@ -261,12 +261,12 @@ function FormView() {
                     textDecoration: 'none'
                   }}
                 >
-                  🔗 Open
+                  Open
                 </a>
               </div>
               {form.status !== 'published' && (
                 <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#dc2626' }}>
-                  ⚠️ Form must be published for the public URL to work
+                  Warning: Form must be published for the public URL to work
                 </p>
               )}
             </div>

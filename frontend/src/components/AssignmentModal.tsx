@@ -213,7 +213,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                           color: '#eab308',
                           marginTop: '0.25rem'
                         }}>
-                          ⚠️ Client - will create user account when assigned
+                          Warning: Client - will create user account when assigned
                         </span>
                       )}
                     </div>

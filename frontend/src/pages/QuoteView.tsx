@@ -421,18 +421,8 @@ function QuoteView() {
   };
 
   const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'created': return '📝';
-      case 'sent': return '📤';
-      case 'viewed': return '👁️';
-      case 'accepted': return '✅';
-      case 'declined': return '❌';
-      case 'status_changed': return '🔄';
-      case 'updated': return '✏️';
-      case 'commented': return '💬';
-      case 'share_link_created': return '🔗';
-      default: return '📌';
-    }
+    // Icons removed - using text labels instead
+    return '';
   };
 
   const getPaymentStatusDetails = () => {
@@ -440,16 +430,16 @@ function QuoteView() {
     
     const status = quote.payment_status.toLowerCase();
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
-      'paid': { label: 'Paid', color: '#065f46', icon: '✅' },
-      'unpaid': { label: 'Unpaid', color: '#991b1b', icon: '⏳' },
-      'partially_paid': { label: 'Partially Paid', color: '#92400e', icon: '💰' },
-      'refunded': { label: 'Refunded', color: '#7c2d12', icon: '↩️' },
-      'failed': { label: 'Payment Failed', color: '#991b1b', icon: '❌' },
-      'voided': { label: 'Voided', color: '#6b7280', icon: '🚫' },
-      'uncollectible': { label: 'Uncollectible', color: '#991b1b', icon: '⚠️' },
+      'paid': { label: 'Paid', color: '#065f46', icon: '' },
+      'unpaid': { label: 'Unpaid', color: '#991b1b', icon: '' },
+      'partially_paid': { label: 'Partially Paid', color: '#92400e', icon: '' },
+      'refunded': { label: 'Refunded', color: '#7c2d12', icon: '' },
+      'failed': { label: 'Payment Failed', color: '#991b1b', icon: '' },
+      'voided': { label: 'Voided', color: '#6b7280', icon: '' },
+      'uncollectible': { label: 'Uncollectible', color: '#991b1b', icon: '' },
     };
     
-    return statusMap[status] || { label: status, color: '#6b7280', icon: '📄' };
+    return statusMap[status] || { label: status, color: '#6b7280', icon: '' };
   };
 
   const paymentStatusDetails = getPaymentStatusDetails();
@@ -586,19 +576,19 @@ function QuoteView() {
               {role === 'admin' && (
                 <>
                   <button onClick={() => setShowSendEmailModal(true)} className="btn-primary">
-                    📧 Send Email
+                    Send Email
                   </button>
                   {shareLink ? (
                     <button onClick={handleCopyShareLink} className="btn-outline">
-                      🔗 Copy Share Link
+                      Copy Share Link
                     </button>
                   ) : (
                     <button onClick={() => setShowShareLinkModal(true)} className="btn-outline">
-                      🔗 Create Share Link
+                      Create Share Link
                     </button>
                   )}
                   <button onClick={() => setShowReminderModal(true)} className="btn-outline">
-                    ⏰ Reminder
+                    Reminder
                   </button>
                   <button onClick={() => setShowAssignmentModal(true)} className="btn-primary">
                     Assign
@@ -606,15 +596,15 @@ function QuoteView() {
                 </>
               )}
               <button onClick={handleDownloadPDF} className="btn-primary">
-                📥 Download PDF
+                Download PDF
               </button>
               <button onClick={handlePrint} className="btn-outline no-print">
-                🖨️ Print
+                Print
               </button>
               {role === 'admin' && (
                 <>
                   <button onClick={handleDuplicateQuote} className="btn-outline">
-                    📋 Duplicate
+                    Duplicate
                   </button>
                   <Link to={`/quotes/${id}/edit`} className="btn-secondary">
                     Edit
