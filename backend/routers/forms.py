@@ -1425,8 +1425,6 @@ async def get_webhook_deliveries(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Password Protection Endpoint
-
-# Password Protection Endpoint
 @router.post("/public/{slug}/verify-password")
 async def verify_form_password(slug: str, password_data: dict):
     """Verify password for a password-protected form (public endpoint)"""
