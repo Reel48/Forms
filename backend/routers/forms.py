@@ -1289,9 +1289,22 @@ async def get_email_templates(
         if template_type:
             query = query.eq("template_type", template_type)
         
-        response = query.order("template_type", desc=False).order("is_default", desc=True).order("created_at", desc=True).execute()
+        # Execute query and sort in Python since Supabase client doesn't support chained order() calls
+        response = query.execute()
+        templates = response.data or []
         
-        return response.data or []
+        # Sort by template_type (asc), then is_default (desc), then created_at (desc)
+        templates.sort(key=lambda x: (
+            x.get("template_type", ""),
+            not x.get("is_default", False),  # False (default) comes before True (non-default)
+            x.get("created_at", "") if isinstance(x.get("created_at"), str) else ""
+        ), reverse=False)
+        # Then reverse for created_at descending within each group
+        templates.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        templates.sort(key=lambda x: not x.get("is_default", False), reverse=True)
+        templates.sort(key=lambda x: x.get("template_type", ""), reverse=False)
+        
+        return templates
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
