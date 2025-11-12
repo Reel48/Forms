@@ -55,12 +55,13 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
   return (
     <div>
           <div style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <label style={{ margin: 0 }}>
+        <label htmlFor="address-structured-mode" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
           <input
             type="checkbox"
+            id="address-structured-mode"
+            name="address-structured-mode"
             checked={mode === 'structured'}
             onChange={(e) => setMode(e.target.checked ? 'structured' : 'simple')}
-            style={{ marginRight: '0.5rem' }}
           />
           Use structured address
         </label>
@@ -68,10 +69,12 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
 
       {mode === 'simple' ? (
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+          <label htmlFor="address-simple" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
             Address
           </label>
           <textarea
+            id="address-simple"
+            name="address-simple"
             value={value.address || ''}
             onChange={handleSimpleAddressChange}
             placeholder="Enter full address..."
@@ -83,11 +86,13 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              <label htmlFor="address-line1" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 Street Address *
               </label>
               <input
                 type="text"
+                id="address-line1"
+                name="address-line1"
                 value={value.address_line1 || ''}
                 onChange={(e) => handleStructuredFieldChange('address_line1', e.target.value)}
                 placeholder="123 Main St"
@@ -97,11 +102,13 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              <label htmlFor="address-line2" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 Address Line 2
               </label>
               <input
                 type="text"
+                id="address-line2"
+                name="address-line2"
                 value={value.address_line2 || ''}
                 onChange={(e) => handleStructuredFieldChange('address_line2', e.target.value)}
                 placeholder="Apt 4B, Suite 100"
@@ -110,11 +117,13 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              <label htmlFor="address-city" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 City *
               </label>
               <input
                 type="text"
+                id="address-city"
+                name="address-city"
                 value={value.address_city || ''}
                 onChange={(e) => handleStructuredFieldChange('address_city', e.target.value)}
                 placeholder="New York"
@@ -124,11 +133,13 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              <label htmlFor="address-state" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 State/Province *
               </label>
               <input
                 type="text"
+                id="address-state"
+                name="address-state"
                 value={value.address_state || ''}
                 onChange={(e) => handleStructuredFieldChange('address_state', e.target.value)}
                 placeholder="NY"
@@ -138,11 +149,13 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              <label htmlFor="address-postal-code" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 ZIP/Postal Code *
               </label>
               <input
                 type="text"
+                id="address-postal-code"
+                name="address-postal-code"
                 value={value.address_postal_code || ''}
                 onChange={(e) => handleStructuredFieldChange('address_postal_code', e.target.value)}
                 placeholder="10001"
@@ -152,10 +165,12 @@ function AddressInput({ value, onChange, mode: externalMode, onModeChange }: Add
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              <label htmlFor="address-country" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
                 Country
               </label>
               <select
+                id="address-country"
+                name="address-country"
                 value={value.address_country || 'US'}
                 onChange={(e) => handleStructuredFieldChange('address_country', e.target.value)}
                 style={{ width: '100%', padding: '0.625rem', border: '1px solid #d1d5db', borderRadius: '6px' }}
