@@ -816,7 +816,12 @@ function WebhooksSection({ formId }: WebhooksSectionProps) {
       const response = await formsAPI.getWebhooks(formId);
       setWebhooks(response.data);
     } catch (error: any) {
-      console.error('Failed to load webhooks:', error);
+      // Handle 404 gracefully - webhooks endpoint may not be available yet
+      if (error?.response?.status === 404) {
+        setWebhooks([]);
+      } else {
+        console.error('Failed to load webhooks:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -1018,7 +1023,12 @@ function FormVersionsSection({ formId }: FormVersionsSectionProps) {
       const response = await formsAPI.getFormVersions(formId);
       setVersions(response.data);
     } catch (error: any) {
-      console.error('Failed to load versions:', error);
+      // Handle 404 gracefully - versions endpoint may not be available yet
+      if (error?.response?.status === 404) {
+        setVersions([]);
+      } else {
+        console.error('Failed to load versions:', error);
+      }
     } finally {
       setLoading(false);
     }

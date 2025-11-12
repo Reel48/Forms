@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form } from '../api';
@@ -32,41 +32,8 @@ function FormsList() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const { role } = useAuth();
 
-  useEffect(() => {
-    loadForms();
-  }, [statusFilter, searchQuery, dateFrom, dateTo]);
-
-  // Load users for assignment display (admin only)
-  useEffect(() => {
-    if (role === 'admin' && forms.length > 0) {
-      loadUsers();
-      loadAllAssignments();
-      loadSubmissionCounts();
-    }
-  }, [forms, role]);
-
-  // Refresh assignments when window gains focus (e.g., navigating back to tab)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (role === 'admin' && forms.length > 0) {
-        loadAllAssignments();
-      }
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [forms, role]);
-
-  // Refresh assignments when component mounts (e.g., navigating to this page)
-  useEffect(() => {
-    if (role === 'admin' && forms.length > 0) {
-      // Small delay to ensure forms are loaded first
-      const timer = setTimeout(() => {
-        loadAllAssignments();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  // Use ref to track if we've loaded forms initially
+  const hasLoadedFormsRef = useRef(false);
 
   const loadUsers = async () => {
     try {
@@ -81,11 +48,15 @@ function FormsList() {
     }
   };
 
-  const loadAllAssignments = async () => {
+  const loadAllAssignments = useCallback(async () => {
+    // Use current forms state
+    const currentForms = forms;
+    if (currentForms.length === 0) return;
+    
     try {
       const assignmentsMap: Record<string, Assignment[]> = {};
       await Promise.all(
-        forms.map(async (form) => {
+        currentForms.map(async (form) => {
           try {
             const response = await api.get(`/api/forms/${form.id}/assignments`);
             assignmentsMap[form.id] = response.data || [];
@@ -99,13 +70,17 @@ function FormsList() {
     } catch (error) {
       console.error('Failed to load assignments:', error);
     }
-  };
+  }, [forms]);
 
-  const loadSubmissionCounts = async () => {
+  const loadSubmissionCounts = useCallback(async () => {
+    // Use current forms state
+    const currentForms = forms;
+    if (currentForms.length === 0) return;
+    
     try {
       const countsMap: Record<string, number> = {};
       await Promise.all(
-        forms.map(async (form) => {
+        currentForms.map(async (form) => {
           try {
             const response = await formsAPI.getSubmissions(form.id);
             countsMap[form.id] = response.data?.length || 0;
@@ -119,9 +94,9 @@ function FormsList() {
     } catch (error) {
       console.error('Failed to load submission counts:', error);
     }
-  };
+  }, [forms]);
 
-  const loadForms = async () => {
+  const loadForms = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -146,14 +121,47 @@ function FormsList() {
       }
       
       setForms(filteredForms);
+      hasLoadedFormsRef.current = true;
     } catch (error: any) {
       console.error('Failed to load forms:', error);
       setError(error?.response?.data?.detail || error?.message || 'Failed to load forms. Please try again.');
       setForms([]);
+      hasLoadedFormsRef.current = false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, searchQuery, dateFrom, dateTo]);
+  
+  // Memoize form IDs to prevent unnecessary re-renders
+  const formsIds = useMemo(() => forms.map(f => f.id).join(','), [forms]);
+
+  useEffect(() => {
+    loadForms();
+  }, [loadForms]);
+
+  // Load users for assignment display (admin only)
+  // Only run after forms have been loaded and when form IDs change
+  useEffect(() => {
+    if (role === 'admin' && forms.length > 0 && hasLoadedFormsRef.current) {
+      loadUsers();
+      loadAllAssignments();
+      loadSubmissionCounts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formsIds, role]);
+
+  // Refresh assignments when window gains focus (e.g., navigating back to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (role === 'admin' && forms.length > 0) {
+        loadAllAssignments();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formsIds, role]);
 
   const getAssignedToText = (formId: string): string => {
     const formAssignments = assignments[formId] || [];
@@ -208,10 +216,15 @@ function FormsList() {
 
   const handleDuplicate = async (formId: string) => {
     try {
-      await formsAPI.duplicate(formId);
-      loadForms(); // Reload the list
+      const response = await formsAPI.duplicate(formId);
+      if (response.data) {
+        loadForms(); // Reload the list
+        alert('Form duplicated successfully!');
+      }
     } catch (error: any) {
-      alert(error?.response?.data?.detail || error?.message || 'Failed to duplicate form. Please try again.');
+      console.error('Failed to duplicate form:', error);
+      const errorMessage = error?.response?.data?.detail || error?.response?.data?.message || error?.message || 'Failed to duplicate form. Please try again.';
+      alert(errorMessage);
     }
   };
 

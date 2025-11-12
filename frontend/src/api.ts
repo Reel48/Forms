@@ -382,18 +382,25 @@ export const formsAPI = {
       name: `${form.name} (Copy)`,
       description: form.description || '',
       status: 'draft', // Always duplicate as draft
-      fields: (form.fields || []).map((field: any) => ({
-        field_type: field.field_type,
-        label: field.label,
-        description: field.description,
-        placeholder: field.placeholder,
-        required: field.required,
-        validation_rules: field.validation_rules || {},
-        options: field.options || [],
-        order_index: field.order_index,
-        conditional_logic: field.conditional_logic || {},
-      })),
+      fields: (form.fields || []).map((field: any, index: number) => {
+        // Filter out fields that shouldn't be included when creating a new form
+        const { id, form_id, created_at, updated_at, ...fieldData } = field;
+        return {
+          field_type: fieldData.field_type || 'text',
+          label: fieldData.label || '',
+          description: fieldData.description || undefined,
+          placeholder: fieldData.placeholder || undefined,
+          required: Boolean(fieldData.required),
+          validation_rules: fieldData.validation_rules || {},
+          options: Array.isArray(fieldData.options) ? fieldData.options : [],
+          order_index: typeof fieldData.order_index === 'number' ? fieldData.order_index : index,
+          conditional_logic: fieldData.conditional_logic || {},
+        };
+      }),
       theme: form.theme || {},
+      settings: form.settings || {},
+      welcome_screen: form.welcome_screen || {},
+      thank_you_screen: form.thank_you_screen || {},
     };
     
     return formsAPI.create(duplicatedForm);

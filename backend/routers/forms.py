@@ -556,7 +556,8 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
             print("No fields provided or fields list is empty")
         
         # Fetch the complete form with fields
-        result = await get_form(form_id)
+        # Pass current_admin as current_user since we're calling from within create_form
+        result = await get_form(form_id, current_admin)
         print(f"Returning form with {len(result.fields) if result.fields else 0} fields")
         return result
         
@@ -600,7 +601,8 @@ async def update_form(form_id: str, form_update: FormUpdate, current_admin: dict
         supabase.table("forms").update(update_data).eq("id", form_id).execute()
         
         # Return updated form
-        return await get_form(form_id)
+        # Pass current_admin as current_user since we're calling from within update_form
+        return await get_form(form_id, current_admin)
         
     except HTTPException:
         raise
