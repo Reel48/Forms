@@ -227,7 +227,7 @@ function FileView() {
             </div>
           ) : (
             <div className="file-preview-placeholder">
-              <div className="preview-icon">📄</div>
+              <div className="preview-icon" style={{ fontSize: '3rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>File</div>
               <p>Preview not available for this file type</p>
               <p className="preview-hint">Click Download to view the file</p>
             </div>

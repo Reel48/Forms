@@ -25,13 +25,13 @@ function FileCard({ file, onDelete, onView, showActions = true, showFolderAssign
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const getFileIcon = (fileType: string): string => {
-    if (fileType.startsWith('image/')) return '🖼️';
-    if (fileType === 'application/pdf') return '📄';
-    if (fileType.includes('word') || fileType.includes('document')) return '📝';
-    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return '📊';
-    if (fileType.includes('zip') || fileType.includes('archive')) return '📦';
-    return '📎';
+  const getFileTypeLabel = (fileType: string): string => {
+    if (fileType.startsWith('image/')) return 'Image';
+    if (fileType === 'application/pdf') return 'PDF';
+    if (fileType.includes('word') || fileType.includes('document')) return 'Document';
+    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return 'Spreadsheet';
+    if (fileType.includes('zip') || fileType.includes('archive')) return 'Archive';
+    return 'File';
   };
 
   const formatDate = (dateString: string): string => {
@@ -94,7 +94,7 @@ function FileCard({ file, onDelete, onView, showActions = true, showFolderAssign
 
   return (
     <div className="file-card" onClick={() => onView?.(file)}>
-      <div className="file-card-icon">{getFileIcon(file.file_type)}</div>
+      <div className="file-card-icon" style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>{getFileTypeLabel(file.file_type)}</div>
       <div className="file-card-content">
         <div className="file-card-name" title={file.name}>
           {file.name}
@@ -126,7 +126,7 @@ function FileCard({ file, onDelete, onView, showActions = true, showFolderAssign
             onClick={handleView}
             title="View"
           >
-            👁️
+            View
           </button>
           <button
             className="file-card-action-btn"
@@ -134,7 +134,7 @@ function FileCard({ file, onDelete, onView, showActions = true, showFolderAssign
             disabled={downloading}
             title="Download"
           >
-            {downloading ? '⏳' : '⬇️'}
+            {downloading ? 'Downloading...' : 'Download'}
           </button>
           {showFolderAssignment && (
             <button
@@ -145,7 +145,7 @@ function FileCard({ file, onDelete, onView, showActions = true, showFolderAssign
               }}
               title="Assign to Folder"
             >
-              📁
+              Assign
             </button>
           )}
           <button
@@ -154,7 +154,7 @@ function FileCard({ file, onDelete, onView, showActions = true, showFolderAssign
             disabled={deleting}
             title="Delete"
           >
-            {deleting ? '⏳' : '🗑️'}
+            {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       )}

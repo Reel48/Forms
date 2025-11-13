@@ -220,7 +220,7 @@ const ESignatureDocumentsList: React.FC = () => {
                     className="btn-secondary btn-sm"
                     title="Assign to Folder"
                   >
-                    📁
+                    Assign
                   </button>
                 )}
               </div>

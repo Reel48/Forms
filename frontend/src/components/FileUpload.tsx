@@ -164,12 +164,12 @@ function FileUpload({
         <div className="file-upload-content">
           {uploading ? (
             <>
-              <div className="upload-icon">⏳</div>
+              <div className="upload-icon" style={{ fontSize: '2rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>Uploading...</div>
               <p>Uploading files...</p>
             </>
           ) : (
             <>
-              <div className="upload-icon">📁</div>
+              <div className="upload-icon" style={{ fontSize: '2rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>Upload</div>
               <p className="upload-text">
                 <strong>Drag & drop files here</strong>
                 <br />

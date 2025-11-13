@@ -516,7 +516,7 @@ function CustomerDashboard() {
                         fontSize: '1.5rem',
                         flexShrink: 0,
                       }}>
-                        {item.type === 'folder' ? '📁' : item.type === 'quote' ? 'Quote' : 'Form'}
+                        {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
                       </div>
 
                       {/* Content */}

@@ -1279,7 +1279,7 @@ function PublicFormView() {
                 </div>
               ) : (
                 <div>
-                  <p style={{ margin: 0, color: '#6b7280' }}>📎 Click or drag file here</p>
+                  <p style={{ margin: 0, color: '#6b7280' }}>Click or drag file here</p>
                   <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
                     Max file size: 10MB
                   </p>

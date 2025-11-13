@@ -686,7 +686,7 @@ function FormsList() {
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                             title="Assign to Folder"
                           >
-                            📁
+                            Assign
                           </button>
                           <button
                             onClick={() => handleDelete(form.id, form.name)}
@@ -786,12 +786,12 @@ function FormsList() {
                 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                    <span>📋</span>
+                    <span style={{ fontWeight: '500' }}>Fields:</span>
                     <span>{form.fields?.length || 0} {form.fields?.length === 1 ? 'field' : 'fields'}</span>
                   </div>
                   {role === 'admin' && submissionCounts[form.id] !== undefined && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <span>📊</span>
+                      <span style={{ fontWeight: '500' }}>Submissions:</span>
                       <span
                         style={{
                           color: submissionCounts[form.id] > 0 ? '#22c55e' : '#9ca3af',
@@ -823,7 +823,7 @@ function FormsList() {
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                           title="Assign to Folder"
                         >
-                          📁
+                          Assign
                         </button>
                         {form.public_url_slug && form.status === 'published' && (
                           <a

@@ -282,7 +282,7 @@ const FolderView: React.FC = () => {
                   className="content-card"
                   onClick={() => navigate(`/files/${file.id}`)}
                 >
-                  <div className="content-icon">📄</div>
+                  <div className="content-icon" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>File</div>
                   <h4>{file.name}</h4>
                   <p className="content-meta">
                     {file.file_type} • {(file.file_size / 1024).toFixed(1)} KB
@@ -318,7 +318,7 @@ const FolderView: React.FC = () => {
                   className="content-card"
                   onClick={() => navigate(`/forms/${form.id}`)}
                 >
-                  <div className="content-icon">📋</div>
+                  <div className="content-icon" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>Form</div>
                   <h4>{form.name}</h4>
                   <p className="content-meta">
                     {form.status || 'Active'} • {form.submissions_count || 0} submissions
@@ -354,7 +354,7 @@ const FolderView: React.FC = () => {
                   className="content-card"
                   onClick={() => navigate(`/esignature/${esig.id}`)}
                 >
-                  <div className="content-icon">✍️</div>
+                  <div className="content-icon" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>E-Signature</div>
                   <h4>{esig.name}</h4>
                   <p className="content-meta">
                     {esig.status} • {esig.signature_mode}
