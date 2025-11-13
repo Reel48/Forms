@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from typing import List, Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -599,7 +599,10 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
     print(f"Quote ID: {quote_id}")
     print(f"QuoteUpdate object: {quote_update}")
     print(f"QuoteUpdate type: {type(quote_update)}")
-    print(f"QuoteUpdate dict: {quote_update.model_dump() if hasattr(quote_update, 'model_dump') else quote_update.dict()}")
+    # Get full dump including all fields
+    full_dump = quote_update.model_dump(exclude_unset=False) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=False)
+    print(f"QuoteUpdate full dump: {full_dump}")
+    print(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}")
     try:
         # Get current quote for comparison - use service role client to ensure we get folder_id
         current_response = supabase_storage.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
@@ -610,10 +613,19 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         old_status = current_quote.get("status")
         
         # Convert to dict, ensuring Decimal fields are strings
-        update_data = quote_update.model_dump(exclude_unset=True) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
+        # Use exclude_none=False to ensure create_folder is included even if it's True
+        update_data = quote_update.model_dump(exclude_unset=True, exclude_none=False) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
+        
         # Store create_folder value before removing it (it's not a database field)
+        # Check both the dict and the model attribute to be safe
         create_folder_value = update_data.pop('create_folder', None)
+        if create_folder_value is None:
+            # Also check the model attribute directly
+            create_folder_value = getattr(quote_update, 'create_folder', None)
+        
         print(f"DEBUG: Extracted create_folder value: {create_folder_value}")
+        print(f"DEBUG: update_data keys before pop: {list(update_data.keys())}")
+        print(f"DEBUG: quote_update.create_folder attribute: {getattr(quote_update, 'create_folder', 'NOT_SET')}")
         # Convert any Decimal fields to strings
         for key, value in update_data.items():
             if isinstance(value, Decimal):
