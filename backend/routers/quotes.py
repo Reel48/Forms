@@ -595,14 +595,15 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
 @router.put("/{quote_id}", response_model=Quote)
 async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
     """Update a quote (admin only)"""
-    print(f"=== UPDATE QUOTE CALLED ===")
-    print(f"Quote ID: {quote_id}")
-    print(f"QuoteUpdate object: {quote_update}")
-    print(f"QuoteUpdate type: {type(quote_update)}")
+    import sys
+    print(f"=== UPDATE QUOTE CALLED ===", file=sys.stderr, flush=True)
+    print(f"Quote ID: {quote_id}", file=sys.stderr, flush=True)
+    print(f"QuoteUpdate object: {quote_update}", file=sys.stderr, flush=True)
+    print(f"QuoteUpdate type: {type(quote_update)}", file=sys.stderr, flush=True)
     # Get full dump including all fields
     full_dump = quote_update.model_dump(exclude_unset=False) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=False)
-    print(f"QuoteUpdate full dump: {full_dump}")
-    print(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}")
+    print(f"QuoteUpdate full dump: {full_dump}", file=sys.stderr, flush=True)
+    print(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}", file=sys.stderr, flush=True)
     try:
         # Get current quote for comparison - use service role client to ensure we get folder_id
         current_response = supabase_storage.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
@@ -623,9 +624,10 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
             # Also check the model attribute directly
             create_folder_value = getattr(quote_update, 'create_folder', None)
         
-        print(f"DEBUG: Extracted create_folder value: {create_folder_value}")
-        print(f"DEBUG: update_data keys before pop: {list(update_data.keys())}")
-        print(f"DEBUG: quote_update.create_folder attribute: {getattr(quote_update, 'create_folder', 'NOT_SET')}")
+        import sys
+        print(f"DEBUG: Extracted create_folder value: {create_folder_value}", file=sys.stderr, flush=True)
+        print(f"DEBUG: update_data keys before pop: {list(update_data.keys())}", file=sys.stderr, flush=True)
+        print(f"DEBUG: quote_update.create_folder attribute: {getattr(quote_update, 'create_folder', 'NOT_SET')}", file=sys.stderr, flush=True)
         # Convert any Decimal fields to strings
         for key, value in update_data.items():
             if isinstance(value, Decimal):
@@ -677,23 +679,25 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         
         # Handle folder creation if requested and quote doesn't have one
         folder_id = current_quote.get("folder_id")
-        print(f"DEBUG: Checking folder creation conditions:")
-        print(f"  - hasattr(quote_update, 'create_folder'): {hasattr(quote_update, 'create_folder')}")
-        print(f"  - quote_update.create_folder: {getattr(quote_update, 'create_folder', None)}")
-        print(f"  - current_quote folder_id: {folder_id}")
-        print(f"  - update_data keys: {list(update_data.keys())}")
-        print(f"  - update_data.get('create_folder'): {update_data.get('create_folder')}")
+        import sys
+        print(f"DEBUG: Checking folder creation conditions:", file=sys.stderr, flush=True)
+        print(f"  - hasattr(quote_update, 'create_folder'): {hasattr(quote_update, 'create_folder')}", file=sys.stderr, flush=True)
+        print(f"  - quote_update.create_folder: {getattr(quote_update, 'create_folder', None)}", file=sys.stderr, flush=True)
+        print(f"  - current_quote folder_id: {folder_id}", file=sys.stderr, flush=True)
+        print(f"  - update_data keys: {list(update_data.keys())}", file=sys.stderr, flush=True)
+        print(f"  - update_data.get('create_folder'): {update_data.get('create_folder')}", file=sys.stderr, flush=True)
         
         # Check both the model attribute and the extracted value
         create_folder_requested = (
-            (hasattr(quote_update, 'create_folder') and quote_update.create_folder) or
+            (hasattr(quote_update, 'create_folder') and quote_update.create_folder is True) or
             create_folder_value is True
         )
-        print(f"DEBUG: create_folder_requested: {create_folder_requested}")
+        print(f"DEBUG: create_folder_requested: {create_folder_requested}", file=sys.stderr, flush=True)
         
         if create_folder_requested and not folder_id:
             try:
-                print(f"Creating folder for existing quote {quote_id}")
+                import sys
+                print(f"Creating folder for existing quote {quote_id}", file=sys.stderr, flush=True)
                 # Generate folder name from quote
                 quote_number = current_quote.get("quote_number", quote_id[:8])
                 folder_name = f"Order - {current_quote.get('title') or quote_number}"
