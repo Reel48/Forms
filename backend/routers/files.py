@@ -34,7 +34,8 @@ async def list_files(
             # User doesn't have a role record, default to customer
             is_admin = False
         
-        query = supabase.table("files").select("*")
+        # Use service role client to bypass RLS (user is already authenticated)
+        query = supabase_storage.table("files").select("*")
         
         # Apply filters
         if folder_id:
@@ -51,7 +52,7 @@ async def list_files(
             # Get folders user has access to (if folder_assignments table exists)
             accessible_folder_ids = []
             try:
-                folder_assignments = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
+                folder_assignments = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
                 accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
             except Exception:
                 # folder_assignments table doesn't exist yet, skip folder filtering
@@ -61,22 +62,54 @@ async def list_files(
             accessible_file_ids = []
             if accessible_folder_ids:
                 try:
-                    file_assignments = supabase.table("file_folder_assignments").select("file_id").in_("folder_id", accessible_folder_ids).execute()
+                    file_assignments = supabase_storage.table("file_folder_assignments").select("file_id").in_("folder_id", accessible_folder_ids).execute()
                     accessible_file_ids = [fa["file_id"] for fa in file_assignments.data] if file_assignments.data else []
                 except Exception:
                     # file_folder_assignments might not have data yet
                     pass
             
-            # Filter: files in accessible folders OR files user uploaded OR files in accessible folders via assignments
-            if accessible_folder_ids or accessible_file_ids:
-                query = query.or_(
-                    f"folder_id.in.({','.join(accessible_folder_ids)})" if accessible_folder_ids else None,
-                    f"id.in.({','.join(accessible_file_ids)})" if accessible_file_ids else None,
-                    f"uploaded_by.eq.{user['id']}"
-                )
-            else:
-                # Only files user uploaded
-                query = query.eq("uploaded_by", user["id"])
+            # Collect all file IDs the user can access
+            accessible_file_ids_set = set(accessible_file_ids)
+            
+            # Get files user uploaded (with filters applied)
+            user_files_query = supabase_storage.table("files").select("*")
+            # Apply the same filters
+            if folder_id:
+                user_files_query = user_files_query.eq("folder_id", folder_id)
+            if quote_id:
+                user_files_query = user_files_query.eq("quote_id", quote_id)
+            if form_id:
+                user_files_query = user_files_query.eq("form_id", form_id)
+            if is_reusable is not None:
+                user_files_query = user_files_query.eq("is_reusable", is_reusable)
+            user_files_query = user_files_query.eq("uploaded_by", user["id"])
+            user_files_response = user_files_query.execute()
+            user_file_ids = {f["id"] for f in (user_files_response.data or [])}
+            accessible_file_ids_set.update(user_file_ids)
+            
+            # Get files in accessible folders
+            if accessible_folder_ids:
+                folder_files_query = supabase_storage.table("files").select("*")
+                # Apply the same filters
+                if folder_id:
+                    folder_files_query = folder_files_query.eq("folder_id", folder_id)
+                if quote_id:
+                    folder_files_query = folder_files_query.eq("quote_id", quote_id)
+                if form_id:
+                    folder_files_query = folder_files_query.eq("form_id", form_id)
+                if is_reusable is not None:
+                    folder_files_query = folder_files_query.eq("is_reusable", is_reusable)
+                folder_files_query = folder_files_query.in_("folder_id", accessible_folder_ids)
+                folder_files_response = folder_files_query.execute()
+                folder_file_ids = {f["id"] for f in (folder_files_response.data or [])}
+                accessible_file_ids_set.update(folder_file_ids)
+            
+            # If no accessible files, return empty list
+            if not accessible_file_ids_set:
+                return []
+            
+            # Query files by accessible IDs
+            query = query.in_("id", list(accessible_file_ids_set))
         
         response = query.order("created_at", desc=True).execute()
         return response.data if response.data else []
