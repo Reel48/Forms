@@ -728,8 +728,8 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                 print(f"Error: Failed to create folder for quote: {str(e)}")
                 # Don't fail the quote update if folder creation fails
         
-        # Update quote
-        response = supabase.table("quotes").update(update_data).eq("id", quote_id).execute()
+        # Update quote - use service role client to ensure folder_id is properly saved
+        response = supabase_storage.table("quotes").update(update_data).eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -751,12 +751,17 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                 activity_type="updated",
                 user_id=current_admin.get("id"),
                 user_name=current_admin.get("name") or current_admin.get("email"),
-                description="Quote updated"
+                description="Quote updated" + (f" with folder" if folder_id else "")
             )
         
-        # Fetch complete quote with relations
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
-        return response.data[0]
+        # Fetch complete quote with relations - use service role client to ensure folder_id is included
+        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Quote not found after update")
+        
+        updated_quote = response.data[0]
+        print(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
+        return updated_quote
         
     except HTTPException:
         raise
