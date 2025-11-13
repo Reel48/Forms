@@ -595,6 +595,11 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
 @router.put("/{quote_id}", response_model=Quote)
 async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
     """Update a quote (admin only)"""
+    print(f"=== UPDATE QUOTE CALLED ===")
+    print(f"Quote ID: {quote_id}")
+    print(f"QuoteUpdate object: {quote_update}")
+    print(f"QuoteUpdate type: {type(quote_update)}")
+    print(f"QuoteUpdate dict: {quote_update.model_dump() if hasattr(quote_update, 'model_dump') else quote_update.dict()}")
     try:
         # Get current quote for comparison - use service role client to ensure we get folder_id
         current_response = supabase_storage.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
