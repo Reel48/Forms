@@ -97,7 +97,8 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
             # User doesn't have a role record, default to customer
             is_admin = False
         
-        response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        # Use service role client to bypass RLS (user is already authenticated)
+        response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="File not found")
@@ -312,8 +313,8 @@ async def delete_file(file_id: str, user = Depends(get_current_user)):
 async def download_file(file_id: str, user = Depends(get_current_user)):
     """Download a file. Returns signed URL or file content."""
     try:
-        # Get file record
-        file_response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        # Get file record - use service role client to bypass RLS
+        file_response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
@@ -500,8 +501,8 @@ async def remove_file_folder_assignment(
 async def get_file_folders(file_id: str, user = Depends(get_current_user)):
     """Get all folders a file is assigned to."""
     try:
-        # Check if file exists and user has access
-        file_response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        # Check if file exists and user has access - use service role client to bypass RLS
+        file_response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
