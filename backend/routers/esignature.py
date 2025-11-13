@@ -134,9 +134,16 @@ async def create_document(
 ):
     """Create a new e-signature document."""
     try:
-        # Verify file exists
-        file_response = supabase.table("files").select("id").eq("id", document.file_id).single().execute()
-        if not file_response.data:
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Verify file exists - use service role to bypass RLS
+        try:
+            file_response = supabase_storage.table("files").select("id").eq("id", document.file_id).single().execute()
+            if not file_response.data:
+                raise HTTPException(status_code=404, detail="File not found")
+        except Exception as e:
+            logger.error(f"Error verifying file: {str(e)}")
             raise HTTPException(status_code=404, detail="File not found")
         
         # Create document record - exclude created_by from dump since we set it manually
@@ -145,26 +152,41 @@ async def create_document(
         document_data["created_by"] = user["id"]
         document_data["status"] = "pending"
         
+        # Add id if not present (Supabase will generate it, but we can set it explicitly)
+        if "id" not in document_data:
+            document_data["id"] = str(uuid.uuid4())
+        
+        # Add timestamps
+        now = datetime.now().isoformat()
+        document_data["created_at"] = now
+        document_data["updated_at"] = now
+        
         # Only include fields that exist in the database table
         allowed_fields = {
-            "name", "description", "file_id", "document_type", "signature_mode",
+            "id", "name", "description", "file_id", "document_type", "signature_mode",
             "require_signature", "signature_fields", "folder_id", "quote_id",
-            "expires_at", "created_by", "status"
+            "expires_at", "created_by", "status", "created_at", "updated_at"
         }
         document_data = {k: v for k, v in document_data.items() if k in allowed_fields}
         
-        response = supabase.table("esignature_documents").insert(document_data).execute()
+        logger.info(f"Creating e-signature document with data: {document_data}")
         
-        if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to create document")
+        # Use service role client to bypass RLS for insert
+        response = supabase_storage.table("esignature_documents").insert(document_data).execute()
         
+        if not response.data or len(response.data) == 0:
+            logger.error("Insert returned no data")
+            raise HTTPException(status_code=500, detail="Failed to create document: Insert returned no data")
+        
+        logger.info(f"Document created successfully with ID: {response.data[0].get('id')}")
         return response.data[0]
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error creating document: {str(e)}")
         import traceback
-        traceback.print_exc()
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating document: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to create document: {str(e)}")
 
 @router.put("/documents/{document_id}", response_model=ESignatureDocument)
