@@ -155,6 +155,7 @@ export interface Quote {
   stripe_payment_intent_id?: string;
   payment_status?: string;
   reminder_date?: string;
+  folder_id?: string;
 }
 
 export interface QuoteCreate {

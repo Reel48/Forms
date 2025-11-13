@@ -596,6 +596,8 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         
         # Convert to dict, ensuring Decimal fields are strings
         update_data = quote_update.model_dump(exclude_unset=True) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
+        # Remove create_folder from update_data (it's not a database field)
+        update_data.pop('create_folder', None)
         # Convert any Decimal fields to strings
         for key, value in update_data.items():
             if isinstance(value, Decimal):
@@ -644,6 +646,67 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
             supabase_storage.table("quote_versions").insert(version_data).execute()
         except Exception as e:
             print(f"Warning: Failed to create version: {str(e)}")
+        
+        # Handle folder creation if requested and quote doesn't have one
+        folder_id = current_quote.get("folder_id")
+        if hasattr(quote_update, 'create_folder') and quote_update.create_folder and not folder_id:
+            try:
+                # Generate folder name from quote
+                quote_number = current_quote.get("quote_number", quote_id[:8])
+                folder_name = f"Order - {current_quote.get('title') or quote_number}"
+                if current_quote.get("client_id"):
+                    # Get client name for folder - use service role client to bypass RLS
+                    try:
+                        client_response = supabase_storage.table("clients").select("name, company").eq("id", current_quote.get("client_id")).single().execute()
+                        if client_response.data:
+                            client_name = client_response.data.get("company") or client_response.data.get("name") or "Client"
+                            folder_name = f"{client_name} - {current_quote.get('title') or quote_number}"
+                    except Exception:
+                        pass
+                
+                folder_data = {
+                    "id": str(uuid.uuid4()),
+                    "name": folder_name,
+                    "description": f"Folder for quote {quote_number}",
+                    "quote_id": quote_id,
+                    "client_id": current_quote.get("client_id"),
+                    "status": "active",
+                    "created_by": current_admin["id"],
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat()
+                }
+                
+                # Use service role client to bypass RLS
+                folder_response = supabase_storage.table("folders").insert(folder_data).execute()
+                if folder_response.data:
+                    folder_id = folder_response.data[0]["id"]
+                    # Update quote with folder_id - use service role client
+                    supabase_storage.table("quotes").update({"folder_id": folder_id}).eq("id", quote_id).execute()
+                    update_data["folder_id"] = folder_id
+                    
+                    # Assign folder to client if client_id exists
+                    if current_quote.get("client_id"):
+                        try:
+                            # Check if client has a user account
+                            client_user_response = supabase_storage.table("user_roles").select("user_id").eq("user_id", current_quote.get("client_id")).limit(1).execute()
+                            # If client has a user account, assign folder to them
+                            # Note: This assumes client_id matches user_id for client accounts
+                            # You may need to adjust this based on your user/client relationship
+                            assignment_data = {
+                                "folder_id": folder_id,
+                                "user_id": current_quote.get("client_id"),
+                                "role": "viewer",
+                                "assigned_by": current_admin["id"],
+                                "assigned_at": datetime.now().isoformat()
+                            }
+                            supabase_storage.table("folder_assignments").insert(assignment_data).execute()
+                        except Exception as e:
+                            print(f"Warning: Failed to assign folder to client: {str(e)}")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"Warning: Failed to create folder for quote: {str(e)}")
+                # Don't fail the quote update if folder creation fails
         
         # Update quote
         response = supabase.table("quotes").update(update_data).eq("id", quote_id).execute()

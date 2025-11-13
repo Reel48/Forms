@@ -121,6 +121,7 @@ class QuoteUpdate(BaseModel):
     client_id: Optional[str] = None
     notes: Optional[str] = None
     terms: Optional[str] = None
+    create_folder: Optional[bool] = None  # Option to create folder if quote doesn't have one
     expiration_date: Optional[datetime] = None
     tax_rate: Optional[Decimal] = None
     currency: Optional[str] = None

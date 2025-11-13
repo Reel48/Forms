@@ -54,8 +54,9 @@ function QuoteBuilder() {
     currency: 'USD',
     status: 'draft',
     line_items: [],
-    create_folder: false,
+    create_folder: true, // Default to true for new quotes
   });
+  const [quoteHasFolder, setQuoteHasFolder] = useState<boolean>(false);
 
   // Mobile detection
   useEffect(() => {
@@ -235,7 +236,9 @@ function QuoteBuilder() {
           discount_percent: item.discount_percent || '0',
           tax_rate: item.tax_rate || '0',
         })),
+        create_folder: !quote.folder_id, // If quote doesn't have a folder, allow creating one
       });
+      setQuoteHasFolder(!!quote.folder_id);
     } catch (error) {
       console.error('Failed to load quote:', error);
     } finally {
@@ -891,24 +894,29 @@ function QuoteBuilder() {
               </small>
             </div>
 
-            {!isEdit && (
-              <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    id="create-folder"
-                    name="create-folder"
-                    checked={formData.create_folder || false}
-                    onChange={(e) => setFormData({ ...formData, create_folder: e.target.checked })}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  <span>Create a folder for this quote</span>
-                </label>
-                <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '1.5rem' }}>
-                  A folder will be automatically created to organize files, forms, and e-signatures related to this quote.
-                </small>
-              </div>
-            )}
+            <div className="form-group" style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
+                <input
+                  type="checkbox"
+                  id="create-folder"
+                  name="create-folder"
+                  checked={formData.create_folder || false}
+                  onChange={(e) => setFormData({ ...formData, create_folder: e.target.checked })}
+                  disabled={quoteHasFolder && isEdit}
+                  style={{ cursor: quoteHasFolder && isEdit ? 'not-allowed' : 'pointer', width: '18px', height: '18px' }}
+                />
+                <span style={{ fontSize: '1rem' }}>
+                  {quoteHasFolder && isEdit 
+                    ? '✓ This quote already has a folder' 
+                    : 'Create a folder for this quote'}
+                </span>
+              </label>
+              <small className="text-muted" style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.875rem', marginLeft: '1.75rem' }}>
+                {quoteHasFolder && isEdit 
+                  ? 'The folder is already created and linked to this quote. You can view it from the folders section.'
+                  : 'A folder will be automatically created to organize files, forms, and e-signatures related to this quote.'}
+              </small>
+            </div>
 
             <div className="flex gap-2" style={{ marginTop: '2rem', flexWrap: 'wrap' }}>
               <button type="submit" className="btn-primary" disabled={saving || Object.keys(validationErrors).length > 0}>
