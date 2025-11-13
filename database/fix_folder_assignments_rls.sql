@@ -1,6 +1,9 @@
--- Fix RLS Infinite Recursion in folder_assignments
--- The problem: Policy queries folder_assignments table within its own policy check
--- Solution: Restructure policy to avoid circular reference
+-- Fix RLS Infinite Recursion in folder_assignments and folders
+-- The problem: 
+-- 1. folder_assignments policy queries folders table
+-- 2. folders policy queries folder_assignments table
+-- This creates a circular dependency causing infinite recursion
+-- Solution: Use security definer functions to break the cycle
 
 -- Drop the problematic policy
 DROP POLICY IF EXISTS "Users can view folder assignments for accessible folders" ON folder_assignments;
@@ -110,4 +113,50 @@ CREATE POLICY "Users can create file folder assignments for accessible folders" 
     )
     AND assigned_by = auth.uid()
   );
+
+-- Fix circular dependency in folders table
+-- The folders policy queries folder_assignments, which queries folders, causing recursion
+-- Solution: Use a security definer function to break the cycle
+
+-- Create function to check folder access (bypasses RLS)
+CREATE OR REPLACE FUNCTION user_has_folder_access(folder_id_to_check UUID, user_id_to_check UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Check if user created the folder
+  IF EXISTS (SELECT 1 FROM folders WHERE id = folder_id_to_check AND created_by = user_id_to_check) THEN
+    RETURN TRUE;
+  END IF;
+  
+  -- Check if folder is assigned to user (bypasses RLS due to SECURITY DEFINER)
+  IF EXISTS (SELECT 1 FROM folder_assignments WHERE folder_id = folder_id_to_check AND user_id = user_id_to_check) THEN
+    RETURN TRUE;
+  END IF;
+  
+  RETURN FALSE;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION user_has_folder_access(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION user_has_folder_access(UUID, UUID) TO anon;
+
+-- Drop and recreate folders policy using the function
+DROP POLICY IF EXISTS "Users can view assigned folders" ON folders;
+
+CREATE POLICY "Users can view assigned folders" ON folders
+  FOR SELECT
+  USING (
+    created_by = auth.uid()
+    OR user_has_folder_access(id, auth.uid())
+  );
+
+-- Update admin policy on folders to use is_admin function
+DROP POLICY IF EXISTS "Admins can manage all folders" ON folders;
+
+CREATE POLICY "Admins can manage all folders" ON folders
+  FOR ALL
+  USING (is_admin(auth.uid()));
 
