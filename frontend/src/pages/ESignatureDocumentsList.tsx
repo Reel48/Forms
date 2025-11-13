@@ -13,7 +13,6 @@ const ESignatureDocumentsList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<ESignatureDocument | null>(null);
 
@@ -117,25 +116,6 @@ const ESignatureDocumentsList: React.FC = () => {
             <option value="declined">Declined</option>
             <option value="expired">Expired</option>
           </select>
-
-          <div className="view-mode-toggle">
-            <button
-              type="button"
-              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid View"
-            >
-              ⬜
-            </button>
-            <button
-              type="button"
-              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-              title="List View"
-            >
-              ☰
-            </button>
-          </div>
         </div>
       </div>
 
@@ -152,80 +132,101 @@ const ESignatureDocumentsList: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className={`documents-${viewMode}`}>
-          {filteredDocuments.map((doc) => (
-            <div
-              key={doc.id}
-              className="document-card"
-              onClick={() => navigate(`/esignature/${doc.id}`)}
-            >
-              <div className="document-header">
-                <h3 className="document-name">{doc.name}</h3>
-                <span className={getStatusBadgeClass(doc.status)}>
-                  {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
-                </span>
-              </div>
-
-              {doc.description && (
-                <p className="document-description">{doc.description}</p>
-              )}
-
-              <div className="document-meta">
-                <div className="meta-item">
-                  <span className="meta-label">Type:</span>
-                  <span className="meta-value">
-                    {doc.document_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-label">Mode:</span>
-                  <span className="meta-value">
-                    {doc.signature_mode.charAt(0).toUpperCase() + doc.signature_mode.slice(1)}
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-label">Created:</span>
-                  <span className="meta-value">{formatDate(doc.created_at)}</span>
-                </div>
-                {doc.signed_at && (
-                  <div className="meta-item">
-                    <span className="meta-label">Signed:</span>
-                    <span className="meta-value">{formatDate(doc.signed_at)}</span>
-                  </div>
-                )}
-              </div>
-
-              {doc.expires_at && (
-                <div className="expiry-warning">
-                  Expires: {formatDate(doc.expires_at)}
-                </div>
-              )}
-
-              <div className="document-actions">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/esignature/${doc.id}`);
-                  }}
-                  className="btn-primary btn-sm"
+        <div className="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Mode</th>
+                <th>Created</th>
+                <th>Signed</th>
+                <th>Expires</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDocuments.map((doc) => (
+                <tr
+                  key={doc.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/esignature/${doc.id}`)}
                 >
-                  {doc.status === 'signed' ? 'View' : 'Sign'}
-                </button>
-                {role === 'admin' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAssignToFolder(doc);
-                    }}
-                    className="btn-secondary btn-sm"
-                    title="Assign to Folder"
-                  >
-                    Assign
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+                  <td>
+                    <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{doc.name}</strong>
+                    {doc.description && (
+                      <div className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                        {doc.description}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={getStatusBadgeClass(doc.status)}>
+                      {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {doc.document_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {doc.signature_mode.charAt(0).toUpperCase() + doc.signature_mode.slice(1)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {formatDate(doc.created_at)}
+                    </span>
+                  </td>
+                  <td>
+                    {doc.signed_at ? (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                        {formatDate(doc.signed_at)}
+                      </span>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                    )}
+                  </td>
+                  <td>
+                    {doc.expires_at ? (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                        {formatDate(doc.expires_at)}
+                      </span>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                    )}
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn-primary btn-sm"
+                        onClick={() => navigate(`/esignature/${doc.id}`)}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        {doc.status === 'signed' ? 'View' : 'Sign'}
+                      </button>
+                      {role === 'admin' && (
+                        <button
+                          className="btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAssignToFolder(doc);
+                          }}
+                          title="Assign to Folder"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          Assign
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

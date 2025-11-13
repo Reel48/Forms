@@ -142,65 +142,83 @@ const FoldersList: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="folders-grid">
-          {filteredFolders.map((folder) => (
-            <div
-              key={folder.id}
-              className="folder-card"
-              onClick={() => navigate(`/folders/${folder.id}`)}
-            >
-              <div className="folder-header">
-                <h3 className="folder-name">{folder.name}</h3>
-                <span className={getStatusBadgeClass(folder.status)}>
-                  {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
-                </span>
-              </div>
-
-              {folder.description && (
-                <p className="folder-description">{folder.description}</p>
-              )}
-
-              <div className="folder-meta">
-                <div className="meta-item">
-                  <span className="meta-label">Created:</span>
-                  <span className="meta-value">{formatDate(folder.created_at)}</span>
-                </div>
-                {folder.quote_id && (
-                  <div className="meta-item">
-                    <span className="meta-label">Has Quote:</span>
-                    <span className="meta-value">Yes</span>
-                  </div>
-                )}
-                {folder.client_id && (
-                  <div className="meta-item">
-                    <span className="meta-label">Client ID:</span>
-                    <span className="meta-value">{folder.client_id.substring(0, 8)}...</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="folder-actions">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/folders/${folder.id}`);
-                  }}
-                  className="btn-primary btn-sm"
+        <div className="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Description</th>
+                <th>Has Quote</th>
+                <th>Client ID</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredFolders.map((folder) => (
+                <tr
+                  key={folder.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/folders/${folder.id}`)}
                 >
-                  View
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(folder.id, folder.name);
-                  }}
-                  className="btn-danger btn-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+                  <td>
+                    <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{folder.name}</strong>
+                  </td>
+                  <td>
+                    <span className={getStatusBadgeClass(folder.status)}>
+                      {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {folder.description || '-'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {folder.quote_id ? 'Yes' : 'No'}
+                    </span>
+                  </td>
+                  <td>
+                    {folder.client_id ? (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                        {folder.client_id.substring(0, 8)}...
+                      </span>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {formatDate(folder.created_at)}
+                    </span>
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn-primary btn-sm"
+                        onClick={() => navigate(`/folders/${folder.id}`)}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        View
+                      </button>
+                      <button
+                        className="btn-danger btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(folder.id, folder.name);
+                        }}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

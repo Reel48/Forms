@@ -104,7 +104,7 @@ function Navigation() {
         {isAdmin ? (
           <>
             <li>
-              <Link
+              <Link 
                 to="/folders"
                 className={`nav-tab ${isFoldersActive ? 'active' : ''}`}
               >

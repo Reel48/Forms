@@ -275,20 +275,37 @@ const FolderView: React.FC = () => {
               <p>No files in this folder</p>
             </div>
           ) : (
-            <div className="files-grid">
-              {files.map((file: any) => (
-                <div
-                  key={file.id}
-                  className="content-card"
-                  onClick={() => navigate(`/files/${file.id}`)}
-                >
-                  <div className="content-icon" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>File</div>
-                  <h4>{file.name}</h4>
-                  <p className="content-meta">
-                    {file.file_type} • {(file.file_size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              ))}
+            <div className="card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((file: any) => (
+                    <tr
+                      key={file.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/files/${file.id}`)}
+                    >
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{file.file_type}</span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {(file.file_size / 1024).toFixed(1)} KB
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
@@ -311,20 +328,39 @@ const FolderView: React.FC = () => {
               <p>No forms in this folder</p>
             </div>
           ) : (
-            <div className="forms-grid">
-              {forms.map((form: any) => (
-                <div
-                  key={form.id}
-                  className="content-card"
-                  onClick={() => navigate(`/forms/${form.id}`)}
-                >
-                  <div className="content-icon" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>Form</div>
-                  <h4>{form.name}</h4>
-                  <p className="content-meta">
-                    {form.status || 'Active'} • {form.submissions_count || 0} submissions
-                  </p>
-                </div>
-              ))}
+            <div className="card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Submissions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {forms.map((form: any) => (
+                    <tr
+                      key={form.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/forms/${form.id}`)}
+                    >
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{form.name}</strong>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {form.status || 'Active'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {form.submissions_count || 0} {form.submissions_count === 1 ? 'submission' : 'submissions'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
@@ -347,20 +383,35 @@ const FolderView: React.FC = () => {
               <p>No e-signature documents in this folder</p>
             </div>
           ) : (
-            <div className="esignatures-grid">
-              {esignatures.map((esig: any) => (
-                <div
-                  key={esig.id}
-                  className="content-card"
-                  onClick={() => navigate(`/esignature/${esig.id}`)}
-                >
-                  <div className="content-icon" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-muted, #6b7280)' }}>E-Signature</div>
-                  <h4>{esig.name}</h4>
-                  <p className="content-meta">
-                    {esig.status} • {esig.signature_mode}
-                  </p>
-                </div>
-              ))}
+            <div className="card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Mode</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {esignatures.map((esig: any) => (
+                    <tr
+                      key={esig.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/esignature/${esig.id}`)}
+                    >
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{esig.name}</strong>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{esig.status}</span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{esig.signature_mode}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

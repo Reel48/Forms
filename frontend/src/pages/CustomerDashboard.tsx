@@ -29,7 +29,6 @@ function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [sortBy, setSortBy] = useState<string>('date');
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
@@ -374,22 +373,6 @@ function CustomerDashboard() {
           {/* Filter Row */}
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: '1', minWidth: '150px' }}>
-              <label htmlFor="view-mode" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-                View
-              </label>
-              <select
-                id="view-mode"
-                name="view-mode"
-                value={viewMode}
-                onChange={(e) => setViewMode(e.target.value as 'table' | 'cards')}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-              >
-                <option value="table">Table View</option>
-                <option value="cards">Card View</option>
-              </select>
-            </div>
-
-            <div style={{ flex: '1', minWidth: '150px' }}>
               <label htmlFor="status-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
                 Status
               </label>
@@ -468,197 +451,147 @@ function CustomerDashboard() {
           </div>
         </div>
       ) : (
-        <div>
-          {groupedItems.map(([groupName, items]) => (
-            <div key={groupName} style={{ marginBottom: '2rem' }}>
-              <h2 style={{ 
-                marginBottom: '1rem', 
-                fontSize: '1.25rem',
-                fontWeight: 600,
-                color: '#374151',
-              }}>
-                {groupName}
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {items.map((item) => (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className="card"
-                    style={{
-                      transition: 'all 0.2s',
-                      borderLeft: `4px solid ${item.type === 'folder' ? '#2196f3' : item.type === 'quote' ? '#667eea' : '#10b981'}`,
-                      ...(item.priority === 'high' ? {
-                        borderLeftWidth: '6px',
-                        borderLeftColor: '#ef4444',
-                        backgroundColor: '#fef2f2',
-                      } : {}),
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateX(0)';
-                      e.currentTarget.style.boxShadow = '';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                      {/* Icon */}
-                      <div style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '8px',
-                        backgroundColor: item.type === 'folder' ? '#2196f3' : item.type === 'quote' ? '#667eea' : '#10b981',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '1.5rem',
-                        flexShrink: 0,
+        <div className="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Description</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map((item) => (
+                <tr
+                  key={`${item.type}-${item.id}`}
+                  style={{
+                    cursor: 'pointer',
+                    ...(item.priority === 'high' ? {
+                      backgroundColor: '#fef2f2',
+                    } : {}),
+                  }}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
+                    </span>
+                  </td>
+                  <td>
+                    <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                  </td>
+                  <td>
+                    {getStatusBadge(item.status, item.type)}
+                  </td>
+                  <td>
+                    {item.priority === 'high' ? (
+                      <span style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
                       }}>
-                        {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
-                      </div>
-
-                      {/* Content */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                          <h3 style={{ 
-                            margin: 0, 
-                            fontSize: '1.125rem',
-                            fontWeight: 600,
-                            color: '#1f2937',
-                          }}>
-                            {item.title}
-                          </h3>
-                          {item.priority === 'high' && (
-                            <span style={{
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              backgroundColor: '#fee2e2',
-                              color: '#dc2626',
-                              border: '1px solid #fecaca',
-                            }}>
-                              🔥 High Priority
-                            </span>
-                          )}
-                          {getStatusBadge(item.status, item.type)}
-                        </div>
-                        {item.description && (
-                          <p style={{ 
-                            margin: '0 0 0.5rem 0',
-                            color: '#6b7280',
-                            fontSize: '0.875rem',
-                          }}>
-                            {item.description}
-                          </p>
-                        )}
-                        <div style={{ 
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '1rem',
-                          fontSize: '0.875rem',
-                          color: '#9ca3af',
-                          marginBottom: '0.75rem',
-                        }}>
-                          <span>{formatDate(item.created_at)}</span>
-                          <span>•</span>
-                          <span>{item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}</span>
-                        </div>
-                        
-                        {/* Quick Actions */}
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        High Priority
+                      </span>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {item.description || '-'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {formatDate(item.created_at)}
+                    </span>
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handleItemClick(item)}
+                        className="btn-outline btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        View
+                      </button>
+                      {item.type === 'folder' && (
+                        <button
+                          onClick={() => handleItemClick(item)}
+                          className="btn-primary btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          Open
+                        </button>
+                      )}
+                      {item.type === 'quote' && (
+                        <>
                           <button
-                            onClick={() => handleItemClick(item)}
-                            className="btn-outline"
-                            style={{
-                              padding: '0.375rem 0.75rem',
-                              fontSize: '0.875rem',
-                            }}
+                            onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
+                            className="btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
                           >
-                            View
+                            PDF
                           </button>
-                          {item.type === 'folder' && (
-                            <button
-                              onClick={() => handleItemClick(item)}
-                              className="btn-primary"
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                fontSize: '0.875rem',
-                              }}
-                            >
-                              Open Folder
-                            </button>
-                          )}
-                          {item.type === 'quote' && (
+                          {(item.status === 'draft' || item.status === 'sent' || item.status === 'viewed') && (
                             <>
                               <button
-                                onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
-                                className="btn-outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAcceptQuote(item.id);
+                                }}
+                                disabled={acceptingQuote === item.id}
+                                className="btn-primary btn-sm"
                                 style={{
-                                  padding: '0.375rem 0.75rem',
-                                  fontSize: '0.875rem',
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem',
+                                  opacity: acceptingQuote === item.id ? 0.6 : 1,
                                 }}
                               >
-                                Download PDF
+                                {acceptingQuote === item.id ? 'Accepting...' : 'Accept'}
                               </button>
-                              {(item.status === 'draft' || item.status === 'sent' || item.status === 'viewed') && (
-                                <>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAcceptQuote(item.id);
-                                    }}
-                                    disabled={acceptingQuote === item.id}
-                                    className="btn-primary"
-                                    style={{
-                                      padding: '0.375rem 0.75rem',
-                                      fontSize: '0.875rem',
-                                      opacity: acceptingQuote === item.id ? 0.6 : 1,
-                                    }}
-                                  >
-                                    {acceptingQuote === item.id ? 'Accepting...' : 'Accept'}
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeclineQuote(item.id);
-                                    }}
-                                    disabled={decliningQuote === item.id}
-                                    className="btn-danger"
-                                    style={{
-                                      padding: '0.375rem 0.75rem',
-                                      fontSize: '0.875rem',
-                                      opacity: decliningQuote === item.id ? 0.6 : 1,
-                                    }}
-                                  >
-                                    {decliningQuote === item.id ? 'Declining...' : 'Decline'}
-                                  </button>
-                                </>
-                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeclineQuote(item.id);
+                                }}
+                                disabled={decliningQuote === item.id}
+                                className="btn-danger btn-sm"
+                                style={{
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem',
+                                  opacity: decliningQuote === item.id ? 0.6 : 1,
+                                }}
+                              >
+                                {decliningQuote === item.id ? 'Declining...' : 'Decline'}
+                              </button>
                             </>
                           )}
-                          {item.type === 'form' && (
-                            <button
-                              onClick={(e) => handleCompleteForm(item.data as Form, e)}
-                              className="btn-primary"
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                fontSize: '0.875rem',
-                              }}
-                            >
-                              Complete
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                        </>
+                      )}
+                      {item.type === 'form' && (
+                        <button
+                          onClick={(e) => handleCompleteForm(item.data as Form, e)}
+                          className="btn-primary btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          Complete
+                        </button>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

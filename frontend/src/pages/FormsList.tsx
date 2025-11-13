@@ -26,7 +26,6 @@ function FormsList() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
   const [users, setUsers] = useState<Record<string, User>>({});
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
@@ -323,34 +322,6 @@ function FormsList() {
       <div className="flex-between mb-4">
         <h1>Forms</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', overflow: 'hidden' }}>
-            <button
-              onClick={() => setViewMode('table')}
-              style={{
-                padding: '0.5rem 1rem',
-                border: 'none',
-                backgroundColor: viewMode === 'table' ? '#667eea' : 'transparent',
-                color: viewMode === 'table' ? 'white' : '#374151',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              Table
-            </button>
-            <button
-              onClick={() => setViewMode('card')}
-              style={{
-                padding: '0.5rem 1rem',
-                border: 'none',
-                backgroundColor: viewMode === 'card' ? '#667eea' : 'transparent',
-                color: viewMode === 'card' ? 'white' : '#374151',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              Cards
-            </button>
-          </div>
           {role === 'admin' && (
             <button onClick={() => navigate('/forms/new')} className="btn-primary">
               Create New Form
@@ -538,7 +509,7 @@ function FormsList() {
             )}
           </div>
         </div>
-      ) : viewMode === 'table' ? (
+      ) : (
         <div className="card">
           {loading && forms.length > 0 && (
             <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
@@ -715,135 +686,6 @@ function FormsList() {
               ))}
             </tbody>
           </table>
-        </div>
-      ) : (
-        <div className="card">
-          {loading && forms.length > 0 && (
-            <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
-              Updating...
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {forms.map((form) => (
-              <div
-                key={form.id}
-                className="card"
-                style={{
-                  border: selectedForms.has(form.id) ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-                  padding: '1.5rem',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer',
-                  backgroundColor: selectedForms.has(form.id) ? '#eff6ff' : 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-                onClick={() => {
-                  if (role === 'admin') {
-                    handleSelectForm(form.id);
-                  } else {
-                    navigate(`/forms/${form.id}`);
-                  }
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-                    {role === 'admin' && (
-                      <input
-                        type="checkbox"
-                        id={`form-select-mobile-${form.id}`}
-                        name={`form-select-mobile-${form.id}`}
-                        checked={selectedForms.has(form.id)}
-                        onChange={() => handleSelectForm(form.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    )}
-                    <Link
-                      to={`/forms/${form.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600', fontSize: '1.125rem', flex: 1 }}
-                    >
-                      {form.name || 'Untitled Form'}
-                    </Link>
-                  </div>
-                  <span className={`badge ${getStatusBadgeClass(form.status)}`} style={{ fontSize: '0.75rem' }}>
-                    {formatStatus(form.status)}
-                  </span>
-                </div>
-                
-                {form.description && (
-                  <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '1rem', minHeight: '2.5rem' }}>
-                    {form.description.length > 100 ? `${form.description.substring(0, 100)}...` : form.description}
-                  </p>
-                )}
-                
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                    <span style={{ fontWeight: '500' }}>Fields:</span>
-                    <span>{form.fields?.length || 0} {form.fields?.length === 1 ? 'field' : 'fields'}</span>
-                  </div>
-                  {role === 'admin' && submissionCounts[form.id] !== undefined && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <span style={{ fontWeight: '500' }}>Submissions:</span>
-                      <span
-                        style={{
-                          color: submissionCounts[form.id] > 0 ? '#22c55e' : '#9ca3af',
-                          fontWeight: '500',
-                        }}
-                      >
-                        {submissionCounts[form.id]} {submissionCounts[form.id] === 1 ? 'submission' : 'submissions'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-                  <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-                    {formatDate(form.created_at)}
-                  </span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
-                    <Link to={`/forms/${form.id}`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                      View
-                    </Link>
-                    {role === 'admin' && (
-                      <>
-                        <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => handleAssignToFolder(form)}
-                          className="btn-outline"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                          title="Assign to Folder"
-                        >
-                          Assign
-                        </button>
-                        {form.public_url_slug && form.status === 'published' && (
-                          <a
-                            href={`/public/form/${form.public_url_slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-primary"
-                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none' }}
-                            title="Open public form"
-                          >
-                            Open
-                          </a>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

@@ -4,7 +4,6 @@ import { filesAPI } from '../api';
 import type { FileItem } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
-import FileCard from '../components/FileCard';
 import './FilesList.css';
 
 function FilesList() {
@@ -15,7 +14,6 @@ function FilesList() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showUpload, setShowUpload] = useState(false);
 
   const loadFiles = useCallback(async () => {
@@ -140,22 +138,6 @@ function FilesList() {
             </option>
           ))}
         </select>
-        <div className="view-toggle">
-          <button
-            className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => setViewMode('grid')}
-            title="Grid View"
-          >
-            ⬜
-          </button>
-          <button
-            className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-            title="List View"
-          >
-            ☰
-          </button>
-        </div>
       </div>
 
       {filteredFiles.length === 0 ? (
@@ -167,17 +149,110 @@ function FilesList() {
           </p>
         </div>
       ) : (
-        <div className={`files-container ${viewMode}`}>
-          {filteredFiles.map((file) => (
-            <FileCard
-              key={file.id}
-              file={file}
-              onDelete={handleDelete}
-              onView={handleView}
-              showActions={role === 'admin'}
-              showFolderAssignment={role === 'admin'}
-            />
-          ))}
+        <div className="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Description</th>
+                <th>Created</th>
+                {role === 'admin' && <th>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredFiles.map((file) => (
+                <tr key={file.id} style={{ cursor: 'pointer' }} onClick={() => handleView(file)}>
+                  <td>
+                    <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
+                  </td>
+                  <td>
+                    <span className="text-muted">{formatFileType(file.file_type)}</span>
+                  </td>
+                  <td>
+                    <span className="text-muted">
+                      {file.file_size < 1024
+                        ? `${file.file_size} B`
+                        : file.file_size < 1024 * 1024
+                        ? `${(file.file_size / 1024).toFixed(1)} KB`
+                        : `${(file.file_size / (1024 * 1024)).toFixed(1)} MB`}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {file.description || '-'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                      {new Date(file.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </td>
+                  {role === 'admin' && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button
+                          className="btn-outline btn-sm"
+                          onClick={() => handleView(file)}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="btn-outline btn-sm"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const response = await filesAPI.download(file.id);
+                              const blob = new Blob([response.data]);
+                              const url = window.URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = file.original_filename;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Download error:', error);
+                              alert('Failed to download file. Please try again.');
+                            }
+                          }}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          Download
+                        </button>
+                        <button
+                          className="btn-danger btn-sm"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm(`Are you sure you want to delete "${file.name}"?`)) {
+                              return;
+                            }
+                            try {
+                              await filesAPI.delete(file.id);
+                              handleDelete(file.id);
+                            } catch (error) {
+                              console.error('Delete error:', error);
+                              alert('Failed to delete file. Please try again.');
+                            }
+                          }}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
