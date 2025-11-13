@@ -606,8 +606,10 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         
         # Convert to dict, ensuring Decimal fields are strings
         update_data = quote_update.model_dump(exclude_unset=True) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=True)
-        # Remove create_folder from update_data (it's not a database field)
+        # Store create_folder value before removing it (it's not a database field)
+        create_folder_value = update_data.get('create_folder')
         update_data.pop('create_folder', None)
+        print(f"DEBUG: Extracted create_folder value: {create_folder_value}")
         # Convert any Decimal fields to strings
         for key, value in update_data.items():
             if isinstance(value, Decimal):
@@ -659,7 +661,20 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         
         # Handle folder creation if requested and quote doesn't have one
         folder_id = current_quote.get("folder_id")
-        if hasattr(quote_update, 'create_folder') and quote_update.create_folder and not folder_id:
+        print(f"DEBUG: Checking folder creation conditions:")
+        print(f"  - hasattr(quote_update, 'create_folder'): {hasattr(quote_update, 'create_folder')}")
+        print(f"  - quote_update.create_folder: {getattr(quote_update, 'create_folder', None)}")
+        print(f"  - current_quote folder_id: {folder_id}")
+        print(f"  - update_data keys: {list(update_data.keys())}")
+        print(f"  - update_data.get('create_folder'): {update_data.get('create_folder')}")
+        
+        # Check both the model attribute and update_data (in case it was passed but not as model attribute)
+        create_folder_requested = (
+            (hasattr(quote_update, 'create_folder') and quote_update.create_folder) or
+            update_data.get('create_folder') is True
+        )
+        
+        if create_folder_requested and not folder_id:
             try:
                 print(f"Creating folder for existing quote {quote_id}")
                 # Generate folder name from quote
