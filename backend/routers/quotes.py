@@ -596,8 +596,8 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
 async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
     """Update a quote (admin only)"""
     try:
-        # Get current quote for comparison
-        current_response = supabase.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
+        # Get current quote for comparison - use service role client to ensure we get folder_id
+        current_response = supabase_storage.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
         if not current_response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
