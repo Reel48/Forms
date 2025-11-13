@@ -12,14 +12,14 @@
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
+  background: var(--brand-white, #ffffff);
+  border-radius: var(--radius-lg, 12px);
   width: 90%;
   max-width: 600px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-xl, 0 10px 15px rgba(0, 0, 0, 0.1));
 }
 
 .modal-header {
@@ -27,20 +27,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--color-border-dark, #e0e0e0);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: var(--color-text-primary, #1f2937);
+  font-weight: 600;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 2rem;
-  color: #666;
+  color: var(--color-text-muted, #6b7280);
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -48,12 +49,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  border-radius: var(--radius-sm, 6px);
+  transition: background-color var(--transition-base, 0.2s);
 }
 
 .modal-close:hover {
-  background-color: #f5f5f5;
+  background-color: var(--color-bg-secondary, #f9fafb);
 }
 
 .modal-body {
@@ -69,15 +70,19 @@
 .search-input {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid var(--color-border-light, #d1d5db);
+  border-radius: var(--radius-sm, 6px);
   font-size: 1rem;
   box-sizing: border-box;
+  background-color: var(--brand-white, #ffffff);
+  color: var(--color-text-primary, #1f2937);
+  transition: all var(--transition-base, 0.2s);
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
 }
 
 .user-list {
@@ -93,14 +98,15 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid var(--color-border-dark, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-base, 0.2s);
+  background-color: var(--brand-white, #ffffff);
 }
 
 .user-item:hover {
-  background-color: #f9fafb;
+  background-color: var(--color-bg-secondary, #f9fafb);
 }
 
 .user-item input[type="checkbox"] {
@@ -112,37 +118,37 @@
 .user-email {
   flex: 1;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-primary, #1f2937);
 }
 
 .assigned-badge {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--color-primary-light, #dbeafe);
+  color: var(--color-primary, #2563eb);
   padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--radius-full, 9999px);
   font-size: 0.875rem;
   font-weight: 500;
 }
 
 .creating-badge {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--color-warning-light, #fef3c7);
+  color: var(--color-warning, #f59e0b);
   padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--radius-full, 9999px);
   font-size: 0.875rem;
   font-weight: 500;
 }
 
 .client-item {
-  border-left: 3px solid #eab308;
-  background-color: #fffbeb;
+  border-left: 3px solid var(--color-warning, #f59e0b);
+  background-color: var(--color-warning-light, #fef3c7);
 }
 
 .loading,
 .empty-state {
   text-align: center;
   padding: 2rem;
-  color: #666;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .modal-footer {
@@ -150,11 +156,10 @@
   justify-content: flex-end;
   gap: 1rem;
   padding: 1.5rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--color-border-dark, #e0e0e0);
 }
 
 .modal-footer button {
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
 }
-

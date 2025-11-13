@@ -3,17 +3,18 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background-color: #fff;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--brand-white, #ffffff);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base, 0.2s);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
 }
 
 .file-card:hover {
-  border-color: #007bff;
-  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
-  transform: translateY(-2px);
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
+  transform: translateY(-1px);
 }
 
 .file-card-icon {
@@ -28,7 +29,7 @@
 
 .file-card-name {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary, #1f2937);
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -40,22 +41,22 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-text-muted, #6b7280);
   margin-bottom: 0.25rem;
 }
 
 .file-card-separator {
-  color: #ccc;
+  color: var(--color-text-light, #9ca3af);
 }
 
 .file-card-size,
 .file-card-date {
-  color: #666;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .file-card-description {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-text-muted, #6b7280);
   margin-top: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,9 +73,9 @@
 .file-card-tag {
   font-size: 0.75rem;
   padding: 0.125rem 0.5rem;
-  background-color: #e3f2fd;
-  color: #1976d2;
-  border-radius: 12px;
+  background-color: var(--color-primary-light, #dbeafe);
+  color: var(--color-primary, #2563eb);
+  border-radius: var(--radius-full, 9999px);
 }
 
 .file-card-actions {
@@ -89,12 +90,12 @@
   font-size: 1.25rem;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  border-radius: var(--radius-sm, 6px);
+  transition: background-color var(--transition-base, 0.2s);
 }
 
 .file-card-action-btn:hover:not(:disabled) {
-  background-color: #f0f0f0;
+  background-color: var(--color-bg-secondary, #f9fafb);
 }
 
 .file-card-action-btn:disabled {
@@ -103,6 +104,6 @@
 }
 
 .file-card-action-danger:hover:not(:disabled) {
-  background-color: #ffebee;
+  background-color: var(--color-danger-light, #fee2e2);
 }
 

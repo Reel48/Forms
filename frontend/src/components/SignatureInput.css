@@ -1,46 +1,47 @@
 .signature-input-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
   width: 100%;
 }
 
 .signature-input {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 24px;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--color-border-dark, #e0e0e0);
+  border-radius: var(--radius-md, 8px);
+  font-size: 1.5rem;
   font-family: 'Dancing Script', cursive;
   text-align: center;
-  transition: border-color 0.2s;
-  background-color: #ffffff;
+  transition: all var(--transition-base, 0.2s);
+  background-color: var(--brand-white, #ffffff);
+  color: var(--color-text-primary, #1f2937);
 }
 
 .signature-input:focus {
   outline: none;
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
 }
 
 .signature-input::placeholder {
-  color: #999999;
+  color: var(--color-text-light, #9ca3af);
   opacity: 0.7;
 }
 
 .signature-preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: var(--color-bg-tertiary, #f3f4f6);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border-dark, #e0e0e0);
 }
 
 .signature-preview-label {
-  font-size: 12px;
-  color: #666666;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #6b7280);
   margin: 0;
   font-weight: 500;
   text-transform: uppercase;
@@ -49,15 +50,14 @@
 
 .signature-preview-text {
   font-family: 'Dancing Script', cursive;
-  color: #000000;
+  color: var(--color-text-primary, #1f2937);
   text-align: center;
   margin: 0;
-  padding: 8px;
-  background-color: #ffffff;
-  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: var(--brand-white, #ffffff);
+  border-radius: var(--radius-sm, 6px);
   min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-

@@ -14,33 +14,33 @@
 .page-header h1 {
   font-size: 32px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary, #1f2937);
   margin: 0;
 }
 
 .btn-create {
-  padding: 12px 24px;
-  background-color: #2196f3;
-  color: white;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-primary, #2563eb);
+  color: var(--brand-white, #ffffff);
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all var(--transition-base, 0.2s);
 }
 
 .btn-create:hover {
-  background-color: #1976d2;
+  background-color: var(--color-primary-hover, #1d4ed8);
 }
 
 .error-banner {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  border: 1px solid #f5c6cb;
+  background-color: var(--color-danger-light, #fee2e2);
+  color: var(--color-danger, #dc2626);
+  padding: 1rem;
+  border-radius: var(--radius-md, 8px);
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--color-danger, #dc2626);
 }
 
 .filters-section {
@@ -59,43 +59,48 @@
 
 .search-input {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 0.2s;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-light, #d1d5db);
+  border-radius: var(--radius-md, 8px);
+  font-size: 1rem;
+  transition: all var(--transition-base, 0.2s);
+  background-color: var(--brand-white, #ffffff);
+  color: var(--color-text-primary, #1f2937);
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #2196f3;
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
 }
 
 .filter-controls {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   align-items: center;
 }
 
 .filter-select {
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
-  background-color: white;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-light, #d1d5db);
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.875rem;
+  background-color: var(--brand-white, #ffffff);
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all var(--transition-base, 0.2s);
+  color: var(--color-text-primary, #1f2937);
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: #2196f3;
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
 }
 
 .empty-state {
   text-align: center;
-  padding: 64px 24px;
-  color: #666666;
+  padding: 4rem 1.5rem;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .empty-state p {
@@ -110,19 +115,19 @@
 }
 
 .folder-card {
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 24px;
+  background-color: var(--brand-white, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-base, 0.2s);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
 }
 
 .folder-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-  border-color: #2196f3;
+  box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
+  transform: translateY(-1px);
+  border-color: var(--color-primary, #2563eb);
 }
 
 .folder-header {
@@ -134,9 +139,9 @@
 }
 
 .folder-name {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary, #1f2937);
   margin: 0;
   flex: 1;
 }
@@ -152,29 +157,29 @@
 }
 
 .status-active {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: var(--color-success-light, #d1fae5);
+  color: var(--color-success, #10b981);
 }
 
 .status-completed {
-  background-color: #d1ecf1;
-  color: #0c5460;
+  background-color: var(--color-primary-light, #dbeafe);
+  color: var(--color-primary, #2563eb);
 }
 
 .status-archived {
-  background-color: #e2e3e5;
-  color: #383d41;
+  background-color: var(--color-bg-tertiary, #f3f4f6);
+  color: var(--color-text-muted, #6b7280);
 }
 
 .status-cancelled {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: var(--color-danger-light, #fee2e2);
+  color: var(--color-danger, #dc2626);
 }
 
 .folder-description {
-  font-size: 14px;
-  color: #666666;
-  margin-bottom: 16px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 1rem;
   line-height: 1.5;
 }
 
@@ -193,57 +198,19 @@
 
 .meta-label {
   font-weight: 600;
-  color: #666666;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .meta-value {
-  color: #1a1a1a;
+  color: var(--color-text-primary, #1f2937);
 }
 
 .folder-actions {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-danger {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-primary {
-  background-color: #2196f3;
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #1976d2;
-}
-
-.btn-secondary {
-  background-color: #f5f5f5;
-  color: #1a1a1a;
-  border: 1px solid #e0e0e0;
-}
-
-.btn-secondary:hover {
-  background-color: #e8e8e8;
-}
-
-.btn-danger {
-  background-color: #f44336;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #d32f2f;
-}
+/* Use global button classes from App.css instead of redefining */
 
 .btn-sm {
   padding: 8px 16px;
@@ -252,18 +219,19 @@
 
 .loading {
   text-align: center;
-  padding: 48px;
-  font-size: 16px;
-  color: #666666;
+  padding: 3rem;
+  font-size: 1rem;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .error {
   text-align: center;
-  padding: 48px;
-  font-size: 16px;
-  color: #721c24;
-  background-color: #f8d7da;
-  border-radius: 8px;
+  padding: 3rem;
+  font-size: 1rem;
+  color: var(--color-danger, #dc2626);
+  background-color: var(--color-danger-light, #fee2e2);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-danger, #dc2626);
 }
 
 @media (max-width: 768px) {
