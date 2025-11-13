@@ -31,10 +31,7 @@ function QuoteBuilder() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
-  const [templates, setTemplates] = useState<any[]>([]);
   const [selectedLineItems, setSelectedLineItems] = useState<Set<number>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -70,9 +67,6 @@ function QuoteBuilder() {
   // Load initial data
   useEffect(() => {
     loadClients();
-    if (role === 'admin') {
-      loadTemplates();
-    }
     if (isEdit) {
       loadQuote();
     } else {
@@ -116,8 +110,6 @@ function QuoteBuilder() {
       }
       // Escape to close modals
       if (e.key === 'Escape') {
-        setShowTemplateModal(false);
-        setShowSaveTemplateModal(false);
         setShowBulkEdit(false);
         setShowPreview(false);
         closeLinkDialog();
@@ -146,14 +138,6 @@ function QuoteBuilder() {
     }
   };
 
-  const loadTemplates = async () => {
-    try {
-      const response = await quotesAPI.getTemplates();
-      setTemplates(response.data || []);
-    } catch (error) {
-      console.error('Failed to load templates:', error);
-    }
-  };
 
 
   const loadLocalAutoSave = () => {
@@ -438,58 +422,6 @@ function QuoteBuilder() {
     }
   };
 
-  const handleLoadTemplate = async (templateId: string) => {
-    try {
-      const response = await quotesAPI.getTemplate(templateId);
-      const template = response.data;
-      
-      setFormData({
-        title: template.title || '',
-        client_id: '',
-        notes: template.notes || '',
-        terms: template.terms || '',
-        tax_rate: template.tax_rate || '0',
-        currency: template.currency || 'USD',
-        status: 'draft',
-        line_items: (template.line_items || []).map((item: any) => ({
-          description: item.description || '',
-          quantity: item.quantity?.toString() || '1',
-          unit_price: item.unit_price?.toString() || '0',
-          discount_percent: item.discount_percent?.toString() || '0',
-          tax_rate: item.tax_rate?.toString() || '0',
-        })),
-      });
-      
-      setShowTemplateModal(false);
-      alert('Template loaded successfully!');
-    } catch (error: any) {
-      console.error('Failed to load template:', error);
-      alert('Failed to load template. Please try again.');
-    }
-  };
-
-  const handleSaveTemplate = async (name: string, description?: string, isPublic?: boolean) => {
-    try {
-      await quotesAPI.createTemplate({
-        name,
-        description,
-        title: formData.title,
-        notes: formData.notes,
-        terms: formData.terms,
-        tax_rate: formData.tax_rate,
-        currency: formData.currency,
-        line_items: formData.line_items,
-        is_public: isPublic || false,
-      });
-      
-      await loadTemplates();
-      setShowSaveTemplateModal(false);
-      alert('Template saved successfully!');
-    } catch (error: any) {
-      console.error('Failed to save template:', error);
-      alert('Failed to save template. Please try again.');
-    }
-  };
 
   const handleDuplicateQuote = async () => {
     if (!isEdit || !id) return;
@@ -578,35 +510,15 @@ function QuoteBuilder() {
             {autoSaveStatus === 'saved' && (
               <span style={{ fontSize: '0.875rem', color: '#10b981' }}>Saved</span>
             )}
-            {role === 'admin' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setShowTemplateModal(true)}
-                  className="btn-outline"
-                  style={{ fontSize: '0.875rem' }}
-                >
-                  Templates
-                </button>
-                {isEdit && (
-                  <button
-                    type="button"
-                    onClick={handleDuplicateQuote}
-                    className="btn-outline"
-                    style={{ fontSize: '0.875rem' }}
-                  >
-                    Duplicate
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowSaveTemplateModal(true)}
-                  className="btn-outline"
-                  style={{ fontSize: '0.875rem' }}
-                >
-                  Save as Template
-                </button>
-              </>
+            {role === 'admin' && isEdit && (
+              <button
+                type="button"
+                onClick={handleDuplicateQuote}
+                className="btn-outline"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Duplicate
+              </button>
             )}
             <button
               type="button"
@@ -1015,21 +927,6 @@ function QuoteBuilder() {
       </div>
 
       {/* Modals */}
-      {showTemplateModal && (
-        <TemplateModal
-          templates={templates}
-          onLoad={handleLoadTemplate}
-          onClose={() => setShowTemplateModal(false)}
-        />
-      )}
-
-      {showSaveTemplateModal && (
-        <SaveTemplateModal
-          onSave={handleSaveTemplate}
-          onClose={() => setShowSaveTemplateModal(false)}
-        />
-      )}
-
       {showBulkEdit && selectedLineItems.size > 0 && (
         <BulkEditModal
           selectedCount={selectedLineItems.size}
@@ -1147,152 +1044,7 @@ function PreviewMode({ formData, clients, currencySymbol, subtotal, taxAmount, t
   );
 }
 
-// Template Modal Component
-function TemplateModal({ templates, onLoad, onClose }: any) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="card"
-        style={{ maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', margin: '1rem' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={{ marginTop: 0 }}>Load Template</h3>
-        {templates.length === 0 ? (
-          <p className="text-muted">No templates available. Save a quote as a template to get started.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {templates.map((template: any) => (
-              <div
-                key={template.id}
-                style={{
-                  padding: '1rem',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer',
-                }}
-                onClick={() => onLoad(template.id)}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-              >
-                <div style={{ fontWeight: '600' }}>{template.name}</div>
-                {template.description && (
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {template.description}
-                  </div>
-                )}
-                {template.line_items && (
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {template.line_items.length} line item(s)
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ marginTop: '1rem' }}>
-          <button onClick={onClose} className="btn-outline">Close</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Save Template Modal Component
-function SaveTemplateModal({ onSave, onClose }: any) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      alert('Template name is required');
-      return;
-    }
-    onSave(name, description || undefined, isPublic);
-  };
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="card"
-        style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={{ marginTop: 0 }}>Save as Template</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="template-name">Template Name *</label>
-            <input
-              type="text"
-              id="template-name"
-              name="template-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="e.g., Standard Service Quote"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="template-description">Description (optional)</label>
-            <textarea
-              id="template-description"
-              name="template-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe when to use this template..."
-              rows={3}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="template-public" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                id="template-public"
-                name="template-public"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-              />
-              <span>Make this template public (available to all admins)</span>
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
-            <button type="submit" className="btn-primary">Save Template</button>
-            <button type="button" onClick={onClose} className="btn-outline">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+// Template modals have been removed
 
 // Bulk Edit Modal Component
 function BulkEditModal({ selectedCount, onEdit, onClose }: any) {

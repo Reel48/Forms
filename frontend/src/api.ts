@@ -353,12 +353,6 @@ export const quotesAPI = {
   getVersions: (quoteId: string) => api.get<any[]>(`/api/quotes/${quoteId}/versions`),
   setReminder: (quoteId: string, reminderDate: string) => api.post<{ message: string }>(`/api/quotes/${quoteId}/reminder`, { reminder_date: reminderDate }),
   deleteReminder: (quoteId: string) => api.delete<{ message: string }>(`/api/quotes/${quoteId}/reminder`),
-  // Templates
-  getTemplates: () => api.get<any[]>('/api/quotes/templates'),
-  getTemplate: (templateId: string) => api.get<any>(`/api/quotes/templates/${templateId}`),
-  createTemplate: (template: any) => api.post<any>('/api/quotes/templates', template),
-  updateTemplate: (templateId: string, template: any) => api.put<any>(`/api/quotes/templates/${templateId}`, template),
-  deleteTemplate: (templateId: string) => api.delete<{ message: string }>(`/api/quotes/templates/${templateId}`),
   // Auto-save
   autoSaveQuote: (quoteId: string, draftData: any) => api.post<{ message: string }>(`/api/quotes/${quoteId}/auto-save`, { draft_data: draftData }),
   getAutoSavedDraft: (quoteId: string) => api.get<{ draft_data: any; last_auto_saved_at: string }>(`/api/quotes/${quoteId}/auto-save`),
