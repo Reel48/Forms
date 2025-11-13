@@ -104,11 +104,11 @@ function Navigation() {
         {isAdmin ? (
           <>
             <li>
-              <Link 
-                to="/forms" 
-                className={`nav-tab ${isFormsActive ? 'active' : ''}`}
+              <Link
+                to="/folders"
+                className={`nav-tab ${isFoldersActive ? 'active' : ''}`}
               >
-                Forms
+                Folders
               </Link>
             </li>
             <li>
@@ -117,6 +117,14 @@ function Navigation() {
                 className={`nav-tab ${isQuotesActive ? 'active' : ''}`}
               >
                 Quotes
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/forms" 
+                className={`nav-tab ${isFormsActive ? 'active' : ''}`}
+              >
+                Forms
               </Link>
             </li>
             <li>
@@ -135,16 +143,6 @@ function Navigation() {
                 E-Signatures
               </Link>
             </li>
-            {isAdmin && (
-              <li>
-                <Link
-                  to="/folders"
-                  className={`nav-tab ${isFoldersActive ? 'active' : ''}`}
-                >
-                  Folders
-                </Link>
-              </li>
-            )}
             <li 
               ref={dropdownRef}
               className={`nav-dropdown ${isSettingsDropdownOpen ? 'open' : ''}`}
