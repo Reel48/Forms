@@ -1,14 +1,21 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
 from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
 import os
+import logging
+import traceback
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # FastAPI JSON encoder for Decimal (converts to string for JSON serialization)
 app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal: str})
@@ -33,6 +40,35 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     )
     return response
 
+# Add global exception handler to catch all errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler to log all unhandled errors
+    """
+    logger.error(f"Unhandled exception: {str(exc)}")
+    logger.error(f"Request path: {request.url.path}")
+    logger.error(f"Request method: {request.method}")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
+
+# Add validation error handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Handler for request validation errors
+    """
+    logger.error(f"Validation error: {exc.errors()}")
+    logger.error(f"Request path: {request.url.path}")
+    logger.error(f"Request method: {request.method}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body}
+    )
+
 # Get allowed origins from environment or use defaults
 # In production, set ALLOWED_ORIGINS to include your Vercel domain(s)
 # Example: ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main.vercel.app
@@ -45,6 +81,22 @@ allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") i
 # Log allowed origins for debugging (don't log in production with sensitive data)
 if os.getenv("ENVIRONMENT") != "production":
     print(f"DEBUG: Allowed CORS origins: {allowed_origins}")
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """
+    Log all incoming requests for debugging
+    """
+    logger.info(f"Incoming request: {request.method} {request.url.path}")
+    try:
+        response = await call_next(request)
+        logger.info(f"Response status: {response.status_code} for {request.method} {request.url.path}")
+        return response
+    except Exception as e:
+        logger.error(f"Error processing request {request.method} {request.url.path}: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
 # CORS middleware
 # Note: FastAPI CORS doesn't support wildcards like *.vercel.app
