@@ -22,15 +22,16 @@ async def list_folders(
 ):
     """List folders. Admins see all folders, users see folders assigned to them."""
     try:
-        # Check if user is admin
-        is_admin = False
-        try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
-            is_admin = False
+        from database import supabase_storage
         
-        query = supabase.table("folders").select("*")
+        # Check if user is admin - use the role from the user dict (already checked in get_current_user)
+        is_admin = user.get("role") == "admin"
+        
+        # Use service role client for admins to bypass RLS, regular client for users
+        if is_admin:
+            query = supabase_storage.table("folders").select("*")
+        else:
+            query = supabase.table("folders").select("*")
         
         # Apply filters
         if client_id:
