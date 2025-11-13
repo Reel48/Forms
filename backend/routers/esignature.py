@@ -139,10 +139,19 @@ async def create_document(
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
-        # Create document record
-        document_data = document.model_dump(exclude_none=True)
+        # Create document record - exclude created_by from dump since we set it manually
+        # Use mode='json' to ensure all values are JSON-serializable (datetime -> ISO string)
+        document_data = document.model_dump(exclude_none=True, exclude={"created_by"}, mode='json')
         document_data["created_by"] = user["id"]
         document_data["status"] = "pending"
+        
+        # Only include fields that exist in the database table
+        allowed_fields = {
+            "name", "description", "file_id", "document_type", "signature_mode",
+            "require_signature", "signature_fields", "folder_id", "quote_id",
+            "expires_at", "created_by", "status"
+        }
+        document_data = {k: v for k, v in document_data.items() if k in allowed_fields}
         
         response = supabase.table("esignature_documents").insert(document_data).execute()
         
@@ -154,6 +163,8 @@ async def create_document(
         raise
     except Exception as e:
         print(f"Error creating document: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create document: {str(e)}")
 
 @router.put("/documents/{document_id}", response_model=ESignatureDocument)
