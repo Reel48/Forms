@@ -118,6 +118,7 @@ const FolderView: React.FC = () => {
             <input
               type="text"
               id="name"
+              name="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -129,6 +130,7 @@ const FolderView: React.FC = () => {
             <label htmlFor="description">Description</label>
             <textarea
               id="description"
+              name="description"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Enter folder description (optional)"
@@ -140,6 +142,7 @@ const FolderView: React.FC = () => {
             <label htmlFor="client_id">Client</label>
             <select
               id="client_id"
+              name="client_id"
               value={formData.client_id || ''}
               onChange={(e) => setFormData({ ...formData, client_id: e.target.value || undefined })}
             >
@@ -156,6 +159,7 @@ const FolderView: React.FC = () => {
             <label htmlFor="status">Status</label>
             <select
               id="status"
+              name="status"
               value={formData.status || 'active'}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             >

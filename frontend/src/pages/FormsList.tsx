@@ -369,6 +369,7 @@ function FormsList() {
               </label>
               <input
                 id="search-input"
+                name="search-input"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -382,6 +383,7 @@ function FormsList() {
               </label>
               <select
                 id="status-filter"
+                name="status-filter"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
@@ -400,6 +402,7 @@ function FormsList() {
               </label>
               <input
                 id="date-from"
+                name="date-from"
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
@@ -412,6 +415,7 @@ function FormsList() {
               </label>
               <input
                 id="date-to"
+                name="date-to"
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}

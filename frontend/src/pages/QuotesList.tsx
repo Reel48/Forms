@@ -908,6 +908,7 @@ function QuotesList() {
               </label>
               <input
                 id="created-from"
+                name="created-from"
                 type="date"
                 value={createdFrom}
                 onChange={(e) => handleDateFilterChange('created_from', e.target.value)}
@@ -920,6 +921,7 @@ function QuotesList() {
               </label>
               <input
                 id="created-to"
+                name="created-to"
                 type="date"
                 value={createdTo}
                 onChange={(e) => handleDateFilterChange('created_to', e.target.value)}

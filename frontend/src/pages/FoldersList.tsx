@@ -103,6 +103,8 @@ const FoldersList: React.FC = () => {
         <div className="search-box">
           <input
             type="text"
+            id="folders-search"
+            name="folders-search"
             placeholder="Search folders..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -112,6 +114,8 @@ const FoldersList: React.FC = () => {
 
         <div className="filter-controls">
           <select
+            id="folders-status-filter"
+            name="folders-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="filter-select"

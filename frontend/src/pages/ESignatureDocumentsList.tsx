@@ -94,6 +94,8 @@ const ESignatureDocumentsList: React.FC = () => {
         <div className="search-box">
           <input
             type="text"
+            id="esignature-search"
+            name="esignature-search"
             placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -103,6 +105,8 @@ const ESignatureDocumentsList: React.FC = () => {
 
         <div className="filter-controls">
           <select
+            id="esignature-status-filter"
+            name="esignature-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="filter-select"

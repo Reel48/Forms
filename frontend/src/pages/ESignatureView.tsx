@@ -55,21 +55,21 @@ const ESignatureView: React.FC = () => {
 
   const fetchDocument = async () => {
     if (!id) return;
-    
-    try {
-      setLoading(true);
-      const docResponse = await esignatureAPI.getDocument(id);
-      setDocument(docResponse.data);
 
-      // Get preview URL
-      const previewResponse = await esignatureAPI.getDocumentPreview(id);
-      setPreviewUrl(previewResponse.data.preview_url);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load document');
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const docResponse = await esignatureAPI.getDocument(id);
+        setDocument(docResponse.data);
+
+        // Get preview URL
+        const previewResponse = await esignatureAPI.getDocumentPreview(id);
+        setPreviewUrl(previewResponse.data.preview_url);
+      } catch (err: any) {
+        setError(err.response?.data?.detail || 'Failed to load document');
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -175,6 +175,7 @@ const ESignatureView: React.FC = () => {
             <input
               type="text"
               id="name"
+              name="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -186,6 +187,7 @@ const ESignatureView: React.FC = () => {
             <label htmlFor="description">Description</label>
             <textarea
               id="description"
+              name="description"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Enter document description (optional)"
@@ -197,6 +199,7 @@ const ESignatureView: React.FC = () => {
             <label htmlFor="file_id">File *</label>
             <select
               id="file_id"
+              name="file_id"
               value={formData.file_id}
               onChange={(e) => setFormData({ ...formData, file_id: e.target.value })}
               required
@@ -217,6 +220,7 @@ const ESignatureView: React.FC = () => {
             <label htmlFor="signature_mode">Signature Mode</label>
             <select
               id="signature_mode"
+              name="signature_mode"
               value={formData.signature_mode || 'simple'}
               onChange={(e) => setFormData({ ...formData, signature_mode: e.target.value as 'simple' | 'advanced' })}
             >
@@ -229,6 +233,7 @@ const ESignatureView: React.FC = () => {
             <label htmlFor="folder_id">Folder (Optional)</label>
             <select
               id="folder_id"
+              name="folder_id"
               value={formData.folder_id || ''}
               onChange={(e) => setFormData({ ...formData, folder_id: e.target.value || undefined })}
             >
@@ -246,6 +251,7 @@ const ESignatureView: React.FC = () => {
             <input
               type="datetime-local"
               id="expires_at"
+              name="expires_at"
               value={formData.expires_at || ''}
               onChange={(e) => setFormData({ ...formData, expires_at: e.target.value || undefined })}
             />

@@ -118,6 +118,8 @@ function FilesList() {
         <div className="search-box">
           <input
             type="text"
+            id="files-search"
+            name="files-search"
             placeholder="Search files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -125,6 +127,8 @@ function FilesList() {
           />
         </div>
         <select
+          id="files-type-filter"
+          name="files-type-filter"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           className="filter-select"
