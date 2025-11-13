@@ -199,6 +199,7 @@ async def upload_file(
             signed_url = None
         
         # Create file record in database
+        # Use supabase_storage (service role) to bypass RLS since we've already verified the user
         file_data = {
             "id": file_id,
             "name": file.filename or "Untitled",
@@ -215,7 +216,8 @@ async def upload_file(
             "uploaded_by": user["id"]
         }
         
-        response = supabase.table("files").insert(file_data).execute()
+        # Use service role client to bypass RLS (user is already authenticated)
+        response = supabase_storage.table("files").insert(file_data).execute()
         
         if not response.data:
             # Try to delete uploaded file if database insert fails
