@@ -205,31 +205,47 @@ async def update_folder(
 async def delete_folder(folder_id: str, user = Depends(get_current_user)):
     """Delete a folder."""
     try:
-        # Check if user is admin
-        is_admin = False
-        try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
-            is_admin = False
+        from database import supabase_storage
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Check if user is admin - use the role from the user dict
+        is_admin = user.get("role") == "admin"
+        
+        # Use service role client for admins to bypass RLS, regular client for users
+        client = supabase_storage if is_admin else supabase
         
         # Get existing folder
-        existing = supabase.table("folders").select("*").eq("id", folder_id).single().execute()
-        if not existing.data:
+        try:
+            existing = client.table("folders").select("*").eq("id", folder_id).single().execute()
+            if not existing.data:
+                raise HTTPException(status_code=404, detail="Folder not found")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error fetching folder for deletion: {str(e)}")
             raise HTTPException(status_code=404, detail="Folder not found")
         
-        # Check access
+        # Check access (for non-admins)
         if not is_admin and existing.data.get("created_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Delete folder (cascade will handle assignments)
-        supabase.table("folders").delete().eq("id", folder_id).execute()
+        try:
+            client.table("folders").delete().eq("id", folder_id).execute()
+            logger.info(f"Folder {folder_id} deleted successfully by user {user['id']}")
+        except Exception as e:
+            logger.error(f"Error deleting folder: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete folder: {str(e)}")
         
         return {"message": "Folder deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error deleting folder: {str(e)}")
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error deleting folder: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to delete folder: {str(e)}")
 
 @router.post("/{folder_id}/assign", response_model=FolderAssignment)
