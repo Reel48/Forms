@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { foldersAPI, type FolderContent } from '../api';
+import { foldersAPI, clientsAPI, type FolderContent, type FolderCreate, type Client } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
 import './FolderView.css';
@@ -12,12 +12,35 @@ const FolderView: React.FC = () => {
   const [content, setContent] = useState<FolderContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [formData, setFormData] = useState<FolderCreate>({
+    name: '',
+    description: '',
+    client_id: '',
+    quote_id: '',
+    status: 'active',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const isNewFolder = id === 'new';
 
   useEffect(() => {
-    if (id) {
+    if (isNewFolder) {
+      loadClients();
+      setLoading(false);
+    } else if (id) {
       loadFolderContent();
     }
-  }, [id]);
+  }, [id, isNewFolder]);
+
+  const loadClients = async () => {
+    try {
+      const response = await clientsAPI.getAll();
+      setClients(response.data);
+    } catch (err: any) {
+      console.error('Failed to load clients:', err);
+    }
+  };
 
   const loadFolderContent = async () => {
     try {
@@ -29,6 +52,32 @@ const FolderView: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to load folder content');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      setError('Folder name is required');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      const folderData: FolderCreate = {
+        name: formData.name.trim(),
+        description: formData.description || undefined,
+        client_id: formData.client_id || undefined,
+        quote_id: formData.quote_id || undefined,
+        status: formData.status || 'active',
+      };
+      const response = await foldersAPI.create(folderData);
+      navigate(`/folders/${response.data.id}`);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to create folder');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -44,6 +93,100 @@ const FolderView: React.FC = () => {
       day: 'numeric',
     });
   };
+
+  if (isNewFolder) {
+    return (
+      <div className="folder-view-container">
+        <div className="folder-header">
+          <div className="folder-header-top">
+            <button onClick={() => navigate('/folders')} className="btn-back">
+              ← Back
+            </button>
+            <h1>Create New Folder</h1>
+          </div>
+        </div>
+
+        {error && (
+          <div className="error-banner" style={{ marginBottom: '1rem' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleCreateFolder} className="folder-form">
+          <div className="form-group">
+            <label htmlFor="name">Folder Name *</label>
+            <input
+              type="text"
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              placeholder="Enter folder name"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter folder description (optional)"
+              rows={3}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="client_id">Client</label>
+            <select
+              id="client_id"
+              value={formData.client_id || ''}
+              onChange={(e) => setFormData({ ...formData, client_id: e.target.value || undefined })}
+            >
+              <option value="">None</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name || client.email}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="status">Status</label>
+            <select
+              id="status"
+              value={formData.status || 'active'}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            >
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={() => navigate('/folders')}
+              className="btn-secondary"
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={saving || !formData.name.trim()}
+            >
+              {saving ? 'Creating...' : 'Create Folder'}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
