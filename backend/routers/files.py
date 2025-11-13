@@ -321,8 +321,13 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
         file_data = file_response.data
         
         # Check access (same logic as get_file)
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        is_admin = False
+        try:
+            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            # User doesn't have a role record, default to customer
+            is_admin = False
         
         if not is_admin:
             if file_data.get("uploaded_by") != user["id"]:
@@ -401,8 +406,13 @@ async def get_file_preview(file_id: str, user = Depends(get_current_user)):
         file_data = file_response.data
         
         # Check access (same logic as get_file)
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        is_admin = False
+        try:
+            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            # User doesn't have a role record, default to customer
+            is_admin = False
         
         if not is_admin:
             if file_data.get("uploaded_by") != user["id"]:
