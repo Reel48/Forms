@@ -286,6 +286,72 @@
   margin-bottom: 16px;
 }
 
+.esignature-form {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+}
+
+.esignature-form .form-group {
+  margin-bottom: 20px;
+}
+
+.esignature-form .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.esignature-form .form-group input,
+.esignature-form .form-group textarea,
+.esignature-form .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.esignature-form .form-group input:focus,
+.esignature-form .form-group textarea:focus,
+.esignature-form .form-group select:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.esignature-form .form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.esignature-form .form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.esignature-form .form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-help-text {
+  font-size: 12px;
+  color: #666666;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 @media (max-width: 968px) {
   .signature-interface {
     grid-template-columns: 1fr;
@@ -293,6 +359,14 @@
 
   .pdf-preview {
     height: 400px;
+  }
+
+  .esignature-form .form-actions {
+    flex-direction: column;
+  }
+
+  .esignature-form .form-actions button {
+    width: 100%;
   }
 }
 
