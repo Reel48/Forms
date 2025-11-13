@@ -693,13 +693,9 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                 if folder_response.data and len(folder_response.data) > 0:
                     folder_id = folder_response.data[0]["id"]
                     print(f"Folder created successfully with ID: {folder_id}")
-                    # Update quote with folder_id - use service role client
-                    update_folder_response = supabase_storage.table("quotes").update({"folder_id": folder_id}).eq("id", quote_id).execute()
-                    if update_folder_response.data:
-                        print(f"Quote updated with folder_id: {folder_id}")
-                        update_data["folder_id"] = folder_id
-                    else:
-                        print(f"Warning: Quote folder_id update response was empty")
+                    # Add folder_id to update_data so it gets saved in the main update
+                    update_data["folder_id"] = folder_id
+                    print(f"Added folder_id {folder_id} to update_data")
                     
                     # Assign folder to client if client_id exists
                     if current_quote.get("client_id"):
