@@ -276,16 +276,21 @@ async def update_file(
 ):
     """Update file metadata."""
     try:
-        # Check if file exists
-        file_response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        # Check if file exists - use service role client to bypass RLS
+        file_response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
         file_data = file_response.data
         
         # Check if user is admin or uploaded the file
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        is_admin = False
+        try:
+            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            # User doesn't have a role record, default to customer
+            is_admin = False
         
         if not is_admin and file_data.get("uploaded_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
@@ -293,7 +298,8 @@ async def update_file(
         # Prepare update data
         update_data = file_update.model_dump(exclude_unset=True)
         
-        response = supabase.table("files").update(update_data).eq("id", file_id).execute()
+        # Use service role client to bypass RLS
+        response = supabase_storage.table("files").update(update_data).eq("id", file_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update file")
@@ -309,16 +315,21 @@ async def update_file(
 async def delete_file(file_id: str, user = Depends(get_current_user)):
     """Delete a file from storage and database."""
     try:
-        # Check if file exists
-        file_response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        # Check if file exists - use service role client to bypass RLS
+        file_response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
         file_data = file_response.data
         
         # Check if user is admin or uploaded the file
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        is_admin = False
+        try:
+            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            # User doesn't have a role record, default to customer
+            is_admin = False
         
         if not is_admin and file_data.get("uploaded_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
@@ -332,8 +343,8 @@ async def delete_file(file_id: str, user = Depends(get_current_user)):
                 print(f"Warning: Failed to delete file from storage: {str(storage_error)}")
                 # Continue with database deletion even if storage deletion fails
         
-        # Delete from database (cascade will handle assignments)
-        supabase.table("files").delete().eq("id", file_id).execute()
+        # Delete from database (cascade will handle assignments) - use service role client
+        supabase_storage.table("files").delete().eq("id", file_id).execute()
         
         return {"message": "File deleted successfully"}
     except HTTPException:
