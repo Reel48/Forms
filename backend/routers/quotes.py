@@ -600,15 +600,19 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
 @router.put("/{quote_id}", response_model=Quote)
 async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
     """Update a quote (admin only)"""
+    # Use module-level logger (defined at top of file)
+    import logging
+    module_logger = logging.getLogger(__name__)
+    
     try:
-        logger.info(f"=== UPDATE QUOTE CALLED ===")
-        logger.info(f"Quote ID: {quote_id}")
-        logger.info(f"QuoteUpdate object: {quote_update}")
-        logger.info(f"QuoteUpdate type: {type(quote_update)}")
+        module_logger.info(f"=== UPDATE QUOTE CALLED ===")
+        module_logger.info(f"Quote ID: {quote_id}")
+        module_logger.info(f"QuoteUpdate object: {quote_update}")
+        module_logger.info(f"QuoteUpdate type: {type(quote_update)}")
         # Get full dump including all fields
         full_dump = quote_update.model_dump(exclude_unset=False) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=False)
-        logger.info(f"QuoteUpdate full dump: {full_dump}")
-        logger.info(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}")
+        module_logger.info(f"QuoteUpdate full dump: {full_dump}")
+        module_logger.info(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}")
     except Exception as log_error:
         # If logging fails, at least try to continue
         import sys
@@ -634,9 +638,9 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
             # Also check the model attribute directly
             create_folder_value = getattr(quote_update, 'create_folder', None)
         
-        logger.info(f"DEBUG: Extracted create_folder value: {create_folder_value}")
-        logger.info(f"DEBUG: update_data keys before pop: {list(update_data.keys())}")
-        logger.info(f"DEBUG: quote_update.create_folder attribute: {getattr(quote_update, 'create_folder', 'NOT_SET')}")
+        module_logger.info(f"DEBUG: Extracted create_folder value: {create_folder_value}")
+        module_logger.info(f"DEBUG: update_data keys before pop: {list(update_data.keys())}")
+        module_logger.info(f"DEBUG: quote_update.create_folder attribute: {getattr(quote_update, 'create_folder', 'NOT_SET')}")
         # Convert any Decimal fields to strings
         for key, value in update_data.items():
             if isinstance(value, Decimal):
@@ -688,23 +692,23 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         
         # Handle folder creation if requested and quote doesn't have one
         folder_id = current_quote.get("folder_id")
-        logger.info(f"DEBUG: Checking folder creation conditions:")
-        logger.info(f"  - hasattr(quote_update, 'create_folder'): {hasattr(quote_update, 'create_folder')}")
-        logger.info(f"  - quote_update.create_folder: {getattr(quote_update, 'create_folder', None)}")
-        logger.info(f"  - current_quote folder_id: {folder_id}")
-        logger.info(f"  - update_data keys: {list(update_data.keys())}")
-        logger.info(f"  - update_data.get('create_folder'): {update_data.get('create_folder')}")
+        module_logger.info(f"DEBUG: Checking folder creation conditions:")
+        module_logger.info(f"  - hasattr(quote_update, 'create_folder'): {hasattr(quote_update, 'create_folder')}")
+        module_logger.info(f"  - quote_update.create_folder: {getattr(quote_update, 'create_folder', None)}")
+        module_logger.info(f"  - current_quote folder_id: {folder_id}")
+        module_logger.info(f"  - update_data keys: {list(update_data.keys())}")
+        module_logger.info(f"  - update_data.get('create_folder'): {update_data.get('create_folder')}")
         
         # Check both the model attribute and the extracted value
         create_folder_requested = (
             (hasattr(quote_update, 'create_folder') and quote_update.create_folder is True) or
             create_folder_value is True
         )
-        logger.info(f"DEBUG: create_folder_requested: {create_folder_requested}")
+        module_logger.info(f"DEBUG: create_folder_requested: {create_folder_requested}")
         
         if create_folder_requested and not folder_id:
             try:
-                logger.info(f"Creating folder for existing quote {quote_id}")
+                module_logger.info(f"Creating folder for existing quote {quote_id}")
                 # Generate folder name from quote
                 quote_number = current_quote.get("quote_number", quote_id[:8])
                 folder_name = f"Order - {current_quote.get('title') or quote_number}"
@@ -716,7 +720,7 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                             client_name = client_response.data.get("company") or client_response.data.get("name") or "Client"
                             folder_name = f"{client_name} - {current_quote.get('title') or quote_number}"
                     except Exception as e:
-                        logger.warning(f"Could not fetch client name: {str(e)}")
+                        module_logger.warning(f"Could not fetch client name: {str(e)}")
                 
                 folder_data = {
                     "id": str(uuid.uuid4()),
@@ -730,15 +734,15 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                     "updated_at": datetime.now().isoformat()
                 }
                 
-                logger.info(f"Inserting folder with data: {folder_data}")
+                module_logger.info(f"Inserting folder with data: {folder_data}")
                 # Use service role client to bypass RLS
                 folder_response = supabase_storage.table("folders").insert(folder_data).execute()
                 if folder_response.data and len(folder_response.data) > 0:
                     folder_id = folder_response.data[0]["id"]
-                    logger.info(f"Folder created successfully with ID: {folder_id}")
+                    module_logger.info(f"Folder created successfully with ID: {folder_id}")
                     # Add folder_id to update_data so it gets saved in the main update
                     update_data["folder_id"] = folder_id
-                    logger.info(f"Added folder_id {folder_id} to update_data")
+                    module_logger.info(f"Added folder_id {folder_id} to update_data")
                     
                     # Assign folder to client if client_id exists
                     if current_quote.get("client_id"):
@@ -756,17 +760,15 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                                 "assigned_at": datetime.now().isoformat()
                             }
                             supabase_storage.table("folder_assignments").insert(assignment_data).execute()
-                            logger.info(f"Folder assigned to client: {current_quote.get('client_id')}")
+                            module_logger.info(f"Folder assigned to client: {current_quote.get('client_id')}")
                         except Exception as e:
-                            logger.warning(f"Failed to assign folder to client: {str(e)}")
+                            module_logger.warning(f"Failed to assign folder to client: {str(e)}")
                 else:
-                    logger.error(f"Folder creation response was empty or invalid")
+                    module_logger.error(f"Folder creation response was empty or invalid")
             except Exception as e:
                 import traceback
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Error: Failed to create folder for quote: {str(e)}")
-                logger.error(traceback.format_exc())
+                module_logger.error(f"Error: Failed to create folder for quote: {str(e)}")
+                module_logger.error(traceback.format_exc())
                 # Don't fail the quote update if folder creation fails
         
         # Update quote - use service role client to ensure folder_id is properly saved
@@ -816,16 +818,16 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                 if response.data:
                     updated_quote = response.data[0]
         
-        logger.info(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
-        logger.info(f"Full quote data keys: {list(updated_quote.keys())}")
+        module_logger.info(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
+        module_logger.info(f"Full quote data keys: {list(updated_quote.keys())}")
         return updated_quote
         
     except HTTPException:
         raise
     except Exception as e:
         import traceback
-        logger.error(f"Error in update_quote: {str(e)}")
-        logger.error(traceback.format_exc())
+        module_logger.error(f"Error in update_quote: {str(e)}")
+        module_logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{quote_id}")
