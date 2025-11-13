@@ -709,7 +709,8 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                             client_name = client_response.data.get("company") or client_response.data.get("name") or "Client"
                             folder_name = f"{client_name} - {current_quote.get('title') or quote_number}"
                     except Exception as e:
-                        print(f"Warning: Could not fetch client name: {str(e)}")
+                        import sys
+                        print(f"Warning: Could not fetch client name: {str(e)}", file=sys.stderr, flush=True)
                 
                 folder_data = {
                     "id": str(uuid.uuid4()),
@@ -723,15 +724,16 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                     "updated_at": datetime.now().isoformat()
                 }
                 
-                print(f"Inserting folder with data: {folder_data}")
+                import sys
+                print(f"Inserting folder with data: {folder_data}", file=sys.stderr, flush=True)
                 # Use service role client to bypass RLS
                 folder_response = supabase_storage.table("folders").insert(folder_data).execute()
                 if folder_response.data and len(folder_response.data) > 0:
                     folder_id = folder_response.data[0]["id"]
-                    print(f"Folder created successfully with ID: {folder_id}")
+                    print(f"Folder created successfully with ID: {folder_id}", file=sys.stderr, flush=True)
                     # Add folder_id to update_data so it gets saved in the main update
                     update_data["folder_id"] = folder_id
-                    print(f"Added folder_id {folder_id} to update_data")
+                    print(f"Added folder_id {folder_id} to update_data", file=sys.stderr, flush=True)
                     
                     # Assign folder to client if client_id exists
                     if current_quote.get("client_id"):
@@ -749,11 +751,13 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                                 "assigned_at": datetime.now().isoformat()
                             }
                             supabase_storage.table("folder_assignments").insert(assignment_data).execute()
-                            print(f"Folder assigned to client: {current_quote.get('client_id')}")
+                            print(f"Folder assigned to client: {current_quote.get('client_id')}", file=sys.stderr, flush=True)
                         except Exception as e:
-                            print(f"Warning: Failed to assign folder to client: {str(e)}")
+                            import sys
+                            print(f"Warning: Failed to assign folder to client: {str(e)}", file=sys.stderr, flush=True)
                 else:
-                    print(f"Error: Folder creation response was empty or invalid")
+                    import sys
+                    print(f"Error: Folder creation response was empty or invalid", file=sys.stderr, flush=True)
             except Exception as e:
                 import traceback
                 traceback.print_exc()
