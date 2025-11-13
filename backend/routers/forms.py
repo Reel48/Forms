@@ -469,6 +469,7 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
         thank_you_screen = form.thank_you_screen if form.thank_you_screen else {}
         
         # Prepare form data
+        # Note: created_by is not in the forms table schema, so we exclude it
         form_data = {
             "id": form_id,
             "name": form.name,
@@ -479,7 +480,6 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
             "settings": settings,
             "welcome_screen": welcome_screen,
             "thank_you_screen": thank_you_screen,
-            "created_by": current_admin["id"],
             "created_at": now,
             "updated_at": now
         }
