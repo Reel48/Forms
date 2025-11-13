@@ -140,40 +140,6 @@ function CustomerDashboard() {
     }
   };
 
-  // Group items by date
-  const groupedItems = useMemo(() => {
-    const groups: Record<string, TimelineItem[]> = {
-      'Today': [],
-      'This Week': [],
-      'This Month': [],
-      'Older': [],
-    };
-
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-
-    filteredItems.forEach(item => {
-      const itemDate = new Date(item.created_at);
-      
-      if (itemDate >= today) {
-        groups['Today'].push(item);
-      } else if (itemDate >= weekAgo) {
-        groups['This Week'].push(item);
-      } else if (itemDate >= monthAgo) {
-        groups['This Month'].push(item);
-      } else {
-        groups['Older'].push(item);
-      }
-    });
-
-    // Remove empty groups
-    return Object.entries(groups).filter(([_, items]) => items.length > 0);
-  }, [filteredItems]);
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
