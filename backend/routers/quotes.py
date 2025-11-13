@@ -330,7 +330,9 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
         totals = calculate_quote_totals(line_items_data, quote.tax_rate, "after_discount")
         
         # Create quote - convert Decimal fields to strings for JSON serialization
-        quote_data = quote.model_dump(exclude={"line_items"}) if hasattr(quote, 'model_dump') else quote.dict(exclude={"line_items"})
+        # Exclude line_items, create_folder, and assign_folder_to_user_id (not database columns)
+        exclude_fields = {"line_items", "create_folder", "assign_folder_to_user_id"}
+        quote_data = quote.model_dump(exclude=exclude_fields) if hasattr(quote, 'model_dump') else quote.dict(exclude=exclude_fields)
         # Convert any remaining Decimal fields to strings
         for key, value in quote_data.items():
             if isinstance(value, Decimal):
@@ -448,8 +450,13 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
         
         return created_quote_full
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error creating quote: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create quote: {str(e)}")
 
 @router.put("/{quote_id}/accept", response_model=Quote)
 async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_user)):
@@ -1121,15 +1128,19 @@ async def get_quote_templates(
 ):
     """Get all quote templates (admin only)"""
     try:
-        query = supabase.table("quote_templates").select("*")
+        # Fetch all templates and filter in Python (simpler and more reliable)
+        response = supabase.table("quote_templates").select("*").order("created_at", desc=True).execute()
+        templates = response.data or []
         
+        # Filter based on access
         if include_public:
-            query = query.or_("created_by.eq." + current_admin["id"] + ",is_public.eq.true")
+            # Include templates created by user OR public templates
+            filtered = [t for t in templates if t.get("created_by") == current_admin["id"] or t.get("is_public") == True]
         else:
-            query = query.eq("created_by", current_admin["id"])
+            # Only templates created by user
+            filtered = [t for t in templates if t.get("created_by") == current_admin["id"]]
         
-        response = query.order("created_at", desc=True).execute()
-        return response.data or []
+        return filtered
     except Exception as e:
         print(f"Error getting quote templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1319,13 +1330,18 @@ async def get_line_item_templates(
         if category_id:
             query = query.eq("category_id", category_id)
         
-        if include_public:
-            query = query.or_("created_by.eq." + current_admin["id"] + ",is_public.eq.true")
-        else:
-            query = query.eq("created_by", current_admin["id"])
-        
         response = query.order("name").execute()
-        return response.data or []
+        templates = response.data or []
+        
+        # Filter based on access
+        if include_public:
+            # Include templates created by user OR public templates
+            filtered = [t for t in templates if t.get("created_by") == current_admin["id"] or t.get("is_public") == True]
+        else:
+            # Only templates created by user
+            filtered = [t for t in templates if t.get("created_by") == current_admin["id"]]
+        
+        return filtered
     except Exception as e:
         print(f"Error getting line item templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
