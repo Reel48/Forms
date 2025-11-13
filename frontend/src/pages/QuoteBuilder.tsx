@@ -399,13 +399,22 @@ function QuoteBuilder() {
     
     try {
       setSaving(true);
+      let response;
       if (isEdit) {
-        await quotesAPI.update(id!, formData);
+        response = await quotesAPI.update(id!, formData);
       } else {
-        await quotesAPI.create(formData);
+        response = await quotesAPI.create(formData);
         // Clear local auto-save after successful creation
         localStorage.removeItem('quoteBuilderDraft');
       }
+      
+      // Check if folder was created
+      if (formData.create_folder && response?.data?.folder_id) {
+        alert(`Quote ${isEdit ? 'updated' : 'created'} successfully! A folder has been created and linked to this quote.`);
+      } else if (formData.create_folder && !response?.data?.folder_id) {
+        alert(`Quote ${isEdit ? 'updated' : 'created'} successfully, but there was an issue creating the folder. Please check the folders section.`);
+      }
+      
       navigate('/');
     } catch (error: any) {
       console.error('Failed to save quote:', error);
