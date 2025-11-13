@@ -47,18 +47,7 @@ function CustomerDashboard() {
       const foldersResponse = await foldersAPI.getAll();
       setFolders(foldersResponse.data || []);
       
-      // Also load quotes and forms for backward compatibility
-      try {
-        const [quotesResponse, formsResponse] = await Promise.all([
-          api.get('/api/customer/quotes'),
-          api.get('/api/customer/forms'),
-        ]);
-        setQuotes(quotesResponse.data || []);
-        setForms(formsResponse.data || []);
-      } catch (error) {
-        // If customer endpoints don't exist, that's okay
-        console.warn('Could not load quotes/forms:', error);
-      }
+      // Quotes and forms are now accessed through folders
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
