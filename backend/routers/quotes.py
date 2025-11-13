@@ -377,9 +377,9 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
                 # Generate folder name from quote
                 folder_name = f"Order - {quote.title or quote_number}"
                 if quote.client_id:
-                    # Get client name for folder
+                    # Get client name for folder - use service role client to bypass RLS
                     try:
-                        client_response = supabase.table("clients").select("name, company").eq("id", quote.client_id).single().execute()
+                        client_response = supabase_storage.table("clients").select("name, company").eq("id", quote.client_id).single().execute()
                         if client_response.data:
                             client_name = client_response.data.get("company") or client_response.data.get("name") or "Client"
                             folder_name = f"{client_name} - {quote.title or quote_number}"
@@ -398,21 +398,22 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
                     "updated_at": datetime.now().isoformat()
                 }
                 
-                folder_response = supabase.table("folders").insert(folder_data).execute()
+                # Use service role client to bypass RLS
+                folder_response = supabase_storage.table("folders").insert(folder_data).execute()
                 if folder_response.data:
                     folder_id = folder_response.data[0]["id"]
                     
-                    # Update quote with folder_id
-                    supabase.table("quotes").update({"folder_id": folder_id}).eq("id", created_quote["id"]).execute()
+                    # Update quote with folder_id - use service role client
+                    supabase_storage.table("quotes").update({"folder_id": folder_id}).eq("id", created_quote["id"]).execute()
                     
                     # Assign folder to user if specified
                     assign_user_id = None
                     if hasattr(quote, 'assign_folder_to_user_id') and quote.assign_folder_to_user_id:
                         assign_user_id = quote.assign_folder_to_user_id
                     elif quote.client_id:
-                        # Try to find user associated with client
+                        # Try to find user associated with client - use service role client
                         try:
-                            client_response = supabase.table("clients").select("user_id").eq("id", quote.client_id).single().execute()
+                            client_response = supabase_storage.table("clients").select("user_id").eq("id", quote.client_id).single().execute()
                             if client_response.data and client_response.data.get("user_id"):
                                 assign_user_id = client_response.data["user_id"]
                         except Exception:
@@ -427,11 +428,14 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
                                 "assigned_by": current_admin["id"],
                                 "assigned_at": datetime.now().isoformat()
                             }
-                            supabase.table("folder_assignments").insert(assignment_data).execute()
+                            # Use service role client to bypass RLS
+                            supabase_storage.table("folder_assignments").insert(assignment_data).execute()
                         except Exception as assign_error:
                             print(f"Warning: Could not assign folder to user: {str(assign_error)}")
             except Exception as folder_error:
                 print(f"Warning: Could not create folder: {str(folder_error)}")
+                import traceback
+                traceback.print_exc()
                 # Continue without folder - quote creation succeeded
         
         # Fetch complete quote with relations
@@ -1129,7 +1133,8 @@ async def get_quote_templates(
     """Get all quote templates (admin only)"""
     try:
         # Fetch all templates and filter in Python (simpler and more reliable)
-        response = supabase.table("quote_templates").select("*").order("created_at", desc=True).execute()
+        # Use service role client to bypass RLS
+        response = supabase_storage.table("quote_templates").select("*").order("created_at", desc=True).execute()
         templates = response.data or []
         
         # Filter based on access
@@ -1287,7 +1292,8 @@ async def get_line_item_categories(
 ):
     """Get all line item categories (admin only)"""
     try:
-        response = supabase.table("line_item_categories").select("*").order("name").execute()
+        # Use service role client to bypass RLS
+        response = supabase_storage.table("line_item_categories").select("*").order("name").execute()
         return response.data or []
     except Exception as e:
         error_msg = str(e).lower()
@@ -1335,7 +1341,8 @@ async def get_line_item_templates(
 ):
     """Get all line item templates (admin only)"""
     try:
-        query = supabase.table("line_item_templates").select("*, line_item_categories(*)")
+        # Use service role client to bypass RLS
+        query = supabase_storage.table("line_item_templates").select("*, line_item_categories(*)")
         
         if category_id:
             query = query.eq("category_id", category_id)
