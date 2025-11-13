@@ -600,14 +600,20 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
 @router.put("/{quote_id}", response_model=Quote)
 async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: dict = Depends(get_current_admin)):
     """Update a quote (admin only)"""
-    logger.info(f"=== UPDATE QUOTE CALLED ===")
-    logger.info(f"Quote ID: {quote_id}")
-    logger.info(f"QuoteUpdate object: {quote_update}")
-    logger.info(f"QuoteUpdate type: {type(quote_update)}")
-    # Get full dump including all fields
-    full_dump = quote_update.model_dump(exclude_unset=False) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=False)
-    logger.info(f"QuoteUpdate full dump: {full_dump}")
-    logger.info(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}")
+    try:
+        logger.info(f"=== UPDATE QUOTE CALLED ===")
+        logger.info(f"Quote ID: {quote_id}")
+        logger.info(f"QuoteUpdate object: {quote_update}")
+        logger.info(f"QuoteUpdate type: {type(quote_update)}")
+        # Get full dump including all fields
+        full_dump = quote_update.model_dump(exclude_unset=False) if hasattr(quote_update, 'model_dump') else quote_update.dict(exclude_unset=False)
+        logger.info(f"QuoteUpdate full dump: {full_dump}")
+        logger.info(f"QuoteUpdate create_folder in dump: {full_dump.get('create_folder')}")
+    except Exception as log_error:
+        # If logging fails, at least try to continue
+        import sys
+        print(f"Logging error (non-fatal): {str(log_error)}", file=sys.stderr, flush=True)
+    
     try:
         # Get current quote for comparison - use service role client to ensure we get folder_id
         current_response = supabase_storage.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
@@ -810,13 +816,16 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
                 if response.data:
                     updated_quote = response.data[0]
         
-        print(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
-        print(f"Full quote data keys: {list(updated_quote.keys())}")
+        logger.info(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
+        logger.info(f"Full quote data keys: {list(updated_quote.keys())}")
         return updated_quote
         
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        logger.error(f"Error in update_quote: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{quote_id}")
