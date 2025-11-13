@@ -1142,6 +1142,11 @@ async def get_quote_templates(
         
         return filtered
     except Exception as e:
+        error_msg = str(e).lower()
+        # If table doesn't exist, return empty array instead of error
+        if "does not exist" in error_msg or "relation" in error_msg and "does not exist" in error_msg:
+            print(f"Quote templates table does not exist yet. Returning empty array.")
+            return []
         print(f"Error getting quote templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1285,6 +1290,11 @@ async def get_line_item_categories(
         response = supabase.table("line_item_categories").select("*").order("name").execute()
         return response.data or []
     except Exception as e:
+        error_msg = str(e).lower()
+        # If table doesn't exist, return empty array instead of error
+        if "does not exist" in error_msg or "relation" in error_msg and "does not exist" in error_msg:
+            print(f"Line item categories table does not exist yet. Returning empty array.")
+            return []
         print(f"Error getting line item categories: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1343,6 +1353,11 @@ async def get_line_item_templates(
         
         return filtered
     except Exception as e:
+        error_msg = str(e).lower()
+        # If table doesn't exist, return empty array instead of error
+        if "does not exist" in error_msg or "relation" in error_msg and "does not exist" in error_msg:
+            print(f"Line item templates table does not exist yet. Returning empty array.")
+            return []
         print(f"Error getting line item templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
