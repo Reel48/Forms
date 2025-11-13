@@ -351,7 +351,16 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=500, detail="File storage path not found")
         
         try:
-            signed_url = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            signed_url_response = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            # Handle both dict response {"signedURL": "..."} and string response
+            if isinstance(signed_url_response, dict):
+                signed_url = signed_url_response.get("signedURL") or signed_url_response.get("signed_url") or signed_url_response.get("url")
+            else:
+                signed_url = signed_url_response
+            
+            if not signed_url:
+                raise Exception("Signed URL is empty")
+            
             # Return redirect to signed URL
             from fastapi.responses import RedirectResponse
             return RedirectResponse(url=signed_url)
@@ -415,9 +424,23 @@ async def get_file_preview(file_id: str, user = Depends(get_current_user)):
         if not storage_path:
             raise HTTPException(status_code=500, detail="File storage path not found")
         
-        signed_url = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
-        
-        return {"preview_url": signed_url}
+        try:
+            signed_url_response = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            # Handle both dict response {"signedURL": "..."} and string response
+            if isinstance(signed_url_response, dict):
+                signed_url = signed_url_response.get("signedURL") or signed_url_response.get("signed_url") or signed_url_response.get("url")
+            else:
+                signed_url = signed_url_response
+            
+            if not signed_url:
+                raise HTTPException(status_code=500, detail="Failed to generate signed URL")
+            
+            return {"preview_url": signed_url}
+        except Exception as url_error:
+            print(f"Error creating signed URL: {str(url_error)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to create preview URL: {str(url_error)}")
     except HTTPException:
         raise
     except Exception as e:
