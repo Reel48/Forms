@@ -1121,7 +1121,7 @@ async def get_quote_templates(
 ):
     """Get all quote templates (admin only)"""
     try:
-        query = supabase_storage.table("quote_templates").select("*")
+        query = supabase.table("quote_templates").select("*")
         
         if include_public:
             query = query.or_("created_by.eq." + current_admin["id"] + ",is_public.eq.true")
@@ -1131,6 +1131,7 @@ async def get_quote_templates(
         response = query.order("created_at", desc=True).execute()
         return response.data or []
     except Exception as e:
+        print(f"Error getting quote templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/templates", response_model=dict)
@@ -1270,9 +1271,10 @@ async def get_line_item_categories(
 ):
     """Get all line item categories (admin only)"""
     try:
-        response = supabase_storage.table("line_item_categories").select("*").order("name").execute()
+        response = supabase.table("line_item_categories").select("*").order("name").execute()
         return response.data or []
     except Exception as e:
+        print(f"Error getting line item categories: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/line-item-categories", response_model=dict)
@@ -1312,7 +1314,7 @@ async def get_line_item_templates(
 ):
     """Get all line item templates (admin only)"""
     try:
-        query = supabase_storage.table("line_item_templates").select("*, line_item_categories(*)")
+        query = supabase.table("line_item_templates").select("*, line_item_categories(*)")
         
         if category_id:
             query = query.eq("category_id", category_id)
@@ -1325,6 +1327,7 @@ async def get_line_item_templates(
         response = query.order("name").execute()
         return response.data or []
     except Exception as e:
+        print(f"Error getting line item templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/line-item-templates", response_model=dict)

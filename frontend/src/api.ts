@@ -168,6 +168,8 @@ export interface QuoteCreate {
   status?: string;
   priority?: string;
   line_items: LineItem[];
+  create_folder?: boolean;
+  assign_folder_to_user_id?: string;
 }
 
 export interface CompanySettings {

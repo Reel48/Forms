@@ -60,6 +60,7 @@ function QuoteBuilder() {
     currency: 'USD',
     status: 'draft',
     line_items: [],
+    create_folder: false,
   });
 
   // Mobile detection
@@ -1010,6 +1011,25 @@ function QuoteBuilder() {
                 Tip: Use markdown format [link text](url) or paste URLs directly. They will be clickable when viewing the quote.
               </small>
             </div>
+
+            {!isEdit && (
+              <div className="form-group" style={{ marginTop: '1.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    id="create-folder"
+                    name="create-folder"
+                    checked={formData.create_folder || false}
+                    onChange={(e) => setFormData({ ...formData, create_folder: e.target.checked })}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span>Create a folder for this quote</span>
+                </label>
+                <small className="text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '1.5rem' }}>
+                  A folder will be automatically created to organize files, forms, and e-signatures related to this quote.
+                </small>
+              </div>
+            )}
 
             <div className="flex gap-2" style={{ marginTop: '2rem', flexWrap: 'wrap' }}>
               <button type="submit" className="btn-primary" disabled={saving || Object.keys(validationErrors).length > 0}>
