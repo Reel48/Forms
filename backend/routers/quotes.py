@@ -1298,11 +1298,14 @@ async def get_line_item_categories(
     except Exception as e:
         error_msg = str(e).lower()
         # If table doesn't exist, return empty array instead of error
-        if "does not exist" in error_msg or "relation" in error_msg and "does not exist" in error_msg:
+        if "does not exist" in error_msg or ("relation" in error_msg and "does not exist" in error_msg):
             print(f"Line item categories table does not exist yet. Returning empty array.")
             return []
         print(f"Error getting line item categories: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        # Return empty array instead of raising error to prevent UI issues
+        return []
 
 @router.post("/line-item-categories", response_model=dict)
 async def create_line_item_category(
@@ -1342,13 +1345,29 @@ async def get_line_item_templates(
     """Get all line item templates (admin only)"""
     try:
         # Use service role client to bypass RLS
-        query = supabase_storage.table("line_item_templates").select("*, line_item_categories(*)")
+        # First get templates without join to avoid potential issues
+        query = supabase_storage.table("line_item_templates").select("*")
         
         if category_id:
             query = query.eq("category_id", category_id)
         
         response = query.order("name").execute()
         templates = response.data or []
+        
+        # Get categories separately and merge
+        try:
+            categories_response = supabase_storage.table("line_item_categories").select("*").execute()
+            categories = {cat["id"]: cat for cat in (categories_response.data or [])}
+            
+            # Merge category data into templates
+            for template in templates:
+                if template.get("category_id") and template["category_id"] in categories:
+                    template["line_item_categories"] = categories[template["category_id"]]
+                else:
+                    template["line_item_categories"] = None
+        except Exception as cat_error:
+            print(f"Warning: Could not load categories: {str(cat_error)}")
+            # Continue without categories
         
         # Filter based on access
         if include_public:
@@ -1362,11 +1381,14 @@ async def get_line_item_templates(
     except Exception as e:
         error_msg = str(e).lower()
         # If table doesn't exist, return empty array instead of error
-        if "does not exist" in error_msg or "relation" in error_msg and "does not exist" in error_msg:
+        if "does not exist" in error_msg or ("relation" in error_msg and "does not exist" in error_msg):
             print(f"Line item templates table does not exist yet. Returning empty array.")
             return []
         print(f"Error getting line item templates: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        # Return empty array instead of raising error to prevent UI issues
+        return []
 
 @router.post("/line-item-templates", response_model=dict)
 async def create_line_item_template(
