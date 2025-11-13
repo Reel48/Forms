@@ -351,15 +351,21 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=500, detail="File storage path not found")
         
         try:
-            signed_url_response = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
-            # Handle both dict response {"signedURL": "..."} and string response
-            if isinstance(signed_url_response, dict):
-                signed_url = signed_url_response.get("signedURL") or signed_url_response.get("signed_url") or signed_url_response.get("url")
+            # Create signed URL - Supabase Python client returns dict with "signedURL" key
+            signed_url_result = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            
+            # Extract URL from response (can be dict or string depending on client version)
+            if isinstance(signed_url_result, dict):
+                signed_url = signed_url_result.get("signedURL") or signed_url_result.get("signed_url") or signed_url_result.get("url")
+            elif isinstance(signed_url_result, str):
+                signed_url = signed_url_result
             else:
-                signed_url = signed_url_response
+                # Try to get URL from response object if it has attributes
+                signed_url = getattr(signed_url_result, "signedURL", None) or getattr(signed_url_result, "signed_url", None) or getattr(signed_url_result, "url", None) or str(signed_url_result)
             
             if not signed_url:
-                raise Exception("Signed URL is empty")
+                print(f"Error: create_signed_url returned unexpected format: {type(signed_url_result)} - {signed_url_result}")
+                raise Exception("Signed URL is empty or invalid format")
             
             # Return redirect to signed URL
             from fastapi.responses import RedirectResponse
@@ -425,19 +431,28 @@ async def get_file_preview(file_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=500, detail="File storage path not found")
         
         try:
-            signed_url_response = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
-            # Handle both dict response {"signedURL": "..."} and string response
-            if isinstance(signed_url_response, dict):
-                signed_url = signed_url_response.get("signedURL") or signed_url_response.get("signed_url") or signed_url_response.get("url")
+            # Create signed URL - Supabase Python client returns dict with "signedURL" key
+            signed_url_result = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            
+            # Extract URL from response (can be dict or string depending on client version)
+            if isinstance(signed_url_result, dict):
+                signed_url = signed_url_result.get("signedURL") or signed_url_result.get("signed_url") or signed_url_result.get("url")
+            elif isinstance(signed_url_result, str):
+                signed_url = signed_url_result
             else:
-                signed_url = signed_url_response
+                # Try to get URL from response object if it has attributes
+                signed_url = getattr(signed_url_result, "signedURL", None) or getattr(signed_url_result, "signed_url", None) or getattr(signed_url_result, "url", None) or str(signed_url_result)
             
             if not signed_url:
-                raise HTTPException(status_code=500, detail="Failed to generate signed URL")
+                print(f"Error: create_signed_url returned unexpected format: {type(signed_url_result)} - {signed_url_result}")
+                raise HTTPException(status_code=500, detail="Failed to generate signed URL: unexpected response format")
             
             return {"preview_url": signed_url}
+        except HTTPException:
+            raise
         except Exception as url_error:
-            print(f"Error creating signed URL: {str(url_error)}")
+            print(f"Error creating signed URL for path '{storage_path}': {str(url_error)}")
+            print(f"Error type: {type(url_error)}")
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Failed to create preview URL: {str(url_error)}")
