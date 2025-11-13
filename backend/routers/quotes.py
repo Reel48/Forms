@@ -760,7 +760,23 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
             raise HTTPException(status_code=404, detail="Quote not found after update")
         
         updated_quote = response.data[0]
+        
+        # If folder was created but folder_id is not in the response, verify it exists
+        if folder_id and not updated_quote.get("folder_id"):
+            print(f"Warning: Folder {folder_id} was created but not found in quote response. Verifying...")
+            # Verify folder exists
+            folder_check = supabase_storage.table("folders").select("id").eq("id", folder_id).execute()
+            if folder_check.data:
+                print(f"Folder {folder_id} exists. Updating quote again with folder_id...")
+                # Update quote again with folder_id
+                supabase_storage.table("quotes").update({"folder_id": folder_id}).eq("id", quote_id).execute()
+                # Fetch again
+                response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+                if response.data:
+                    updated_quote = response.data[0]
+        
         print(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
+        print(f"Full quote data keys: {list(updated_quote.keys())}")
         return updated_quote
         
     except HTTPException:

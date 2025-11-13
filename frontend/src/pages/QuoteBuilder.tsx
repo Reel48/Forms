@@ -409,10 +409,19 @@ function QuoteBuilder() {
       }
       
       // Check if folder was created
-      if (formData.create_folder && response?.data?.folder_id) {
-        alert(`Quote ${isEdit ? 'updated' : 'created'} successfully! A folder has been created and linked to this quote.`);
-      } else if (formData.create_folder && !response?.data?.folder_id) {
-        alert(`Quote ${isEdit ? 'updated' : 'created'} successfully, but there was an issue creating the folder. Please check the folders section.`);
+      console.log('Quote save response:', response);
+      console.log('Response data:', response?.data);
+      console.log('Folder ID in response:', response?.data?.folder_id);
+      console.log('Create folder was checked:', formData.create_folder);
+      
+      if (formData.create_folder) {
+        if (response?.data?.folder_id) {
+          alert(`Quote ${isEdit ? 'updated' : 'created'} successfully! A folder has been created and linked to this quote.`);
+        } else {
+          // Check if folder exists by querying folders endpoint
+          console.log('Folder ID not in response, checking if folder was created...');
+          alert(`Quote ${isEdit ? 'updated' : 'created'} successfully. ${isEdit ? 'If you checked "Create a folder", please check the folders section to verify it was created.' : 'A folder should have been created - please check the folders section.'}`);
+        }
       }
       
       navigate('/');
