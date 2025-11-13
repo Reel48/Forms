@@ -26,8 +26,6 @@ function CustomerDashboard() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -209,7 +207,7 @@ function CustomerDashboard() {
     }
   };
 
-  const getStatusBadge = (status: string, type: 'quote' | 'form') => {
+  const getStatusBadge = (status: string, type: 'quote' | 'form' | 'folder') => {
     const statusLower = status.toLowerCase();
     let badgeClass = 'badge-draft';
     let label = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
@@ -231,6 +229,28 @@ function CustomerDashboard() {
           break;
         case 'viewed':
           badgeClass = 'badge-sent';
+          icon = '';
+          break;
+        default:
+          badgeClass = 'badge-draft';
+          icon = '';
+      }
+    } else if (type === 'folder') {
+      switch (statusLower) {
+        case 'active':
+          badgeClass = 'badge-sent';
+          icon = '';
+          break;
+        case 'completed':
+          badgeClass = 'badge-accepted';
+          icon = '';
+          break;
+        case 'archived':
+          badgeClass = 'badge-declined';
+          icon = '';
+          break;
+        case 'cancelled':
+          badgeClass = 'badge-declined';
           icon = '';
           break;
         default:

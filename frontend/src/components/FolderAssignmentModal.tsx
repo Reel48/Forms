@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { foldersAPI, Folder } from '../api';
+import { foldersAPI, type Folder } from '../api';
 import './FolderAssignmentModal.css';
 
 interface FolderAssignmentModalProps {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { foldersAPI, Folder } from '../api';
+import { foldersAPI, type Folder } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import './FoldersList.css';
 
@@ -12,7 +12,7 @@ const FoldersList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [clientFilter, setClientFilter] = useState<string>('all');
+  const [clientFilter] = useState<string>('all');
 
   useEffect(() => {
     loadFolders();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { esignatureAPI, foldersAPI, ESignatureDocument } from '../api';
+import { esignatureAPI, foldersAPI, type ESignatureDocument } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderAssignmentModal from '../components/FolderAssignmentModal';
 import './ESignatureDocumentsList.css';

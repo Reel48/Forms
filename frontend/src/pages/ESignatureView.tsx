@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { esignatureAPI, ESignatureDocument } from '../api';
+import { esignatureAPI, type ESignatureDocument } from '../api';
 import SignatureCanvas from '../components/SignatureCanvas';
 import SignatureInput from '../components/SignatureInput';
 import './ESignatureView.css';
@@ -122,7 +122,7 @@ const ESignatureView: React.FC = () => {
   }
 
   const isSigned = document.status === 'signed';
-  const isExpired = document.expires_at && new Date(document.expires_at) < new Date();
+  const isExpired = !!(document.expires_at && new Date(document.expires_at) < new Date());
 
   return (
     <div className="esignature-view-container">
