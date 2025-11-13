@@ -359,13 +359,6 @@ export const quotesAPI = {
   createTemplate: (template: any) => api.post<any>('/api/quotes/templates', template),
   updateTemplate: (templateId: string, template: any) => api.put<any>(`/api/quotes/templates/${templateId}`, template),
   deleteTemplate: (templateId: string) => api.delete<{ message: string }>(`/api/quotes/templates/${templateId}`),
-  // Line item categories
-  getLineItemCategories: () => api.get<any[]>('/api/quotes/line-item-categories'),
-  createLineItemCategory: (category: any) => api.post<any>('/api/quotes/line-item-categories', category),
-  // Line item templates
-  getLineItemTemplates: (categoryId?: string) => api.get<any[]>(`/api/quotes/line-item-templates${categoryId ? `?category_id=${categoryId}` : ''}`),
-  createLineItemTemplate: (template: any) => api.post<any>('/api/quotes/line-item-templates', template),
-  deleteLineItemTemplate: (templateId: string) => api.delete<{ message: string }>(`/api/quotes/line-item-templates/${templateId}`),
   // Auto-save
   autoSaveQuote: (quoteId: string, draftData: any) => api.post<{ message: string }>(`/api/quotes/${quoteId}/auto-save`, { draft_data: draftData }),
   getAutoSavedDraft: (quoteId: string) => api.get<{ draft_data: any; last_auto_saved_at: string }>(`/api/quotes/${quoteId}/auto-save`),

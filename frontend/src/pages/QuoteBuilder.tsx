@@ -33,11 +33,8 @@ function QuoteBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
-  const [showLineItemTemplates, setShowLineItemTemplates] = useState(false);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [lineItemTemplates, setLineItemTemplates] = useState<any[]>([]);
-  const [lineItemCategories, setLineItemCategories] = useState<any[]>([]);
   const [selectedLineItems, setSelectedLineItems] = useState<Set<number>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -75,8 +72,6 @@ function QuoteBuilder() {
     loadClients();
     if (role === 'admin') {
       loadTemplates();
-      loadLineItemTemplates();
-      loadLineItemCategories();
     }
     if (isEdit) {
       loadQuote();
@@ -123,7 +118,6 @@ function QuoteBuilder() {
       if (e.key === 'Escape') {
         setShowTemplateModal(false);
         setShowSaveTemplateModal(false);
-        setShowLineItemTemplates(false);
         setShowBulkEdit(false);
         setShowPreview(false);
         closeLinkDialog();
@@ -161,23 +155,6 @@ function QuoteBuilder() {
     }
   };
 
-  const loadLineItemTemplates = async () => {
-    try {
-      const response = await quotesAPI.getLineItemTemplates();
-      setLineItemTemplates(response.data || []);
-    } catch (error) {
-      console.error('Failed to load line item templates:', error);
-    }
-  };
-
-  const loadLineItemCategories = async () => {
-    try {
-      const response = await quotesAPI.getLineItemCategories();
-      setLineItemCategories(response.data || []);
-    } catch (error) {
-      console.error('Failed to load line item categories:', error);
-    }
-  };
 
   const loadLocalAutoSave = () => {
     try {
@@ -756,16 +733,6 @@ function QuoteBuilder() {
               <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
                 <h2>Line Items</h2>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {role === 'admin' && (
-                    <button
-                      type="button"
-                      onClick={() => setShowLineItemTemplates(true)}
-                      className="btn-outline"
-                      style={{ fontSize: '0.875rem' }}
-                    >
-                      ⚡ Quick Add
-                    </button>
-                  )}
                   {selectedLineItems.size > 0 && (
                     <button
                       type="button"
@@ -1063,18 +1030,6 @@ function QuoteBuilder() {
         />
       )}
 
-      {showLineItemTemplates && (
-        <LineItemTemplatesModal
-          templates={lineItemTemplates}
-          categories={lineItemCategories}
-          onAdd={(template: any) => {
-            addLineItem(template);
-            setShowLineItemTemplates(false);
-          }}
-          onClose={() => setShowLineItemTemplates(false)}
-        />
-      )}
-
       {showBulkEdit && selectedLineItems.size > 0 && (
         <BulkEditModal
           selectedCount={selectedLineItems.size}
@@ -1334,96 +1289,6 @@ function SaveTemplateModal({ onSave, onClose }: any) {
             <button type="button" onClick={onClose} className="btn-outline">Cancel</button>
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-// Line Item Templates Modal Component
-function LineItemTemplatesModal({ templates, categories, onAdd, onClose }: any) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-
-  const filteredTemplates = selectedCategory
-    ? templates.filter((t: any) => t.category_id === selectedCategory)
-    : templates;
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="card"
-        style={{ maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', margin: '1rem' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={{ marginTop: 0 }}>Quick Add Line Items</h3>
-        {categories.length > 0 && (
-          <div className="form-group">
-            <label htmlFor="template-category-filter">Filter by Category</label>
-            <select
-              id="template-category-filter"
-              name="template-category-filter"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat: any) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {filteredTemplates.length === 0 ? (
-          <p className="text-muted">No line item templates available.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {filteredTemplates.map((template: any) => (
-              <div
-                key={template.id}
-                style={{
-                  padding: '1rem',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.375rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: '600' }}>{template.name}</div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {template.description}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    ${parseFloat(template.default_unit_price || '0').toFixed(2)} × {template.default_quantity || '1'}
-                  </div>
-                </div>
-                <button
-                  onClick={() => onAdd(template)}
-                  className="btn-primary"
-                  style={{ fontSize: '0.875rem' }}
-                >
-                  Add
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ marginTop: '1rem' }}>
-          <button onClick={onClose} className="btn-outline">Close</button>
-        </div>
       </div>
     </div>
   );
