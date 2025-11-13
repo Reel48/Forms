@@ -586,17 +586,23 @@ async def remove_esignature_from_folder(
 async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
     """Get all content in a folder (quotes, files, forms, e-signatures)."""
     try:
-        # Check if user is admin
-        is_admin = False
-        try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
-            is_admin = False
+        from database import supabase_storage
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Check if user is admin - use the role from the user dict
+        is_admin = user.get("role") == "admin"
+        
+        # Use service role client for admins to bypass RLS, regular client for users
+        client = supabase_storage if is_admin else supabase
         
         # Check folder access
-        folder_response = supabase.table("folders").select("*").eq("id", folder_id).single().execute()
-        if not folder_response.data:
+        try:
+            folder_response = client.table("folders").select("*").eq("id", folder_id).single().execute()
+            if not folder_response.data:
+                raise HTTPException(status_code=404, detail="Folder not found")
+        except Exception as e:
+            logger.error(f"Error fetching folder: {str(e)}")
             raise HTTPException(status_code=404, detail="Folder not found")
         
         if not is_admin:
@@ -605,6 +611,8 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
                 if not assignment.data and folder_response.data.get("created_by") != user["id"]:
                     raise HTTPException(status_code=403, detail="Access denied")
+            except HTTPException:
+                raise
             except Exception:
                 if folder_response.data.get("created_by") != user["id"]:
                     raise HTTPException(status_code=403, detail="Access denied")
@@ -615,42 +623,48 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
         quote = None
         if folder.get("quote_id"):
             try:
-                quote_response = supabase.table("quotes").select("*").eq("id", folder["quote_id"]).single().execute()
+                quote_response = client.table("quotes").select("*, clients(*), line_items(*)").eq("id", folder["quote_id"]).single().execute()
                 quote = quote_response.data if quote_response.data else None
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Error fetching quote: {str(e)}")
                 pass
         
         # Get files assigned to folder
         files = []
         try:
-            file_assignments = supabase.table("file_folder_assignments").select("file_id").eq("folder_id", folder_id).execute()
+            file_assignments = client.table("file_folder_assignments").select("file_id").eq("folder_id", folder_id).execute()
             if file_assignments.data:
                 file_ids = [fa["file_id"] for fa in file_assignments.data]
-                files_response = supabase.table("files").select("*").in_("id", file_ids).execute()
+                files_response = client.table("files").select("*").in_("id", file_ids).execute()
                 files = files_response.data if files_response.data else []
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error fetching files: {str(e)}")
             pass
         
         # Get forms assigned to folder
         forms = []
         try:
-            form_assignments = supabase.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute()
+            form_assignments = client.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute()
             if form_assignments.data:
                 form_ids = [fa["form_id"] for fa in form_assignments.data]
-                forms_response = supabase.table("forms").select("*").in_("id", form_ids).execute()
+                forms_response = client.table("forms").select("*").in_("id", form_ids).execute()
                 forms = forms_response.data if forms_response.data else []
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error fetching forms: {str(e)}")
             pass
         
         # Get e-signature documents assigned to folder
         esignatures = []
         try:
-            esig_assignments = supabase.table("esignature_document_folder_assignments").select("document_id").eq("folder_id", folder_id).execute()
+            # Check if the table exists by trying to query it
+            esig_assignments = client.table("esignature_document_folder_assignments").select("document_id").eq("folder_id", folder_id).execute()
             if esig_assignments.data:
                 esig_ids = [ea["document_id"] for ea in esig_assignments.data]
-                esig_response = supabase.table("esignature_documents").select("*").in_("id", esig_ids).execute()
+                esig_response = client.table("esignature_documents").select("*").in_("id", esig_ids).execute()
                 esignatures = esig_response.data if esig_response.data else []
-        except Exception:
+        except Exception as e:
+            # Table might not exist yet, that's okay
+            logger.warning(f"Error fetching e-signatures (table may not exist): {str(e)}")
             pass
         
         return {
@@ -663,6 +677,9 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error getting folder content: {str(e)}")
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error getting folder content: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to get folder content: {str(e)}")
 
