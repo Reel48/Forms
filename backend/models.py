@@ -138,6 +138,7 @@ class Quote(QuoteBase):
     updated_at: datetime
     line_items: List[LineItem] = []
     clients: Optional[Client] = None  # Supabase returns 'clients' (table name) - matches frontend expectation
+    folder_id: Optional[str] = None  # Folder associated with this quote
     stripe_invoice_id: Optional[str] = None
     stripe_payment_intent_id: Optional[str] = None
     payment_status: Optional[str] = "unpaid"
