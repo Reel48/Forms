@@ -113,6 +113,8 @@ class QuoteBase(BaseModel):
 
 class QuoteCreate(QuoteBase):
     line_items: List[LineItemCreate] = []
+    create_folder: Optional[bool] = False  # Option to create folder with quote
+    assign_folder_to_user_id: Optional[str] = None  # User to assign folder to
 
 class QuoteUpdate(BaseModel):
     title: Optional[str] = None
@@ -449,6 +451,271 @@ class FileFolderAssignmentCreate(FileFolderAssignmentBase):
     assigned_by: Optional[str] = None
 
 class FileFolderAssignment(FileFolderAssignmentBase):
+    id: str
+    assigned_at: datetime
+    assigned_by: Optional[str] = None
+    
+    @field_validator('assigned_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+# E-Signature Models
+class ESignatureDocumentBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    file_id: str
+    document_type: str = "terms_of_service"  # terms_of_service, contract, agreement, custom
+    signature_mode: str = "simple"  # simple, advanced
+    require_signature: bool = True
+    signature_fields: Optional[Dict[str, Any]] = None  # JSONB for advanced mode
+    folder_id: Optional[str] = None
+    quote_id: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+class ESignatureDocumentCreate(ESignatureDocumentBase):
+    created_by: Optional[str] = None
+
+class ESignatureDocumentUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    document_type: Optional[str] = None
+    signature_mode: Optional[str] = None
+    require_signature: Optional[bool] = None
+    signature_fields: Optional[Dict[str, Any]] = None
+    folder_id: Optional[str] = None
+    quote_id: Optional[str] = None
+    status: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+class ESignatureDocument(ESignatureDocumentBase):
+    id: str
+    status: str  # pending, signed, declined, expired
+    signed_by: Optional[str] = None
+    signed_at: Optional[datetime] = None
+    signed_ip_address: Optional[str] = None
+    signature_method: Optional[str] = None  # draw, type, upload
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    @field_validator('created_at', 'updated_at', 'signed_at', 'expires_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class ESignatureSignatureBase(BaseModel):
+    document_id: str
+    folder_id: Optional[str] = None
+    signature_data: str  # Base64 encoded signature image or text
+    signature_type: str  # draw, type, upload
+    signature_position: Optional[Dict[str, Any]] = None  # Position on document (x, y, page)
+    field_id: Optional[str] = None  # For advanced mode
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+class ESignatureSignatureCreate(ESignatureSignatureBase):
+    user_id: Optional[str] = None
+
+class ESignatureSignature(ESignatureSignatureBase):
+    id: str
+    user_id: str
+    signed_at: datetime
+    signed_file_id: Optional[str] = None
+    signed_file_url: Optional[str] = None
+    
+    @field_validator('signed_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class ESignatureDocumentFolderAssignmentBase(BaseModel):
+    document_id: str
+    folder_id: str
+
+class ESignatureDocumentFolderAssignmentCreate(ESignatureDocumentFolderAssignmentBase):
+    assigned_by: Optional[str] = None
+
+class ESignatureDocumentFolderAssignment(ESignatureDocumentFolderAssignmentBase):
+    id: str
+    assigned_at: datetime
+    assigned_by: Optional[str] = None
+    status: str  # pending, signed, declined
+    signed_at: Optional[datetime] = None
+    
+    @field_validator('assigned_at', 'signed_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+# Folder Models
+class FolderBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    quote_id: Optional[str] = None
+    client_id: Optional[str] = None
+    status: str = "active"  # active, completed, archived, cancelled
+
+class FolderCreate(FolderBase):
+    created_by: Optional[str] = None
+    assign_to_user_id: Optional[str] = None  # User to assign folder to
+
+class FolderUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    quote_id: Optional[str] = None
+    client_id: Optional[str] = None
+    status: Optional[str] = None
+
+class Folder(FolderBase):
+    id: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class FolderAssignmentBase(BaseModel):
+    folder_id: str
+    user_id: str
+    role: str = "viewer"  # viewer, editor
+
+class FolderAssignmentCreate(FolderAssignmentBase):
+    assigned_by: Optional[str] = None
+
+class FolderAssignment(FolderAssignmentBase):
+    id: str
+    assigned_at: datetime
+    assigned_by: Optional[str] = None
+    
+    @field_validator('assigned_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class FormFolderAssignmentBase(BaseModel):
+    form_id: str
+    folder_id: str
+
+class FormFolderAssignmentCreate(FormFolderAssignmentBase):
+    assigned_by: Optional[str] = None
+
+class FormFolderAssignment(FormFolderAssignmentBase):
     id: str
     assigned_at: datetime
     assigned_by: Optional[str] = None

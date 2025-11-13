@@ -18,6 +18,10 @@ const PublicFormView = lazy(() => import('./pages/PublicFormView'));
 const ClientsList = lazy(() => import('./pages/ClientsList'));
 const FilesList = lazy(() => import('./pages/FilesList'));
 const FileView = lazy(() => import('./pages/FileView'));
+const ESignatureDocumentsList = lazy(() => import('./pages/ESignatureDocumentsList'));
+const ESignatureView = lazy(() => import('./pages/ESignatureView'));
+const FoldersList = lazy(() => import('./pages/FoldersList'));
+const FolderView = lazy(() => import('./pages/FolderView'));
 const CompanySettingsPage = lazy(() => import('./pages/CompanySettings'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
@@ -48,6 +52,8 @@ function Navigation() {
   const isFormsActive = location.pathname.startsWith('/forms');
   const isQuotesActive = !isFormsActive && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
   const isFilesActive = location.pathname.startsWith('/files');
+  const isESignatureActive = location.pathname.startsWith('/esignature');
+  const isFoldersActive = location.pathname.startsWith('/folders');
   const isClientsActive = location.pathname === '/clients';
   const isSettingsActive = location.pathname === '/settings';
   const isProfileActive = location.pathname === '/profile';
@@ -114,13 +120,31 @@ function Navigation() {
               </Link>
             </li>
             <li>
-              <Link 
-                to="/files" 
+              <Link
+                to="/files"
                 className={`nav-tab ${isFilesActive ? 'active' : ''}`}
               >
                 Files
               </Link>
             </li>
+            <li>
+              <Link
+                to="/esignature"
+                className={`nav-tab ${isESignatureActive ? 'active' : ''}`}
+              >
+                E-Signatures
+              </Link>
+            </li>
+            {isAdmin && (
+              <li>
+                <Link
+                  to="/folders"
+                  className={`nav-tab ${isFoldersActive ? 'active' : ''}`}
+                >
+                  Folders
+                </Link>
+              </li>
+            )}
             <li 
               ref={dropdownRef}
               className={`nav-dropdown ${isSettingsDropdownOpen ? 'open' : ''}`}
@@ -247,6 +271,10 @@ function AppContent() {
           <Route path="/forms/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormView /></Suspense></ProtectedRoute>} />
           <Route path="/files" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FilesList /></Suspense></ProtectedRoute>} />
           <Route path="/files/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FileView /></Suspense></ProtectedRoute>} />
+          <Route path="/esignature" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ESignatureDocumentsList /></Suspense></ProtectedRoute>} />
+          <Route path="/esignature/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ESignatureView /></Suspense></ProtectedRoute>} />
+          <Route path="/folders" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FoldersList /></Suspense></ProtectedRoute>} />
+          <Route path="/folders/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FolderView /></Suspense></ProtectedRoute>} />
           
           {/* Admin-only routes */}
           <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />

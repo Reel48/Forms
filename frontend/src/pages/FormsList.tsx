@@ -1,9 +1,10 @@
 import { useState, useEffect, memo, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { formsAPI } from '../api';
+import { formsAPI, foldersAPI } from '../api';
 import type { Form } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api';
+import FolderAssignmentModal from '../components/FolderAssignmentModal';
 
 interface User {
   id: string;
@@ -31,6 +32,8 @@ function FormsList() {
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [selectedFormForFolder, setSelectedFormForFolder] = useState<Form | null>(null);
   const { role } = useAuth();
   
   // Track previous location to detect navigation back to forms list
@@ -244,6 +247,18 @@ function FormsList() {
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.message || error?.message || 'Failed to duplicate form. Please try again.';
       alert(errorMessage);
     }
+  };
+
+  const handleAssignToFolder = (form: Form) => {
+    setSelectedFormForFolder(form);
+    setFolderModalOpen(true);
+  };
+
+  const handleFolderAssign = async (folderId: string) => {
+    if (!selectedFormForFolder) return;
+    await foldersAPI.assignForm(folderId, selectedFormForFolder.id);
+    setFolderModalOpen(false);
+    setSelectedFormForFolder(null);
   };
 
   const handleSelectForm = (formId: string) => {
@@ -662,6 +677,14 @@ function FormsList() {
                             Duplicate
                           </button>
                           <button
+                            onClick={() => handleAssignToFolder(form)}
+                            className="btn-outline"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            title="Assign to Folder"
+                          >
+                            📁
+                          </button>
+                          <button
                             onClick={() => handleDelete(form.id, form.name)}
                             className="btn-danger"
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
@@ -790,6 +813,14 @@ function FormsList() {
                         <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                           Edit
                         </Link>
+                        <button
+                          onClick={() => handleAssignToFolder(form)}
+                          className="btn-outline"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          title="Assign to Folder"
+                        >
+                          📁
+                        </button>
                         {form.public_url_slug && form.status === 'published' && (
                           <a
                             href={`/public/form/${form.public_url_slug}`}
@@ -810,6 +841,19 @@ function FormsList() {
             ))}
           </div>
         </div>
+      )}
+
+      {selectedFormForFolder && (
+        <FolderAssignmentModal
+          isOpen={folderModalOpen}
+          onClose={() => {
+            setFolderModalOpen(false);
+            setSelectedFormForFolder(null);
+          }}
+          onAssign={handleFolderAssign}
+          itemType="form"
+          itemName={selectedFormForFolder.name}
+        />
       )}
     </div>
   );

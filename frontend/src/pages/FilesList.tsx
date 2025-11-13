@@ -171,6 +171,7 @@ function FilesList() {
               onDelete={handleDelete}
               onView={handleView}
               showActions={role === 'admin'}
+              showFolderAssignment={role === 'admin'}
             />
           ))}
         </div>

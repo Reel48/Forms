@@ -368,6 +368,70 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
             
             supabase.table("line_items").insert(line_items_to_insert).execute()
         
+        # Create folder if requested
+        folder_id = None
+        if hasattr(quote, 'create_folder') and quote.create_folder:
+            try:
+                # Generate folder name from quote
+                folder_name = f"Order - {quote.title or quote_number}"
+                if quote.client_id:
+                    # Get client name for folder
+                    try:
+                        client_response = supabase.table("clients").select("name, company").eq("id", quote.client_id).single().execute()
+                        if client_response.data:
+                            client_name = client_response.data.get("company") or client_response.data.get("name") or "Client"
+                            folder_name = f"{client_name} - {quote.title or quote_number}"
+                    except Exception:
+                        pass
+                
+                folder_data = {
+                    "id": str(uuid.uuid4()),
+                    "name": folder_name,
+                    "description": f"Folder for quote {quote_number}",
+                    "quote_id": created_quote["id"],
+                    "client_id": quote.client_id,
+                    "status": "active",
+                    "created_by": current_admin["id"],
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat()
+                }
+                
+                folder_response = supabase.table("folders").insert(folder_data).execute()
+                if folder_response.data:
+                    folder_id = folder_response.data[0]["id"]
+                    
+                    # Update quote with folder_id
+                    supabase.table("quotes").update({"folder_id": folder_id}).eq("id", created_quote["id"]).execute()
+                    
+                    # Assign folder to user if specified
+                    assign_user_id = None
+                    if hasattr(quote, 'assign_folder_to_user_id') and quote.assign_folder_to_user_id:
+                        assign_user_id = quote.assign_folder_to_user_id
+                    elif quote.client_id:
+                        # Try to find user associated with client
+                        try:
+                            client_response = supabase.table("clients").select("user_id").eq("id", quote.client_id).single().execute()
+                            if client_response.data and client_response.data.get("user_id"):
+                                assign_user_id = client_response.data["user_id"]
+                        except Exception:
+                            pass
+                    
+                    if assign_user_id:
+                        try:
+                            assignment_data = {
+                                "folder_id": folder_id,
+                                "user_id": assign_user_id,
+                                "role": "viewer",
+                                "assigned_by": current_admin["id"],
+                                "assigned_at": datetime.now().isoformat()
+                            }
+                            supabase.table("folder_assignments").insert(assignment_data).execute()
+                        except Exception as assign_error:
+                            print(f"Warning: Could not assign folder to user: {str(assign_error)}")
+            except Exception as folder_error:
+                print(f"Warning: Could not create folder: {str(folder_error)}")
+                # Continue without folder - quote creation succeeded
+        
         # Fetch complete quote with relations
         response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", created_quote["id"]).execute()
         created_quote_full = response.data[0]
@@ -379,7 +443,7 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
             user_id=current_admin.get("id"),
             user_name=current_admin.get("name") or current_admin.get("email"),
             user_email=current_admin.get("email"),
-            description="Quote created"
+            description="Quote created" + (f" with folder" if folder_id else "")
         )
         
         return created_quote_full

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { filesAPI } from '../api';
+import { filesAPI, foldersAPI } from '../api';
 import type { FileItem } from '../api';
+import FolderAssignmentModal from './FolderAssignmentModal';
 import './FileCard.css';
 
 interface FileCardProps {
@@ -8,11 +9,13 @@ interface FileCardProps {
   onDelete?: (fileId: string) => void;
   onView?: (file: FileItem) => void;
   showActions?: boolean;
+  showFolderAssignment?: boolean;
 }
 
-function FileCard({ file, onDelete, onView, showActions = true }: FileCardProps) {
+function FileCard({ file, onDelete, onView, showActions = true, showFolderAssignment = false }: FileCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showFolderModal, setShowFolderModal] = useState(false);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -85,6 +88,10 @@ function FileCard({ file, onDelete, onView, showActions = true }: FileCardProps)
     onView?.(file);
   };
 
+  const handleAssignToFolder = async (folderId: string) => {
+    await foldersAPI.assignFile(folderId, file.id);
+  };
+
   return (
     <div className="file-card" onClick={() => onView?.(file)}>
       <div className="file-card-icon">{getFileIcon(file.file_type)}</div>
@@ -129,6 +136,18 @@ function FileCard({ file, onDelete, onView, showActions = true }: FileCardProps)
           >
             {downloading ? '⏳' : '⬇️'}
           </button>
+          {showFolderAssignment && (
+            <button
+              className="file-card-action-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFolderModal(true);
+              }}
+              title="Assign to Folder"
+            >
+              📁
+            </button>
+          )}
           <button
             className="file-card-action-btn file-card-action-danger"
             onClick={handleDelete}
@@ -138,6 +157,16 @@ function FileCard({ file, onDelete, onView, showActions = true }: FileCardProps)
             {deleting ? '⏳' : '🗑️'}
           </button>
         </div>
+      )}
+
+      {showFolderAssignment && (
+        <FolderAssignmentModal
+          isOpen={showFolderModal}
+          onClose={() => setShowFolderModal(false)}
+          onAssign={handleAssignToFolder}
+          itemType="file"
+          itemName={file.name}
+        />
       )}
     </div>
   );

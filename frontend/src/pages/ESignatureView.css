@@ -1,0 +1,298 @@
+.esignature-view-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.esignature-header {
+  margin-bottom: 32px;
+}
+
+.esignature-header h1 {
+  font-size: 32px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.document-description {
+  font-size: 16px;
+  color: #666666;
+  margin-bottom: 16px;
+}
+
+.document-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-signed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-declined {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-expired {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.signed-date {
+  font-size: 14px;
+  color: #666666;
+}
+
+.error-banner {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #f5c6cb;
+}
+
+.signed-document-view {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.success-message h2 {
+  font-size: 28px;
+  color: #155724;
+  margin-bottom: 16px;
+}
+
+.success-message p {
+  font-size: 16px;
+  color: #666666;
+  margin-bottom: 32px;
+}
+
+.signed-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.signature-interface {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.pdf-preview-section,
+.signature-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-preview-section h2,
+.signature-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+}
+
+.pdf-preview {
+  width: 100%;
+  height: 600px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+}
+
+.pdf-loading {
+  padding: 48px;
+  text-align: center;
+  color: #666666;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.signature-instructions {
+  font-size: 14px;
+  color: #666666;
+  margin-bottom: 24px;
+}
+
+.signature-method-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.method-btn {
+  flex: 1;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.method-btn:hover {
+  background-color: #e8e8e8;
+  border-color: #cccccc;
+}
+
+.method-btn.active {
+  background-color: #2196f3;
+  color: white;
+  border-color: #2196f3;
+}
+
+.signature-input-area {
+  margin-bottom: 24px;
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.signature-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.signature-file-input {
+  display: none;
+}
+
+.signature-upload-label {
+  padding: 12px 24px;
+  background-color: #2196f3;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.signature-upload-label:hover {
+  background-color: #1976d2;
+}
+
+.uploaded-signature-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+  background-color: white;
+}
+
+.uploaded-signature-preview img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.signature-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #2196f3;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.btn-primary:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f5f5f5;
+  color: #1a1a1a;
+  border: 1px solid #e0e0e0;
+}
+
+.btn-secondary:hover {
+  background-color: #e8e8e8;
+}
+
+.btn-sign {
+  flex: 1;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 48px;
+  font-size: 16px;
+}
+
+.error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 968px) {
+  .signature-interface {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-preview {
+    height: 400px;
+  }
+}
+

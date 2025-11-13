@@ -539,6 +539,192 @@ export const filesAPI = {
   getFolders: (fileId: string) => api.get<FileFolderAssignment[]>(`/api/files/${fileId}/folders`),
 };
 
+// E-Signature Types
+export interface ESignatureDocument {
+  id: string;
+  name: string;
+  description?: string;
+  file_id: string;
+  document_type: string; // terms_of_service, contract, agreement, custom
+  signature_mode: string; // simple, advanced
+  require_signature: boolean;
+  signature_fields?: Record<string, any>; // JSONB for advanced mode
+  folder_id?: string;
+  quote_id?: string;
+  expires_at?: string;
+  status: string; // pending, signed, declined, expired
+  signed_by?: string;
+  signed_at?: string;
+  signed_ip_address?: string;
+  signature_method?: string; // draw, type, upload
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ESignatureDocumentCreate {
+  name: string;
+  description?: string;
+  file_id: string;
+  document_type?: string;
+  signature_mode?: string;
+  require_signature?: boolean;
+  signature_fields?: Record<string, any>;
+  folder_id?: string;
+  quote_id?: string;
+  expires_at?: string;
+}
+
+export interface ESignatureDocumentUpdate {
+  name?: string;
+  description?: string;
+  document_type?: string;
+  signature_mode?: string;
+  require_signature?: boolean;
+  signature_fields?: Record<string, any>;
+  folder_id?: string;
+  quote_id?: string;
+  status?: string;
+  expires_at?: string;
+}
+
+export interface ESignatureSignature {
+  id: string;
+  document_id: string;
+  folder_id?: string;
+  user_id: string;
+  signature_data: string; // Base64 encoded signature image or text
+  signature_type: string; // draw, type, upload
+  signature_position?: Record<string, any>; // Position on document (x, y, page)
+  field_id?: string; // For advanced mode
+  ip_address?: string;
+  user_agent?: string;
+  signed_at: string;
+  signed_file_id?: string;
+  signed_file_url?: string;
+}
+
+export interface ESignatureSignatureCreate {
+  document_id: string;
+  folder_id?: string;
+  signature_data: string;
+  signature_type: string;
+  signature_position?: Record<string, any>;
+  field_id?: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+// E-Signature API
+export const esignatureAPI = {
+  // Documents
+  getAllDocuments: (filters?: { folder_id?: string; quote_id?: string; status?: string; signature_mode?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.folder_id) params.append('folder_id', filters.folder_id);
+    if (filters?.quote_id) params.append('quote_id', filters.quote_id);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.signature_mode) params.append('signature_mode', filters.signature_mode);
+    const queryString = params.toString();
+    return api.get<ESignatureDocument[]>(`/api/esignature/documents${queryString ? `?${queryString}` : ''}`);
+  },
+  getDocument: (id: string) => api.get<ESignatureDocument>(`/api/esignature/documents/${id}`),
+  createDocument: (document: ESignatureDocumentCreate) => api.post<ESignatureDocument>('/api/esignature/documents', document),
+  updateDocument: (id: string, document: ESignatureDocumentUpdate) => api.put<ESignatureDocument>(`/api/esignature/documents/${id}`, document),
+  deleteDocument: (id: string) => api.delete<{ message: string }>(`/api/esignature/documents/${id}`),
+  getDocumentPreview: (id: string) => api.get<{ preview_url: string }>(`/api/esignature/documents/${id}/preview`),
+  // Signatures
+  signDocument: (id: string, signature: ESignatureSignatureCreate) => api.post<ESignatureSignature>(`/api/esignature/documents/${id}/sign`, signature),
+  getDocumentSignatures: (id: string) => api.get<ESignatureSignature[]>(`/api/esignature/documents/${id}/signatures`),
+  getSignedPdf: (id: string) => api.get(`/api/esignature/documents/${id}/signed-pdf`),
+};
+
+// Folder Types
+export interface Folder {
+  id: string;
+  name: string;
+  description?: string;
+  quote_id?: string;
+  client_id?: string;
+  status: string; // active, completed, archived, cancelled
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FolderCreate {
+  name: string;
+  description?: string;
+  quote_id?: string;
+  client_id?: string;
+  status?: string;
+  assign_to_user_id?: string;
+}
+
+export interface FolderUpdate {
+  name?: string;
+  description?: string;
+  quote_id?: string;
+  client_id?: string;
+  status?: string;
+}
+
+export interface FolderAssignment {
+  id: string;
+  folder_id: string;
+  user_id: string;
+  role: string; // viewer, editor
+  assigned_at: string;
+  assigned_by?: string;
+}
+
+export interface FolderAssignmentCreate {
+  folder_id: string;
+  user_id: string;
+  role?: string;
+}
+
+export interface FormFolderAssignment {
+  id: string;
+  form_id: string;
+  folder_id: string;
+  assigned_at: string;
+  assigned_by?: string;
+}
+
+export interface FolderContent {
+  folder: Folder;
+  quote?: any;
+  files: any[];
+  forms: any[];
+  esignatures: any[];
+}
+
+// Folders API
+export const foldersAPI = {
+  getAll: (filters?: { client_id?: string; quote_id?: string; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.client_id) params.append('client_id', filters.client_id);
+    if (filters?.quote_id) params.append('quote_id', filters.quote_id);
+    if (filters?.status) params.append('status', filters.status);
+    const queryString = params.toString();
+    return api.get<Folder[]>(`/api/folders${queryString ? `?${queryString}` : ''}`);
+  },
+  getById: (id: string) => api.get<Folder>(`/api/folders/${id}`),
+  create: (folder: FolderCreate) => api.post<Folder>('/api/folders', folder),
+  update: (id: string, folder: FolderUpdate) => api.put<Folder>(`/api/folders/${id}`, folder),
+  delete: (id: string) => api.delete<{ message: string }>(`/api/folders/${id}`),
+  assignToUser: (id: string, assignment: FolderAssignmentCreate) => api.post<FolderAssignment>(`/api/folders/${id}/assign`, assignment),
+  removeAssignment: (id: string, userId: string) => api.delete<{ message: string }>(`/api/folders/${id}/assign/${userId}`),
+  getAssignments: (id: string) => api.get<FolderAssignment[]>(`/api/folders/${id}/assignments`),
+  assignForm: (id: string, formId: string) => api.post<FormFolderAssignment>(`/api/folders/${id}/forms/${formId}`),
+  removeForm: (id: string, formId: string) => api.delete<{ message: string }>(`/api/folders/${id}/forms/${formId}`),
+  assignFile: (id: string, fileId: string) => api.post<any>(`/api/folders/${id}/files/${fileId}`),
+  removeFile: (id: string, fileId: string) => api.delete<{ message: string }>(`/api/folders/${id}/files/${fileId}`),
+  assignESignature: (id: string, documentId: string) => api.post<any>(`/api/folders/${id}/esignature/${documentId}`),
+  removeESignature: (id: string, documentId: string) => api.delete<{ message: string }>(`/api/folders/${id}/esignature/${documentId}`),
+  getContent: (id: string) => api.get<FolderContent>(`/api/folders/${id}/content`),
+};
+
 // Auth API
 export const authAPI = {
   requestPasswordReset: (email: string) => api.post<{ message: string }>('/api/auth/password-reset/request', { email }),

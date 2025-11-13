@@ -1,0 +1,115 @@
+import React, { useState, useEffect } from 'react';
+import { foldersAPI, Folder } from '../api';
+import './FolderAssignmentModal.css';
+
+interface FolderAssignmentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAssign: (folderId: string) => Promise<void>;
+  itemType: 'file' | 'form' | 'esignature';
+  itemName: string;
+}
+
+const FolderAssignmentModal: React.FC<FolderAssignmentModalProps> = ({
+  isOpen,
+  onClose,
+  onAssign,
+  itemType,
+  itemName,
+}) => {
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadFolders();
+    }
+  }, [isOpen]);
+
+  const loadFolders = async () => {
+    try {
+      setLoading(true);
+      const response = await foldersAPI.getAll();
+      setFolders(response.data || []);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load folders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedFolderId) return;
+
+    try {
+      setAssigning(true);
+      setError(null);
+      await onAssign(selectedFolderId);
+      onClose();
+      setSelectedFolderId('');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to assign to folder');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Assign {itemType.charAt(0).toUpperCase() + itemType.slice(1)} to Folder</h2>
+          <button onClick={onClose} className="modal-close">×</button>
+        </div>
+
+        <div className="modal-body">
+          <p className="item-name-display">Item: <strong>{itemName}</strong></p>
+
+          {error && <div className="error-message">{error}</div>}
+
+          {loading ? (
+            <div className="loading">Loading folders...</div>
+          ) : (
+            <div className="folder-select">
+              <label htmlFor="folder-select">Select Folder:</label>
+              <select
+                id="folder-select"
+                value={selectedFolderId}
+                onChange={(e) => setSelectedFolderId(e.target.value)}
+                className="folder-select-input"
+              >
+                <option value="">-- Select a folder --</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name} {folder.status !== 'active' ? `(${folder.status})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button onClick={onClose} className="btn-secondary" disabled={assigning}>
+            Cancel
+          </button>
+          <button
+            onClick={handleAssign}
+            className="btn-primary"
+            disabled={!selectedFolderId || assigning}
+          >
+            {assigning ? 'Assigning...' : 'Assign to Folder'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FolderAssignmentModal;
+

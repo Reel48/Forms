@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files
+from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
@@ -67,6 +67,8 @@ app.include_router(stripe.router)
 app.include_router(company_settings.router)
 app.include_router(forms.router)
 app.include_router(files.router)
+app.include_router(esignature.router)
+app.include_router(folders.router)
 app.include_router(email_debug.router)
 
 @app.get("/")

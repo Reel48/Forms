@@ -1,23 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api, { quotesAPI } from '../api';
-import type { Quote, Form } from '../api';
+import api, { quotesAPI, foldersAPI } from '../api';
+import type { Quote, Form, Folder } from '../api';
 
 interface TimelineItem {
   id: string;
-  type: 'quote' | 'form';
+  type: 'folder' | 'quote' | 'form';
   title: string;
   description?: string;
   status: string;
   priority?: string;
   created_at: string;
-  data: Quote | Form;
+  data: Folder | Quote | Form;
 }
 
-const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined'] as const;
+const FOLDER_STATUSES = ['active', 'completed', 'archived', 'cancelled'] as const;
 const SORT_OPTIONS = [
-  { value: 'priority', label: 'Priority' },
   { value: 'date', label: 'Date (Newest)' },
   { value: 'date_oldest', label: 'Date (Oldest)' },
   { value: 'status', label: 'Status' },
@@ -26,13 +25,14 @@ const SORT_OPTIONS = [
 function CustomerDashboard() {
   const navigate = useNavigate();
   const { role } = useAuth();
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'quote' | 'form'>('all');
-  const [sortBy, setSortBy] = useState<string>('priority');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [sortBy, setSortBy] = useState<string>('date');
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
 
@@ -45,12 +45,22 @@ function CustomerDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [quotesResponse, formsResponse] = await Promise.all([
-        api.get('/api/customer/quotes'),
-        api.get('/api/customer/forms'),
-      ]);
-      setQuotes(quotesResponse.data || []);
-      setForms(formsResponse.data || []);
+      // Load folders (main organizing structure)
+      const foldersResponse = await foldersAPI.getAll();
+      setFolders(foldersResponse.data || []);
+      
+      // Also load quotes and forms for backward compatibility
+      try {
+        const [quotesResponse, formsResponse] = await Promise.all([
+          api.get('/api/customer/quotes'),
+          api.get('/api/customer/forms'),
+        ]);
+        setQuotes(quotesResponse.data || []);
+        setForms(formsResponse.data || []);
+      } catch (error) {
+        // If customer endpoints don't exist, that's okay
+        console.warn('Could not load quotes/forms:', error);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -58,72 +68,43 @@ function CustomerDashboard() {
     }
   };
 
-  // Combine timeline items
+  // Convert folders to timeline items
   const timelineItems = useMemo(() => {
-    const items: TimelineItem[] = [
-      ...quotes.map(quote => ({
-        id: quote.id,
-        type: 'quote' as const,
-        title: quote.title,
-        description: `Quote #${quote.quote_number}${quote.total ? ` • $${parseFloat(quote.total).toFixed(2)}` : ''}`,
-        status: quote.status,
-        priority: quote.priority || 'normal',
-        created_at: quote.created_at,
-        data: quote,
-      })),
-      ...forms.map(form => ({
-        id: form.id,
-        type: 'form' as const,
-        title: form.name,
-        description: form.description || '',
-        status: form.status,
-        priority: form.priority || 'normal',
-        created_at: form.created_at,
-        data: form,
-      })),
-    ];
-
-    // Apply type filter
-    let filtered = items;
-    if (typeFilter !== 'all') {
-      filtered = items.filter(item => item.type === typeFilter);
-    }
+    const items: TimelineItem[] = folders.map(folder => ({
+      id: folder.id,
+      type: 'folder' as const,
+      title: folder.name,
+      description: folder.description || `Order folder${folder.quote_id ? ' with quote' : ''}`,
+      status: folder.status,
+      priority: 'normal',
+      created_at: folder.created_at,
+      data: folder,
+    }));
 
     // Apply status filter
+    let filtered = items;
     if (statusFilter) {
-      filtered = filtered.filter(item => {
-        if (item.type === 'quote') {
-          return item.status === statusFilter;
-        }
-        // For forms, map status filter if needed
-        return true;
-      });
+      filtered = items.filter(item => item.status === statusFilter);
     }
 
     // Sort items
     return filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'priority':
-          // High priority items first
-          if (a.priority === 'high' && b.priority !== 'high') return -1;
-          if (a.priority !== 'high' && b.priority === 'high') return 1;
-          // Then by date (newest first)
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'date':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'date_oldest':
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         case 'status':
-          const statusOrder = { 'accepted': 0, 'sent': 1, 'viewed': 2, 'draft': 3, 'declined': 4 };
-          const aOrder = statusOrder[a.status as keyof typeof statusOrder] ?? 5;
-          const bOrder = statusOrder[b.status as keyof typeof statusOrder] ?? 5;
+          const statusOrder = { 'active': 0, 'completed': 1, 'archived': 2, 'cancelled': 3 };
+          const aOrder = statusOrder[a.status as keyof typeof statusOrder] ?? 4;
+          const bOrder = statusOrder[b.status as keyof typeof statusOrder] ?? 4;
           if (aOrder !== bOrder) return aOrder - bOrder;
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         default:
-          return 0;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [quotes, forms, typeFilter, statusFilter, sortBy]);
+  }, [folders, statusFilter, sortBy]);
 
   // Filter timeline items by search term
   const filteredItems = useMemo(() => {
@@ -278,7 +259,9 @@ function CustomerDashboard() {
   };
 
   const handleItemClick = (item: TimelineItem) => {
-    if (item.type === 'quote') {
+    if (item.type === 'folder') {
+      navigate(`/folders/${item.id}`);
+    } else if (item.type === 'quote') {
       navigate(`/quotes/${item.id}`);
     } else {
       navigate(`/forms/${item.id}`);
@@ -382,19 +365,18 @@ function CustomerDashboard() {
           {/* Filter Row */}
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: '1', minWidth: '150px' }}>
-              <label htmlFor="type-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-                Type
+              <label htmlFor="view-mode" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                View
               </label>
               <select
-                id="type-filter"
-                name="type-filter"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'quote' | 'form')}
+                id="view-mode"
+                name="view-mode"
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as 'table' | 'cards')}
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
               >
-                <option value="all">All Types</option>
-                <option value="quote">Quotes Only</option>
-                <option value="form">Forms Only</option>
+                <option value="table">Table View</option>
+                <option value="cards">Card View</option>
               </select>
             </div>
 
@@ -410,7 +392,7 @@ function CustomerDashboard() {
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
               >
                 <option value="">All Statuses</option>
-                {QUOTE_STATUSES.map((status) => (
+                {FOLDER_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </option>
@@ -435,12 +417,11 @@ function CustomerDashboard() {
               </select>
             </div>
 
-            {(statusFilter || typeFilter !== 'all' || searchTerm) && (
+            {(statusFilter || searchTerm) && (
               <div>
                 <button
                   onClick={() => {
                     setStatusFilter('');
-                    setTypeFilter('all');
                     setSearchTerm('');
                   }}
                   style={{
@@ -496,7 +477,7 @@ function CustomerDashboard() {
                     className="card"
                     style={{
                       transition: 'all 0.2s',
-                      borderLeft: `4px solid ${item.type === 'quote' ? '#667eea' : '#10b981'}`,
+                      borderLeft: `4px solid ${item.type === 'folder' ? '#2196f3' : item.type === 'quote' ? '#667eea' : '#10b981'}`,
                       ...(item.priority === 'high' ? {
                         borderLeftWidth: '6px',
                         borderLeftColor: '#ef4444',
@@ -518,7 +499,7 @@ function CustomerDashboard() {
                         width: '48px',
                         height: '48px',
                         borderRadius: '8px',
-                        backgroundColor: item.type === 'quote' ? '#667eea' : '#10b981',
+                        backgroundColor: item.type === 'folder' ? '#2196f3' : item.type === 'quote' ? '#667eea' : '#10b981',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -526,7 +507,7 @@ function CustomerDashboard() {
                         fontSize: '1.5rem',
                         flexShrink: 0,
                       }}>
-                        {item.type === 'quote' ? 'Quote' : 'Form'}
+                        {item.type === 'folder' ? '📁' : item.type === 'quote' ? 'Quote' : 'Form'}
                       </div>
 
                       {/* Content */}
@@ -574,7 +555,7 @@ function CustomerDashboard() {
                         }}>
                           <span>{formatDate(item.created_at)}</span>
                           <span>•</span>
-                          <span>{item.type === 'quote' ? 'Quote' : 'Form'}</span>
+                          <span>{item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}</span>
                         </div>
                         
                         {/* Quick Actions */}
@@ -589,6 +570,18 @@ function CustomerDashboard() {
                           >
                             View
                           </button>
+                          {item.type === 'folder' && (
+                            <button
+                              onClick={() => handleItemClick(item)}
+                              className="btn-primary"
+                              style={{
+                                padding: '0.375rem 0.75rem',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              Open Folder
+                            </button>
+                          )}
                           {item.type === 'quote' && (
                             <>
                               <button
