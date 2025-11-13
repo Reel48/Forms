@@ -378,8 +378,8 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
 async def get_file_preview(file_id: str, user = Depends(get_current_user)):
     """Get preview URL for a file (signed URL that expires)."""
     try:
-        # Get file record (same access check as download)
-        file_response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        # Get file record - use service role client to bypass RLS
+        file_response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
