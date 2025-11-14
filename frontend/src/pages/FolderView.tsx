@@ -428,7 +428,21 @@ const FolderView: React.FC = () => {
                       onClick={() => navigate(`/esignature/${esig.id}`)}
                     >
                       <td>
-                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{esig.name}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{esig.name}</strong>
+                          {esig.is_template && (
+                            <span style={{ 
+                              fontSize: '0.75rem', 
+                              padding: '0.125rem 0.375rem', 
+                              backgroundColor: '#dbeafe', 
+                              color: '#1e40af', 
+                              borderRadius: '0.25rem',
+                              fontWeight: 500
+                            }}>
+                              Template
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <span className="text-muted" style={{ fontSize: '0.875rem' }}>{esig.status}</span>
