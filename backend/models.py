@@ -519,6 +519,34 @@ class ESignatureDocument(ESignatureDocumentBase):
     created_at: datetime
     updated_at: datetime
     
+    @field_validator('signature_fields', mode='before')
+    @classmethod
+    def validate_signature_fields(cls, v):
+        """Convert empty arrays to None, and ensure dict format"""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            # Convert empty array to None, or convert array to dict if needed
+            if len(v) == 0:
+                return None
+            # If it's a non-empty array, we might need to handle it differently
+            # For now, return None to avoid validation errors
+            return None
+        if isinstance(v, dict):
+            return v
+        # Try to parse as JSON string
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list) and len(parsed) == 0:
+                    return None
+                if isinstance(parsed, dict):
+                    return parsed
+                return None
+            except:
+                return None
+        return None
+    
     @field_validator('created_at', 'updated_at', 'signed_at', 'expires_at', mode='before')
     @classmethod
     def parse_datetime(cls, v):
