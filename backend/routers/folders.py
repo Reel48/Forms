@@ -635,6 +635,12 @@ async def assign_esignature_to_folder(
             print(f"Admin user {user['id']} can assign document to folder - skipping permission checks")
         # Admins can assign any document to any folder - no additional checks needed
         
+        # Check if assignment already exists
+        existing_assignment = supabase_storage.table("esignature_document_folder_assignments").select("id").eq("document_id", document_id).eq("folder_id", folder_id).execute()
+        if existing_assignment.data:
+            # Already assigned, return the existing assignment
+            return existing_assignment.data[0]
+        
         # Create assignment
         assignment_data = {
             "document_id": document_id,
@@ -652,7 +658,10 @@ async def assign_esignature_to_folder(
         except Exception as e:
             error_msg = str(e)
             if "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
-                raise HTTPException(status_code=400, detail="E-signature document is already assigned to this folder")
+                # Assignment was created by another request, fetch and return it
+                existing = supabase_storage.table("esignature_document_folder_assignments").select("*").eq("document_id", document_id).eq("folder_id", folder_id).single().execute()
+                if existing.data:
+                    return existing.data[0]
             raise HTTPException(status_code=500, detail=f"Failed to assign document: {error_msg}")
     except HTTPException:
         raise
