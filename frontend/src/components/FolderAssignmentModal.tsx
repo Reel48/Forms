@@ -106,7 +106,7 @@ const FolderAssignmentModal: React.FC<FolderAssignmentModalProps> = ({
             className="btn-primary"
             disabled={!selectedFolderId || assigning}
           >
-            {assigning ? 'Assigning...' : 'Assign to Folder'}
+            {assigning ? 'Adding...' : 'Add to Folder'}
           </button>
         </div>
       </div>
