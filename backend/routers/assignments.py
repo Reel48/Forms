@@ -16,8 +16,8 @@ router = APIRouter(prefix="/api", tags=["assignments"])
 
 
 class AssignRequest(BaseModel):
-    user_ids: List[str]  # List of user IDs to assign to
-    expires_at: Optional[str] = None  # Optional expiration date (ISO format)
+    folder_ids: List[str]  # List of folder IDs to assign to
+    expires_at: Optional[str] = None  # Optional expiration date (ISO format) - deprecated, kept for backward compatibility
 
 
 class AssignmentResponse(BaseModel):
@@ -40,7 +40,8 @@ async def assign_quote(
     current_admin: dict = Depends(get_current_admin)
 ):
     """
-    Assign a quote to one or more customers (admin only).
+    Assign a quote to one or more folders (admin only).
+    Users access quotes through folder assignments.
     """
     try:
         # Use service role client to bypass RLS for admin operations
@@ -52,6 +53,81 @@ async def assign_quote(
         quote = quote_response.data[0]
         quote_title = quote.get("title", "Quote")
         quote_number = quote.get("quote_number", "")
+        
+        assignments = []
+        folders_to_notify = []  # Store folder info for notifications
+        
+        for folder_id in assign_request.folder_ids:
+            # Verify folder exists
+            folder_response = supabase_storage.table("folders").select("id, name, client_id").eq("id", folder_id).execute()
+            if not folder_response.data:
+                print(f"Warning: Folder {folder_id} not found, skipping")
+                continue
+            
+            folder = folder_response.data[0]
+            folders_to_notify.append(folder)
+            
+            # Check if assignment already exists
+            existing = supabase_storage.table("quote_folder_assignments").select("id").eq("quote_id", quote_id).eq("folder_id", folder_id).execute()
+            
+            if existing.data:
+                # Update existing assignment
+                supabase_storage.table("quote_folder_assignments").update({
+                    "assigned_by": current_admin["id"],
+                    "assigned_at": datetime.now().isoformat()
+                }).eq("id", existing.data[0]["id"]).execute()
+                assignments.append(existing.data[0]["id"])
+            else:
+                # Create new assignment
+                assignment_data = {
+                    "id": str(uuid.uuid4()),
+                    "quote_id": quote_id,
+                    "folder_id": folder_id,
+                    "assigned_by": current_admin["id"],
+                    "assigned_at": datetime.now().isoformat()
+                }
+                result = supabase_storage.table("quote_folder_assignments").insert(assignment_data).execute()
+                if result.data:
+                    assignments.append(result.data[0]["id"])
+            
+            # Also set folder_id on quote if not already set (for backward compatibility)
+            current_quote = supabase_storage.table("quotes").select("folder_id").eq("id", quote_id).single().execute()
+            if current_quote.data and not current_quote.data.get("folder_id"):
+                supabase_storage.table("quotes").update({"folder_id": folder_id}).eq("id", quote_id).execute()
+        
+        # Get users assigned to these folders for email notifications
+        users_to_notify = []
+        if folders_to_notify and supabase_service_role_key:
+            folder_ids = [f["id"] for f in folders_to_notify]
+            # Get folder assignments
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id, user_id").in_("folder_id", folder_ids).execute()
+            
+            if folder_assignments_response.data:
+                user_ids = list(set([fa["user_id"] for fa in folder_assignments_response.data]))
+                
+                # Get user emails
+                for user_id in user_ids:
+                    try:
+                        auth_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
+                        headers = {
+                            "apikey": supabase_service_role_key,
+                            "Authorization": f"Bearer {supabase_service_role_key}",
+                            "Content-Type": "application/json"
+                        }
+                        user_response = requests.get(auth_url, headers=headers, timeout=10)
+                        if user_response.status_code == 200:
+                            user_data = user_response.json()
+                            user_email = user_data.get("email")
+                            user_metadata = user_data.get("user_metadata", {})
+                            user_name = user_metadata.get("name")
+                            if user_email:
+                                users_to_notify.append({
+                                    "email": user_email,
+                                    "name": user_name,
+                                    "user_id": user_id
+                                })
+                    except Exception as e:
+                        print(f"Warning: Could not fetch user info for {user_id}: {str(e)}")
         
         # Get admin name for email
         admin_name = None
@@ -71,86 +147,7 @@ async def assign_quote(
         except Exception as e:
             print(f"Warning: Could not fetch admin name: {str(e)}")
         
-        assignments = []
-        users_to_notify = []  # Store user info for email notifications
-        
-        for user_id in assign_request.user_ids:
-            # Handle client_ prefixed IDs (clients without user accounts)
-            actual_user_id = user_id
-            is_client_without_user = user_id.startswith("client_")
-            
-            if is_client_without_user:
-                # Extract client_id from prefixed ID
-                client_id = user_id.replace("client_", "")
-                # Get client email
-                client_response = supabase_storage.table("clients").select("email, name").eq("id", client_id).execute()
-                if client_response.data:
-                    client = client_response.data[0]
-                    client_email = client.get("email")
-                    client_name = client.get("name")
-                    if client_email:
-                        users_to_notify.append({
-                            "email": client_email,
-                            "name": client_name,
-                            "user_id": None  # No user account
-                        })
-                # Skip assignment creation for clients without user accounts
-                # They can't access quotes without accounts
-                continue
-            
-            # Check if assignment already exists
-            existing = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", actual_user_id).execute()
-            
-            if existing.data:
-                # Update existing assignment
-                supabase_storage.table("quote_assignments").update({
-                    "assigned_by": current_admin["id"],
-                    "assigned_at": datetime.now().isoformat(),
-                    "expires_at": assign_request.expires_at,
-                    "status": "assigned"
-                }).eq("id", existing.data[0]["id"]).execute()
-                assignments.append(existing.data[0]["id"])
-            else:
-                # Create new assignment
-                assignment_data = {
-                    "id": str(uuid.uuid4()),
-                    "quote_id": quote_id,
-                    "user_id": actual_user_id,
-                    "assigned_by": current_admin["id"],
-                    "assigned_at": datetime.now().isoformat(),
-                    "expires_at": assign_request.expires_at,
-                    "status": "assigned",
-                    "created_at": datetime.now().isoformat()
-                }
-                result = supabase_storage.table("quote_assignments").insert(assignment_data).execute()
-                if result.data:
-                    assignments.append(result.data[0]["id"])
-            
-            # Get user email and name for notification
-            try:
-                if supabase_service_role_key:
-                    auth_url = f"{supabase_url}/auth/v1/admin/users/{actual_user_id}"
-                    headers = {
-                        "apikey": supabase_service_role_key,
-                        "Authorization": f"Bearer {supabase_service_role_key}",
-                        "Content-Type": "application/json"
-                    }
-                    user_response = requests.get(auth_url, headers=headers, timeout=10)
-                    if user_response.status_code == 200:
-                        user_data = user_response.json()
-                        user_email = user_data.get("email")
-                        user_metadata = user_data.get("user_metadata", {})
-                        user_name = user_metadata.get("name")
-                        if user_email:
-                            users_to_notify.append({
-                                "email": user_email,
-                                "name": user_name,
-                                "user_id": actual_user_id
-                            })
-            except Exception as e:
-                print(f"Warning: Could not fetch user info for {actual_user_id}: {str(e)}")
-        
-        # Send email notifications
+        # Send email notifications to users with folder access
         for user_info in users_to_notify:
             try:
                 email_service.send_quote_assignment_notification(
@@ -166,7 +163,7 @@ async def assign_quote(
                 print(f"Warning: Failed to send email notification to {user_info['email']}: {str(e)}")
         
         return {
-            "message": f"Quote assigned to {len(assignments)} user(s)",
+            "message": f"Quote assigned to {len(assignments)} folder(s)",
             "assignment_ids": assignments
         }
         
@@ -185,61 +182,33 @@ async def get_quote_assignments(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Get all assignments for a quote.
-    Admins see all assignments, customers see only their own.
+    Get all folder assignments for a quote.
+    Admins see all folder assignments, customers see only folders they have access to.
     """
     try:
         # Use service role client for admin to bypass RLS, regular client for customers
         client = supabase_storage if current_user["role"] == "admin" else supabase
         
-        # Get assignments without join (join syntax was causing 400 errors)
-        query = client.table("quote_assignments").select("*").eq("quote_id", quote_id)
-        
-        # If customer, only show their own assignments
-        if current_user["role"] != "admin":
-            query = query.eq("user_id", current_user["id"])
+        # Get folder assignments
+        query = supabase_storage.table("quote_folder_assignments").select("*, folders(*)").eq("quote_id", quote_id)
         
         response = query.execute()
         assignments = response.data or []
         
-        # Enrich assignments with user email and name
-        if assignments and supabase_service_role_key:
-            # Get all unique user IDs
-            user_ids = list(set([a.get("user_id") for a in assignments if a.get("user_id")]))
+        # If customer, filter to only folders they have access to
+        if current_user["role"] != "admin":
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
             
-            if user_ids:
-                # Fetch all users from Supabase Auth using REST API
-                auth_url = f"{supabase_url}/auth/v1/admin/users"
-                headers = {
-                    "apikey": supabase_service_role_key,
-                    "Authorization": f"Bearer {supabase_service_role_key}",
-                    "Content-Type": "application/json"
-                }
-                
-                user_map = {}
-                try:
-                    # Get all users (with pagination if needed)
-                    response = requests.get(auth_url, headers=headers, params={"per_page": 1000}, timeout=10)
-                    if response.status_code == 200:
-                        users_data = response.json()
-                        for auth_user in users_data.get("users", []):
-                            user_id = auth_user.get("id")
-                            if user_id in user_ids:
-                                user_email = auth_user.get("email")
-                                user_metadata = auth_user.get("user_metadata", {})
-                                user_name = user_metadata.get("name")
-                                user_map[user_id] = {
-                                    "email": user_email,
-                                    "name": user_name
-                                }
-                except Exception as e:
-                    print(f"Warning: Could not fetch users for assignments: {e}")
-                
-                # Enrich assignments with user info
-                for assignment in assignments:
-                    user_id = assignment.get("user_id")
-                    if user_id in user_map:
-                        assignment["user"] = user_map[user_id]
+            # Filter assignments to only accessible folders
+            assignments = [a for a in assignments if a.get("folder_id") in accessible_folder_ids]
+        
+        # Enrich with folder info (already included via join, but ensure it's structured)
+        for assignment in assignments:
+            if assignment.get("folders"):
+                assignment["folder"] = assignment["folders"]
+                del assignment["folders"]
         
         return assignments
         
@@ -257,17 +226,17 @@ async def unassign_quote(
     current_admin: dict = Depends(get_current_admin)
 ):
     """
-    Remove a quote assignment (admin only).
+    Remove a quote from a folder (admin only).
     """
     try:
-        # Use service role client to bypass RLS for admin operations (consistent with assign endpoint)
-        result = supabase_storage.table("quote_assignments").delete().eq("id", assignment_id).eq("quote_id", quote_id).execute()
+        # Use service role client to bypass RLS for admin operations
+        result = supabase_storage.table("quote_folder_assignments").delete().eq("id", assignment_id).eq("quote_id", quote_id).execute()
         
         # Verify the assignment was deleted
         if not result.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
         
-        return {"message": "Assignment removed successfully"}
+        return {"message": "Quote removed from folder successfully"}
         
     except HTTPException:
         raise
@@ -286,7 +255,8 @@ async def assign_form(
     current_admin: dict = Depends(get_current_admin)
 ):
     """
-    Assign a form to one or more customers (admin only).
+    Assign a form to one or more folders (admin only).
+    Users access forms through folder assignments.
     """
     try:
         # Use service role client to bypass RLS for admin operations
@@ -297,6 +267,76 @@ async def assign_form(
         
         form = form_response.data[0]
         form_name = form.get("name", "Form")
+        
+        assignments = []
+        folders_to_notify = []  # Store folder info for notifications
+        
+        for folder_id in assign_request.folder_ids:
+            # Verify folder exists
+            folder_response = supabase_storage.table("folders").select("id, name, client_id").eq("id", folder_id).execute()
+            if not folder_response.data:
+                print(f"Warning: Folder {folder_id} not found, skipping")
+                continue
+            
+            folder = folder_response.data[0]
+            folders_to_notify.append(folder)
+            
+            # Check if assignment already exists (using form_folder_assignments table)
+            existing = supabase_storage.table("form_folder_assignments").select("id").eq("form_id", form_id).eq("folder_id", folder_id).execute()
+            
+            if existing.data:
+                # Update existing assignment
+                supabase_storage.table("form_folder_assignments").update({
+                    "assigned_by": current_admin["id"],
+                    "assigned_at": datetime.now().isoformat()
+                }).eq("id", existing.data[0]["id"]).execute()
+                assignments.append(existing.data[0]["id"])
+            else:
+                # Create new assignment
+                assignment_data = {
+                    "id": str(uuid.uuid4()),
+                    "form_id": form_id,
+                    "folder_id": folder_id,
+                    "assigned_by": current_admin["id"],
+                    "assigned_at": datetime.now().isoformat()
+                }
+                result = supabase_storage.table("form_folder_assignments").insert(assignment_data).execute()
+                if result.data:
+                    assignments.append(result.data[0]["id"])
+        
+        # Get users assigned to these folders for email notifications
+        users_to_notify = []
+        if folders_to_notify and supabase_service_role_key:
+            folder_ids = [f["id"] for f in folders_to_notify]
+            # Get folder assignments
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id, user_id").in_("folder_id", folder_ids).execute()
+            
+            if folder_assignments_response.data:
+                user_ids = list(set([fa["user_id"] for fa in folder_assignments_response.data]))
+                
+                # Get user emails
+                for user_id in user_ids:
+                    try:
+                        auth_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
+                        headers = {
+                            "apikey": supabase_service_role_key,
+                            "Authorization": f"Bearer {supabase_service_role_key}",
+                            "Content-Type": "application/json"
+                        }
+                        user_response = requests.get(auth_url, headers=headers, timeout=10)
+                        if user_response.status_code == 200:
+                            user_data = user_response.json()
+                            user_email = user_data.get("email")
+                            user_metadata = user_data.get("user_metadata", {})
+                            user_name = user_metadata.get("name")
+                            if user_email:
+                                users_to_notify.append({
+                                    "email": user_email,
+                                    "name": user_name,
+                                    "user_id": user_id
+                                })
+                    except Exception as e:
+                        print(f"Warning: Could not fetch user info for {user_id}: {str(e)}")
         
         # Get admin name for email
         admin_name = None
@@ -316,87 +356,7 @@ async def assign_form(
         except Exception as e:
             print(f"Warning: Could not fetch admin name: {str(e)}")
         
-        assignments = []
-        users_to_notify = []  # Store user info for email notifications
-        
-        for user_id in assign_request.user_ids:
-            # Handle client_ prefixed IDs (clients without user accounts)
-            actual_user_id = user_id
-            is_client_without_user = user_id.startswith("client_")
-            
-            if is_client_without_user:
-                # Extract client_id from prefixed ID
-                client_id = user_id.replace("client_", "")
-                # Get client email
-                client_response = supabase_storage.table("clients").select("email, name").eq("id", client_id).execute()
-                if client_response.data:
-                    client = client_response.data[0]
-                    client_email = client.get("email")
-                    client_name = client.get("name")
-                    if client_email:
-                        users_to_notify.append({
-                            "email": client_email,
-                            "name": client_name,
-                            "user_id": None  # No user account
-                        })
-                # Skip assignment creation for clients without user accounts
-                # They can't access forms without accounts
-                continue
-            
-            # Check if assignment already exists
-            existing = supabase_storage.table("form_assignments").select("id").eq("form_id", form_id).eq("user_id", actual_user_id).execute()
-            
-            if existing.data:
-                # Update existing assignment
-                supabase_storage.table("form_assignments").update({
-                    "assigned_by": current_admin["id"],
-                    "assigned_at": datetime.now().isoformat(),
-                    "expires_at": assign_request.expires_at,
-                    "status": "pending"
-                }).eq("id", existing.data[0]["id"]).execute()
-                assignments.append(existing.data[0]["id"])
-            else:
-                # Create new assignment with unique access token
-                assignment_data = {
-                    "id": str(uuid.uuid4()),
-                    "form_id": form_id,
-                    "user_id": actual_user_id,
-                    "assigned_by": current_admin["id"],
-                    "assigned_at": datetime.now().isoformat(),
-                    "expires_at": assign_request.expires_at,
-                    "status": "pending",
-                    "access_token": str(uuid.uuid4()),
-                    "created_at": datetime.now().isoformat()
-                }
-                result = supabase_storage.table("form_assignments").insert(assignment_data).execute()
-                if result.data:
-                    assignments.append(result.data[0]["id"])
-            
-            # Get user email and name for notification
-            try:
-                if supabase_service_role_key:
-                    auth_url = f"{supabase_url}/auth/v1/admin/users/{actual_user_id}"
-                    headers = {
-                        "apikey": supabase_service_role_key,
-                        "Authorization": f"Bearer {supabase_service_role_key}",
-                        "Content-Type": "application/json"
-                    }
-                    user_response = requests.get(auth_url, headers=headers, timeout=10)
-                    if user_response.status_code == 200:
-                        user_data = user_response.json()
-                        user_email = user_data.get("email")
-                        user_metadata = user_data.get("user_metadata", {})
-                        user_name = user_metadata.get("name")
-                        if user_email:
-                            users_to_notify.append({
-                                "email": user_email,
-                                "name": user_name,
-                                "user_id": actual_user_id
-                            })
-            except Exception as e:
-                print(f"Warning: Could not fetch user info for {actual_user_id}: {str(e)}")
-        
-        # Send email notifications
+        # Send email notifications to users with folder access
         for user_info in users_to_notify:
             try:
                 email_service.send_form_assignment_notification(
@@ -411,7 +371,7 @@ async def assign_form(
                 print(f"Warning: Failed to send email notification to {user_info['email']}: {str(e)}")
         
         return {
-            "message": f"Form assigned to {len(assignments)} user(s)",
+            "message": f"Form assigned to {len(assignments)} folder(s)",
             "assignment_ids": assignments
         }
         
@@ -430,61 +390,30 @@ async def get_form_assignments(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Get all assignments for a form.
-    Admins see all assignments, customers see only their own.
+    Get all folder assignments for a form.
+    Admins see all folder assignments, customers see only folders they have access to.
     """
     try:
-        # Use service role client for admin to bypass RLS, regular client for customers
-        client = supabase_storage if current_user["role"] == "admin" else supabase
-        
-        # Get assignments without join (join syntax was causing 400 errors)
-        query = client.table("form_assignments").select("*").eq("form_id", form_id)
-        
-        # If customer, only show their own assignments
-        if current_user["role"] != "admin":
-            query = query.eq("user_id", current_user["id"])
+        # Get folder assignments
+        query = supabase_storage.table("form_folder_assignments").select("*, folders(*)").eq("form_id", form_id)
         
         response = query.execute()
         assignments = response.data or []
         
-        # Enrich assignments with user email and name
-        if assignments and supabase_service_role_key:
-            # Get all unique user IDs
-            user_ids = list(set([a.get("user_id") for a in assignments if a.get("user_id")]))
+        # If customer, filter to only folders they have access to
+        if current_user["role"] != "admin":
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
             
-            if user_ids:
-                # Fetch all users from Supabase Auth using REST API
-                auth_url = f"{supabase_url}/auth/v1/admin/users"
-                headers = {
-                    "apikey": supabase_service_role_key,
-                    "Authorization": f"Bearer {supabase_service_role_key}",
-                    "Content-Type": "application/json"
-                }
-                
-                user_map = {}
-                try:
-                    # Get all users (with pagination if needed)
-                    response = requests.get(auth_url, headers=headers, params={"per_page": 1000}, timeout=10)
-                    if response.status_code == 200:
-                        users_data = response.json()
-                        for auth_user in users_data.get("users", []):
-                            user_id = auth_user.get("id")
-                            if user_id in user_ids:
-                                user_email = auth_user.get("email")
-                                user_metadata = auth_user.get("user_metadata", {})
-                                user_name = user_metadata.get("name")
-                                user_map[user_id] = {
-                                    "email": user_email,
-                                    "name": user_name
-                                }
-                except Exception as e:
-                    print(f"Warning: Could not fetch users for assignments: {e}")
-                
-                # Enrich assignments with user info
-                for assignment in assignments:
-                    user_id = assignment.get("user_id")
-                    if user_id in user_map:
-                        assignment["user"] = user_map[user_id]
+            # Filter assignments to only accessible folders
+            assignments = [a for a in assignments if a.get("folder_id") in accessible_folder_ids]
+        
+        # Enrich with folder info (already included via join, but ensure it's structured)
+        for assignment in assignments:
+            if assignment.get("folders"):
+                assignment["folder"] = assignment["folders"]
+                del assignment["folders"]
         
         return assignments
         
@@ -502,17 +431,17 @@ async def unassign_form(
     current_admin: dict = Depends(get_current_admin)
 ):
     """
-    Remove a form assignment (admin only).
+    Remove a form from a folder (admin only).
     """
     try:
-        # Use service role client to bypass RLS for admin operations (consistent with assign endpoint)
-        result = supabase_storage.table("form_assignments").delete().eq("id", assignment_id).eq("form_id", form_id).execute()
+        # Use service role client to bypass RLS for admin operations
+        result = supabase_storage.table("form_folder_assignments").delete().eq("id", assignment_id).eq("form_id", form_id).execute()
         
         # Verify the assignment was deleted
         if not result.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
         
-        return {"message": "Assignment removed successfully"}
+        return {"message": "Form removed from folder successfully"}
         
     except HTTPException:
         raise
@@ -527,19 +456,32 @@ async def unassign_form(
 @router.get("/customer/quotes")
 async def get_customer_quotes(current_user: dict = Depends(get_current_user)):
     """
-    Get all quotes assigned to the current customer.
+    Get all quotes assigned to folders the current customer has access to.
     """
     try:
-        # Use service role client to bypass RLS and ensure customers can see their assignments
-        # Get all quote assignments for this user
-        assignments_response = supabase_storage.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
-        quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
+        # Get folders assigned to user
+        folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+        accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
         
-        if not quote_ids:
+        if not accessible_folder_ids:
+            return []
+        
+        # Get quotes assigned to these folders
+        quote_assignments_response = supabase_storage.table("quote_folder_assignments").select("quote_id").in_("folder_id", accessible_folder_ids).execute()
+        quote_ids = [qa["quote_id"] for qa in (quote_assignments_response.data or [])]
+        
+        # Also get quotes with folder_id directly set (for backward compatibility)
+        quotes_with_folder = supabase_storage.table("quotes").select("id").in_("folder_id", accessible_folder_ids).execute()
+        direct_quote_ids = [q["id"] for q in (quotes_with_folder.data or [])]
+        
+        # Combine and deduplicate
+        all_quote_ids = list(set(quote_ids + direct_quote_ids))
+        
+        if not all_quote_ids:
             return []
         
         # Get the quotes - use service role client to bypass RLS
-        quotes_response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").in_("id", quote_ids).order("created_at", desc=True).execute()
+        quotes_response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").in_("id", all_quote_ids).order("created_at", desc=True).execute()
         return quotes_response.data or []
         
     except Exception as e:

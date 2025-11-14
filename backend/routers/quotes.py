@@ -156,11 +156,25 @@ async def get_quotes(
         # Start building query
         query = supabase.table("quotes").select("*, clients(*), line_items(*)")
         
-        # If customer, only show assigned quotes
+        # If customer, only show quotes in folders they have access to
         if current_user and current_user.get("role") == "customer":
-            # Get assigned quote IDs using service role client to bypass RLS
-            assignments_response = supabase_storage.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
-            assigned_quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+            
+            if not accessible_folder_ids:
+                return []  # No accessible folders
+            
+            # Get quotes assigned to these folders
+            quote_assignments_response = supabase_storage.table("quote_folder_assignments").select("quote_id").in_("folder_id", accessible_folder_ids).execute()
+            quote_ids_from_assignments = [qa["quote_id"] for qa in (quote_assignments_response.data or [])]
+            
+            # Also get quotes with folder_id directly set (for backward compatibility)
+            quotes_with_folder = supabase_storage.table("quotes").select("id").in_("folder_id", accessible_folder_ids).execute()
+            quote_ids_from_direct = [q["id"] for q in (quotes_with_folder.data or [])]
+            
+            # Combine and deduplicate
+            assigned_quote_ids = list(set(quote_ids_from_assignments + quote_ids_from_direct))
             
             if not assigned_quote_ids:
                 return []  # No assigned quotes
@@ -302,10 +316,28 @@ async def get_quote(quote_id: str, current_user: Optional[dict] = Depends(get_op
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
-        # If customer, verify they have access using service role client to bypass RLS
+        # If customer, verify they have access through folder assignments
         if current_user and current_user.get("role") == "customer":
-            assignment = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
-            if not assignment.data:
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+            
+            if not accessible_folder_ids:
+                raise HTTPException(status_code=403, detail="You don't have access to this quote")
+            
+            # Check if quote is in any accessible folder
+            quote = response.data[0]
+            quote_folder_id = quote.get("folder_id")
+            
+            # Check direct folder_id match
+            has_access = quote_folder_id in accessible_folder_ids if quote_folder_id else False
+            
+            # Also check quote_folder_assignments
+            if not has_access:
+                quote_assignments_response = supabase_storage.table("quote_folder_assignments").select("id").eq("quote_id", quote_id).in_("folder_id", accessible_folder_ids).execute()
+                has_access = bool(quote_assignments_response.data)
+            
+            if not has_access:
                 raise HTTPException(status_code=403, detail="You don't have access to this quote")
         
         return response.data[0]
@@ -485,8 +517,27 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
     try:
         # If customer, verify they have access to this quote using service role client to bypass RLS
         if current_user.get("role") == "customer":
-            assignment = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", current_user["id"]).execute()
-            if not assignment.data:
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+            
+            if not accessible_folder_ids:
+                raise HTTPException(status_code=403, detail="You don't have access to this quote")
+            
+            # Check if quote is in any accessible folder
+            quote_response = supabase_storage.table("quotes").select("folder_id").eq("id", quote_id).single().execute()
+            quote = quote_response.data if quote_response.data else {}
+            quote_folder_id = quote.get("folder_id")
+            
+            # Check direct folder_id match
+            has_access = quote_folder_id in accessible_folder_ids if quote_folder_id else False
+            
+            # Also check quote_folder_assignments
+            if not has_access:
+                quote_assignments_response = supabase_storage.table("quote_folder_assignments").select("id").eq("quote_id", quote_id).in_("folder_id", accessible_folder_ids).execute()
+                has_access = bool(quote_assignments_response.data)
+            
+            if not has_access:
                 raise HTTPException(status_code=403, detail="You don't have access to this quote")
         # Update quote status to accepted
         update_data = {
@@ -860,7 +911,7 @@ class BulkStatusUpdateRequest(PydanticBaseModel):
 
 class BulkAssignRequest(PydanticBaseModel):
     quote_ids: List[str]
-    user_ids: List[str]
+    folder_ids: List[str]
 
 @router.post("/bulk/delete")
 async def bulk_delete_quotes(request: BulkDeleteRequest, current_admin: dict = Depends(get_current_admin)):
@@ -907,45 +958,47 @@ async def bulk_update_status(request: BulkStatusUpdateRequest, current_admin: di
 
 @router.post("/bulk/assign")
 async def bulk_assign_quotes(request: BulkAssignRequest, current_admin: dict = Depends(get_current_admin)):
-    """Bulk assign quotes to users (admin only)"""
+    """Bulk assign quotes to folders (admin only)"""
     try:
         if not request.quote_ids:
             raise HTTPException(status_code=400, detail="No quote IDs provided")
-        if not request.user_ids:
-            raise HTTPException(status_code=400, detail="No user IDs provided")
+        if not request.folder_ids:
+            raise HTTPException(status_code=400, detail="No folder IDs provided")
         
         # Get admin name for assignment tracking
         admin_name = current_admin.get("name") or current_admin.get("email", "Admin")
         
         assignments_to_create = []
         for quote_id in request.quote_ids:
-            for user_id in request.user_ids:
+            for folder_id in request.folder_ids:
                 # Check if assignment already exists
-                existing = supabase_storage.table("quote_assignments").select("id").eq("quote_id", quote_id).eq("user_id", user_id).execute()
+                existing = supabase_storage.table("quote_folder_assignments").select("id").eq("quote_id", quote_id).eq("folder_id", folder_id).execute()
                 if not existing.data:
                     assignments_to_create.append({
                         "quote_id": quote_id,
-                        "user_id": user_id,
-                        "assigned_by": admin_name,
+                        "folder_id": folder_id,
+                        "assigned_by": current_admin["id"],
                         "assigned_at": datetime.now().isoformat()
                     })
         
         if assignments_to_create:
-            supabase_storage.table("quote_assignments").insert(assignments_to_create).execute()
+            supabase_storage.table("quote_folder_assignments").insert(assignments_to_create).execute()
         
-        # Send email notifications
-        for assignment in assignments_to_create:
-            try:
-                # Get quote info
-                quote_response = supabase_storage.table("quotes").select("title, quote_number").eq("id", assignment["quote_id"]).execute()
-                if quote_response.data:
-                    quote = quote_response.data[0]
-                    quote_title = quote.get("title", "Quote")
-                    quote_number = quote.get("quote_number", "")
-                    
-                    # Get user email
-                    if supabase_service_role_key:
-                        auth_url = f"{supabase_url}/auth/v1/admin/users/{assignment['user_id']}"
+        # Get users assigned to these folders for email notifications
+        folder_ids = list(set([a["folder_id"] for a in assignments_to_create]))
+        users_to_notify = []
+        
+        if folder_ids and supabase_service_role_key:
+            # Get folder assignments
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id, user_id").in_("folder_id", folder_ids).execute()
+            
+            if folder_assignments_response.data:
+                user_ids = list(set([fa["user_id"] for fa in folder_assignments_response.data]))
+                
+                # Get user emails
+                for user_id in user_ids:
+                    try:
+                        auth_url = f"{supabase_url}/auth/v1/admin/users/{user_id}"
                         headers = {
                             "apikey": supabase_service_role_key,
                             "Authorization": f"Bearer {supabase_service_role_key}",
@@ -957,18 +1010,43 @@ async def bulk_assign_quotes(request: BulkAssignRequest, current_admin: dict = D
                             user_email = user_data.get("email")
                             user_metadata = user_data.get("user_metadata", {})
                             user_name = user_metadata.get("name")
-                            
                             if user_email:
+                                users_to_notify.append({
+                                    "email": user_email,
+                                    "name": user_name,
+                                    "user_id": user_id
+                                })
+                    except Exception as e:
+                        print(f"Warning: Could not fetch user info for {user_id}: {str(e)}")
+        
+        # Send email notifications
+        for assignment in assignments_to_create:
+            try:
+                # Get quote info
+                quote_response = supabase_storage.table("quotes").select("title, quote_number").eq("id", assignment["quote_id"]).execute()
+                if quote_response.data:
+                    quote = quote_response.data[0]
+                    quote_title = quote.get("title", "Quote")
+                    quote_number = quote.get("quote_number", "")
+                    
+                    # Notify all users with access to the folder
+                    for user_info in users_to_notify:
+                        # Check if user has access to this folder
+                        user_folder_access = supabase_storage.table("folder_assignments").select("id").eq("folder_id", assignment["folder_id"]).eq("user_id", user_info["user_id"]).execute()
+                        if user_folder_access.data:
+                            try:
                                 email_service.send_quote_assignment_notification(
-                                    to_email=user_email,
+                                    to_email=user_info["email"],
                                     quote_title=quote_title,
                                     quote_number=quote_number,
                                     quote_id=assignment["quote_id"],
-                                    user_name=user_name,
+                                    user_name=user_info["name"],
                                     assigned_by=admin_name
                                 )
+                            except Exception as e:
+                                print(f"Warning: Failed to send notification to {user_info['email']}: {str(e)}")
             except Exception as e:
-                print(f"Warning: Failed to send email notification for assignment: {str(e)}")
+                print(f"Warning: Failed to process notification for quote {assignment['quote_id']}: {str(e)}")
         
         return {"message": f"Assigned {len(assignments_to_create)} quote(s) successfully", "assigned_count": len(assignments_to_create)}
     except HTTPException:
@@ -1309,8 +1387,24 @@ async def get_client_quote_history(
         
         # If customer, only show assigned quotes
         if current_user and current_user.get("role") == "customer":
-            assignments_response = supabase_storage.table("quote_assignments").select("quote_id").eq("user_id", current_user["id"]).execute()
-            assigned_quote_ids = [a["quote_id"] for a in (assignments_response.data or [])]
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+            
+            if not accessible_folder_ids:
+                return []
+            
+            # Get quotes assigned to these folders
+            quote_assignments_response = supabase_storage.table("quote_folder_assignments").select("quote_id").in_("folder_id", accessible_folder_ids).execute()
+            quote_ids_from_assignments = [qa["quote_id"] for qa in (quote_assignments_response.data or [])]
+            
+            # Also get quotes with folder_id directly set (for backward compatibility)
+            quotes_with_folder = supabase_storage.table("quotes").select("id").in_("folder_id", accessible_folder_ids).execute()
+            quote_ids_from_direct = [q["id"] for q in (quotes_with_folder.data or [])]
+            
+            # Combine and deduplicate
+            assigned_quote_ids = list(set(quote_ids_from_assignments + quote_ids_from_direct))
+            
             if assigned_quote_ids:
                 query = query.in_("id", assigned_quote_ids)
             else:

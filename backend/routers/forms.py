@@ -273,10 +273,17 @@ async def get_forms(
                 # For template library, show all templates the customer created (regardless of folder assignments)
                 query = query.eq("created_by", current_user["id"])
             else:
-                # For regular form list, only show assigned forms
-                # Get assigned form IDs
-                assignments_response = supabase_storage.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
-                assigned_form_ids = [a["form_id"] for a in (assignments_response.data or [])]
+                # For regular form list, only show forms in folders they have access to
+                # Get folders assigned to user
+                folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+                accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+                
+                if not accessible_folder_ids:
+                    return []  # No accessible folders
+                
+                # Get forms assigned to these folders
+                form_assignments_response = supabase_storage.table("form_folder_assignments").select("form_id").in_("folder_id", accessible_folder_ids).execute()
+                assigned_form_ids = [fa["form_id"] for fa in (form_assignments_response.data or [])]
                 
                 if not assigned_form_ids:
                     return []  # No assigned forms
@@ -418,10 +425,20 @@ async def get_form(form_id: str, current_user: Optional[dict] = Depends(get_opti
         
         form = response.data
         
-        # If customer, verify they have access
+        # If customer, verify they have access through folder assignments
         if current_user and current_user.get("role") == "customer":
-            assignment = supabase.table("form_assignments").select("id").eq("form_id", form_id).eq("user_id", current_user["id"]).execute()
-            if not assignment.data:
+            # Get folders assigned to user
+            folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+            accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+            
+            if not accessible_folder_ids:
+                raise HTTPException(status_code=403, detail="You don't have access to this form")
+            
+            # Check if form is in any accessible folder
+            form_assignments_response = supabase_storage.table("form_folder_assignments").select("id").eq("form_id", form_id).in_("folder_id", accessible_folder_ids).execute()
+            has_access = bool(form_assignments_response.data)
+            
+            if not has_access:
                 raise HTTPException(status_code=403, detail="You don't have access to this form")
         
         # Sort fields by order_index and map form_fields to fields for Pydantic model
