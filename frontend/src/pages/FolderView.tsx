@@ -282,6 +282,7 @@ const FolderView: React.FC = () => {
                     <th>Name</th>
                     <th>Type</th>
                     <th>Size</th>
+                    {role === 'admin' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -316,6 +317,26 @@ const FolderView: React.FC = () => {
                           {(file.file_size / 1024).toFixed(1)} KB
                         </span>
                       </td>
+                      {role === 'admin' && (
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="btn-danger btn-sm"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Remove "${file.name}" from this folder?`)) return;
+                              try {
+                                await foldersAPI.removeFile(folder.id, file.id);
+                                loadFolderContent();
+                              } catch (err: any) {
+                                alert(err.response?.data?.detail || 'Failed to remove file from folder');
+                              }
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -349,6 +370,7 @@ const FolderView: React.FC = () => {
                     <th>Name</th>
                     <th>Status</th>
                     <th>Submissions</th>
+                    {role === 'admin' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -385,6 +407,26 @@ const FolderView: React.FC = () => {
                           {form.submissions_count || 0} {form.submissions_count === 1 ? 'submission' : 'submissions'}
                         </span>
                       </td>
+                      {role === 'admin' && (
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="btn-danger btn-sm"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Remove "${form.name}" from this folder?`)) return;
+                              try {
+                                await foldersAPI.removeForm(folder.id, form.id);
+                                loadFolderContent();
+                              } catch (err: any) {
+                                alert(err.response?.data?.detail || 'Failed to remove form from folder');
+                              }
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -418,6 +460,7 @@ const FolderView: React.FC = () => {
                     <th>Name</th>
                     <th>Status</th>
                     <th>Mode</th>
+                    {role === 'admin' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -450,6 +493,26 @@ const FolderView: React.FC = () => {
                       <td>
                         <span className="text-muted" style={{ fontSize: '0.875rem' }}>{esig.signature_mode}</span>
                       </td>
+                      {role === 'admin' && (
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="btn-danger btn-sm"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Remove "${esig.name}" from this folder?`)) return;
+                              try {
+                                await foldersAPI.removeESignature(folder.id, esig.id);
+                                loadFolderContent();
+                              } catch (err: any) {
+                                alert(err.response?.data?.detail || 'Failed to remove e-signature from folder');
+                              }
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
