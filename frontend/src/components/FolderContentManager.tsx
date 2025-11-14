@@ -34,29 +34,27 @@ const FolderContentManager: React.FC<FolderContentManagerProps> = ({
       const contentResponse = await foldersAPI.getContent(folderId);
       const content = contentResponse.data;
 
-      // Load all available items
+      // Load all available templates (templates can be assigned to multiple folders)
       let allItems: any[] = [];
       let assigned: any[] = [];
 
       if (activeTab === 'files') {
-        const filesResponse = await filesAPI.getAll({ is_reusable: true });
+        const filesResponse = await filesAPI.getAll({ templates_only: true });
         allItems = filesResponse.data || [];
         assigned = content.files || [];
       } else if (activeTab === 'forms') {
-        const formsResponse = await formsAPI.getAll();
+        const formsResponse = await formsAPI.getAll({ templates_only: true });
         allItems = formsResponse.data || [];
         assigned = content.forms || [];
       } else if (activeTab === 'esignatures') {
-        const esigResponse = await esignatureAPI.getAllDocuments();
+        const esigResponse = await esignatureAPI.getAllDocuments({ templates_only: true });
         allItems = esigResponse.data || [];
         assigned = content.esignatures || [];
       }
 
-      // Filter out already assigned items
-      const assignedIds = new Set(assigned.map((item: any) => item.id));
-      const available = allItems.filter((item: any) => !assignedIds.has(item.id));
-
-      setAvailableItems(available);
+      // Show ALL templates in available list (templates can be in multiple folders)
+      // Don't filter out already assigned items - user should see all templates
+      setAvailableItems(allItems);
       setAssignedItems(assigned);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load items');
