@@ -459,6 +459,12 @@ async def remove_form_from_folder(
         if not assignment_check.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
         
+        # Verify form still exists before deleting assignment
+        form_check = supabase_storage.table("forms").select("id, name, is_template").eq("id", form_id).single().execute()
+        if not form_check.data:
+            raise HTTPException(status_code=404, detail="Form not found - cannot remove assignment")
+        print(f"Removing form assignment: form_id={form_id}, form_name={form_check.data.get('name')}, is_template={form_check.data.get('is_template')}")
+        
         # Delete assignment - use service role client to bypass RLS
         # Get the assignment ID first, then delete by ID (more reliable)
         assignment_id = assignment_check.data[0]["id"]
@@ -469,6 +475,13 @@ async def remove_form_from_folder(
         if verify_check.data:
             print(f"Error: Assignment still exists after delete attempt for folder {folder_id}, form {form_id}")
             raise HTTPException(status_code=500, detail="Failed to remove assignment - assignment still exists")
+        
+        # Verify form still exists after deleting assignment (should always be true)
+        form_after_check = supabase_storage.table("forms").select("id, name, is_template").eq("id", form_id).single().execute()
+        if not form_after_check.data:
+            print(f"ERROR: Form {form_id} was deleted when assignment was removed! This should not happen.")
+            raise HTTPException(status_code=500, detail="Form was deleted when assignment was removed - this is a bug")
+        print(f"Form still exists after assignment removal: form_id={form_id}, is_template={form_after_check.data.get('is_template')}")
         
         return {"message": "Form assignment removed successfully"}
     except HTTPException:
@@ -573,6 +586,12 @@ async def remove_file_from_folder(
         if not assignment_check.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
         
+        # Verify file still exists before deleting assignment
+        file_check = supabase_storage.table("files").select("id, name, is_reusable").eq("id", file_id).single().execute()
+        if not file_check.data:
+            raise HTTPException(status_code=404, detail="File not found - cannot remove assignment")
+        print(f"Removing file assignment: file_id={file_id}, file_name={file_check.data.get('name')}, is_reusable={file_check.data.get('is_reusable')}")
+        
         # Delete assignment - use service role client to bypass RLS
         # Get the assignment ID first, then delete by ID (more reliable)
         assignment_id = assignment_check.data[0]["id"]
@@ -583,6 +602,13 @@ async def remove_file_from_folder(
         if verify_check.data:
             print(f"Error: Assignment still exists after delete attempt for folder {folder_id}, file {file_id}")
             raise HTTPException(status_code=500, detail="Failed to remove assignment - assignment still exists")
+        
+        # Verify file still exists after deleting assignment (should always be true)
+        file_after_check = supabase_storage.table("files").select("id, name, is_reusable").eq("id", file_id).single().execute()
+        if not file_after_check.data:
+            print(f"ERROR: File {file_id} was deleted when assignment was removed! This should not happen.")
+            raise HTTPException(status_code=500, detail="File was deleted when assignment was removed - this is a bug")
+        print(f"File still exists after assignment removal: file_id={file_id}, is_reusable={file_after_check.data.get('is_reusable')}")
         
         return {"message": "File assignment removed successfully"}
     except HTTPException:
@@ -695,6 +721,12 @@ async def remove_esignature_from_folder(
         if not assignment_check.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
         
+        # Verify document still exists before deleting assignment
+        doc_check = supabase_storage.table("esignature_documents").select("id, name, is_template").eq("id", document_id).single().execute()
+        if not doc_check.data:
+            raise HTTPException(status_code=404, detail="E-signature document not found - cannot remove assignment")
+        print(f"Removing e-signature assignment: document_id={document_id}, document_name={doc_check.data.get('name')}, is_template={doc_check.data.get('is_template')}")
+        
         # Delete assignment - use service role client to bypass RLS
         # Get the assignment ID first, then delete by ID (more reliable)
         assignment_id = assignment_check.data[0]["id"]
@@ -705,6 +737,13 @@ async def remove_esignature_from_folder(
         if verify_check.data:
             print(f"Error: Assignment still exists after delete attempt for folder {folder_id}, document {document_id}")
             raise HTTPException(status_code=500, detail="Failed to remove assignment - assignment still exists")
+        
+        # Verify document still exists after deleting assignment (should always be true)
+        doc_after_check = supabase_storage.table("esignature_documents").select("id, name, is_template").eq("id", document_id).single().execute()
+        if not doc_after_check.data:
+            print(f"ERROR: E-signature document {document_id} was deleted when assignment was removed! This should not happen.")
+            raise HTTPException(status_code=500, detail="E-signature document was deleted when assignment was removed - this is a bug")
+        print(f"Document still exists after assignment removal: document_id={document_id}, is_template={doc_after_check.data.get('is_template')}")
         
         return {"message": "E-signature assignment removed successfully"}
     except HTTPException:

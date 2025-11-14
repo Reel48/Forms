@@ -258,8 +258,17 @@ async def get_forms(
             # For template library (main page), show only templates
             query = query.eq("is_template", True)
         
-        # If customer, filter by access
-        if current_user and current_user.get("role") == "customer":
+        # Check if user is admin
+        is_admin = False
+        if current_user:
+            try:
+                user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", current_user["id"]).single().execute()
+                is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+            except Exception:
+                is_admin = False
+        
+        # If not admin (customer), filter by access
+        if current_user and not is_admin:
             if templates_only:
                 # For template library, show all templates the customer created (regardless of folder assignments)
                 query = query.eq("created_by", current_user["id"])
@@ -273,6 +282,7 @@ async def get_forms(
                     return []  # No assigned forms
                 
                 query = query.in_("id", assigned_form_ids)
+        # Admins see all templates when templates_only=True (no additional filtering needed)
         
         # Apply status filter
         if status:
