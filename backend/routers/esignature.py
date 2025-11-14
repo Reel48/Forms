@@ -178,7 +178,7 @@ async def create_document(
         # Only include fields that exist in the database table
         allowed_fields = {
             "id", "name", "description", "file_id", "document_type", "signature_mode",
-            "require_signature", "signature_fields", "folder_id", "quote_id",
+            "require_signature", "signature_fields", "is_template", "folder_id", "quote_id",
             "expires_at", "created_by", "status", "created_at", "updated_at"
         }
         document_data = {k: v for k, v in document_data.items() if k in allowed_fields}
