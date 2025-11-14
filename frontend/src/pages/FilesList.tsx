@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { filesAPI } from '../api';
+import { filesAPI, foldersAPI } from '../api';
 import type { FileItem } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
+import FolderAssignmentModal from '../components/FolderAssignmentModal';
 import './FilesList.css';
 
 function FilesList() {
@@ -15,6 +16,8 @@ function FilesList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [showUpload, setShowUpload] = useState(false);
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -267,6 +270,23 @@ function FilesList() {
             Showing {filteredFiles.length} of {files.length} file{files.length !== 1 ? 's' : ''}
           </p>
         </div>
+      )}
+
+      {selectedFile && (
+        <FolderAssignmentModal
+          isOpen={folderModalOpen}
+          onClose={() => {
+            setFolderModalOpen(false);
+            setSelectedFile(null);
+          }}
+          onAssign={async (folderId: string) => {
+            await foldersAPI.assignFile(folderId, selectedFile.id);
+            setFolderModalOpen(false);
+            setSelectedFile(null);
+          }}
+          itemType="file"
+          itemName={selectedFile.name}
+        />
       )}
     </div>
   );

@@ -656,14 +656,16 @@ function FormsList() {
                           >
                             Duplicate
                           </button>
-                          <button
-                            onClick={() => handleAssignToFolder(form)}
-                            className="btn-outline"
-                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                            title="Assign to Folder"
-                          >
-                            Assign
-                          </button>
+                          {form.is_template && (
+                            <button
+                              onClick={() => handleAssignToFolder(form)}
+                              className="btn-primary"
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#10b981', borderColor: '#10b981' }}
+                              title="Use this template in a folder"
+                            >
+                              Use Template
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(form.id, form.name)}
                             className="btn-danger"

@@ -63,12 +63,15 @@ const FolderAssignmentModal: React.FC<FolderAssignmentModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Assign {itemType.charAt(0).toUpperCase() + itemType.slice(1)} to Folder</h2>
+          <h2>Use Template in Folder</h2>
           <button onClick={onClose} className="modal-close">×</button>
         </div>
 
         <div className="modal-body">
-          <p className="item-name-display">Item: <strong>{itemName}</strong></p>
+          <p className="item-name-display">Template: <strong>{itemName}</strong></p>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+            This template will be available in the selected folder. The template remains in your library and can be used in multiple folders.
+          </p>
 
           {error && <div className="error-message">{error}</div>}
 

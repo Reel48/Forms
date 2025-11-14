@@ -213,17 +213,17 @@ const ESignatureDocumentsList: React.FC = () => {
                       >
                         {doc.status === 'signed' ? 'View' : 'Sign'}
                       </button>
-                      {role === 'admin' && (
+                      {role === 'admin' && doc.is_template && (
                         <button
-                          className="btn-secondary btn-sm"
+                          className="btn-primary btn-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAssignToFolder(doc);
                           }}
-                          title="Assign to Folder"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          title="Use this template in a folder"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: '#10b981', borderColor: '#10b981' }}
                         >
-                          Assign
+                          Use Template
                         </button>
                       )}
                     </div>
