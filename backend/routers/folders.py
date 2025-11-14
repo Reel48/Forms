@@ -68,12 +68,13 @@ async def list_folders(
 async def get_folder(folder_id: str, user = Depends(get_current_user)):
     """Get folder by ID."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         response = supabase.table("folders").select("*").eq("id", folder_id).single().execute()
@@ -111,12 +112,13 @@ async def create_folder(
 ):
     """Create a new folder. Admins can create folders for any client."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Only admins can create folders
@@ -170,12 +172,13 @@ async def update_folder(
 ):
     """Update a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Get existing folder
@@ -256,12 +259,13 @@ async def assign_folder_to_user(
 ):
     """Assign a folder to a user."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Only admins can assign folders
@@ -298,12 +302,13 @@ async def remove_folder_assignment(
 ):
     """Remove folder assignment from a user."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Only admins can remove assignments
@@ -324,12 +329,13 @@ async def remove_folder_assignment(
 async def get_folder_assignments(folder_id: str, user = Depends(get_current_user)):
     """Get all assignments for a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Check folder access
@@ -363,12 +369,13 @@ async def assign_form_to_folder(
 ):
     """Assign a form to a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Verify folder and form exist - use service role client to bypass RLS
@@ -419,12 +426,13 @@ async def remove_form_from_folder(
 ):
     """Remove a form from a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Only admins can remove form assignments
@@ -449,12 +457,13 @@ async def assign_file_to_folder(
 ):
     """Assign a file to a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Verify folder and file exist - use service role client to bypass RLS
@@ -509,12 +518,13 @@ async def remove_file_from_folder(
 ):
     """Remove a file from a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Only admins can remove file assignments
@@ -539,12 +549,14 @@ async def assign_esignature_to_folder(
 ):
     """Assign an e-signature document to a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+            print(f"Admin check for user {user['id']}: is_admin={is_admin}")
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Verify folder and document exist - use service role client to bypass RLS
@@ -556,15 +568,21 @@ async def assign_esignature_to_folder(
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="E-signature document not found")
         
+        print(f"Assigning document {document_id} to folder {folder_id}, is_admin={is_admin}")
+        
         # Check permissions: admins can assign any document to any folder, users can only assign their own documents to folders they have access to
         if not is_admin:
             if doc_response.data.get("created_by") != user["id"]:
+                print(f"User {user['id']} does not own document {document_id}")
                 raise HTTPException(status_code=403, detail="You can only assign e-signature documents you created")
             
             # Check if user has access to the folder
             folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
             if not folder_assignment.data:
+                print(f"User {user['id']} does not have access to folder {folder_id}")
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
+        else:
+            print(f"Admin user {user['id']} can assign document to folder - skipping permission checks")
         # Admins can assign any document to any folder - no additional checks needed
         
         # Create assignment
@@ -600,12 +618,13 @@ async def remove_esignature_from_folder(
 ):
     """Remove an e-signature document from a folder."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
-        except Exception:
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
         # Only admins can remove e-signature assignments
