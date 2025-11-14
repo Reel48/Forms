@@ -50,10 +50,22 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Request path: {request.url.path}")
     logger.error(f"Request method: {request.method}")
     logger.error(traceback.format_exc())
-    return JSONResponse(
+    
+    # Create response with CORS headers
+    response = JSONResponse(
         status_code=500,
         content={"detail": f"Internal server error: {str(exc)}"}
     )
+    
+    # Ensure CORS headers are added even on errors
+    origin = request.headers.get("origin")
+    if origin and origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 # Add validation error handler
 @app.exception_handler(RequestValidationError)
@@ -64,10 +76,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error(f"Validation error: {exc.errors()}")
     logger.error(f"Request path: {request.url.path}")
     logger.error(f"Request method: {request.method}")
-    return JSONResponse(
+    
+    # Create response with CORS headers
+    response = JSONResponse(
         status_code=422,
         content={"detail": exc.errors(), "body": exc.body}
     )
+    
+    # Ensure CORS headers are added even on errors
+    origin = request.headers.get("origin")
+    if origin and origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 # Get allowed origins from environment or use defaults
 # In production, set ALLOWED_ORIGINS to include your Vercel domain(s)
