@@ -315,8 +315,8 @@ async def remove_folder_assignment(
         if not is_admin:
             raise HTTPException(status_code=403, detail="Only admins can remove folder assignments")
         
-        # Delete assignment
-        supabase.table("folder_assignments").delete().eq("folder_id", folder_id).eq("user_id", user_id).execute()
+        # Delete assignment - use service role client to bypass RLS
+        supabase_storage.table("folder_assignments").delete().eq("folder_id", folder_id).eq("user_id", user_id).execute()
         
         return {"message": "Assignment removed successfully"}
     except HTTPException:
@@ -439,8 +439,8 @@ async def remove_form_from_folder(
         if not is_admin:
             raise HTTPException(status_code=403, detail="Only admins can remove form assignments")
         
-        # Delete assignment
-        supabase.table("form_folder_assignments").delete().eq("folder_id", folder_id).eq("form_id", form_id).execute()
+        # Delete assignment - use service role client to bypass RLS
+        supabase_storage.table("form_folder_assignments").delete().eq("folder_id", folder_id).eq("form_id", form_id).execute()
         
         return {"message": "Form assignment removed successfully"}
     except HTTPException:
@@ -531,8 +531,8 @@ async def remove_file_from_folder(
         if not is_admin:
             raise HTTPException(status_code=403, detail="Only admins can remove file assignments")
         
-        # Delete assignment
-        supabase.table("file_folder_assignments").delete().eq("folder_id", folder_id).eq("file_id", file_id).execute()
+        # Delete assignment - use service role client to bypass RLS
+        supabase_storage.table("file_folder_assignments").delete().eq("folder_id", folder_id).eq("file_id", file_id).execute()
         
         return {"message": "File assignment removed successfully"}
     except HTTPException:
@@ -631,8 +631,8 @@ async def remove_esignature_from_folder(
         if not is_admin:
             raise HTTPException(status_code=403, detail="Only admins can remove e-signature assignments")
         
-        # Delete assignment
-        supabase.table("esignature_document_folder_assignments").delete().eq("folder_id", folder_id).eq("document_id", document_id).execute()
+        # Delete assignment - use service role client to bypass RLS
+        supabase_storage.table("esignature_document_folder_assignments").delete().eq("folder_id", folder_id).eq("document_id", document_id).execute()
         
         return {"message": "E-signature assignment removed successfully"}
     except HTTPException:

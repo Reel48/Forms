@@ -574,22 +574,26 @@ async def remove_file_folder_assignment(
 ):
     """Remove file assignment from folder."""
     try:
-        # Check if assignment exists
-        assignment_response = supabase.table("file_folder_assignments").select("*").eq("file_id", file_id).eq("folder_id", folder_id).single().execute()
+        # Check if assignment exists - use service role client to bypass RLS
+        assignment_response = supabase_storage.table("file_folder_assignments").select("*").eq("file_id", file_id).eq("folder_id", folder_id).single().execute()
         if not assignment_response.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
         
         assignment_data = assignment_response.data
         
-        # Check if user is admin or created the assignment
-        user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
-        is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        # Check if user is admin or created the assignment - use service role client to bypass RLS
+        is_admin = False
+        try:
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            is_admin = False
         
         if not is_admin and assignment_data.get("assigned_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
-        # Delete assignment
-        supabase.table("file_folder_assignments").delete().eq("file_id", file_id).eq("folder_id", folder_id).execute()
+        # Delete assignment - use service role client to bypass RLS
+        supabase_storage.table("file_folder_assignments").delete().eq("file_id", file_id).eq("folder_id", folder_id).execute()
         
         return {"message": "Assignment removed successfully"}
     except HTTPException:
