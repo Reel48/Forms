@@ -380,7 +380,7 @@ async def assign_form_to_folder(
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        # Check permissions: admins can assign any form, users can only assign their own forms
+        # Check permissions: admins can assign any form to any folder, users can only assign their own forms to folders they have access to
         if not is_admin:
             if form_response.data.get("created_by") != user["id"]:
                 raise HTTPException(status_code=403, detail="You can only assign forms you created")
@@ -389,6 +389,7 @@ async def assign_form_to_folder(
             folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
             if not folder_assignment.data:
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
+        # Admins can assign any form to any folder - no additional checks needed
         
         # Create assignment
         assignment_data = {
@@ -465,7 +466,7 @@ async def assign_file_to_folder(
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
-        # Check permissions: admins can assign any file, users can only assign their own files
+        # Check permissions: admins can assign any file to any folder, users can only assign their own files to folders they have access to
         if not is_admin:
             if file_response.data.get("uploaded_by") != user["id"]:
                 raise HTTPException(status_code=403, detail="You can only assign files you uploaded")
@@ -474,6 +475,7 @@ async def assign_file_to_folder(
             folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
             if not folder_assignment.data:
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
+        # Admins can assign any file to any folder - no additional checks needed
         
         # Create assignment (use existing file_folder_assignments table)
         assignment_data = {
@@ -554,7 +556,7 @@ async def assign_esignature_to_folder(
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="E-signature document not found")
         
-        # Check permissions: admins can assign any document, users can only assign their own documents
+        # Check permissions: admins can assign any document to any folder, users can only assign their own documents to folders they have access to
         if not is_admin:
             if doc_response.data.get("created_by") != user["id"]:
                 raise HTTPException(status_code=403, detail="You can only assign e-signature documents you created")
@@ -563,6 +565,7 @@ async def assign_esignature_to_folder(
             folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
             if not folder_assignment.data:
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
+        # Admins can assign any document to any folder - no additional checks needed
         
         # Create assignment
         assignment_data = {
