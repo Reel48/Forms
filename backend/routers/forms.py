@@ -258,16 +258,21 @@ async def get_forms(
             # For template library (main page), show only templates
             query = query.eq("is_template", True)
         
-        # If customer, only show assigned forms
+        # If customer, filter by access
         if current_user and current_user.get("role") == "customer":
-            # Get assigned form IDs
-            assignments_response = supabase_storage.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
-            assigned_form_ids = [a["form_id"] for a in (assignments_response.data or [])]
-            
-            if not assigned_form_ids:
-                return []  # No assigned forms
-            
-            query = query.in_("id", assigned_form_ids)
+            if templates_only:
+                # For template library, show all templates the customer created (regardless of folder assignments)
+                query = query.eq("created_by", current_user["id"])
+            else:
+                # For regular form list, only show assigned forms
+                # Get assigned form IDs
+                assignments_response = supabase_storage.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
+                assigned_form_ids = [a["form_id"] for a in (assignments_response.data or [])]
+                
+                if not assigned_form_ids:
+                    return []  # No assigned forms
+                
+                query = query.in_("id", assigned_form_ids)
         
         # Apply status filter
         if status:

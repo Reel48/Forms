@@ -72,22 +72,27 @@ async def list_documents(
         
         # If not admin, filter by access
         if not is_admin:
-            # Get folders user has access to (if folder_assignments table exists)
-            accessible_folder_ids = []
-            try:
-                folder_assignments = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
-                accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
-            except Exception:
-                pass
-            
-            # Filter: documents user created OR documents in accessible folders
-            if accessible_folder_ids:
-                query = query.or_(
-                    f"folder_id.in.({','.join(accessible_folder_ids)})",
-                    f"created_by.eq.{user['id']}"
-                )
-            else:
+            if templates_only:
+                # For template library, show all templates the user created (regardless of folder assignments)
                 query = query.eq("created_by", user["id"])
+            else:
+                # For regular document list, filter by folder access
+                # Get folders user has access to (if folder_assignments table exists)
+                accessible_folder_ids = []
+                try:
+                    folder_assignments = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
+                    accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
+                except Exception:
+                    pass
+                
+                # Filter: documents user created OR documents in accessible folders
+                if accessible_folder_ids:
+                    query = query.or_(
+                        f"folder_id.in.({','.join(accessible_folder_ids)})",
+                        f"created_by.eq.{user['id']}"
+                    )
+                else:
+                    query = query.eq("created_by", user["id"])
         
         response = query.order("created_at", desc=True).execute()
         return response.data if response.data else []
