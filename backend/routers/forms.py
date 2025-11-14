@@ -493,6 +493,7 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
             "settings": settings,
             "welcome_screen": welcome_screen,
             "thank_you_screen": thank_you_screen,
+            "is_template": getattr(form, 'is_template', True),  # New forms are templates by default
             "created_at": now,
             "updated_at": now
         }
