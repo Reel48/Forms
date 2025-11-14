@@ -593,7 +593,15 @@ async def remove_file_folder_assignment(
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Delete assignment - use service role client to bypass RLS
-        supabase_storage.table("file_folder_assignments").delete().eq("file_id", file_id).eq("folder_id", folder_id).execute()
+        delete_response = supabase_storage.table("file_folder_assignments").delete().eq("file_id", file_id).eq("folder_id", folder_id).execute()
+        
+        # Verify deletion
+        if not delete_response.data:
+            print(f"Warning: Delete operation returned no data for file {file_id}, folder {folder_id}")
+            # Try to verify if it still exists
+            verify_check = supabase_storage.table("file_folder_assignments").select("id").eq("file_id", file_id).eq("folder_id", folder_id).execute()
+            if verify_check.data:
+                raise HTTPException(status_code=500, detail="Failed to remove assignment - assignment still exists")
         
         return {"message": "Assignment removed successfully"}
     except HTTPException:
