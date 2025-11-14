@@ -59,7 +59,7 @@ async def create_email_template(
         # If this is marked as default, unset other defaults of the same type
         is_default = template_data.get("is_default", False)
         if is_default:
-            supabase.table("email_templates").update({"is_default": False}).eq("template_type", template_type).execute()
+            supabase_storage.table("email_templates").update({"is_default": False}).eq("template_type", template_type).execute()
         
         template_db_data = {
             "id": str(uuid.uuid4()),
@@ -74,7 +74,7 @@ async def create_email_template(
             "updated_at": datetime.now().isoformat(),
         }
         
-        response = supabase.table("email_templates").insert(template_db_data).execute()
+        response = supabase_storage.table("email_templates").insert(template_db_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create template")
@@ -93,7 +93,7 @@ async def get_email_templates(
 ):
     """Get all email templates (admin only)"""
     try:
-        query = supabase.table("email_templates").select("*")
+        query = supabase_storage.table("email_templates").select("*")
         
         if template_type:
             query = query.eq("template_type", template_type)
@@ -120,7 +120,7 @@ async def get_email_template(
 ):
     """Get a specific email template (admin only)"""
     try:
-        response = supabase.table("email_templates").select("*").eq("id", template_id).single().execute()
+        response = supabase_storage.table("email_templates").select("*").eq("id", template_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Template not found")
@@ -141,7 +141,7 @@ async def update_email_template(
     """Update an email template (admin only)"""
     try:
         # Verify template exists
-        template_check = supabase.table("email_templates").select("id, template_type").eq("id", template_id).single().execute()
+        template_check = supabase_storage.table("email_templates").select("id, template_type").eq("id", template_id).single().execute()
         if not template_check.data:
             raise HTTPException(status_code=404, detail="Template not found")
         
@@ -182,10 +182,10 @@ async def update_email_template(
             is_default = template_data["is_default"]
             if is_default:
                 # Unset other defaults of the same type
-                supabase.table("email_templates").update({"is_default": False}).eq("template_type", template_type).neq("id", template_id).execute()
+                supabase_storage.table("email_templates").update({"is_default": False}).eq("template_type", template_type).neq("id", template_id).execute()
             update_data["is_default"] = is_default
         
-        response = supabase.table("email_templates").update(update_data).eq("id", template_id).execute()
+        response = supabase_storage.table("email_templates").update(update_data).eq("id", template_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update template")
@@ -205,12 +205,12 @@ async def delete_email_template(
     """Delete an email template (admin only)"""
     try:
         # Verify template exists
-        template_check = supabase.table("email_templates").select("id").eq("id", template_id).execute()
+        template_check = supabase_storage.table("email_templates").select("id").eq("id", template_id).execute()
         if not template_check.data:
             raise HTTPException(status_code=404, detail="Template not found")
         
         # Delete template
-        supabase.table("email_templates").delete().eq("id", template_id).execute()
+        supabase_storage.table("email_templates").delete().eq("id", template_id).execute()
         
         return {"success": True}
         
@@ -604,7 +604,7 @@ async def update_form(form_id: str, form_update: FormUpdate, current_admin: dict
     """Update a form (admin only)"""
     try:
         # Check if form exists
-        existing = supabase.table("forms").select("id").eq("id", form_id).execute()
+        existing = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
@@ -628,7 +628,7 @@ async def update_form(form_id: str, form_update: FormUpdate, current_admin: dict
         update_data["updated_at"] = datetime.now().isoformat()
         
         # Update form
-        supabase.table("forms").update(update_data).eq("id", form_id).execute()
+        supabase_storage.table("forms").update(update_data).eq("id", form_id).execute()
         
         # Return updated form
         # Pass current_admin as current_user since we're calling from within update_form
@@ -644,12 +644,12 @@ async def delete_form(form_id: str, current_admin: dict = Depends(get_current_ad
     """Delete a form and all its fields (admin only)"""
     try:
         # Check if form exists
-        existing = supabase.table("forms").select("id").eq("id", form_id).execute()
+        existing = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Delete form (cascade will delete fields, submissions, and answers)
-        supabase.table("forms").delete().eq("id", form_id).execute()
+        supabase_storage.table("forms").delete().eq("id", form_id).execute()
         
         return {"message": "Form deleted successfully"}
         
@@ -664,12 +664,12 @@ async def create_field(form_id: str, field: FormFieldCreate, current_admin: dict
     """Add a field to a form (admin only)"""
     try:
         # Check if form exists
-        existing = supabase.table("forms").select("id").eq("id", form_id).execute()
+        existing = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Get current max order_index
-        fields_response = supabase.table("form_fields").select("order_index").eq("form_id", form_id).order("order_index", desc=True).limit(1).execute()
+        fields_response = supabase_storage.table("form_fields").select("order_index").eq("form_id", form_id).order("order_index", desc=True).limit(1).execute()
         max_order = fields_response.data[0]["order_index"] if fields_response.data else -1
         
         # Create field
@@ -688,7 +688,7 @@ async def create_field(form_id: str, field: FormFieldCreate, current_admin: dict
             "created_at": datetime.now().isoformat()
         }
         
-        response = supabase.table("form_fields").insert(field_data).execute()
+        response = supabase_storage.table("form_fields").insert(field_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create field")
@@ -705,7 +705,7 @@ async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdat
     """Update a form field (admin only)"""
     try:
         # Check if field exists and belongs to form
-        existing = supabase.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
+        existing = supabase_storage.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Field not found")
         
@@ -713,7 +713,7 @@ async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdat
         update_data = field_update.model_dump(exclude_unset=True)
         
         # Update field
-        response = supabase.table("form_fields").update(update_data).eq("id", field_id).execute()
+        response = supabase_storage.table("form_fields").update(update_data).eq("id", field_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update field")
@@ -730,12 +730,12 @@ async def delete_field(form_id: str, field_id: str, current_admin: dict = Depend
     """Delete a form field (admin only)"""
     try:
         # Check if field exists and belongs to form
-        existing = supabase.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
+        existing = supabase_storage.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Field not found")
         
         # Delete field
-        supabase.table("form_fields").delete().eq("id", field_id).execute()
+        supabase_storage.table("form_fields").delete().eq("id", field_id).execute()
         
         return {"message": "Field deleted successfully"}
         
@@ -749,7 +749,7 @@ async def reorder_fields(form_id: str, field_orders: List[dict], current_admin: 
     """Reorder form fields (admin only)"""
     try:
         # Check if form exists
-        existing = supabase.table("forms").select("id").eq("id", form_id).execute()
+        existing = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
@@ -759,7 +759,7 @@ async def reorder_fields(form_id: str, field_orders: List[dict], current_admin: 
             order_index = field_order.get("order_index")
             
             if field_id and order_index is not None:
-                supabase.table("form_fields").update({"order_index": order_index}).eq("id", field_id).eq("form_id", form_id).execute()
+                supabase_storage.table("form_fields").update({"order_index": order_index}).eq("id", field_id).eq("form_id", form_id).execute()
         
         return {"message": "Fields reordered successfully"}
         
@@ -774,13 +774,13 @@ async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_c
     """Get all submissions for a form (admin only)"""
     try:
         # Check if form exists
-        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
         
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Fetch submissions with answers
-        response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
+        response = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
         
         submissions = response.data or []
         
@@ -838,7 +838,7 @@ async def create_short_url(form_id: str, request: Request, current_admin: dict =
         import random
         
         # Verify form exists
-        form_check = supabase.table("forms").select("id, public_url_slug").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id, public_url_slug").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
@@ -855,7 +855,7 @@ async def create_short_url(form_id: str, request: Request, current_admin: dict =
         short_code = None
         for _ in range(10):
             code = generate_short_code()
-            existing = supabase.table("form_short_urls").select("id").eq("short_code", code).execute()
+            existing = supabase_storage.table("form_short_urls").select("id").eq("short_code", code).execute()
             if not existing.data:
                 short_code = code
                 break
@@ -872,7 +872,7 @@ async def create_short_url(form_id: str, request: Request, current_admin: dict =
             "created_at": datetime.now().isoformat(),
         }
         
-        response = supabase.table("form_short_urls").insert(short_url_data).execute()
+        response = supabase_storage.table("form_short_urls").insert(short_url_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create short URL")
@@ -952,7 +952,7 @@ async def redirect_short_url(short_code: str):
 async def get_form_short_urls(form_id: str, current_admin: dict = Depends(get_current_admin)):
     """Get all short URLs for a form (admin only)"""
     try:
-        response = supabase.table("form_short_urls").select("*").eq("form_id", form_id).order("created_at", desc=True).execute()
+        response = supabase_storage.table("form_short_urls").select("*").eq("form_id", form_id).order("created_at", desc=True).execute()
         
         return response.data or []
         
@@ -971,13 +971,13 @@ async def export_submissions_pdf(form_id: str, current_admin: dict = Depends(get
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         
         # Get form and submissions
-        form_response = supabase.table("forms").select("*").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("*").eq("id", form_id).single().execute()
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         form = form_response.data
         
-        submissions_response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
+        submissions_response = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
         submissions = submissions_response.data or []
         
         if not submissions:
@@ -1053,7 +1053,7 @@ async def export_submissions_pdf(form_id: str, current_admin: dict = Depends(get
             elements.append(Spacer(1, 0.2*inch))
             
             # Get form fields for reference
-            fields_response = supabase.table("form_fields").select("*").eq("form_id", form_id).order("order_index").execute()
+            fields_response = supabase_storage.table("form_fields").select("*").eq("form_id", form_id).order("order_index").execute()
             fields = {f['id']: f for f in (fields_response.data or [])}
             
             # Answers
@@ -1125,16 +1125,16 @@ async def get_submission_notes(
     """Get all notes for a submission (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
         # Get notes
-        response = supabase.table("form_submission_notes").select("*").eq("submission_id", submission_id).order("created_at", desc=True).execute()
+        response = supabase_storage.table("form_submission_notes").select("*").eq("submission_id", submission_id).order("created_at", desc=True).execute()
         
         return response.data or []
         
@@ -1153,11 +1153,11 @@ async def create_submission_note(
     """Create a note for a submission (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
@@ -1175,7 +1175,7 @@ async def create_submission_note(
             "updated_at": datetime.now().isoformat(),
         }
         
-        response = supabase.table("form_submission_notes").insert(note_data_db).execute()
+        response = supabase_storage.table("form_submission_notes").insert(note_data_db).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create note")
@@ -1198,16 +1198,16 @@ async def update_submission_note(
     """Update a submission note (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
         # Verify note exists and belongs to submission
-        note_check = supabase.table("form_submission_notes").select("id").eq("id", note_id).eq("submission_id", submission_id).execute()
+        note_check = supabase_storage.table("form_submission_notes").select("id").eq("id", note_id).eq("submission_id", submission_id).execute()
         if not note_check.data:
             raise HTTPException(status_code=404, detail="Note not found")
         
@@ -1216,7 +1216,7 @@ async def update_submission_note(
             raise HTTPException(status_code=400, detail="Note text is required")
         
         # Update note
-        response = supabase.table("form_submission_notes").update({
+        response = supabase_storage.table("form_submission_notes").update({
             "note_text": note_text,
             "updated_at": datetime.now().isoformat(),
         }).eq("id", note_id).execute()
@@ -1241,21 +1241,21 @@ async def delete_submission_note(
     """Delete a submission note (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
         # Verify note exists and belongs to submission
-        note_check = supabase.table("form_submission_notes").select("id").eq("id", note_id).eq("submission_id", submission_id).execute()
+        note_check = supabase_storage.table("form_submission_notes").select("id").eq("id", note_id).eq("submission_id", submission_id).execute()
         if not note_check.data:
             raise HTTPException(status_code=404, detail="Note not found")
         
         # Delete note
-        supabase.table("form_submission_notes").delete().eq("id", note_id).execute()
+        supabase_storage.table("form_submission_notes").delete().eq("id", note_id).execute()
         
         return {"success": True}
         
@@ -1274,7 +1274,7 @@ async def create_webhook(
     """Create a webhook for a form (admin only)"""
     try:
         # Verify form exists
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
@@ -1302,7 +1302,7 @@ async def create_webhook(
             "updated_at": datetime.now().isoformat(),
         }
         
-        response = supabase.table("form_webhooks").insert(webhook_db_data).execute()
+        response = supabase_storage.table("form_webhooks").insert(webhook_db_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create webhook")
@@ -1322,11 +1322,11 @@ async def get_form_webhooks(
     """Get all webhooks for a form (admin only)"""
     try:
         # Verify form exists
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        response = supabase.table("form_webhooks").select("*").eq("form_id", form_id).order("created_at", desc=True).execute()
+        response = supabase_storage.table("form_webhooks").select("*").eq("form_id", form_id).order("created_at", desc=True).execute()
         
         # Don't return secret in response
         webhooks = response.data or []
@@ -1351,11 +1351,11 @@ async def update_webhook(
     """Update a webhook (admin only)"""
     try:
         # Verify form and webhook exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        webhook_check = supabase.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
+        webhook_check = supabase_storage.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
         if not webhook_check.data:
             raise HTTPException(status_code=404, detail="Webhook not found")
         
@@ -1386,7 +1386,7 @@ async def update_webhook(
             if secret and secret != "***":
                 update_data["secret"] = secret if secret else None
         
-        response = supabase.table("form_webhooks").update(update_data).eq("id", webhook_id).execute()
+        response = supabase_storage.table("form_webhooks").update(update_data).eq("id", webhook_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update webhook")
@@ -1411,16 +1411,16 @@ async def delete_webhook(
     """Delete a webhook (admin only)"""
     try:
         # Verify form and webhook exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        webhook_check = supabase.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
+        webhook_check = supabase_storage.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
         if not webhook_check.data:
             raise HTTPException(status_code=404, detail="Webhook not found")
         
         # Delete webhook
-        supabase.table("form_webhooks").delete().eq("id", webhook_id).execute()
+        supabase_storage.table("form_webhooks").delete().eq("id", webhook_id).execute()
         
         return {"success": True}
         
@@ -1439,15 +1439,15 @@ async def get_webhook_deliveries(
     """Get delivery history for a webhook (admin only)"""
     try:
         # Verify form and webhook exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        webhook_check = supabase.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
+        webhook_check = supabase_storage.table("form_webhooks").select("id").eq("id", webhook_id).eq("form_id", form_id).execute()
         if not webhook_check.data:
             raise HTTPException(status_code=404, detail="Webhook not found")
         
-        response = supabase.table("form_webhook_deliveries").select("*").eq("webhook_id", webhook_id).order("created_at", desc=True).limit(limit).execute()
+        response = supabase_storage.table("form_webhook_deliveries").select("*").eq("webhook_id", webhook_id).order("created_at", desc=True).limit(limit).execute()
         
         return response.data or []
         
@@ -1498,11 +1498,11 @@ async def add_submission_tag(
     """Add a tag to a submission (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
@@ -1527,7 +1527,7 @@ async def add_submission_tag(
         }
         
         try:
-            response = supabase.table("form_submission_tags").insert(tag_db_data).execute()
+            response = supabase_storage.table("form_submission_tags").insert(tag_db_data).execute()
             return response.data[0] if response.data else tag_db_data
         except Exception as e:
             # Check if it's a duplicate
@@ -1549,15 +1549,15 @@ async def get_submission_tags(
     """Get all tags for a submission (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
-        response = supabase.table("form_submission_tags").select("*").eq("submission_id", submission_id).order("created_at", desc=True).execute()
+        response = supabase_storage.table("form_submission_tags").select("*").eq("submission_id", submission_id).order("created_at", desc=True).execute()
         
         return response.data or []
         
@@ -1576,21 +1576,21 @@ async def delete_submission_tag(
     """Delete a tag from a submission (admin only)"""
     try:
         # Verify form and submission exist
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
         # Verify tag exists and belongs to submission
-        tag_check = supabase.table("form_submission_tags").select("id").eq("id", tag_id).eq("submission_id", submission_id).execute()
+        tag_check = supabase_storage.table("form_submission_tags").select("id").eq("id", tag_id).eq("submission_id", submission_id).execute()
         if not tag_check.data:
             raise HTTPException(status_code=404, detail="Tag not found")
         
         # Delete tag
-        supabase.table("form_submission_tags").delete().eq("id", tag_id).execute()
+        supabase_storage.table("form_submission_tags").delete().eq("id", tag_id).execute()
         
         return {"success": True}
         
@@ -1607,19 +1607,19 @@ async def get_all_submission_tags(
     """Get all unique tags used in a form's submissions (admin only)"""
     try:
         # Verify form exists
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Get all submissions for this form
-        submissions_response = supabase.table("form_submissions").select("id").eq("form_id", form_id).execute()
+        submissions_response = supabase_storage.table("form_submissions").select("id").eq("form_id", form_id).execute()
         submission_ids = [s["id"] for s in (submissions_response.data or [])]
         
         if not submission_ids:
             return []
         
         # Get all tags for these submissions
-        response = supabase.table("form_submission_tags").select("tag_name, color").in_("submission_id", submission_ids).execute()
+        response = supabase_storage.table("form_submission_tags").select("tag_name, color").in_("submission_id", submission_ids).execute()
         
         # Get unique tags
         unique_tags = {}
@@ -1670,7 +1670,7 @@ async def save_field_to_library(
             "updated_at": datetime.now().isoformat(),
         }
         
-        response = supabase.table("field_library").insert(library_field_data).execute()
+        response = supabase_storage.table("field_library").insert(library_field_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to save field to library")
@@ -1689,7 +1689,7 @@ async def get_field_library(
 ):
     """Get all fields from the library (admin only)"""
     try:
-        query = supabase.table("field_library").select("*")
+        query = supabase_storage.table("field_library").select("*")
         
         if field_type:
             query = query.eq("field_type", field_type)
@@ -1709,12 +1709,12 @@ async def delete_field_from_library(
     """Delete a field from the library (admin only)"""
     try:
         # Verify field exists
-        field_check = supabase.table("field_library").select("id").eq("id", field_id).execute()
+        field_check = supabase_storage.table("field_library").select("id").eq("id", field_id).execute()
         if not field_check.data:
             raise HTTPException(status_code=404, detail="Field not found in library")
         
         # Delete field
-        supabase.table("field_library").delete().eq("id", field_id).execute()
+        supabase_storage.table("field_library").delete().eq("id", field_id).execute()
         
         return {"success": True}
         
@@ -1733,14 +1733,14 @@ async def create_form_version(
     """Create a new version snapshot of a form (admin only)"""
     try:
         # Verify form exists
-        form_response = supabase.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         form = form_response.data
         
         # Get current max version number
-        versions_response = supabase.table("form_versions").select("version_number").eq("form_id", form_id).order("version_number", desc=True).limit(1).execute()
+        versions_response = supabase_storage.table("form_versions").select("version_number").eq("form_id", form_id).order("version_number", desc=True).limit(1).execute()
         max_version = 0
         if versions_response.data and len(versions_response.data) > 0:
             max_version = versions_response.data[0].get("version_number", 0)
@@ -1766,7 +1766,7 @@ async def create_form_version(
             "created_at": datetime.now().isoformat(),
         }
         
-        response = supabase.table("form_versions").insert(version_db_data).execute()
+        response = supabase_storage.table("form_versions").insert(version_db_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create version")
@@ -1786,11 +1786,11 @@ async def get_form_versions(
     """Get all versions of a form (admin only)"""
     try:
         # Verify form exists
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
-        response = supabase.table("form_versions").select("*").eq("form_id", form_id).order("version_number", desc=True).execute()
+        response = supabase_storage.table("form_versions").select("*").eq("form_id", form_id).order("version_number", desc=True).execute()
         
         return response.data or []
         
@@ -1808,12 +1808,12 @@ async def restore_form_version(
     """Restore a form to a previous version (admin only)"""
     try:
         # Verify form exists
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Get version
-        version_response = supabase.table("form_versions").select("*").eq("id", version_id).eq("form_id", form_id).single().execute()
+        version_response = supabase_storage.table("form_versions").select("*").eq("id", version_id).eq("form_id", form_id).single().execute()
         if not version_response.data:
             raise HTTPException(status_code=404, detail="Version not found")
         
@@ -1831,13 +1831,13 @@ async def restore_form_version(
             "updated_at": datetime.now().isoformat(),
         }
         
-        supabase.table("forms").update(update_data).eq("id", form_id).execute()
+        supabase_storage.table("forms").update(update_data).eq("id", form_id).execute()
         
         # Restore fields
         fields_data = form_data.get("fields", [])
         if fields_data:
             # Delete existing fields
-            supabase.table("form_fields").delete().eq("form_id", form_id).execute()
+            supabase_storage.table("form_fields").delete().eq("form_id", form_id).execute()
             
             # Insert restored fields
             for idx, field in enumerate(fields_data):
@@ -1855,7 +1855,7 @@ async def restore_form_version(
                     "conditional_logic": field.get("conditional_logic", {}),
                     "created_at": datetime.now().isoformat(),
                 }
-                supabase.table("form_fields").insert(field_db_data).execute()
+                supabase_storage.table("form_fields").insert(field_db_data).execute()
         
         return {"success": True, "message": f"Form restored to version {version.get('version_number')}"}
         
@@ -1874,12 +1874,12 @@ async def update_submission_review_status(
     """Update the review status of a submission (admin only)"""
     try:
         # Verify form exists
-        form_check = supabase.table("forms").select("id").eq("id", form_id).execute()
+        form_check = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
         if not form_check.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Verify submission exists
-        submission_check = supabase.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
+        submission_check = supabase_storage.table("form_submissions").select("id").eq("id", submission_id).eq("form_id", form_id).execute()
         if not submission_check.data:
             raise HTTPException(status_code=404, detail="Submission not found")
         
@@ -1889,13 +1889,13 @@ async def update_submission_review_status(
             raise HTTPException(status_code=400, detail="Invalid review_status. Must be 'new', 'reviewed', or 'archived'")
         
         # Update submission
-        response = supabase.table("form_submissions").update({"review_status": new_status}).eq("id", submission_id).execute()
+        response = supabase_storage.table("form_submissions").update({"review_status": new_status}).eq("id", submission_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update submission")
         
         # Fetch complete submission with answers
-        full_response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).single().execute()
+        full_response = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).single().execute()
         
         if not full_response.data:
             raise HTTPException(status_code=500, detail="Failed to fetch updated submission")
