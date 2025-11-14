@@ -8,7 +8,7 @@ from models import (
     FolderAssignment, FolderAssignmentCreate,
     FormFolderAssignment, FormFolderAssignmentCreate
 )
-from database import supabase
+from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
