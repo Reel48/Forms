@@ -222,6 +222,7 @@ export interface Form {
   description?: string;
   status: string; // draft, published, archived
   priority?: string;
+  is_template?: boolean; // True for reusable templates, False for project-specific instances
   public_url_slug?: string;
   theme?: Record<string, any>;
   settings?: Record<string, any>;
@@ -542,6 +543,7 @@ export interface ESignatureDocument {
   signature_mode: string; // simple, advanced
   require_signature: boolean;
   signature_fields?: Record<string, any>; // JSONB for advanced mode
+  is_template?: boolean; // True for reusable templates, False for project-specific instances
   folder_id?: string;
   quote_id?: string;
   expires_at?: string;

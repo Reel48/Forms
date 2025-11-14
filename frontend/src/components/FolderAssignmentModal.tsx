@@ -14,7 +14,7 @@ const FolderAssignmentModal: React.FC<FolderAssignmentModalProps> = ({
   isOpen,
   onClose,
   onAssign,
-  itemType,
+  itemType: _itemType, // Prefixed with _ to indicate intentionally unused
   itemName,
 }) => {
   const [folders, setFolders] = useState<Folder[]>([]);
