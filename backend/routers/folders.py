@@ -398,6 +398,12 @@ async def assign_form_to_folder(
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
         # Admins can assign any form to any folder - no additional checks needed
         
+        # Check if assignment already exists
+        existing_assignment = supabase_storage.table("form_folder_assignments").select("id").eq("form_id", form_id).eq("folder_id", folder_id).execute()
+        if existing_assignment.data:
+            # Already assigned, return the existing assignment
+            return existing_assignment.data[0]
+        
         # Create assignment
         assignment_data = {
             "form_id": form_id,
@@ -405,13 +411,22 @@ async def assign_form_to_folder(
             "assigned_by": user["id"]
         }
         
-        # Use service role client to bypass RLS
-        response = supabase_storage.table("form_folder_assignments").insert(assignment_data).execute()
-        
-        if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to create assignment")
-        
-        return response.data[0]
+        try:
+            # Use service role client to bypass RLS
+            response = supabase_storage.table("form_folder_assignments").insert(assignment_data).execute()
+            
+            if not response.data:
+                raise HTTPException(status_code=500, detail="Failed to create assignment")
+            
+            return response.data[0]
+        except Exception as e:
+            error_msg = str(e)
+            if "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
+                # Assignment was created by another request, fetch and return it
+                existing = supabase_storage.table("form_folder_assignments").select("*").eq("form_id", form_id).eq("folder_id", folder_id).single().execute()
+                if existing.data:
+                    return existing.data[0]
+            raise HTTPException(status_code=500, detail=f"Failed to assign form: {error_msg}")
     except HTTPException:
         raise
     except Exception as e:
@@ -499,6 +514,12 @@ async def assign_file_to_folder(
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
         # Admins can assign any file to any folder - no additional checks needed
         
+        # Check if assignment already exists
+        existing_assignment = supabase_storage.table("file_folder_assignments").select("id").eq("file_id", file_id).eq("folder_id", folder_id).execute()
+        if existing_assignment.data:
+            # Already assigned, return the existing assignment
+            return existing_assignment.data[0]
+        
         # Create assignment (use existing file_folder_assignments table)
         assignment_data = {
             "file_id": file_id,
@@ -515,7 +536,10 @@ async def assign_file_to_folder(
         except Exception as e:
             error_msg = str(e)
             if "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
-                raise HTTPException(status_code=400, detail="File is already assigned to this folder")
+                # Assignment was created by another request, fetch and return it
+                existing = supabase_storage.table("file_folder_assignments").select("*").eq("file_id", file_id).eq("folder_id", folder_id).single().execute()
+                if existing.data:
+                    return existing.data[0]
             raise HTTPException(status_code=500, detail=f"Failed to assign file: {error_msg}")
     except HTTPException:
         raise
