@@ -255,7 +255,7 @@ async def upload_file(
             "quote_id": quote_id,
             "form_id": form_id,
             "description": description,
-            "is_reusable": is_reusable,
+            "is_reusable": is_reusable if is_reusable is not None else True,  # Default to reusable (template)
             "uploaded_by": user["id"]
         }
         
