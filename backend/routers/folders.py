@@ -371,18 +371,24 @@ async def assign_form_to_folder(
         except Exception:
             is_admin = False
         
-        # Only admins can assign forms to folders
-        if not is_admin:
-            raise HTTPException(status_code=403, detail="Only admins can assign forms to folders")
-        
-        # Verify folder and form exist
-        folder_response = supabase.table("folders").select("id").eq("id", folder_id).single().execute()
+        # Verify folder and form exist - use service role client to bypass RLS
+        folder_response = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
         if not folder_response.data:
             raise HTTPException(status_code=404, detail="Folder not found")
         
-        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id, created_by").eq("id", form_id).single().execute()
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Check permissions: admins can assign any form, users can only assign their own forms
+        if not is_admin:
+            if form_response.data.get("created_by") != user["id"]:
+                raise HTTPException(status_code=403, detail="You can only assign forms you created")
+            
+            # Check if user has access to the folder
+            folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+            if not folder_assignment.data:
+                raise HTTPException(status_code=403, detail="You don't have access to this folder")
         
         # Create assignment
         assignment_data = {
@@ -391,7 +397,8 @@ async def assign_form_to_folder(
             "assigned_by": user["id"]
         }
         
-        response = supabase.table("form_folder_assignments").insert(assignment_data).execute()
+        # Use service role client to bypass RLS
+        response = supabase_storage.table("form_folder_assignments").insert(assignment_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create assignment")
@@ -449,18 +456,24 @@ async def assign_file_to_folder(
         except Exception:
             is_admin = False
         
-        # Only admins can assign files to folders
-        if not is_admin:
-            raise HTTPException(status_code=403, detail="Only admins can assign files to folders")
-        
-        # Verify folder and file exist
-        folder_response = supabase.table("folders").select("id").eq("id", folder_id).single().execute()
+        # Verify folder and file exist - use service role client to bypass RLS
+        folder_response = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
         if not folder_response.data:
             raise HTTPException(status_code=404, detail="Folder not found")
         
-        file_response = supabase.table("files").select("id").eq("id", file_id).single().execute()
+        file_response = supabase_storage.table("files").select("id, uploaded_by").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
+        
+        # Check permissions: admins can assign any file, users can only assign their own files
+        if not is_admin:
+            if file_response.data.get("uploaded_by") != user["id"]:
+                raise HTTPException(status_code=403, detail="You can only assign files you uploaded")
+            
+            # Check if user has access to the folder
+            folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+            if not folder_assignment.data:
+                raise HTTPException(status_code=403, detail="You don't have access to this folder")
         
         # Create assignment (use existing file_folder_assignments table)
         assignment_data = {
@@ -470,7 +483,8 @@ async def assign_file_to_folder(
         }
         
         try:
-            response = supabase.table("file_folder_assignments").insert(assignment_data).execute()
+            # Use service role client to bypass RLS
+            response = supabase_storage.table("file_folder_assignments").insert(assignment_data).execute()
             if not response.data:
                 raise HTTPException(status_code=500, detail="Failed to create assignment")
             return response.data[0]
@@ -531,18 +545,24 @@ async def assign_esignature_to_folder(
         except Exception:
             is_admin = False
         
-        # Only admins can assign e-signature documents to folders
-        if not is_admin:
-            raise HTTPException(status_code=403, detail="Only admins can assign e-signature documents to folders")
-        
-        # Verify folder and document exist
-        folder_response = supabase.table("folders").select("id").eq("id", folder_id).single().execute()
+        # Verify folder and document exist - use service role client to bypass RLS
+        folder_response = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
         if not folder_response.data:
             raise HTTPException(status_code=404, detail="Folder not found")
         
-        doc_response = supabase.table("esignature_documents").select("id").eq("id", document_id).single().execute()
+        doc_response = supabase_storage.table("esignature_documents").select("id, created_by").eq("id", document_id).single().execute()
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="E-signature document not found")
+        
+        # Check permissions: admins can assign any document, users can only assign their own documents
+        if not is_admin:
+            if doc_response.data.get("created_by") != user["id"]:
+                raise HTTPException(status_code=403, detail="You can only assign e-signature documents you created")
+            
+            # Check if user has access to the folder
+            folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+            if not folder_assignment.data:
+                raise HTTPException(status_code=403, detail="You don't have access to this folder")
         
         # Create assignment
         assignment_data = {
@@ -553,7 +573,8 @@ async def assign_esignature_to_folder(
         }
         
         try:
-            response = supabase.table("esignature_document_folder_assignments").insert(assignment_data).execute()
+            # Use service role client to bypass RLS
+            response = supabase_storage.table("esignature_document_folder_assignments").insert(assignment_data).execute()
             if not response.data:
                 raise HTTPException(status_code=500, detail="Failed to create assignment")
             return response.data[0]
