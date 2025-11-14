@@ -162,6 +162,9 @@ async def create_document(
         document_data = document.model_dump(exclude_none=True, exclude={"created_by"}, mode='json')
         document_data["created_by"] = user["id"]
         document_data["status"] = "pending"
+        # New documents are templates by default (is_template = true)
+        if "is_template" not in document_data or document_data.get("is_template") is None:
+            document_data["is_template"] = True
         
         # Add id if not present (Supabase will generate it, but we can set it explicitly)
         if "id" not in document_data:

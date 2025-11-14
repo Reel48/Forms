@@ -736,17 +736,28 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             pass
         
         # Get e-signature documents assigned to folder
+        # Include both: templates (via many-to-many) and instances (via direct folder_id)
         esignatures = []
         try:
-            # Check if the table exists by trying to query it
-            esig_assignments = client.table("esignature_document_folder_assignments").select("document_id").eq("folder_id", folder_id).execute()
-            if esig_assignments.data:
-                esig_ids = [ea["document_id"] for ea in esig_assignments.data]
-                esig_response = client.table("esignature_documents").select("*").in_("id", esig_ids).execute()
-                esignatures = esig_response.data if esig_response.data else []
+            # Get templates assigned via many-to-many relationship
+            esig_assignments = supabase_storage.table("esignature_document_folder_assignments").select("document_id").eq("folder_id", folder_id).execute()
+            template_ids = [ea["document_id"] for ea in (esig_assignments.data or [])]
+            
+            # Get instances directly assigned to folder
+            instances_response = supabase_storage.table("esignature_documents").select("*").eq("folder_id", folder_id).eq("is_template", False).execute()
+            instances = instances_response.data if instances_response.data else []
+            
+            # Get templates
+            if template_ids:
+                templates_response = supabase_storage.table("esignature_documents").select("*").in_("id", template_ids).execute()
+                templates = templates_response.data if templates_response.data else []
+            else:
+                templates = []
+            
+            # Combine templates and instances
+            esignatures = templates + instances
         except Exception as e:
-            # Table might not exist yet, that's okay
-            logger.warning(f"Error fetching e-signatures (table may not exist): {str(e)}")
+            logger.warning(f"Error fetching e-signatures: {str(e)}")
             pass
         
         return {
