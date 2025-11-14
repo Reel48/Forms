@@ -689,25 +689,48 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 pass
         
         # Get files assigned to folder
+        # Include both: reusable files (via many-to-many) and instances (via direct folder_id)
         files = []
         try:
-            file_assignments = client.table("file_folder_assignments").select("file_id").eq("folder_id", folder_id).execute()
-            if file_assignments.data:
-                file_ids = [fa["file_id"] for fa in file_assignments.data]
-                files_response = client.table("files").select("*").in_("id", file_ids).execute()
-                files = files_response.data if files_response.data else []
+            # Get reusable files assigned via many-to-many relationship
+            file_assignments = supabase_storage.table("file_folder_assignments").select("file_id").eq("folder_id", folder_id).execute()
+            reusable_file_ids = [fa["file_id"] for fa in (file_assignments.data or [])]
+            
+            # Get instances directly assigned to folder (non-reusable)
+            instances_response = supabase_storage.table("files").select("*").eq("folder_id", folder_id).eq("is_reusable", False).execute()
+            instances = instances_response.data if instances_response.data else []
+            
+            # Get reusable files
+            if reusable_file_ids:
+                reusable_response = supabase_storage.table("files").select("*").in_("id", reusable_file_ids).execute()
+                reusable_files = reusable_response.data if reusable_response.data else []
+            else:
+                reusable_files = []
+            
+            # Combine reusable files and instances
+            files = reusable_files + instances
         except Exception as e:
             logger.warning(f"Error fetching files: {str(e)}")
             pass
         
         # Get forms assigned to folder
+        # Include both: templates (via many-to-many) and instances (via direct assignment)
         forms = []
         try:
-            form_assignments = client.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute()
-            if form_assignments.data:
-                form_ids = [fa["form_id"] for fa in form_assignments.data]
-                forms_response = client.table("forms").select("*").in_("id", form_ids).execute()
-                forms = forms_response.data if forms_response.data else []
+            # Get templates assigned via many-to-many relationship
+            form_assignments = supabase_storage.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute()
+            template_form_ids = [fa["form_id"] for fa in (form_assignments.data or [])]
+            
+            # Get templates
+            if template_form_ids:
+                templates_response = supabase_storage.table("forms").select("*, form_fields(*)").in_("id", template_form_ids).eq("is_template", True).execute()
+                templates = templates_response.data if templates_response.data else []
+            else:
+                templates = []
+            
+            # Note: Forms don't have direct folder_id, so instances are only via assignments
+            # For now, we show templates. If we add instance support later, we can add it here.
+            forms = templates
         except Exception as e:
             logger.warning(f"Error fetching forms: {str(e)}")
             pass

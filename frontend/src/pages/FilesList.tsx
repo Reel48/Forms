@@ -20,7 +20,9 @@ function FilesList() {
     setLoading(true);
     setError(null);
     try {
-      const filters: { folder_id?: string; quote_id?: string; form_id?: string; is_reusable?: boolean } = {};
+      const filters: { folder_id?: string; quote_id?: string; form_id?: string; is_reusable?: boolean; templates_only?: boolean } = {
+        templates_only: true  // Show only reusable files in template library
+      };
       const response = await filesAPI.getAll(filters);
       setFiles(response.data || []);
     } catch (error: any) {
@@ -87,10 +89,13 @@ function FilesList() {
   return (
     <div className="container">
       <div className="files-header">
-        <h1>Files</h1>
+        <div>
+          <h1>File Templates</h1>
+          <p className="page-subtitle">Reusable files for your projects</p>
+        </div>
         {role === 'admin' && (
           <button className="btn-primary" onClick={() => setShowUpload(!showUpload)}>
-            {showUpload ? 'Cancel Upload' : '+ Upload Files'}
+            {showUpload ? 'Cancel Upload' : '+ Upload Template'}
           </button>
         )}
       </div>

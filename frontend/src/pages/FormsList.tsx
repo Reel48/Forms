@@ -106,7 +106,9 @@ function FormsList() {
     setLoading(true);
     setError(null);
     try {
-      const filters: { status?: string; search?: string } = {};
+      const filters: { status?: string; search?: string; templates_only?: boolean } = {
+        templates_only: true  // Show only templates in template library
+      };
       if (statusFilter) {
         filters.status = statusFilter;
       }
@@ -320,11 +322,14 @@ function FormsList() {
   return (
     <div className="container">
       <div className="flex-between mb-4">
-        <h1>Forms</h1>
+        <div>
+          <h1>Form Templates</h1>
+          <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Reusable templates for your projects</p>
+        </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {role === 'admin' && (
             <button onClick={() => navigate('/forms/new')} className="btn-primary">
-              Create New Form
+              Create Template
             </button>
           )}
         </div>

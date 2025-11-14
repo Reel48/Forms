@@ -36,14 +36,18 @@ async def list_documents(
     quote_id: Optional[str] = Query(None, description="Filter by quote ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
     signature_mode: Optional[str] = Query(None, description="Filter by signature mode"),
+    templates_only: bool = Query(True, description="Show only templates (for template library)"),
     user = Depends(get_current_user)
 ):
-    """List e-signature documents. Admins see all, users see documents they created or have access to."""
+    """List e-signature documents. 
+    - If templates_only=True (default): Shows only reusable templates (template library)
+    - If folder_id provided: Shows all documents in folder (templates + instances)
+    - Admins see all, users see documents they created or have access to."""
     try:
         # Check if user is admin
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             is_admin = False
@@ -53,7 +57,12 @@ async def list_documents(
         
         # Apply filters
         if folder_id:
+            # When viewing folder content, show all documents (templates + instances)
             query = query.eq("folder_id", folder_id)
+        elif templates_only:
+            # For template library (main page), show only templates
+            query = query.eq("is_template", True)
+        
         if quote_id:
             query = query.eq("quote_id", quote_id)
         if status:

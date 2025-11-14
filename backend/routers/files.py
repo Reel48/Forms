@@ -21,14 +21,18 @@ async def list_files(
     quote_id: Optional[str] = Query(None, description="Filter by quote ID"),
     form_id: Optional[str] = Query(None, description="Filter by form ID"),
     is_reusable: Optional[bool] = Query(None, description="Filter by reusable flag"),
+    templates_only: bool = Query(True, description="Show only reusable files (for template library)"),
     user = Depends(get_current_user)
 ):
-    """List files with optional filters. Admins see all files, users see files in their folders."""
+    """List files with optional filters.
+    - If templates_only=True (default): Shows only reusable files (template library)
+    - If folder_id provided: Shows all files in folder (templates + instances)
+    - Admins see all files, users see files in their folders."""
     try:
         # Check if user is admin
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             # User doesn't have a role record, default to customer
@@ -39,7 +43,12 @@ async def list_files(
         
         # Apply filters
         if folder_id:
+            # When viewing folder content, show all files (templates + instances)
             query = query.eq("folder_id", folder_id)
+        elif templates_only:
+            # For template library (main page), show only reusable files
+            query = query.eq("is_reusable", True)
+        
         if quote_id:
             query = query.eq("quote_id", quote_id)
         if form_id:

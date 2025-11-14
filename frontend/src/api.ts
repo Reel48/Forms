@@ -388,10 +388,12 @@ export const companySettingsAPI = {
 
 // Forms API
 export const formsAPI = {
-  getAll: (filters?: { status?: string; search?: string }) => {
+  getAll: (filters?: { status?: string; search?: string; folder_id?: string; templates_only?: boolean }) => {
     const params = new URLSearchParams();
     if (filters?.status) params.append('status', filters.status);
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.folder_id) params.append('folder_id', filters.folder_id);
+    if (filters?.templates_only !== undefined) params.append('templates_only', filters.templates_only.toString());
     const queryString = params.toString();
     return api.get<Form[]>(`/api/forms${queryString ? `?${queryString}` : ''}`);
   },
@@ -496,12 +498,13 @@ export const formsAPI = {
 
 // Files API
 export const filesAPI = {
-  getAll: (filters?: { folder_id?: string; quote_id?: string; form_id?: string; is_reusable?: boolean }) => {
+  getAll: (filters?: { folder_id?: string; quote_id?: string; form_id?: string; is_reusable?: boolean; templates_only?: boolean }) => {
     const params = new URLSearchParams();
     if (filters?.folder_id) params.append('folder_id', filters.folder_id);
     if (filters?.quote_id) params.append('quote_id', filters.quote_id);
     if (filters?.form_id) params.append('form_id', filters.form_id);
     if (filters?.is_reusable !== undefined) params.append('is_reusable', filters.is_reusable.toString());
+    if (filters?.templates_only !== undefined) params.append('templates_only', filters.templates_only.toString());
     const queryString = params.toString();
     return api.get<FileItem[]>(`/api/files${queryString ? `?${queryString}` : ''}`);
   },
@@ -608,12 +611,13 @@ export interface ESignatureSignatureCreate {
 // E-Signature API
 export const esignatureAPI = {
   // Documents
-  getAllDocuments: (filters?: { folder_id?: string; quote_id?: string; status?: string; signature_mode?: string }) => {
+  getAllDocuments: (filters?: { folder_id?: string; quote_id?: string; status?: string; signature_mode?: string; templates_only?: boolean }) => {
     const params = new URLSearchParams();
     if (filters?.folder_id) params.append('folder_id', filters.folder_id);
     if (filters?.quote_id) params.append('quote_id', filters.quote_id);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.signature_mode) params.append('signature_mode', filters.signature_mode);
+    if (filters?.templates_only !== undefined) params.append('templates_only', filters.templates_only.toString());
     const queryString = params.toString();
     return api.get<ESignatureDocument[]>(`/api/esignature/documents${queryString ? `?${queryString}` : ''}`);
   },

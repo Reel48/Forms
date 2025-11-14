@@ -237,18 +237,31 @@ async def get_template_variables(
 async def get_forms(
     status: Optional[str] = Query(None, description="Filter by status (draft, published, archived)"),
     search: Optional[str] = Query(None, description="Search by name or description"),
+    folder_id: Optional[str] = Query(None, description="Filter by folder ID"),
+    templates_only: bool = Query(True, description="Show only templates (for template library)"),
     current_user: Optional[dict] = Depends(get_optional_user)
 ):
     """Get all forms with optional filtering.
-    Admins see all forms. Customers see only assigned forms.
+    - If templates_only=True (default): Shows only reusable templates (template library)
+    - If folder_id provided: Shows all forms in folder (templates + instances)
+    - Admins see all forms. Customers see only assigned forms.
     """
     try:
-        query = supabase.table("forms").select("*, form_fields(*)")
+        # Use service role client to bypass RLS
+        query = supabase_storage.table("forms").select("*, form_fields(*)")
+        
+        # Apply folder filter
+        if folder_id:
+            # When viewing folder content, show all forms (templates + instances)
+            query = query.eq("folder_id", folder_id)
+        elif templates_only:
+            # For template library (main page), show only templates
+            query = query.eq("is_template", True)
         
         # If customer, only show assigned forms
         if current_user and current_user.get("role") == "customer":
             # Get assigned form IDs
-            assignments_response = supabase.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
+            assignments_response = supabase_storage.table("form_assignments").select("form_id").eq("user_id", current_user["id"]).execute()
             assigned_form_ids = [a["form_id"] for a in (assignments_response.data or [])]
             
             if not assigned_form_ids:

@@ -259,6 +259,7 @@ class FormBase(BaseModel):
     description: Optional[str] = None
     status: str = "draft"  # draft, published, archived
     priority: Optional[str] = "normal"  # normal, high
+    is_template: bool = True  # True for reusable templates, False for project-specific instances
     public_url_slug: Optional[str] = None
     theme: Dict[str, Any] = {}
     settings: Dict[str, Any] = {}
@@ -489,6 +490,7 @@ class ESignatureDocumentBase(BaseModel):
     signature_mode: str = "simple"  # simple, advanced
     require_signature: bool = True
     signature_fields: Optional[Dict[str, Any]] = None  # JSONB for advanced mode
+    is_template: bool = True  # True for reusable templates, False for project-specific instances
     folder_id: Optional[str] = None
     quote_id: Optional[str] = None
     expires_at: Optional[datetime] = None

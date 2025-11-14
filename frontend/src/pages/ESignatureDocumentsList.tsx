@@ -24,7 +24,9 @@ const ESignatureDocumentsList: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const filters: any = {};
+      const filters: any = {
+        templates_only: true  // Show only templates in template library
+      };
       if (statusFilter !== 'all') {
         filters.status = statusFilter;
       }
@@ -78,12 +80,15 @@ const ESignatureDocumentsList: React.FC = () => {
   return (
     <div className="esignature-documents-container">
       <div className="page-header">
-        <h1>E-Signature Documents</h1>
+        <div>
+          <h1>E-Signature Templates</h1>
+          <p className="page-subtitle">Reusable templates for your projects</p>
+        </div>
         <button
           onClick={() => navigate('/esignature/new')}
           className="btn-primary btn-create"
         >
-          + Create Document
+          + Create Template
         </button>
       </div>
 
