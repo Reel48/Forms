@@ -48,7 +48,8 @@ async def list_documents(
         except Exception:
             is_admin = False
         
-        query = supabase.table("esignature_documents").select("*")
+        # Use service role client to bypass RLS (user is already authenticated)
+        query = supabase_storage.table("esignature_documents").select("*")
         
         # Apply filters
         if folder_id:
@@ -65,7 +66,7 @@ async def list_documents(
             # Get folders user has access to (if folder_assignments table exists)
             accessible_folder_ids = []
             try:
-                folder_assignments = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
+                folder_assignments = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
                 accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
             except Exception:
                 pass
@@ -97,7 +98,8 @@ async def get_document(document_id: str, user = Depends(get_current_user)):
         except Exception:
             is_admin = False
         
-        response = supabase.table("esignature_documents").select("*").eq("id", document_id).single().execute()
+        # Use service role client to bypass RLS
+        response = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Document not found")
