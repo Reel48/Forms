@@ -66,9 +66,9 @@ function FormView() {
     }
   };
 
-  const handleAssign = async (userIds: string[]) => {
+  const handleAssign = async (folderIds: string[]) => {
     try {
-      await api.post(`/api/forms/${id}/assign`, { user_ids: userIds });
+      await api.post(`/api/forms/${id}/assign`, { folder_ids: folderIds });
       await loadAssignments();
     } catch (error) {
       throw error;

@@ -177,9 +177,9 @@ function QuoteView() {
     }
   };
 
-  const handleAssign = async (userIds: string[]) => {
+  const handleAssign = async (folderIds: string[]) => {
     try {
-      await api.post(`/api/quotes/${id}/assign`, { user_ids: userIds });
+      await api.post(`/api/quotes/${id}/assign`, { folder_ids: folderIds });
       await loadAssignments();
       await loadActivities();
     } catch (error) {

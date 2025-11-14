@@ -5,12 +5,13 @@ import './AssignmentsList.css';
 
 interface Assignment {
   id: string;
-  user_id: string;
+  folder_id: string;
   assigned_at: string;
-  status: string;
-  user?: {
-    email: string;
-    name?: string;
+  folder?: {
+    id: string;
+    name: string;
+    description?: string;
+    client_id?: string;
   };
 }
 
@@ -80,27 +81,26 @@ export const AssignmentsList: React.FC<AssignmentsListProps> = ({
   if (assignments.length === 0) {
     return (
       <div className="assignments-empty">
-        No assignments yet. Assign this {quoteId ? 'quote' : 'form'} to customers to get started.
+        No assignments yet. Assign this {quoteId ? 'quote' : 'form'} to folders to get started.
       </div>
     );
   }
 
   return (
     <div className="assignments-list">
-      <h3>Assigned To ({assignments.length})</h3>
+      <h3>Assigned To Folders ({assignments.length})</h3>
       <div className="assignments-items">
         {assignments.map((assignment) => (
           <div key={assignment.id} className="assignment-item">
             <div className="assignment-info">
               <span className="assignment-email">
-                {assignment.user?.email || assignment.user_id}
-                {assignment.user?.name && assignment.user.name !== assignment.user.email && (
-                  <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>
-                    ({assignment.user.name})
+                {assignment.folder?.name || assignment.folder_id}
+                {assignment.folder?.description && (
+                  <span style={{ color: '#6b7280', marginLeft: '0.5rem', fontSize: '0.875rem' }}>
+                    - {assignment.folder.description}
                   </span>
                 )}
               </span>
-              <span className="assignment-status">{assignment.status}</span>
               <span className="assignment-date">
                 Assigned {new Date(assignment.assigned_at).toLocaleDateString()}
               </span>
@@ -119,4 +119,3 @@ export const AssignmentsList: React.FC<AssignmentsListProps> = ({
     </div>
   );
 };
-
