@@ -513,8 +513,8 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
             "updated_at": now
         }
         
-        # Create form
-        form_response = supabase.table("forms").insert(form_data).execute()
+        # Create form - use service role client to bypass RLS
+        form_response = supabase_storage.table("forms").insert(form_data).execute()
         
         if not form_response.data:
             raise HTTPException(status_code=500, detail="Failed to create form")
@@ -569,7 +569,8 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
             if fields_data:
                 print(f"Inserting {len(fields_data)} fields into database...")
                 try:
-                    fields_response = supabase.table("form_fields").insert(fields_data).execute()
+                    # Use service role client to bypass RLS
+                    fields_response = supabase_storage.table("form_fields").insert(fields_data).execute()
                     if fields_response.data:
                         print(f"Successfully inserted {len(fields_response.data)} fields")
                     else:
