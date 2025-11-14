@@ -354,7 +354,7 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
             "updated_at": datetime.now().isoformat()
         })
         
-        quote_response = supabase.table("quotes").insert(quote_data).execute()
+        quote_response = supabase_storage.table("quotes").insert(quote_data).execute()
         created_quote = quote_response.data[0]
         
         # Create line items
@@ -373,7 +373,7 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
                     "line_total": str(line_total)
                 })
             
-            supabase.table("line_items").insert(line_items_to_insert).execute()
+            supabase_storage.table("line_items").insert(line_items_to_insert).execute()
         
         # Create folder if requested
         folder_id = None
@@ -454,7 +454,7 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
                 # Continue without folder - quote creation succeeded
         
         # Fetch complete quote with relations
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", created_quote["id"]).execute()
+        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", created_quote["id"]).execute()
         created_quote_full = response.data[0]
         
         # Log creation activity
@@ -835,10 +835,10 @@ async def delete_quote(quote_id: str, current_admin: dict = Depends(get_current_
     """Delete a quote (admin only)"""
     try:
         # Delete line items first (foreign key constraint)
-        supabase.table("line_items").delete().eq("quote_id", quote_id).execute()
+        supabase_storage.table("line_items").delete().eq("quote_id", quote_id).execute()
         
         # Delete quote
-        response = supabase.table("quotes").delete().eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").delete().eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -870,10 +870,10 @@ async def bulk_delete_quotes(request: BulkDeleteRequest, current_admin: dict = D
             raise HTTPException(status_code=400, detail="No quote IDs provided")
         
         # Delete line items first
-        supabase.table("line_items").delete().in_("quote_id", request.quote_ids).execute()
+        supabase_storage.table("line_items").delete().in_("quote_id", request.quote_ids).execute()
         
         # Delete quotes
-        response = supabase.table("quotes").delete().in_("id", request.quote_ids).execute()
+        response = supabase_storage.table("quotes").delete().in_("id", request.quote_ids).execute()
         
         return {"message": f"Deleted {len(response.data)} quote(s) successfully", "deleted_count": len(response.data)}
     except HTTPException:
@@ -897,7 +897,7 @@ async def bulk_update_status(request: BulkStatusUpdateRequest, current_admin: di
             "updated_at": datetime.now().isoformat()
         }
         
-        response = supabase.table("quotes").update(update_data).in_("id", request.quote_ids).execute()
+        response = supabase_storage.table("quotes").update(update_data).in_("id", request.quote_ids).execute()
         
         return {"message": f"Updated {len(response.data)} quote(s) successfully", "updated_count": len(response.data)}
     except HTTPException:
@@ -937,7 +937,7 @@ async def bulk_assign_quotes(request: BulkAssignRequest, current_admin: dict = D
         for assignment in assignments_to_create:
             try:
                 # Get quote info
-                quote_response = supabase.table("quotes").select("title, quote_number").eq("id", assignment["quote_id"]).execute()
+                quote_response = supabase_storage.table("quotes").select("title, quote_number").eq("id", assignment["quote_id"]).execute()
                 if quote_response.data:
                     quote = quote_response.data[0]
                     quote_title = quote.get("title", "Quote")
@@ -1020,7 +1020,7 @@ async def send_quote_email(
     """Send quote via email (admin only)"""
     try:
         # Get quote
-        response = supabase.table("quotes").select("*, clients(*)").eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").select("*, clients(*)").eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -1100,7 +1100,7 @@ async def create_share_link(
         supabase_storage.table("quote_share_links").insert(share_link_data).execute()
         
         # Update quote with share token
-        supabase.table("quotes").update({"share_token": share_token}).eq("id", quote_id).execute()
+        supabase_storage.table("quotes").update({"share_token": share_token}).eq("id", quote_id).execute()
         
         share_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/share/quote/{share_token}"
         
@@ -1227,7 +1227,7 @@ async def set_reminder(
 ):
     """Set a reminder for a quote (admin only)"""
     try:
-        supabase.table("quotes").update({
+        supabase_storage.table("quotes").update({
             "reminder_date": request.reminder_date,
             "reminder_sent": False
         }).eq("id", quote_id).execute()
@@ -1243,7 +1243,7 @@ async def delete_reminder(
 ):
     """Delete reminder for a quote (admin only)"""
     try:
-        supabase.table("quotes").update({
+        supabase_storage.table("quotes").update({
             "reminder_date": None,
             "reminder_sent": False
         }).eq("id", quote_id).execute()
@@ -1268,7 +1268,7 @@ async def auto_save_quote(
 ):
     """Auto-save a quote draft (admin only)"""
     try:
-        supabase.table("quotes").update({
+        supabase_storage.table("quotes").update({
             "draft_auto_save": request.draft_data,
             "last_auto_saved_at": datetime.now().isoformat()
         }).eq("id", quote_id).execute()
@@ -1284,7 +1284,7 @@ async def get_auto_saved_draft(
 ):
     """Get auto-saved draft for a quote (admin only)"""
     try:
-        response = supabase.table("quotes").select("draft_auto_save, last_auto_saved_at").eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").select("draft_auto_save, last_auto_saved_at").eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -1330,7 +1330,7 @@ async def get_quote_analytics(
 ):
     """Get quote analytics summary (admin only)"""
     try:
-        query = supabase.table("quotes").select("*")
+        query = supabase_storage.table("quotes").select("*")
         
         if start_date:
             try:

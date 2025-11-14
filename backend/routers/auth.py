@@ -659,7 +659,7 @@ async def create_user_for_client(
     """
     try:
         # Get client information
-        client_response = supabase.table("clients").select("*").eq("id", request.client_id).execute()
+        client_response = supabase_storage.table("clients").select("*").eq("id", request.client_id).execute()
         if not client_response.data:
             raise HTTPException(status_code=404, detail="Client not found")
         
