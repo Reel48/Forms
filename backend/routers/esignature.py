@@ -207,8 +207,8 @@ async def update_document(
         except Exception:
             is_admin = False
         
-        # Get existing document
-        existing = supabase.table("esignature_documents").select("*").eq("id", document_id).single().execute()
+        # Get existing document - use service role client to bypass RLS
+        existing = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
@@ -218,7 +218,8 @@ async def update_document(
         
         # Update document
         update_data = document_update.model_dump(exclude_none=True)
-        response = supabase.table("esignature_documents").update(update_data).eq("id", document_id).execute()
+        # Use service role client to bypass RLS
+        response = supabase_storage.table("esignature_documents").update(update_data).eq("id", document_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update document")
@@ -242,8 +243,8 @@ async def delete_document(document_id: str, user = Depends(get_current_user)):
         except Exception:
             is_admin = False
         
-        # Get existing document
-        existing = supabase.table("esignature_documents").select("*").eq("id", document_id).single().execute()
+        # Get existing document - use service role client to bypass RLS
+        existing = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
@@ -251,8 +252,8 @@ async def delete_document(document_id: str, user = Depends(get_current_user)):
         if not is_admin and existing.data.get("created_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
-        # Delete document (cascade will handle signatures)
-        supabase.table("esignature_documents").delete().eq("id", document_id).execute()
+        # Delete document (cascade will handle signatures) - use service role client
+        supabase_storage.table("esignature_documents").delete().eq("id", document_id).execute()
         
         return {"message": "Document deleted successfully"}
     except HTTPException:
@@ -265,8 +266,8 @@ async def delete_document(document_id: str, user = Depends(get_current_user)):
 async def get_document_preview(document_id: str, user = Depends(get_current_user)):
     """Get preview URL for the document PDF."""
     try:
-        # Get document
-        doc_response = supabase.table("esignature_documents").select("*, files(*)").eq("id", document_id).single().execute()
+        # Get document - use service role client to bypass RLS
+        doc_response = supabase_storage.table("esignature_documents").select("*, files(*)").eq("id", document_id).single().execute()
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
@@ -280,14 +281,34 @@ async def get_document_preview(document_id: str, user = Depends(get_current_user
         if not storage_path:
             raise HTTPException(status_code=500, detail="File storage path not found")
         
-        # Get signed URL
-        signed_url = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
-        
-        return {"preview_url": signed_url}
+        # Get signed URL - handle both dict and string responses
+        try:
+            signed_url_result = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            
+            # Extract URL from response (can be dict or string depending on client version)
+            if isinstance(signed_url_result, dict):
+                signed_url = signed_url_result.get("signedURL") or signed_url_result.get("signed_url") or signed_url_result.get("url")
+            elif isinstance(signed_url_result, str):
+                signed_url = signed_url_result
+            else:
+                # Try to get URL from response object if it has attributes
+                signed_url = getattr(signed_url_result, "signedURL", None) or getattr(signed_url_result, "signed_url", None) or getattr(signed_url_result, "url", None) or str(signed_url_result)
+            
+            if not signed_url:
+                raise HTTPException(status_code=500, detail="Failed to generate signed URL")
+            
+            return {"preview_url": signed_url}
+        except Exception as url_error:
+            print(f"Error creating signed URL: {str(url_error)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to create preview URL: {str(url_error)}")
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error getting document preview: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get preview: {str(e)}")
 
 def embed_signature_in_pdf(pdf_bytes: bytes, signature_image_bytes: bytes, signature_type: str = "draw") -> bytes:
@@ -425,8 +446,8 @@ async def sign_document(
 ):
     """Sign an e-signature document (simple mode)."""
     try:
-        # Get document
-        doc_response = supabase.table("esignature_documents").select("*, files(*)").eq("id", document_id).single().execute()
+        # Get document - use service role client to bypass RLS
+        doc_response = supabase_storage.table("esignature_documents").select("*, files(*)").eq("id", document_id).single().execute()
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
@@ -562,7 +583,8 @@ async def sign_document(
             "signature_method": signature.signature_type
         }
         
-        supabase.table("esignature_documents").update(update_data).eq("id", document_id).execute()
+        # Use service role client to bypass RLS
+        supabase_storage.table("esignature_documents").update(update_data).eq("id", document_id).execute()
         
         return signature_response.data[0]
     except HTTPException:
@@ -584,7 +606,8 @@ async def get_document_signatures(document_id: str, user = Depends(get_current_u
             is_admin = False
         
         # Get document to check access
-        doc_response = supabase.table("esignature_documents").select("*").eq("id", document_id).single().execute()
+        # Use service role client to bypass RLS
+        doc_response = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
@@ -610,7 +633,8 @@ async def get_signed_pdf(document_id: str, user = Depends(get_current_user)):
     """Download the signed PDF version of the document."""
     try:
         # Get document
-        doc_response = supabase.table("esignature_documents").select("*").eq("id", document_id).single().execute()
+        # Use service role client to bypass RLS
+        doc_response = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
