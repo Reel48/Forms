@@ -640,9 +640,12 @@ async def assign_esignature_to_folder(
             is_admin = False
         
         # Verify folder and document exist - use service role client to bypass RLS
-        folder_response = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
+        folder_response = supabase_storage.table("folders").select("id, name").eq("id", folder_id).single().execute()
         if not folder_response.data:
             raise HTTPException(status_code=404, detail="Folder not found")
+        
+        folder = folder_response.data
+        folder_name = folder.get("name", "Folder")
         
         # Get the full template document
         template_doc_response = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
@@ -650,6 +653,7 @@ async def assign_esignature_to_folder(
             raise HTTPException(status_code=404, detail="E-signature document not found")
         
         template_doc = template_doc_response.data
+        template_name = template_doc.get("name", "E-Signature Document")
         
         # Only allow assigning templates (is_template = True) to folders
         if not template_doc.get("is_template", False):
@@ -671,9 +675,12 @@ async def assign_esignature_to_folder(
         else:
             print(f"Admin user {user['id']} can assign document to folder - skipping permission checks")
         
+        # Generate the copy name: "Folder Name - E-Signature Name"
+        copy_name = f"{folder_name} - {template_name}"
+        
         # Check if a copy already exists for this template in this folder
-        # We check by file_id and name to see if an instance already exists
-        existing_copy = supabase_storage.table("esignature_documents").select("id").eq("folder_id", folder_id).eq("is_template", False).eq("file_id", template_doc.get("file_id")).eq("name", template_doc.get("name")).execute()
+        # We check by folder_id and the expected copy name
+        existing_copy = supabase_storage.table("esignature_documents").select("id").eq("folder_id", folder_id).eq("is_template", False).eq("name", copy_name).execute()
         if existing_copy.data:
             # Copy already exists, return it instead of creating a new one
             existing_doc = supabase_storage.table("esignature_documents").select("*").eq("id", existing_copy.data[0]["id"]).single().execute()
@@ -687,7 +694,7 @@ async def assign_esignature_to_folder(
         
         copy_data = {
             "id": copy_id,
-            "name": template_doc.get("name", "E-Signature Document"),
+            "name": copy_name,  # Use "Folder Name - E-Signature Name" format
             "description": template_doc.get("description"),
             "file_id": template_doc.get("file_id"),  # Same file reference
             "document_type": template_doc.get("document_type", "terms_of_service"),
