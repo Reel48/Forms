@@ -104,10 +104,10 @@ async def list_documents(
 async def get_document(document_id: str, user = Depends(get_current_user)):
     """Get e-signature document by ID."""
     try:
-        # Check if user is admin
+        # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             is_admin = False
@@ -123,11 +123,11 @@ async def get_document(document_id: str, user = Depends(get_current_user)):
         # Check access if not admin
         if not is_admin:
             if document.get("created_by") != user["id"]:
-                # Check folder access
+                # Check folder access - use service role client to bypass RLS
                 folder_id = document.get("folder_id")
                 if folder_id:
                     try:
-                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
                         if not folder_assignment.data:
                             raise HTTPException(status_code=403, detail="Access denied")
                     except Exception:
@@ -219,7 +219,7 @@ async def update_document(
         # Check if user is admin
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             is_admin = False
@@ -255,7 +255,7 @@ async def delete_document(document_id: str, user = Depends(get_current_user)):
         # Check if user is admin
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             is_admin = False
@@ -561,7 +561,7 @@ async def sign_document(
         }
         
         try:
-            signed_file_response = supabase.table("files").insert(signed_file_data).execute()
+            signed_file_response = supabase_storage.table("files").insert(signed_file_data).execute()
             signed_file_id = signed_file_response.data[0]["id"] if signed_file_response.data else file_id
         except Exception as file_error:
             print(f"Warning: Could not create file record: {str(file_error)}")
@@ -586,7 +586,7 @@ async def sign_document(
             "signed_file_url": signed_url
         }
         
-        signature_response = supabase.table("esignature_signatures").insert(signature_data_record).execute()
+        signature_response = supabase_storage.table("esignature_signatures").insert(signature_data_record).execute()
         
         if not signature_response.data:
             raise HTTPException(status_code=500, detail="Failed to create signature record")
@@ -617,7 +617,7 @@ async def get_document_signatures(document_id: str, user = Depends(get_current_u
         # Check if user is admin
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             is_admin = False
@@ -633,9 +633,9 @@ async def get_document_signatures(document_id: str, user = Depends(get_current_u
         # Check access
         if not is_admin and document.get("created_by") != user["id"]:
             # Users can only see their own signatures
-            query = supabase.table("esignature_signatures").select("*").eq("document_id", document_id).eq("user_id", user["id"])
+            query = supabase_storage.table("esignature_signatures").select("*").eq("document_id", document_id).eq("user_id", user["id"])
         else:
-            query = supabase.table("esignature_signatures").select("*").eq("document_id", document_id)
+            query = supabase_storage.table("esignature_signatures").select("*").eq("document_id", document_id)
         
         response = query.order("signed_at", desc=True).execute()
         return response.data if response.data else []
@@ -662,7 +662,7 @@ async def get_signed_pdf(document_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=400, detail="Document not signed yet")
         
         # Get latest signature
-        sig_response = supabase.table("esignature_signatures").select("*, files(*)").eq("document_id", document_id).order("signed_at", desc=True).limit(1).execute()
+        sig_response = supabase_storage.table("esignature_signatures").select("*, files(*)").eq("document_id", document_id).order("signed_at", desc=True).limit(1).execute()
         
         if not sig_response.data:
             raise HTTPException(status_code=404, detail="Signed PDF not found")
@@ -674,7 +674,7 @@ async def get_signed_pdf(document_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="Signed file ID not found")
         
         # Get file
-        file_response = supabase.table("files").select("*").eq("id", signed_file_id).single().execute()
+        file_response = supabase_storage.table("files").select("*").eq("id", signed_file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="Signed file not found")
         
