@@ -195,7 +195,7 @@ async def upload_file(
     quote_id: Optional[str] = None,
     form_id: Optional[str] = None,
     description: Optional[str] = None,
-    is_reusable: bool = False,
+    is_reusable: bool = True,  # Default to True so files appear in template library
     user = Depends(get_current_user)
 ):
     """Upload a file to Supabase Storage."""
@@ -262,7 +262,7 @@ async def upload_file(
             "quote_id": quote_id,
             "form_id": form_id,
             "description": description,
-            "is_reusable": is_reusable if is_reusable is not None else True,  # Default to reusable (template)
+            "is_reusable": is_reusable,  # Use the provided value (defaults to True)
             "uploaded_by": user["id"]
         }
         
