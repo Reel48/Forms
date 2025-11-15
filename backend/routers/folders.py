@@ -809,10 +809,11 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
         # Check if user is admin - use the role from the user dict
         is_admin = user.get("role") == "admin"
         
-        # Use service role client for admins to bypass RLS, regular client for users
-        client = supabase_storage if is_admin else supabase
+        # Use service role client for all authenticated users to bypass RLS
+        # We'll filter by folder assignments for non-admins to ensure proper access control
+        client = supabase_storage
         
-        # Check folder access
+        # Check folder access - use service role client to bypass RLS
         try:
             folder_response = client.table("folders").select("*").eq("id", folder_id).single().execute()
             if not folder_response.data:
@@ -822,9 +823,9 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="Folder not found")
         
         if not is_admin:
-            # Check if user has access to folder
+            # Check if user has access to folder - use service role client to bypass RLS
             try:
-                assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
                 if not assignment.data and folder_response.data.get("created_by") != user["id"]:
                     raise HTTPException(status_code=403, detail="Access denied")
             except HTTPException:
