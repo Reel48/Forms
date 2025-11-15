@@ -602,11 +602,28 @@ async def create_form(form: FormCreate, current_admin: dict = Depends(get_curren
         else:
             print("No fields provided or fields list is empty")
         
-        # Fetch the complete form with fields
-        # Pass current_admin as current_user since we're calling from within create_form
-        result = await get_form(form_id, current_admin)
-        print(f"Returning form with {len(result.fields) if result.fields else 0} fields")
-        return result
+        # Fetch the complete form with fields using service role client
+        # Don't call get_form directly as it uses anon key - fetch directly instead
+        form_response = supabase_storage.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
+        
+        if not form_response.data:
+            raise HTTPException(status_code=500, detail="Failed to retrieve created form")
+        
+        form = form_response.data
+        
+        # Sort fields by order_index and map form_fields to fields for Pydantic model
+        fields = form.get("form_fields", [])
+        if fields:
+            fields = sorted(fields, key=lambda x: x.get("order_index", 0))
+        
+        # Map form_fields to fields for the Pydantic model
+        form["fields"] = fields
+        # Remove form_fields to avoid confusion
+        if "form_fields" in form:
+            del form["form_fields"]
+        
+        print(f"Returning form with {len(fields)} fields")
+        return form
         
     except HTTPException:
         raise
