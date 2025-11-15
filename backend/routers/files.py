@@ -140,7 +140,7 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
         # Check if user is admin
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             # User doesn't have a role record, default to customer
@@ -162,14 +162,14 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
                 folder_id = file_data.get("folder_id")
                 if folder_id:
                     try:
-                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
                         if not folder_assignment.data:
                             # Check many-to-many assignments
                             try:
-                                file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
+                                file_assignment = supabase_storage.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
                                 if file_assignment.data:
                                     accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
-                                    user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
+                                    user_folders = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
                                     if not user_folders.data:
                                         raise HTTPException(status_code=403, detail="Access denied")
                                 else:
@@ -302,7 +302,7 @@ async def update_file(
         # Check if user is admin or uploaded the file
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             # User doesn't have a role record, default to customer
@@ -341,7 +341,7 @@ async def delete_file(file_id: str, user = Depends(get_current_user)):
         # Check if user is admin or uploaded the file
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             # User doesn't have a role record, default to customer
@@ -383,7 +383,7 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
         # Check access (same logic as get_file)
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             # User doesn't have a role record, default to customer
@@ -394,13 +394,13 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
                 folder_id = file_data.get("folder_id")
                 if folder_id:
                     try:
-                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
                         if not folder_assignment.data:
                             try:
-                                file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
+                                file_assignment = supabase_storage.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
                                 if file_assignment.data:
                                     accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
-                                    user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
+                                    user_folders = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
                                     if not user_folders.data:
                                         raise HTTPException(status_code=403, detail="Access denied")
                                 else:
@@ -468,7 +468,7 @@ async def get_file_preview(file_id: str, user = Depends(get_current_user)):
         # Check access (same logic as get_file)
         is_admin = False
         try:
-            user_role_response = supabase.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
             is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
         except Exception:
             # User doesn't have a role record, default to customer
@@ -479,13 +479,13 @@ async def get_file_preview(file_id: str, user = Depends(get_current_user)):
                 folder_id = file_data.get("folder_id")
                 if folder_id:
                     try:
-                        folder_assignment = supabase.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
                         if not folder_assignment.data:
                             try:
-                                file_assignment = supabase.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
+                                file_assignment = supabase_storage.table("file_folder_assignments").select("folder_id").eq("file_id", file_id).execute()
                                 if file_assignment.data:
                                     accessible_folder_ids = [fa["folder_id"] for fa in file_assignment.data]
-                                    user_folders = supabase.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
+                                    user_folders = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).in_("folder_id", accessible_folder_ids).execute()
                                     if not user_folders.data:
                                         raise HTTPException(status_code=403, detail="Access denied")
                                 else:
@@ -542,7 +542,7 @@ async def assign_file_to_folder(
     """Assign a file to a folder (many-to-many relationship)."""
     try:
         # Check if file exists
-        file_response = supabase.table("files").select("*").eq("id", file_id).single().execute()
+        file_response = supabase_storage.table("files").select("*").eq("id", file_id).single().execute()
         if not file_response.data:
             raise HTTPException(status_code=404, detail="File not found")
         
@@ -550,7 +550,7 @@ async def assign_file_to_folder(
         # For now, just check if user has access
         
         # Check if assignment already exists
-        existing = supabase.table("file_folder_assignments").select("*").eq("file_id", file_id).eq("folder_id", folder_id).execute()
+        existing = supabase_storage.table("file_folder_assignments").select("*").eq("file_id", file_id).eq("folder_id", folder_id).execute()
         if existing.data:
             raise HTTPException(status_code=400, detail="File is already assigned to this folder")
         
@@ -561,7 +561,7 @@ async def assign_file_to_folder(
             "assigned_by": user["id"]
         }
         
-        response = supabase.table("file_folder_assignments").insert(assignment_data).execute()
+        response = supabase_storage.table("file_folder_assignments").insert(assignment_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create assignment")
@@ -627,7 +627,7 @@ async def get_file_folders(file_id: str, user = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="File not found")
         
         # Get assignments
-        response = supabase.table("file_folder_assignments").select("*").eq("file_id", file_id).execute()
+        response = supabase_storage.table("file_folder_assignments").select("*").eq("file_id", file_id).execute()
         
         return response.data if response.data else []
     except HTTPException:

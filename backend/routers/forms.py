@@ -28,7 +28,7 @@ def generate_url_slug() -> str:
     while True:
         slug = 'form-' + ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(8))
         # Check if slug exists
-        existing = supabase.table("forms").select("id").eq("public_url_slug", slug).execute()
+        existing = supabase_storage.table("forms").select("id").eq("public_url_slug", slug).execute()
         if not existing.data:
             return slug
 
@@ -333,7 +333,7 @@ async def get_form_by_slug(slug: str):
     try:
         from datetime import datetime
         
-        response = supabase.table("forms").select("*, form_fields(*)").eq("public_url_slug", slug).single().execute()
+        response = supabase_storage.table("forms").select("*, form_fields(*)").eq("public_url_slug", slug).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Form not found")
@@ -380,7 +380,7 @@ async def get_form_by_slug(slug: str):
             try:
                 max_submissions = int(settings["max_submissions"])
                 # Count completed submissions
-                count_response = supabase.table("form_submissions").select("id", count="exact").eq("form_id", form.get("id")).eq("status", "completed").execute()
+                count_response = supabase_storage.table("form_submissions").select("id", count="exact").eq("form_id", form.get("id")).eq("status", "completed").execute()
                 current_count = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
                 
                 if current_count >= max_submissions:
@@ -418,7 +418,7 @@ async def get_form(form_id: str, current_user: Optional[dict] = Depends(get_opti
     Admins can see any form. Customers can only see assigned forms.
     """
     try:
-        response = supabase.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
+        response = supabase_storage.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Form not found")
