@@ -623,8 +623,12 @@ async def assign_esignature_to_folder(
     document_id: str,
     user = Depends(get_current_user)
 ):
-    """Assign an e-signature document to a folder."""
+    """Assign an e-signature document to a folder by creating a copy.
+    The template remains unchanged, and the copy in the folder can be signed independently."""
     try:
+        import uuid
+        from datetime import datetime
+        
         # Check if user is admin - use service role client to bypass RLS
         is_admin = False
         try:
@@ -640,15 +644,22 @@ async def assign_esignature_to_folder(
         if not folder_response.data:
             raise HTTPException(status_code=404, detail="Folder not found")
         
-        doc_response = supabase_storage.table("esignature_documents").select("id, created_by").eq("id", document_id).single().execute()
-        if not doc_response.data:
+        # Get the full template document
+        template_doc_response = supabase_storage.table("esignature_documents").select("*").eq("id", document_id).single().execute()
+        if not template_doc_response.data:
             raise HTTPException(status_code=404, detail="E-signature document not found")
         
-        print(f"Assigning document {document_id} to folder {folder_id}, is_admin={is_admin}")
+        template_doc = template_doc_response.data
+        
+        # Only allow assigning templates (is_template = True) to folders
+        if not template_doc.get("is_template", False):
+            raise HTTPException(status_code=400, detail="Only template documents can be assigned to folders. Templates will be copied for use in the folder.")
+        
+        print(f"Assigning template document {document_id} to folder {folder_id}, is_admin={is_admin}")
         
         # Check permissions: admins can assign any document to any folder, users can only assign their own documents to folders they have access to
         if not is_admin:
-            if doc_response.data.get("created_by") != user["id"]:
+            if template_doc.get("created_by") != user["id"]:
                 print(f"User {user['id']} does not own document {document_id}")
                 raise HTTPException(status_code=403, detail="You can only assign e-signature documents you created")
             
@@ -659,17 +670,52 @@ async def assign_esignature_to_folder(
                 raise HTTPException(status_code=403, detail="You don't have access to this folder")
         else:
             print(f"Admin user {user['id']} can assign document to folder - skipping permission checks")
-        # Admins can assign any document to any folder - no additional checks needed
         
-        # Check if assignment already exists
-        existing_assignment = supabase_storage.table("esignature_document_folder_assignments").select("id").eq("document_id", document_id).eq("folder_id", folder_id).execute()
-        if existing_assignment.data:
-            # Already assigned, return the existing assignment
-            return existing_assignment.data[0]
+        # Check if a copy already exists for this template in this folder
+        # We check by file_id and name to see if an instance already exists
+        existing_copy = supabase_storage.table("esignature_documents").select("id").eq("folder_id", folder_id).eq("is_template", False).eq("file_id", template_doc.get("file_id")).eq("name", template_doc.get("name")).execute()
+        if existing_copy.data:
+            # Copy already exists, return it instead of creating a new one
+            existing_doc = supabase_storage.table("esignature_documents").select("*").eq("id", existing_copy.data[0]["id"]).single().execute()
+            if existing_doc.data:
+                return existing_doc.data[0]
         
-        # Create assignment
+        # Create a copy of the template document for this folder
+        # The copy will be an instance (is_template = False) and can be signed without affecting the template
+        copy_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        copy_data = {
+            "id": copy_id,
+            "name": template_doc.get("name", "E-Signature Document"),
+            "description": template_doc.get("description"),
+            "file_id": template_doc.get("file_id"),  # Same file reference
+            "document_type": template_doc.get("document_type", "terms_of_service"),
+            "signature_mode": template_doc.get("signature_mode", "simple"),
+            "require_signature": template_doc.get("require_signature", True),
+            "signature_fields": template_doc.get("signature_fields"),
+            "is_template": False,  # This is an instance, not a template
+            "folder_id": folder_id,  # Directly assigned to folder
+            "quote_id": template_doc.get("quote_id"),  # Preserve quote_id if exists
+            "expires_at": template_doc.get("expires_at"),
+            "created_by": user["id"],  # The user assigning it
+            "status": "pending",  # Start as pending
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        # Create the copy
+        copy_response = supabase_storage.table("esignature_documents").insert(copy_data).execute()
+        
+        if not copy_response.data:
+            raise HTTPException(status_code=500, detail="Failed to create document copy")
+        
+        copy_doc = copy_response.data[0]
+        
+        # Also create an assignment record linking the template to the folder (for reference)
+        # This allows us to track which template was used
         assignment_data = {
-            "document_id": document_id,
+            "document_id": document_id,  # Original template ID
             "folder_id": folder_id,
             "assigned_by": user["id"],
             "status": "pending"
@@ -677,18 +723,12 @@ async def assign_esignature_to_folder(
         
         try:
             # Use service role client to bypass RLS
-            response = supabase_storage.table("esignature_document_folder_assignments").insert(assignment_data).execute()
-            if not response.data:
-                raise HTTPException(status_code=500, detail="Failed to create assignment")
-            return response.data[0]
+            assignment_response = supabase_storage.table("esignature_document_folder_assignments").insert(assignment_data).execute()
         except Exception as e:
-            error_msg = str(e)
-            if "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
-                # Assignment was created by another request, fetch and return it
-                existing = supabase_storage.table("esignature_document_folder_assignments").select("*").eq("document_id", document_id).eq("folder_id", folder_id).single().execute()
-                if existing.data:
-                    return existing.data[0]
-            raise HTTPException(status_code=500, detail=f"Failed to assign document: {error_msg}")
+            # If assignment fails, that's okay - the copy was created successfully
+            print(f"Warning: Could not create assignment record: {str(e)}")
+        
+        return copy_doc
     except HTTPException:
         raise
     except Exception as e:
@@ -701,7 +741,8 @@ async def remove_esignature_from_folder(
     document_id: str,
     user = Depends(get_current_user)
 ):
-    """Remove an e-signature document from a folder."""
+    """Remove an e-signature document instance from a folder.
+    This deletes the copy (instance) that was created when the template was assigned to the folder."""
     try:
         # Check if user is admin - use service role client to bypass RLS
         is_admin = False
@@ -712,45 +753,43 @@ async def remove_esignature_from_folder(
             print(f"Error checking admin status: {str(e)}")
             is_admin = False
         
-        # Only admins can remove e-signature assignments
+        # Only admins can remove e-signature instances
         if not is_admin:
-            raise HTTPException(status_code=403, detail="Only admins can remove e-signature assignments")
+            raise HTTPException(status_code=403, detail="Only admins can remove e-signature documents from folders")
         
-        # Check if assignment exists first
-        assignment_check = supabase_storage.table("esignature_document_folder_assignments").select("id").eq("folder_id", folder_id).eq("document_id", document_id).execute()
-        if not assignment_check.data:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        # Verify document still exists before deleting assignment
-        doc_check = supabase_storage.table("esignature_documents").select("id, name, is_template").eq("id", document_id).single().execute()
+        # Check if this is an instance (copy) in the folder
+        doc_check = supabase_storage.table("esignature_documents").select("id, name, is_template, folder_id").eq("id", document_id).single().execute()
         if not doc_check.data:
-            raise HTTPException(status_code=404, detail="E-signature document not found - cannot remove assignment")
-        print(f"Removing e-signature assignment: document_id={document_id}, document_name={doc_check.data.get('name')}, is_template={doc_check.data.get('is_template')}")
+            raise HTTPException(status_code=404, detail="E-signature document not found")
         
-        # Delete assignment - use service role client to bypass RLS
-        # Get the assignment ID first, then delete by ID (more reliable)
-        assignment_id = assignment_check.data[0]["id"]
-        delete_response = supabase_storage.table("esignature_document_folder_assignments").delete().eq("id", assignment_id).execute()
+        doc = doc_check.data
         
-        # Verify deletion - check if assignment still exists
-        verify_check = supabase_storage.table("esignature_document_folder_assignments").select("id").eq("folder_id", folder_id).eq("document_id", document_id).execute()
-        if verify_check.data:
-            print(f"Error: Assignment still exists after delete attempt for folder {folder_id}, document {document_id}")
-            raise HTTPException(status_code=500, detail="Failed to remove assignment - assignment still exists")
+        # Only allow deleting instances (copies), not templates
+        if doc.get("is_template", False):
+            raise HTTPException(status_code=400, detail="Cannot delete template documents. Only instances (copies) in folders can be removed.")
         
-        # Verify document still exists after deleting assignment (should always be true)
-        doc_after_check = supabase_storage.table("esignature_documents").select("id, name, is_template").eq("id", document_id).single().execute()
-        if not doc_after_check.data:
-            print(f"ERROR: E-signature document {document_id} was deleted when assignment was removed! This should not happen.")
-            raise HTTPException(status_code=500, detail="E-signature document was deleted when assignment was removed - this is a bug")
-        print(f"Document still exists after assignment removal: document_id={document_id}, is_template={doc_after_check.data.get('is_template')}")
+        # Verify the document is in this folder
+        if doc.get("folder_id") != folder_id:
+            raise HTTPException(status_code=400, detail="Document is not in this folder")
         
-        return {"message": "E-signature assignment removed successfully"}
+        print(f"Removing e-signature instance: document_id={document_id}, document_name={doc.get('name')}, folder_id={folder_id}")
+        
+        # Delete the instance (copy) - this is safe because it's a copy, not the template
+        delete_response = supabase_storage.table("esignature_documents").delete().eq("id", document_id).execute()
+        
+        # Also try to remove any assignment records (for reference)
+        try:
+            supabase_storage.table("esignature_document_folder_assignments").delete().eq("folder_id", folder_id).eq("document_id", document_id).execute()
+        except Exception:
+            # Assignment removal is optional - the instance deletion is what matters
+            pass
+        
+        return {"message": "E-signature document removed from folder successfully"}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error removing e-signature assignment: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to remove e-signature assignment: {str(e)}")
+        print(f"Error removing e-signature from folder: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to remove e-signature from folder: {str(e)}")
 
 @router.get("/{folder_id}/content")
 async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
@@ -847,26 +886,14 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             pass
         
         # Get e-signature documents assigned to folder
-        # Include both: templates (via many-to-many) and instances (via direct folder_id)
+        # Show only instances (copies) that were created when templates were assigned to the folder
+        # Templates remain in the template library and are not shown in folder content
         esignatures = []
         try:
-            # Get templates assigned via many-to-many relationship
-            esig_assignments = supabase_storage.table("esignature_document_folder_assignments").select("document_id").eq("folder_id", folder_id).execute()
-            template_ids = [ea["document_id"] for ea in (esig_assignments.data or [])]
-            
-            # Get instances directly assigned to folder
+            # Get instances (copies) directly assigned to folder
+            # These are copies created when templates were assigned, with is_template=False
             instances_response = supabase_storage.table("esignature_documents").select("*").eq("folder_id", folder_id).eq("is_template", False).execute()
-            instances = instances_response.data if instances_response.data else []
-            
-            # Get templates
-            if template_ids:
-                templates_response = supabase_storage.table("esignature_documents").select("*").in_("id", template_ids).execute()
-                templates = templates_response.data if templates_response.data else []
-            else:
-                templates = []
-            
-            # Combine templates and instances
-            esignatures = templates + instances
+            esignatures = instances_response.data if instances_response.data else []
         except Exception as e:
             logger.warning(f"Error fetching e-signatures: {str(e)}")
             pass
