@@ -8,7 +8,7 @@ import './FolderView.css';
 const FolderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [content, setContent] = useState<FolderContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -374,7 +374,7 @@ const FolderView: React.FC = () => {
                           >
                             View
                           </button>
-                          {(role === 'admin' || file.uploaded_by === content?.folder?.created_by) && (
+                          {(role === 'admin' || file.uploaded_by === user?.id) && (
                             <button
                               className="btn-danger btn-sm"
                               onClick={async (e) => {
