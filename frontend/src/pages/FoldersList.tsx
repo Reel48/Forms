@@ -77,24 +77,18 @@ const FoldersList: React.FC = () => {
     );
   }
 
-  if (role !== 'admin') {
-    return (
-      <div className="folders-list-container">
-        <div className="error">Access denied. Admin only.</div>
-      </div>
-    );
-  }
-
   return (
     <div className="folders-list-container">
       <div className="page-header">
         <h1>Folders</h1>
-        <button
-          onClick={() => navigate('/folders/new')}
-          className="btn-primary btn-create"
-        >
-          + Create Folder
-        </button>
+        {role === 'admin' && (
+          <button
+            onClick={() => navigate('/folders/new')}
+            className="btn-primary btn-create"
+          >
+            + Create Folder
+          </button>
+        )}
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -203,16 +197,18 @@ const FoldersList: React.FC = () => {
                       >
                         View
                       </button>
-                      <button
-                        className="btn-danger btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(folder.id, folder.name);
-                        }}
-                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                      >
-                        Delete
-                      </button>
+                      {role === 'admin' && (
+                        <button
+                          className="btn-danger btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(folder.id, folder.name);
+                          }}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
