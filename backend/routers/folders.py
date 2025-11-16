@@ -896,25 +896,12 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 templates = []
             
             # Check completion status for each form (if user has submitted it)
-            # Note: Forms use submitter_email instead of user_id, so we'll check by email if available
+            # Note: Forms use submitter_email instead of user_id, so we'll check by email
             for form in templates:
                 form["item_type"] = "form"
                 # Check if user has submitted this form
-                # Try to get user email from auth.users table
                 try:
-                    user_email = None
-                    if user.get("email"):
-                        user_email = user["email"]
-                    elif user.get("id"):
-                        # Try to get email from auth.users
-                        try:
-                            from database import supabase_storage
-                            user_response = supabase_storage.table("auth.users").select("email").eq("id", user["id"]).single().execute()
-                            if user_response.data:
-                                user_email = user_response.data.get("email")
-                        except:
-                            pass
-                    
+                    user_email = user.get("email")
                     if user_email:
                         submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).eq("submitter_email", user_email).limit(1).execute()
                         form["is_completed"] = len(submission_check.data or []) > 0
