@@ -424,6 +424,20 @@ async def download_file(file_id: str, user = Depends(get_current_user)):
                     except Exception:
                         raise HTTPException(status_code=403, detail="Access denied")
         
+        # Track file view (idempotent - uses UNIQUE constraint)
+        try:
+            from datetime import datetime
+            view_data = {
+                "file_id": file_id,
+                "user_id": user["id"],
+                "viewed_at": datetime.now().isoformat()
+            }
+            # Use INSERT ... ON CONFLICT DO NOTHING to make it idempotent
+            supabase_storage.table("file_views").insert(view_data).execute()
+        except Exception as view_error:
+            # Log but don't fail the request if view tracking fails
+            print(f"Warning: Failed to track file view: {str(view_error)}")
+        
         # Get signed URL (expires in 1 hour)
         storage_path = file_data.get("storage_path")
         if not storage_path:
