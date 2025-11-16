@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { foldersAPI, clientsAPI, type FolderContent, type FolderCreate, type Client } from '../api';
+import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
 import './FolderView.css';
@@ -21,6 +21,8 @@ const FolderView: React.FC = () => {
     status: 'active',
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isNewFolder = id === 'new';
 
@@ -83,6 +85,48 @@ const FolderView: React.FC = () => {
 
   const handleContentChange = () => {
     loadFolderContent();
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !id || id === 'new') return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        await filesAPI.upload(file, {
+          folder_id: id,
+          // is_reusable will be automatically set to false by backend when folder_id is provided
+        });
+      });
+
+      await Promise.all(uploadPromises);
+      await loadFolderContent();
+      alert('Files uploaded successfully!');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to upload files';
+      setError(errorMessage);
+      alert(`Upload failed: ${errorMessage}`);
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string, fileName: string) => {
+    if (!confirm(`Delete "${fileName}"? This action cannot be undone.`)) return;
+
+    try {
+      await filesAPI.delete(fileId);
+      await loadFolderContent();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to delete file');
+    }
   };
 
   const formatDate = (dateString: string): string => {
@@ -257,18 +301,107 @@ const FolderView: React.FC = () => {
           </section>
         )}
 
-        {/* Combined Tasks Section (Files, Forms, E-Signatures) */}
+        {/* Files Section - Separate from Tasks */}
         <section className="content-section">
           <div className="section-header">
-            <h2>Tasks ({files.length + forms.length + esignatures.length})</h2>
+            <h2>Files ({files.length})</h2>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+                disabled={uploading}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="btn-primary btn-sm"
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Upload Files'}
+              </button>
+            </div>
+          </div>
+          {files.length === 0 ? (
+            <div className="empty-content">
+              <p>No files in this folder. Upload files to get started.</p>
+            </div>
+          ) : (
+            <div className="card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((file: any) => (
+                    <tr
+                      key={file.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/files/${file.id}`)}
+                    >
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{file.file_type}</span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {(file.file_size / 1024).toFixed(1)} KB
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {formatDate(file.created_at)}
+                        </span>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            className="btn-primary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/files/${file.id}`);
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            View
+                          </button>
+                          {(role === 'admin' || file.uploaded_by === content?.folder?.created_by) && (
+                            <button
+                              className="btn-danger btn-sm"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                handleDeleteFile(file.id, file.name);
+                              }}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* Tasks Section (Forms and E-Signatures only) */}
+        <section className="content-section">
+          <div className="section-header">
+            <h2>Tasks ({forms.length + esignatures.length})</h2>
             {role === 'admin' && (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => navigate(`/files?folder_id=${folder.id}`)}
-                  className="btn-primary btn-sm"
-                >
-                  Add Files
-                </button>
                 <button
                   onClick={() => navigate(`/forms?folder_id=${folder.id}`)}
                   className="btn-primary btn-sm"
@@ -284,7 +417,7 @@ const FolderView: React.FC = () => {
               </div>
             )}
           </div>
-          {files.length === 0 && forms.length === 0 && esignatures.length === 0 ? (
+          {forms.length === 0 && esignatures.length === 0 ? (
             <div className="empty-content">
               <p>No tasks in this folder</p>
             </div>
@@ -301,91 +434,6 @@ const FolderView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Files */}
-                  {files.map((file: any) => (
-                    <tr
-                      key={`file-${file.id}`}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/files/${file.id}`)}
-                    >
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            backgroundColor: file.is_completed ? '#10b981' : '#e5e7eb',
-                            border: '2px solid',
-                            borderColor: file.is_completed ? '#10b981' : '#d1d5db',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'default'
-                          }}
-                          title={file.is_completed ? 'Completed' : 'Not completed'}
-                        >
-                          {file.is_completed && (
-                            <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ 
-                          fontSize: '0.75rem', 
-                          padding: '0.25rem 0.5rem', 
-                          backgroundColor: '#e0e7ff', 
-                          color: '#4338ca', 
-                          borderRadius: '0.25rem',
-                          fontWeight: 500
-                        }}>
-                          File
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
-                          {file.is_reusable && (
-                            <span style={{ 
-                              fontSize: '0.75rem', 
-                              padding: '0.125rem 0.375rem', 
-                              backgroundColor: '#dbeafe', 
-                              color: '#1e40af', 
-                              borderRadius: '0.25rem',
-                              fontWeight: 500
-                            }}>
-                              Template
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {file.file_type} • {(file.file_size / 1024).toFixed(1)} KB
-                        </span>
-                      </td>
-                      {role === 'admin' && (
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <button
-                            className="btn-danger btn-sm"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (!confirm(`Remove "${file.name}" from this folder?`)) return;
-                              try {
-                                await foldersAPI.removeFile(folder.id, file.id);
-                                loadFolderContent();
-                              } catch (err: any) {
-                                alert(err.response?.data?.detail || 'Failed to remove file from folder');
-                              }
-                            }}
-                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                  
                   {/* Forms */}
                   {forms.map((form: any) => (
                     <tr

@@ -846,38 +846,13 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 logger.warning(f"Error fetching quote: {str(e)}")
                 pass
         
-        # Get files assigned to folder
-        # Include both: reusable files (via many-to-many) and instances (via direct folder_id)
+        # Get folder-specific files only (not reusable templates)
+        # Files uploaded directly to this folder with is_reusable=False
         files = []
         try:
-            # Get reusable files assigned via many-to-many relationship
-            file_assignments = supabase_storage.table("file_folder_assignments").select("file_id").eq("folder_id", folder_id).execute()
-            reusable_file_ids = [fa["file_id"] for fa in (file_assignments.data or [])]
-            
-            # Get instances directly assigned to folder (non-reusable)
-            instances_response = supabase_storage.table("files").select("*").eq("folder_id", folder_id).eq("is_reusable", False).execute()
-            instances = instances_response.data if instances_response.data else []
-            
-            # Get reusable files
-            if reusable_file_ids:
-                reusable_response = supabase_storage.table("files").select("*").in_("id", reusable_file_ids).execute()
-                reusable_files = reusable_response.data if reusable_response.data else []
-            else:
-                reusable_files = []
-            
-            # Combine reusable files and instances
-            all_files = reusable_files + instances
-            
-            # Check completion status for each file (if user has viewed it)
-            for file in all_files:
-                file["item_type"] = "file"
-                # Check if user has viewed this file
-                try:
-                    view_check = supabase_storage.table("file_views").select("id").eq("file_id", file["id"]).eq("user_id", user["id"]).limit(1).execute()
-                    file["is_completed"] = len(view_check.data or []) > 0
-                except Exception:
-                    file["is_completed"] = False
-            files = all_files
+            # Get only folder-specific files (directly assigned, not reusable)
+            files_response = supabase_storage.table("files").select("*").eq("folder_id", folder_id).eq("is_reusable", False).execute()
+            files = files_response.data if files_response.data else []
         except Exception as e:
             logger.warning(f"Error fetching files: {str(e)}")
             pass

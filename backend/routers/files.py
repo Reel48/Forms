@@ -43,12 +43,13 @@ async def list_files(
         
         # Apply filters
         if folder_id:
-            # When viewing folder content, show all files (templates + instances)
-            query = query.eq("folder_id", folder_id)
+            # When viewing folder content, show ONLY folder-specific files
+            # (not reusable templates assigned via many-to-many)
+            query = query.eq("folder_id", folder_id).eq("is_reusable", False)
         elif templates_only:
             # For template library (main page), show only reusable files
-            # Templates should always appear regardless of folder assignments
-            query = query.eq("is_reusable", True)
+            # Exclude folder-specific files (those with folder_id set)
+            query = query.eq("is_reusable", True).is_("folder_id", "null")
         
         if quote_id:
             query = query.eq("quote_id", quote_id)
@@ -209,11 +210,52 @@ async def upload_file(
     quote_id: Optional[str] = None,
     form_id: Optional[str] = None,
     description: Optional[str] = None,
-    is_reusable: bool = True,  # Default to True so files appear in template library
+    is_reusable: Optional[bool] = None,  # If None, auto-detect based on folder_id
     user = Depends(get_current_user)
 ):
-    """Upload a file to Supabase Storage."""
+    """Upload a file to Supabase Storage.
+    
+    If folder_id is provided:
+    - File is folder-specific (is_reusable=False)
+    - User must have access to the folder (admin or assigned customer)
+    - File will only appear in that folder
+    
+    If folder_id is not provided:
+    - File is a template (is_reusable=True by default)
+    - Only admins can upload templates
+    """
     try:
+        # Check if user is admin
+        is_admin = False
+        try:
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            is_admin = False
+        
+        # If folder_id is provided, verify user has access to folder
+        if folder_id:
+            # Verify folder exists
+            folder_response = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
+            if not folder_response.data:
+                raise HTTPException(status_code=404, detail="Folder not found")
+            
+            # Check folder access (admin or assigned customer)
+            if not is_admin:
+                folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                if not folder_assignment.data:
+                    raise HTTPException(status_code=403, detail="You don't have access to this folder")
+            
+            # Folder-specific files are NOT reusable
+            is_reusable = False
+        else:
+            # No folder_id: this is a template upload
+            # Only admins can upload templates
+            if not is_admin:
+                raise HTTPException(status_code=403, detail="Only admins can upload template files")
+            # Default to reusable if not specified
+            if is_reusable is None:
+                is_reusable = True
         # Validate file size
         file_content = await file.read()
         if len(file_content) > MAX_FILE_SIZE:
