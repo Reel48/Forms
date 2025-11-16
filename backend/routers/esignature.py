@@ -407,14 +407,28 @@ def embed_signature_in_pdf(pdf_bytes: bytes, signature_image_bytes: bytes, signa
         elif signature_type == "type":
             # Draw text signature
             can.setFont("Helvetica-Bold", 14)
-            # Decode if base64
-            if isinstance(signature_image_bytes, str):
+            # Decode signature text - handle both base64 encoded and plain text
+            if isinstance(signature_image_bytes, bytes):
                 try:
-                    signature_text = base64.b64decode(signature_image_bytes).decode('utf-8')
+                    # Try to decode as UTF-8 first
+                    signature_text = signature_image_bytes.decode('utf-8')
+                    # If it looks like base64, try decoding it
+                    if len(signature_text) > 0 and not signature_text.isprintable():
+                        try:
+                            signature_text = base64.b64decode(signature_text).decode('utf-8')
+                        except:
+                            pass  # Use original if base64 decode fails
                 except:
-                    signature_text = signature_image_bytes
+                    signature_text = str(signature_image_bytes)
             else:
-                signature_text = signature_image_bytes.decode('utf-8') if isinstance(signature_image_bytes, bytes) else str(signature_image_bytes)
+                # String input
+                signature_text = str(signature_image_bytes)
+                # Check if it's base64 encoded (common pattern: alphanumeric with = padding)
+                if len(signature_text) > 10 and (signature_text.endswith('=') or not signature_text.isprintable()):
+                    try:
+                        signature_text = base64.b64decode(signature_text).decode('utf-8')
+                    except:
+                        pass  # Use original if base64 decode fails
             
             # Wrap text if needed
             text_width = can.stringWidth(signature_text, "Helvetica-Bold", 14)
