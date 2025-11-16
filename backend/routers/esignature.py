@@ -378,18 +378,29 @@ def embed_signature_in_pdf(pdf_bytes: bytes, signature_image_bytes: bytes, signa
                 
                 # Load image
                 img = Image.open(io.BytesIO(signature_image_bytes))
-                # Resize to fit
+                # Resize to fit while maintaining aspect ratio
                 img.thumbnail((int(sig_width), int(sig_height)), Image.Resampling.LANCZOS)
                 
-                # Save to temporary buffer
-                img_buffer = io.BytesIO()
-                img.save(img_buffer, format='PNG')
-                img_buffer.seek(0)
+                # Save to temporary file for ReportLab (ReportLab needs a file path or PIL Image)
+                import tempfile
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                    img.save(tmp_file.name, format='PNG')
+                    tmp_path = tmp_file.name
                 
-                # Draw image on canvas
-                can.drawImage(img_buffer, x, y, width=sig_width, height=sig_height, preserveAspectRatio=True)
+                try:
+                    # Draw image on canvas using file path
+                    can.drawImage(tmp_path, x, y, width=sig_width, height=sig_height, preserveAspectRatio=True, mask='auto')
+                finally:
+                    # Clean up temp file
+                    import os
+                    try:
+                        os.unlink(tmp_path)
+                    except:
+                        pass
             except Exception as img_error:
                 print(f"Error embedding image signature: {str(img_error)}")
+                import traceback
+                traceback.print_exc()
                 # Fallback: draw text
                 can.setFont("Helvetica-Bold", 12)
                 can.drawString(x, y + 20, "Signature")
