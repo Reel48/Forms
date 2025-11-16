@@ -257,41 +257,90 @@ const FolderView: React.FC = () => {
           </section>
         )}
 
-        {/* Files Section */}
+        {/* Combined Tasks Section (Files, Forms, E-Signatures) */}
         <section className="content-section">
           <div className="section-header">
-            <h2>Files ({files.length})</h2>
+            <h2>Tasks ({files.length + forms.length + esignatures.length})</h2>
             {role === 'admin' && (
-              <button
-                onClick={() => navigate(`/files?folder_id=${folder.id}`)}
-                className="btn-primary btn-sm"
-              >
-                Add Files
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => navigate(`/files?folder_id=${folder.id}`)}
+                  className="btn-primary btn-sm"
+                >
+                  Add Files
+                </button>
+                <button
+                  onClick={() => navigate(`/forms?folder_id=${folder.id}`)}
+                  className="btn-primary btn-sm"
+                >
+                  Add Forms
+                </button>
+                <button
+                  onClick={() => navigate(`/esignature?folder_id=${folder.id}`)}
+                  className="btn-primary btn-sm"
+                >
+                  Add Documents
+                </button>
+              </div>
             )}
           </div>
-          {files.length === 0 ? (
+          {files.length === 0 && forms.length === 0 && esignatures.length === 0 ? (
             <div className="empty-content">
-              <p>No files in this folder</p>
+              <p>No tasks in this folder</p>
             </div>
           ) : (
             <div className="card">
               <table>
                 <thead>
                   <tr>
-                    <th>Name</th>
+                    <th style={{ width: '40px' }}></th>
                     <th>Type</th>
-                    <th>Size</th>
+                    <th>Name</th>
+                    <th>Details</th>
                     {role === 'admin' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Files */}
                   {files.map((file: any) => (
                     <tr
-                      key={file.id}
+                      key={`file-${file.id}`}
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/files/${file.id}`)}
                     >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: file.is_completed ? '#10b981' : '#e5e7eb',
+                            border: '2px solid',
+                            borderColor: file.is_completed ? '#10b981' : '#d1d5db',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'default'
+                          }}
+                          title={file.is_completed ? 'Completed' : 'Not completed'}
+                        >
+                          {file.is_completed && (
+                            <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '0.25rem 0.5rem', 
+                          backgroundColor: '#e0e7ff', 
+                          color: '#4338ca', 
+                          borderRadius: '0.25rem',
+                          fontWeight: 500
+                        }}>
+                          File
+                        </span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
@@ -310,11 +359,8 @@ const FolderView: React.FC = () => {
                         </div>
                       </td>
                       <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{file.file_type}</span>
-                      </td>
-                      <td>
                         <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {(file.file_size / 1024).toFixed(1)} KB
+                          {file.file_type} • {(file.file_size / 1024).toFixed(1)} KB
                         </span>
                       </td>
                       {role === 'admin' && (
@@ -339,47 +385,47 @@ const FolderView: React.FC = () => {
                       )}
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* Forms Section */}
-        <section className="content-section">
-          <div className="section-header">
-            <h2>Forms ({forms.length})</h2>
-            {role === 'admin' && (
-              <button
-                onClick={() => navigate(`/forms?folder_id=${folder.id}`)}
-                className="btn-primary btn-sm"
-              >
-                Add Forms
-              </button>
-            )}
-          </div>
-          {forms.length === 0 ? (
-            <div className="empty-content">
-              <p>No forms in this folder</p>
-            </div>
-          ) : (
-            <div className="card">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Submissions</th>
-                    {role === 'admin' && <th>Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
+                  
+                  {/* Forms */}
                   {forms.map((form: any) => (
                     <tr
-                      key={form.id}
+                      key={`form-${form.id}`}
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/forms/${form.id}`)}
                     >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: form.is_completed ? '#10b981' : '#e5e7eb',
+                            border: '2px solid',
+                            borderColor: form.is_completed ? '#10b981' : '#d1d5db',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'default'
+                          }}
+                          title={form.is_completed ? 'Completed' : 'Not completed'}
+                        >
+                          {form.is_completed && (
+                            <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '0.25rem 0.5rem', 
+                          backgroundColor: '#fef3c7', 
+                          color: '#92400e', 
+                          borderRadius: '0.25rem',
+                          fontWeight: 500
+                        }}>
+                          Form
+                        </span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{form.name}</strong>
@@ -399,12 +445,7 @@ const FolderView: React.FC = () => {
                       </td>
                       <td>
                         <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {form.status || 'Active'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {form.submissions_count || 0} {form.submissions_count === 1 ? 'submission' : 'submissions'}
+                          {form.status || 'Active'} • {form.submissions_count || 0} {form.submissions_count === 1 ? 'submission' : 'submissions'}
                         </span>
                       </td>
                       {role === 'admin' && (
@@ -429,47 +470,47 @@ const FolderView: React.FC = () => {
                       )}
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* E-Signatures Section */}
-        <section className="content-section">
-          <div className="section-header">
-            <h2>E-Signature Documents ({esignatures.length})</h2>
-            {role === 'admin' && (
-              <button
-                onClick={() => navigate(`/esignature?folder_id=${folder.id}`)}
-                className="btn-primary btn-sm"
-              >
-                Add Documents
-              </button>
-            )}
-          </div>
-          {esignatures.length === 0 ? (
-            <div className="empty-content">
-              <p>No e-signature documents in this folder</p>
-            </div>
-          ) : (
-            <div className="card">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Mode</th>
-                    {role === 'admin' && <th>Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
+                  
+                  {/* E-Signatures */}
                   {esignatures.map((esig: any) => (
                     <tr
-                      key={esig.id}
+                      key={`esignature-${esig.id}`}
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/esignature/${esig.id}`)}
                     >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: esig.is_completed ? '#10b981' : '#e5e7eb',
+                            border: '2px solid',
+                            borderColor: esig.is_completed ? '#10b981' : '#d1d5db',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'default'
+                          }}
+                          title={esig.is_completed ? 'Completed' : 'Not completed'}
+                        >
+                          {esig.is_completed && (
+                            <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '0.25rem 0.5rem', 
+                          backgroundColor: '#fce7f3', 
+                          color: '#9f1239', 
+                          borderRadius: '0.25rem',
+                          fontWeight: 500
+                        }}>
+                          E-Signature
+                        </span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{esig.name}</strong>
@@ -488,10 +529,9 @@ const FolderView: React.FC = () => {
                         </div>
                       </td>
                       <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{esig.status}</span>
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{esig.signature_mode}</span>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {esig.status} • {esig.signature_mode}
+                        </span>
                       </td>
                       {role === 'admin' && (
                         <td onClick={(e) => e.stopPropagation()}>

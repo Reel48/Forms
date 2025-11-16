@@ -866,7 +866,16 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 reusable_files = []
             
             # Combine reusable files and instances
-            files = reusable_files + instances
+            all_files = reusable_files + instances
+            
+            # Check completion status for each file (if user has viewed it)
+            # For now, we'll check if there's a file_views table or track via a simple mechanism
+            # Since we don't have a file_views table yet, we'll mark as incomplete for now
+            # TODO: Add file_views tracking when user opens a file
+            for file in all_files:
+                file["item_type"] = "file"
+                file["is_completed"] = False  # Will be updated when we add file view tracking
+            files = all_files
         except Exception as e:
             logger.warning(f"Error fetching files: {str(e)}")
             pass
@@ -886,8 +895,33 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             else:
                 templates = []
             
-            # Note: Forms don't have direct folder_id, so instances are only via assignments
-            # For now, we show templates. If we add instance support later, we can add it here.
+            # Check completion status for each form (if user has submitted it)
+            # Note: Forms use submitter_email instead of user_id, so we'll check by email if available
+            for form in templates:
+                form["item_type"] = "form"
+                # Check if user has submitted this form
+                # Try to get user email from auth.users table
+                try:
+                    user_email = None
+                    if user.get("email"):
+                        user_email = user["email"]
+                    elif user.get("id"):
+                        # Try to get email from auth.users
+                        try:
+                            from database import supabase_storage
+                            user_response = supabase_storage.table("auth.users").select("email").eq("id", user["id"]).single().execute()
+                            if user_response.data:
+                                user_email = user_response.data.get("email")
+                        except:
+                            pass
+                    
+                    if user_email:
+                        submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).eq("submitter_email", user_email).limit(1).execute()
+                        form["is_completed"] = len(submission_check.data or []) > 0
+                    else:
+                        form["is_completed"] = False
+                except Exception:
+                    form["is_completed"] = False
             forms = templates
         except Exception as e:
             logger.warning(f"Error fetching forms: {str(e)}")
@@ -901,7 +935,18 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             # Get instances (copies) directly assigned to folder
             # These are copies created when templates were assigned, with is_template=False
             instances_response = supabase_storage.table("esignature_documents").select("*").eq("folder_id", folder_id).eq("is_template", False).execute()
-            esignatures = instances_response.data if instances_response.data else []
+            instances = instances_response.data if instances_response.data else []
+            
+            # Check completion status for each e-signature (if user has signed it)
+            for esig in instances:
+                esig["item_type"] = "esignature"
+                # Check if user has signed this document
+                try:
+                    signature_check = supabase_storage.table("esignature_signatures").select("id").eq("document_id", esig["id"]).eq("user_id", user["id"]).limit(1).execute()
+                    esig["is_completed"] = len(signature_check.data or []) > 0
+                except Exception:
+                    esig["is_completed"] = False
+            esignatures = instances
         except Exception as e:
             logger.warning(f"Error fetching e-signatures: {str(e)}")
             pass
