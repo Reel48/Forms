@@ -127,7 +127,7 @@ export default function ResetPassword() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         disabled={loading}
-                        placeholder="At least 12 characters with uppercase, lowercase, number, and special character"
+                        placeholder="New password"
                         minLength={12}
                       />
                       <button
