@@ -6,7 +6,7 @@ import './FoldersList.css';
 
 const FoldersList: React.FC = () => {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, loading: authLoading } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +69,7 @@ const FoldersList: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="folders-list-container">
         <div className="loading">Loading folders...</div>
