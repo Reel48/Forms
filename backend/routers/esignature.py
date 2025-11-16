@@ -539,8 +539,23 @@ async def sign_document(
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Invalid signature image format: {str(e)}")
         else:
-            # Text signature
-            signature_image_bytes = signature_data.encode('utf-8')
+            # Text signature - decode base64 if encoded, otherwise use as plain text
+            try:
+                # Check if signature_data is base64 encoded (typed signatures might come as base64)
+                if isinstance(signature_data, str):
+                    # Try to decode base64 - if it fails, use as plain text
+                    try:
+                        decoded = base64.b64decode(signature_data)
+                        # If decode succeeds, use decoded text
+                        signature_text = decoded.decode('utf-8')
+                        signature_image_bytes = signature_text.encode('utf-8')
+                    except:
+                        # Not base64, use as plain text
+                        signature_image_bytes = signature_data.encode('utf-8')
+                else:
+                    signature_image_bytes = str(signature_data).encode('utf-8')
+            except Exception as e:
+                signature_image_bytes = str(signature_data).encode('utf-8')
         
         # Embed signature in PDF
         try:
