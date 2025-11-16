@@ -128,7 +128,7 @@ async def create_folder(
         folder_data = folder.model_dump(exclude_none=True, exclude={"assign_to_user_id"})
         folder_data["created_by"] = user["id"]
         
-        response = supabase.table("folders").insert(folder_data).execute()
+        response = supabase_storage.table("folders").insert(folder_data).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create folder")
@@ -145,14 +145,14 @@ async def create_folder(
                     "role": "viewer",
                     "assigned_by": user["id"]
                 }
-                supabase.table("folder_assignments").insert(assignment_data).execute()
+                supabase_storage.table("folder_assignments").insert(assignment_data).execute()
             except Exception as assign_error:
                 print(f"Warning: Could not create folder assignment: {str(assign_error)}")
         
         # If quote_id is provided, update quote to link to folder
         if folder.quote_id:
             try:
-                supabase.table("quotes").update({"folder_id": folder_id}).eq("id", folder.quote_id).execute()
+                supabase_storage.table("quotes").update({"folder_id": folder_id}).eq("id", folder.quote_id).execute()
             except Exception as quote_error:
                 print(f"Warning: Could not update quote: {str(quote_error)}")
         
@@ -181,7 +181,7 @@ async def update_folder(
             is_admin = False
         
         # Get existing folder
-        existing = supabase.table("folders").select("*").eq("id", folder_id).single().execute()
+        existing = supabase_storage.table("folders").select("*").eq("id", folder_id).single().execute()
         if not existing.data:
             raise HTTPException(status_code=404, detail="Folder not found")
         
@@ -191,7 +191,7 @@ async def update_folder(
         
         # Update folder
         update_data = folder_update.model_dump(exclude_none=True)
-        response = supabase.table("folders").update(update_data).eq("id", folder_id).execute()
+        response = supabase_storage.table("folders").update(update_data).eq("id", folder_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to update folder")

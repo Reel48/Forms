@@ -838,13 +838,13 @@ async def get_form_submission(form_id: str, submission_id: str):
     """Get a single submission by ID"""
     try:
         # Check if form exists
-        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
         
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Fetch submission with answers
-        response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).eq("form_id", form_id).single().execute()
+        response = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).eq("form_id", form_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Submission not found")
@@ -927,7 +927,7 @@ async def create_short_url(form_id: str, request: Request, current_admin: dict =
 async def get_short_url_info(short_code: str):
     """Get information about a short URL (public)"""
     try:
-        response = supabase.table("form_short_urls").select("*, forms(id, name, public_url_slug)").eq("short_code", short_code).single().execute()
+        response = supabase_storage.table("form_short_urls").select("*, forms(id, name, public_url_slug)").eq("short_code", short_code).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Short URL not found")
@@ -958,7 +958,7 @@ async def redirect_short_url(short_code: str):
         from fastapi.responses import RedirectResponse
         
         # Get short URL info
-        response = supabase.table("form_short_urls").select("*, forms(public_url_slug)").eq("short_code", short_code).single().execute()
+        response = supabase_storage.table("form_short_urls").select("*, forms(public_url_slug)").eq("short_code", short_code).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Short URL not found")
@@ -971,7 +971,7 @@ async def redirect_short_url(short_code: str):
         
         # Increment click count
         current_count = short_url.get("click_count", 0)
-        supabase.table("form_short_urls").update({"click_count": current_count + 1}).eq("id", short_url["id"]).execute()
+        supabase_storage.table("form_short_urls").update({"click_count": current_count + 1}).eq("id", short_url["id"]).execute()
         
         # Redirect to the form
         redirect_url = f"/public/form/{form['public_url_slug']}"
@@ -1496,7 +1496,7 @@ async def verify_form_password(slug: str, password_data: dict):
     """Verify password for a password-protected form (public endpoint)"""
     try:
         # Get form
-        response = supabase.table("forms").select("id, settings").eq("public_url_slug", slug).single().execute()
+        response = supabase_storage.table("forms").select("id, settings").eq("public_url_slug", slug).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Form not found")
@@ -1957,7 +1957,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
         import requests as http_requests
         
         # Check if form exists and is published
-        form_response = supabase.table("forms").select("id, status, settings").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id, status, settings").eq("id", form_id).single().execute()
         
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
@@ -1982,7 +1982,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
             try:
                 max_submissions = int(settings["max_submissions"])
                 # Count completed submissions
-                count_response = supabase.table("form_submissions").select("id", count="exact").eq("form_id", form_id).eq("status", "completed").execute()
+                count_response = supabase_storage.table("form_submissions").select("id", count="exact").eq("form_id", form_id).eq("status", "completed").execute()
                 current_count = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
                 
                 if current_count >= max_submissions:
@@ -2029,7 +2029,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
         if client_ip:
             # Check submissions from this IP in the last hour
             one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat()
-            recent_submissions = supabase.table("form_submissions").select("id").eq("form_id", form_id).eq("ip_address", client_ip).gte("submitted_at", one_hour_ago).execute()
+            recent_submissions = supabase_storage.table("form_submissions").select("id").eq("form_id", form_id).eq("ip_address", client_ip).gte("submitted_at", one_hour_ago).execute()
             submission_count = len(recent_submissions.data or [])
             
             # Default limit: 10 submissions per hour per IP
@@ -2055,7 +2055,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
             "submitted_at": now,
         }
         
-        submission_response = supabase.table("form_submissions").insert(submission_data).execute()
+        submission_response = supabase_storage.table("form_submissions").insert(submission_data).execute()
         
         if not submission_response.data:
             raise HTTPException(status_code=500, detail="Failed to create submission")
@@ -2077,10 +2077,10 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
                 answers_data.append(answer_data)
             
             if answers_data:
-                supabase.table("form_submission_answers").insert(answers_data).execute()
+                supabase_storage.table("form_submission_answers").insert(answers_data).execute()
         
         # Fetch complete submission with answers
-        response = supabase.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).single().execute()
+        response = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("id", submission_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to fetch submission")
@@ -2097,7 +2097,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
         # Get form name for email notification
         form_name = "Form"
         try:
-            form_detail_response = supabase.table("forms").select("name").eq("id", form_id).single().execute()
+            form_detail_response = supabase_storage.table("forms").select("name").eq("id", form_id).single().execute()
             if form_detail_response.data:
                 form_name = form_detail_response.data.get("name", "Form")
         except Exception as e:
@@ -2142,7 +2142,7 @@ async def upload_file(form_id: str, file: UploadFile = File(...)):
     """Upload a file for a form submission to Supabase Storage"""
     try:
         # Check if form exists
-        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
@@ -2221,7 +2221,7 @@ async def create_payment_intent(form_id: str, amount: float, currency: str = "us
     """Create a Stripe payment intent for a form payment field"""
     try:
         # Check if form exists
-        form_response = supabase.table("forms").select("id").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         

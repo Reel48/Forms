@@ -80,7 +80,7 @@ class WebhookService:
                 "created_at": datetime.now().isoformat(),
             }
             
-            supabase.table("form_webhook_deliveries").insert(delivery_data).execute()
+            supabase_storage.table("form_webhook_deliveries").insert(delivery_data).execute()
             
             return {
                 "success": response.status_code < 400,
@@ -145,7 +145,7 @@ class WebhookService:
                 "delivered_at": None,
                 "created_at": datetime.now().isoformat(),
             }
-            supabase.table("form_webhook_deliveries").insert(delivery_data).execute()
+            supabase_storage.table("form_webhook_deliveries").insert(delivery_data).execute()
         except Exception as e:
             logger.error(f"Failed to log webhook delivery failure: {str(e)}")
     
@@ -267,7 +267,7 @@ class WebhookService:
         """
         try:
             # Check for Slack webhook in form settings
-            form_response = supabase.table("forms").select("name, settings").eq("id", form_id).single().execute()
+            form_response = supabase_storage.table("forms").select("name, settings").eq("id", form_id).single().execute()
             form = form_response.data if form_response.data else {}
             form_name = form.get("name", "Form")
             settings = form.get("settings", {})
@@ -281,14 +281,14 @@ class WebhookService:
                     logger.error(f"Error sending Slack notification: {str(e)}")
             
             # Get all active webhooks for this form
-            webhooks_response = supabase.table("form_webhooks").select("*").eq("form_id", form_id).eq("is_active", True).execute()
+            webhooks_response = supabase_storage.table("form_webhooks").select("*").eq("form_id", form_id).eq("is_active", True).execute()
             webhooks = webhooks_response.data or []
             
             if not webhooks:
                 return
             
             # Get form details
-            form_response = supabase.table("forms").select("id, name").eq("id", form_id).single().execute()
+            form_response = supabase_storage.table("forms").select("id, name").eq("id", form_id).single().execute()
             form = form_response.data if form_response.data else {}
             
             # Prepare webhook payload

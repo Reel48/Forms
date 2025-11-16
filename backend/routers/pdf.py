@@ -108,7 +108,7 @@ async def generate_quote_pdf(
     """
     try:
         # Fetch quote with all relations
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -155,7 +155,7 @@ async def generate_quote_pdf(
         # Fetch company settings
         company_settings = None
         try:
-            company_response = supabase.table("company_settings").select("*").limit(1).execute()
+            company_response = supabase_storage.table("company_settings").select("*").limit(1).execute()
             if company_response.data:
                 company_settings = company_response.data[0]
         except Exception:

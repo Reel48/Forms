@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/company-settings", tags=["company-settings"])
 async def get_company_settings():
     """Get company settings (returns first/only row)"""
     try:
-        response = supabase.table("company_settings").select("*").limit(1).execute()
+        response = supabase_storage.table("company_settings").select("*").limit(1).execute()
         if not response.data:
             # Return default empty settings if none exist
             return {
@@ -37,7 +37,7 @@ async def update_company_settings(settings: CompanySettingsUpdate):
     """Update company settings (upsert - creates if doesn't exist)"""
     try:
         # Check if settings exist
-        existing = supabase.table("company_settings").select("*").limit(1).execute()
+        existing = supabase_storage.table("company_settings").select("*").limit(1).execute()
         
         # Convert to dict, excluding None values for update
         update_data = settings.model_dump(exclude_unset=True) if hasattr(settings, 'model_dump') else settings.dict(exclude_unset=True)
@@ -45,7 +45,7 @@ async def update_company_settings(settings: CompanySettingsUpdate):
         
         if existing.data:
             # Update existing
-            response = supabase.table("company_settings").update(update_data).eq("id", existing.data[0]["id"]).execute()
+            response = supabase_storage.table("company_settings").update(update_data).eq("id", existing.data[0]["id"]).execute()
             if not response.data:
                 raise HTTPException(status_code=404, detail="Company settings not found")
             return response.data[0]
@@ -54,7 +54,7 @@ async def update_company_settings(settings: CompanySettingsUpdate):
             import uuid
             update_data["id"] = str(uuid.uuid4())
             update_data["created_at"] = datetime.now().isoformat()
-            response = supabase.table("company_settings").insert(update_data).execute()
+            response = supabase_storage.table("company_settings").insert(update_data).execute()
             if not response.data:
                 raise HTTPException(status_code=500, detail="Failed to create company settings")
             return response.data[0]

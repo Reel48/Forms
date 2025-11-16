@@ -121,7 +121,7 @@ async def get_clients():
 async def get_client(client_id: str):
     """Get a specific client"""
     try:
-        response = supabase.table("clients").select("*").eq("id", client_id).execute()
+        response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Client not found")
         return response.data[0]
@@ -161,7 +161,7 @@ async def create_client(client: ClientCreate):
         
         # Insert into Supabase (let it generate id and created_at)
         print(f"DEBUG: Inserting into Supabase: {client_data}")
-        insert_response = supabase.table("clients").insert(client_data).execute()
+        insert_response = supabase_storage.table("clients").insert(client_data).execute()
         
         print(f"DEBUG: Insert response: {insert_response}")
         print(f"DEBUG: Insert response data: {insert_response.data}")
@@ -174,7 +174,7 @@ async def create_client(client: ClientCreate):
         
         # Fetch the complete client record with all fields
         print(f"DEBUG: Fetching created client with id: {created_client_id}")
-        response = supabase.table("clients").select("*").eq("id", created_client_id).execute()
+        response = supabase_storage.table("clients").select("*").eq("id", created_client_id).execute()
         
         print(f"DEBUG: Fetch response: {response}")
         print(f"DEBUG: Fetch response data: {response.data}")
@@ -210,7 +210,7 @@ async def update_client(client_id: str, client: ClientCreate):
     """Update a client"""
     try:
         # Get existing client to check for Stripe customer ID
-        existing_response = supabase.table("clients").select("*").eq("id", client_id).execute()
+        existing_response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Client not found")
         
@@ -235,12 +235,12 @@ async def update_client(client_id: str, client: ClientCreate):
                 print(f"Failed to update Stripe customer: {e}")
         
         # Update the client - Supabase returns updated data by default
-        response = supabase.table("clients").update(client_data).eq("id", client_id).execute()
+        response = supabase_storage.table("clients").update(client_data).eq("id", client_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Client not found")
         
         # Fetch the complete updated client to ensure all fields are returned
-        updated_response = supabase.table("clients").select("*").eq("id", client_id).execute()
+        updated_response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
         if not updated_response.data:
             raise HTTPException(status_code=404, detail="Client not found after update")
         return updated_response.data[0]
@@ -253,7 +253,7 @@ async def update_client(client_id: str, client: ClientCreate):
 async def delete_client(client_id: str):
     """Delete a client"""
     try:
-        response = supabase.table("clients").delete().eq("id", client_id).execute()
+        response = supabase_storage.table("clients").delete().eq("id", client_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Client not found")
         return {"message": "Client deleted successfully"}

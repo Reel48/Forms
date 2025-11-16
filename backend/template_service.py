@@ -53,13 +53,13 @@ class TemplateService:
         """
         try:
             # Get default template for this type
-            response = supabase.table("email_templates").select("*").eq("template_type", template_type).eq("is_default", True).single().execute()
+            response = supabase_storage.table("email_templates").select("*").eq("template_type", template_type).eq("is_default", True).single().execute()
             
             if response.data:
                 return response.data
             
             # If no default, get any template of this type
-            response = supabase.table("email_templates").select("*").eq("template_type", template_type).limit(1).execute()
+            response = supabase_storage.table("email_templates").select("*").eq("template_type", template_type).limit(1).execute()
             
             if response.data and len(response.data) > 0:
                 return response.data[0]

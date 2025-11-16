@@ -154,7 +154,7 @@ async def get_quotes(
             )
         
         # Start building query
-        query = supabase.table("quotes").select("*, clients(*), line_items(*)")
+        query = supabase_storage.table("quotes").select("*, clients(*), line_items(*)")
         
         # If customer, only show quotes in folders they have access to
         if current_user and current_user.get("role") == "customer":
@@ -312,7 +312,7 @@ async def get_quote(quote_id: str, current_user: Optional[dict] = Depends(get_op
     Admins can see any quote. Customers can only see assigned quotes.
     """
     try:
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -545,12 +545,12 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
             "updated_at": datetime.now().isoformat()
         }
         
-        response = supabase.table("quotes").update(update_data).eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").update(update_data).eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
         # Fetch complete quote with relations
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
         quote = response.data[0]
         
         # Log acceptance activity
@@ -576,7 +576,7 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
                     
                     # Update client with Stripe customer ID if not set
                     if not client.get("stripe_customer_id"):
-                        supabase.table("clients").update({
+                        supabase_storage.table("clients").update({
                             "stripe_customer_id": customer_id
                         }).eq("id", client["id"]).execute()
                     
@@ -592,13 +592,13 @@ async def accept_quote(quote_id: str, current_user: dict = Depends(get_current_u
                         )
                         
                         # Update quote with invoice information
-                        supabase.table("quotes").update({
+                        supabase_storage.table("quotes").update({
                             "stripe_invoice_id": invoice_data["invoice_id"],
                             "updated_at": datetime.now().isoformat()
                         }).eq("id", quote_id).execute()
                         
                         # Refresh quote data to include invoice
-                        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+                        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
                         quote = response.data[0]
             except Exception as e:
                 # Log error but don't fail the acceptance
@@ -1383,7 +1383,7 @@ async def get_client_quote_history(
 ):
     """Get quote history for a specific client"""
     try:
-        query = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("client_id", client_id)
+        query = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("client_id", client_id)
         
         # If customer, only show assigned quotes
         if current_user and current_user.get("role") == "customer":

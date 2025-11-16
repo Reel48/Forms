@@ -45,14 +45,14 @@ def store_webhook_event(
         
         # Try to insert, but handle duplicate key error (idempotency)
         try:
-            response = supabase.table("webhook_events").insert(event_record).execute()
+            response = supabase_storage.table("webhook_events").insert(event_record).execute()
             if response.data:
                 return response.data[0]["id"]
         except Exception as e:
             # If event already exists, update it
             if "duplicate" in str(e).lower() or "unique" in str(e).lower():
                 logger.info(f"Event {stripe_event_id} already exists, updating status")
-                update_response = supabase.table("webhook_events").update({
+                update_response = supabase_storage.table("webhook_events").update({
                     "processing_status": processing_status,
                     "error_message": error_message,
                     "processed_at": datetime.now().isoformat() if processing_status in ["completed", "failed"] else None
@@ -70,7 +70,7 @@ def store_webhook_event(
 def check_event_processed(stripe_event_id: str) -> bool:
     """Check if webhook event has already been processed (idempotency check)"""
     try:
-        response = supabase.table("webhook_events").select("processing_status").eq("stripe_event_id", stripe_event_id).execute()
+        response = supabase_storage.table("webhook_events").select("processing_status").eq("stripe_event_id", stripe_event_id).execute()
         if response.data:
             status = response.data[0].get("processing_status")
             return status == "completed"
@@ -96,7 +96,7 @@ def update_event_status(
         if quote_id:
             update_data["quote_id"] = quote_id
         
-        supabase.table("webhook_events").update(update_data).eq("stripe_event_id", stripe_event_id).execute()
+        supabase_storage.table("webhook_events").update(update_data).eq("stripe_event_id", stripe_event_id).execute()
     except Exception as e:
         logger.error(f"Failed to update event status: {str(e)}")
 
@@ -107,7 +107,7 @@ def handle_invoice_event(event_type: str, invoice_data: Dict[str, Any]) -> Optio
     
     # Find quote by invoice ID
     try:
-        quote_response = supabase.table("quotes").select("id, payment_status, status").eq("stripe_invoice_id", invoice_id).execute()
+        quote_response = supabase_storage.table("quotes").select("id, payment_status, status").eq("stripe_invoice_id", invoice_id).execute()
         if not quote_response.data:
             logger.warning(f"No quote found for invoice {invoice_id}")
             return None
@@ -129,7 +129,7 @@ def handle_invoice_event(event_type: str, invoice_data: Dict[str, Any]) -> Optio
             # Send email notifications for payment
             try:
                 # Get quote details with client info
-                quote_detail_response = supabase.table("quotes").select("*, clients(*)").eq("id", quote_id).execute()
+                quote_detail_response = supabase_storage.table("quotes").select("*, clients(*)").eq("id", quote_id).execute()
                 if quote_detail_response.data:
                     quote_data = quote_detail_response.data[0]
                     quote_title = quote_data.get("title", "Quote")
@@ -241,7 +241,7 @@ def handle_invoice_event(event_type: str, invoice_data: Dict[str, Any]) -> Optio
         
         # Update quote if we have changes
         if update_data:
-            supabase.table("quotes").update(update_data).eq("id", quote_id).execute()
+            supabase_storage.table("quotes").update(update_data).eq("id", quote_id).execute()
         
         return quote_id
         
@@ -254,7 +254,7 @@ async def create_invoice_from_quote(quote_id: str):
     """Create a Stripe invoice from an accepted quote"""
     try:
         # Fetch quote with client and line items
-        response = supabase.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+        response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Quote not found")
         
@@ -287,7 +287,7 @@ async def create_invoice_from_quote(quote_id: str):
         
         # Update client with Stripe customer ID if not set
         if not client.get("stripe_customer_id"):
-            supabase.table("clients").update({
+            supabase_storage.table("clients").update({
                 "stripe_customer_id": customer_id
             }).eq("id", client["id"]).execute()
         
@@ -307,7 +307,7 @@ async def create_invoice_from_quote(quote_id: str):
         )
         
         # Update quote with invoice information
-        supabase.table("quotes").update({
+        supabase_storage.table("quotes").update({
             "stripe_invoice_id": invoice_data["invoice_id"],
             "payment_status": "unpaid",
             "status": "accepted"
@@ -456,7 +456,7 @@ async def get_webhook_events(
 ):
     """Get webhook events for debugging and monitoring"""
     try:
-        query = supabase.table("webhook_events").select("*").order("created_at", desc=True).limit(limit)
+        query = supabase_storage.table("webhook_events").select("*").order("created_at", desc=True).limit(limit)
         
         if event_type:
             query = query.eq("event_type", event_type)
@@ -473,7 +473,7 @@ async def get_webhook_events(
 async def get_webhook_event(event_id: str):
     """Get a specific webhook event by Stripe event ID"""
     try:
-        response = supabase.table("webhook_events").select("*").eq("stripe_event_id", event_id).execute()
+        response = supabase_storage.table("webhook_events").select("*").eq("stripe_event_id", event_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Webhook event not found")
         return response.data[0]
