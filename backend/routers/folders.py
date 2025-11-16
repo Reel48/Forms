@@ -853,6 +853,23 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             # Get only folder-specific files (directly assigned, not reusable)
             files_response = supabase_storage.table("files").select("*").eq("folder_id", folder_id).eq("is_reusable", False).execute()
             files = files_response.data if files_response.data else []
+            
+            # Check completion status for each file
+            # For admins: check if ANY user has viewed it
+            # For customers: check if the current user has viewed it
+            for file in files:
+                file["item_type"] = "file"
+                try:
+                    if is_admin:
+                        # Admin: check if any user has viewed this file
+                        view_check = supabase_storage.table("file_views").select("id").eq("file_id", file["id"]).limit(1).execute()
+                        file["is_completed"] = len(view_check.data or []) > 0
+                    else:
+                        # Customer: check if current user has viewed this file
+                        view_check = supabase_storage.table("file_views").select("id").eq("file_id", file["id"]).eq("user_id", user["id"]).limit(1).execute()
+                        file["is_completed"] = len(view_check.data or []) > 0
+                except Exception:
+                    file["is_completed"] = False
         except Exception as e:
             logger.warning(f"Error fetching files: {str(e)}")
             pass
@@ -872,18 +889,25 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             else:
                 templates = []
             
-            # Check completion status for each form (if user has submitted it)
+            # Check completion status for each form
+            # For admins: check if ANY user has submitted it
+            # For customers: check if the current user has submitted it
             # Note: Forms use submitter_email instead of user_id, so we'll check by email
             for form in templates:
                 form["item_type"] = "form"
-                # Check if user has submitted this form
                 try:
-                    user_email = user.get("email")
-                    if user_email:
-                        submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).eq("submitter_email", user_email).limit(1).execute()
+                    if is_admin:
+                        # Admin: check if any user has submitted this form
+                        submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).limit(1).execute()
                         form["is_completed"] = len(submission_check.data or []) > 0
                     else:
-                        form["is_completed"] = False
+                        # Customer: check if current user has submitted this form
+                        user_email = user.get("email")
+                        if user_email:
+                            submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).eq("submitter_email", user_email).limit(1).execute()
+                            form["is_completed"] = len(submission_check.data or []) > 0
+                        else:
+                            form["is_completed"] = False
                 except Exception:
                     form["is_completed"] = False
             forms = templates
@@ -901,13 +925,20 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             instances_response = supabase_storage.table("esignature_documents").select("*").eq("folder_id", folder_id).eq("is_template", False).execute()
             instances = instances_response.data if instances_response.data else []
             
-            # Check completion status for each e-signature (if user has signed it)
+            # Check completion status for each e-signature
+            # For admins: check if ANY user has signed it
+            # For customers: check if the current user has signed it
             for esig in instances:
                 esig["item_type"] = "esignature"
-                # Check if user has signed this document
                 try:
-                    signature_check = supabase_storage.table("esignature_signatures").select("id").eq("document_id", esig["id"]).eq("user_id", user["id"]).limit(1).execute()
-                    esig["is_completed"] = len(signature_check.data or []) > 0
+                    if is_admin:
+                        # Admin: check if any user has signed this document
+                        signature_check = supabase_storage.table("esignature_signatures").select("id").eq("document_id", esig["id"]).limit(1).execute()
+                        esig["is_completed"] = len(signature_check.data or []) > 0
+                    else:
+                        # Customer: check if current user has signed this document
+                        signature_check = supabase_storage.table("esignature_signatures").select("id").eq("document_id", esig["id"]).eq("user_id", user["id"]).limit(1).execute()
+                        esig["is_completed"] = len(signature_check.data or []) > 0
                 except Exception:
                     esig["is_completed"] = False
             esignatures = instances
