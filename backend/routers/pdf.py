@@ -13,7 +13,7 @@ import os
 import re
 import html
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from database import supabase
+from database import supabase_storage
 from datetime import datetime
 
 router = APIRouter(prefix="/api/pdf", tags=["pdf"])
