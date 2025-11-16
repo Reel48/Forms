@@ -342,8 +342,26 @@ const ESignatureView: React.FC = () => {
             <p>This document has been successfully signed.</p>
             <div className="signed-actions">
               <button
-                onClick={() => {
-                  window.open(`/api/esignature/documents/${id}/signed-pdf`, '_blank');
+                onClick={async () => {
+                  try {
+                    const { supabase } = await import('../lib/supabase');
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                    
+                    // Use full API URL to avoid React Router interference
+                    // The backend returns a redirect to the signed URL, so we'll follow it
+                    const url = `${API_URL}/api/esignature/documents/${id}/signed-pdf`;
+                    const headers: HeadersInit = {};
+                    if (session?.access_token) {
+                      headers['Authorization'] = `Bearer ${session.access_token}`;
+                    }
+                    
+                    // Open in new window - the backend will redirect to the signed PDF URL
+                    window.open(url, '_blank');
+                  } catch (err) {
+                    console.error('Failed to download signed PDF:', err);
+                    alert('Failed to download signed PDF. Please try again.');
+                  }
                 }}
                 className="btn-primary"
               >
