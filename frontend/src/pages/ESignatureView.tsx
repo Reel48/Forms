@@ -349,15 +349,28 @@ const ESignatureView: React.FC = () => {
                     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
                     
                     // Use full API URL to avoid React Router interference
-                    // The backend returns a redirect to the signed URL, so we'll follow it
+                    // The backend returns a redirect to the signed URL
                     const url = `${API_URL}/api/esignature/documents/${id}/signed-pdf`;
                     const headers: HeadersInit = {};
                     if (session?.access_token) {
                       headers['Authorization'] = `Bearer ${session.access_token}`;
                     }
                     
-                    // Open in new window - the backend will redirect to the signed PDF URL
-                    window.open(url, '_blank');
+                    // Fetch with redirect following - this will get the final signed URL
+                    const response = await fetch(url, { 
+                      headers,
+                      redirect: 'follow' // Follow redirects automatically
+                    });
+                    
+                    if (!response.ok) {
+                      throw new Error('Failed to get signed PDF');
+                    }
+                    
+                    // Get the final URL after redirect
+                    const finalUrl = response.url;
+                    
+                    // Open the signed PDF URL in a new window
+                    window.open(finalUrl, '_blank');
                   } catch (err) {
                     console.error('Failed to download signed PDF:', err);
                     alert('Failed to download signed PDF. Please try again.');
