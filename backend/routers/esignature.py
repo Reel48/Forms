@@ -673,22 +673,43 @@ async def get_signed_pdf(document_id: str, user = Depends(get_current_user)):
         if not signed_file_id:
             raise HTTPException(status_code=404, detail="Signed file ID not found")
         
-        # Get file
-        file_response = supabase_storage.table("files").select("*").eq("id", signed_file_id).single().execute()
-        if not file_response.data:
-            raise HTTPException(status_code=404, detail="Signed file not found")
+        # Try to get file from signature join first, then fallback to direct query
+        file_data = signature.get("files")
+        if not file_data:
+            # Fallback: Get file directly
+            file_response = supabase_storage.table("files").select("*").eq("id", signed_file_id).single().execute()
+            if not file_response.data:
+                raise HTTPException(status_code=404, detail="Signed file not found")
+            file_data = file_response.data
         
-        file_data = file_response.data
         storage_path = file_data.get("storage_path")
         
         if not storage_path:
             raise HTTPException(status_code=500, detail="File storage path not found")
         
-        # Get signed URL
-        signed_url = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
-        
-        from fastapi.responses import RedirectResponse
-        return RedirectResponse(url=signed_url)
+        # Get signed URL - handle both dict and string responses
+        try:
+            signed_url_result = supabase_storage.storage.from_("project-files").create_signed_url(storage_path, 3600)
+            
+            # Extract URL from response (can be dict or string depending on client version)
+            if isinstance(signed_url_result, dict):
+                signed_url = signed_url_result.get("signedURL") or signed_url_result.get("signed_url") or signed_url_result.get("url")
+            elif isinstance(signed_url_result, str):
+                signed_url = signed_url_result
+            else:
+                # Try to get URL from response object if it has attributes
+                signed_url = getattr(signed_url_result, "signedURL", None) or getattr(signed_url_result, "signed_url", None) or getattr(signed_url_result, "url", None) or str(signed_url_result)
+            
+            if not signed_url:
+                raise HTTPException(status_code=500, detail="Failed to generate signed URL")
+            
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=signed_url)
+        except Exception as url_error:
+            print(f"Error creating signed URL: {str(url_error)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to create signed URL: {str(url_error)}")
     except HTTPException:
         raise
     except Exception as e:
