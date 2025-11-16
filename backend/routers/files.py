@@ -181,6 +181,20 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
                         # folder_assignments table doesn't exist yet, deny access if user didn't upload
                         raise HTTPException(status_code=403, detail="Access denied")
         
+        # Track file view (idempotent - uses UNIQUE constraint)
+        try:
+            from datetime import datetime
+            view_data = {
+                "file_id": file_id,
+                "user_id": user["id"],
+                "viewed_at": datetime.now().isoformat()
+            }
+            # Use INSERT ... ON CONFLICT DO NOTHING to make it idempotent
+            supabase_storage.table("file_views").insert(view_data).execute()
+        except Exception as view_error:
+            # Log but don't fail the request if view tracking fails
+            print(f"Warning: Failed to track file view: {str(view_error)}")
+        
         return file_data
     except HTTPException:
         raise

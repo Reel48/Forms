@@ -869,12 +869,14 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             all_files = reusable_files + instances
             
             # Check completion status for each file (if user has viewed it)
-            # For now, we'll check if there's a file_views table or track via a simple mechanism
-            # Since we don't have a file_views table yet, we'll mark as incomplete for now
-            # TODO: Add file_views tracking when user opens a file
             for file in all_files:
                 file["item_type"] = "file"
-                file["is_completed"] = False  # Will be updated when we add file view tracking
+                # Check if user has viewed this file
+                try:
+                    view_check = supabase_storage.table("file_views").select("id").eq("file_id", file["id"]).eq("user_id", user["id"]).limit(1).execute()
+                    file["is_completed"] = len(view_check.data or []) > 0
+                except Exception:
+                    file["is_completed"] = False
             files = all_files
         except Exception as e:
             logger.warning(f"Error fetching files: {str(e)}")
