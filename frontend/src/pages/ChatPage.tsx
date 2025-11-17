@@ -19,41 +19,6 @@ const ChatPage: React.FC = () => {
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
 
-  useEffect(() => {
-    console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
-    loadConversations();
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
-        messagesSubscriptionRef.current = null;
-      }
-      if (conversationsSubscriptionRef.current) {
-        supabase.removeChannel(conversationsSubscriptionRef.current);
-        conversationsSubscriptionRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (selectedConversation) {
-      loadMessages(selectedConversation.id);
-      markAllAsRead(selectedConversation.id);
-      setupRealtimeSubscriptions(selectedConversation.id);
-    } else {
-      // Clean up subscriptions when no conversation selected
-      if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
-        messagesSubscriptionRef.current = null;
-      }
-    }
-  }, [selectedConversation?.id, setupRealtimeSubscriptions]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback((conversationId: string) => {
     // Clean up existing subscriptions
@@ -142,6 +107,41 @@ const ChatPage: React.FC = () => {
 
     conversationsSubscriptionRef.current = conversationsChannel;
   }, [user?.id]);
+
+  useEffect(() => {
+    console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
+    loadConversations();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
+      if (conversationsSubscriptionRef.current) {
+        supabase.removeChannel(conversationsSubscriptionRef.current);
+        conversationsSubscriptionRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      loadMessages(selectedConversation.id);
+      markAllAsRead(selectedConversation.id);
+      setupRealtimeSubscriptions(selectedConversation.id);
+    } else {
+      // Clean up subscriptions when no conversation selected
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
+    }
+  }, [selectedConversation?.id, setupRealtimeSubscriptions]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const loadConversations = async () => {
     try {

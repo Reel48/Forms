@@ -22,54 +22,6 @@ const CustomerChatWidget: React.FC = () => {
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
 
-  useEffect(() => {
-    console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
-    loadConversation();
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
-        messagesSubscriptionRef.current = null;
-      }
-      if (conversationsSubscriptionRef.current) {
-        supabase.removeChannel(conversationsSubscriptionRef.current);
-        conversationsSubscriptionRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (conversation) {
-      loadMessages(conversation.id);
-      setupRealtimeSubscriptions(conversation.id);
-    } else {
-      // Clean up subscriptions when no conversation
-      if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
-        messagesSubscriptionRef.current = null;
-      }
-    }
-  }, [conversation?.id, setupRealtimeSubscriptions]);
-
-  useEffect(() => {
-    if (isOpen && messages.length > 0) {
-      scrollToBottom();
-    }
-  }, [messages, isOpen]);
-
-  // Mark messages as read when chat is opened
-  useEffect(() => {
-    if (isOpen && conversation) {
-      const now = Date.now();
-      // Only mark as read if it's been at least 2 seconds since last call
-      if (now - lastMarkAsReadRef.current > 2000) {
-        markAllAsRead();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, conversation?.id]);
-
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback((conversationId: string) => {
     // Clean up existing subscriptions
@@ -161,6 +113,54 @@ const CustomerChatWidget: React.FC = () => {
 
     conversationsSubscriptionRef.current = conversationsChannel;
   }, [user?.id]);
+
+  useEffect(() => {
+    console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
+    loadConversation();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
+      if (conversationsSubscriptionRef.current) {
+        supabase.removeChannel(conversationsSubscriptionRef.current);
+        conversationsSubscriptionRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (conversation) {
+      loadMessages(conversation.id);
+      setupRealtimeSubscriptions(conversation.id);
+    } else {
+      // Clean up subscriptions when no conversation
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
+    }
+  }, [conversation?.id, setupRealtimeSubscriptions]);
+
+  useEffect(() => {
+    if (isOpen && messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen]);
+
+  // Mark messages as read when chat is opened
+  useEffect(() => {
+    if (isOpen && conversation) {
+      const now = Date.now();
+      // Only mark as read if it's been at least 2 seconds since last call
+      if (now - lastMarkAsReadRef.current > 2000) {
+        markAllAsRead();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, conversation?.id]);
 
   // Fallback: Check for unread messages periodically when chat is closed (as backup)
   useEffect(() => {
