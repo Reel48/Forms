@@ -1097,118 +1097,120 @@ function QuoteView() {
                   )}
                 </div>
               )}
+            </>
+          )}
         </div>
 
-        {/* Modals */}
-        {role === 'admin' && (
-          <>
-            {/* Send Email Modal */}
-            {showSendEmailModal && (
+      {/* Modals */}
+      {role === 'admin' && (
+        <>
+          {/* Send Email Modal */}
+          {showSendEmailModal && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}
+              onClick={() => setShowSendEmailModal(false)}
+            >
               <div
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 1000,
-                }}
-                onClick={() => setShowSendEmailModal(false)}
+                className="card"
+                style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <div
-                  className="card"
-                  style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h3 style={{ marginTop: 0 }}>Send Quote via Email</h3>
-                  <SendEmailForm
-                    quote={quote}
-                    onSend={handleSendEmail}
-                    onCancel={() => setShowSendEmailModal(false)}
-                    sending={sendingEmail}
-                  />
-                </div>
+                <h3 style={{ marginTop: 0 }}>Send Quote via Email</h3>
+                <SendEmailForm
+                  quote={quote}
+                  onSend={handleSendEmail}
+                  onCancel={() => setShowSendEmailModal(false)}
+                  sending={sendingEmail}
+                />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Share Link Modal */}
-            {showShareLinkModal && (
+          {/* Share Link Modal */}
+          {showShareLinkModal && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}
+              onClick={() => setShowShareLinkModal(false)}
+            >
               <div
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 1000,
-                }}
-                onClick={() => setShowShareLinkModal(false)}
+                className="card"
+                style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <div
-                  className="card"
-                  style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h3 style={{ marginTop: 0 }}>Create Share Link</h3>
-                  <ShareLinkForm
-                    onCreate={handleCreateShareLink}
-                    onCancel={() => setShowShareLinkModal(false)}
-                  />
-                </div>
+                <h3 style={{ marginTop: 0 }}>Create Share Link</h3>
+                <ShareLinkForm
+                  onCreate={handleCreateShareLink}
+                  onCancel={() => setShowShareLinkModal(false)}
+                />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Reminder Modal */}
-            {showReminderModal && (
+          {/* Reminder Modal */}
+          {showReminderModal && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}
+              onClick={() => setShowReminderModal(false)}
+            >
               <div
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 1000,
-                }}
-                onClick={() => setShowReminderModal(false)}
+                className="card"
+                style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <div
-                  className="card"
-                  style={{ maxWidth: '500px', width: '90%', margin: '1rem' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h3 style={{ marginTop: 0 }}>Set Reminder</h3>
-                  <ReminderForm
-                    currentReminder={quote.reminder_date}
-                    onSet={handleSetReminder}
-                    onCancel={() => setShowReminderModal(false)}
-                  />
-                </div>
+                <h3 style={{ marginTop: 0 }}>Set Reminder</h3>
+                <ReminderForm
+                  currentReminder={quote.reminder_date}
+                  onSet={handleSetReminder}
+                  onCancel={() => setShowReminderModal(false)}
+                />
               </div>
-            )}
+            </div>
+          )}
 
-            <AssignmentModal
-              isOpen={showAssignmentModal}
-              onClose={() => setShowAssignmentModal(false)}
-              onAssign={handleAssign}
-              title={`Assign Quote: ${quote.title}`}
-              existingAssignments={assignments}
-            />
-          </>
-        )}
-      </>
-    );
+          <AssignmentModal
+            isOpen={showAssignmentModal}
+            onClose={() => setShowAssignmentModal(false)}
+            onAssign={handleAssign}
+            title={`Assign Quote: ${quote.title}`}
+            existingAssignments={assignments}
+          />
+        </>
+      )}
+    </>
+  );
 }
 
 // Send Email Form Component
