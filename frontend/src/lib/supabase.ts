@@ -43,6 +43,7 @@ export const getRealtimeClient = (): SupabaseClient => {
           persistSession: false,
           autoRefreshToken: false,
           detectSessionInUrl: false,
+          storageKey: 'realtime-service-role', // Use separate storage key to avoid conflicts
         },
         realtime: {
           params: {
@@ -50,7 +51,7 @@ export const getRealtimeClient = (): SupabaseClient => {
           },
         },
       });
-      console.log('✅ Realtime client created with service role key (auth disabled)');
+      console.log('✅ Realtime client created with service role key (auth disabled, isolated storage)');
     } else {
       console.log('♻️ Reusing existing Realtime client instance');
     }
