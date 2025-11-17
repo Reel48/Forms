@@ -291,12 +291,33 @@ const FolderView: React.FC = () => {
                 View Quote
               </button>
             </div>
-            <div className="quote-card">
+            <div 
+              className="quote-card"
+              style={{
+                ...(quote.payment_status === 'paid' ? {
+                  backgroundColor: '#d1fae5',
+                  borderColor: '#065f46',
+                  borderWidth: '2px',
+                  borderStyle: 'solid'
+                } : {})
+              }}
+            >
               <h3>{quote.title || quote.quote_number}</h3>
               <div className="quote-meta">
                 <span>Quote #: {quote.quote_number}</span>
                 <span>Status: {quote.status}</span>
                 <span>Total: ${parseFloat(quote.total || 0).toFixed(2)}</span>
+                {quote.payment_status === 'paid' && (
+                  <span style={{ 
+                    color: '#065f46', 
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}>
+                    ✓ Paid
+                  </span>
+                )}
               </div>
             </div>
           </section>
