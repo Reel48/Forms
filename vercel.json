@@ -5,7 +5,7 @@
   "installCommand": "cd frontend && npm install",
   "rewrites": [
     {
-      "source": "/((?!assets|.*\\..*).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
