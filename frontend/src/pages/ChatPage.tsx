@@ -19,121 +19,13 @@ const ChatPage: React.FC = () => {
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
 
-  // Setup Realtime subscriptions for messages and conversations
+  // NOTE: Realtime subscriptions disabled due to WebSocket authentication issues
+  // The Supabase client is not properly including the access token in WebSocket connections
+  // Falling back to efficient polling instead
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
-    // Get the current session from Supabase (required for RLS in Realtime)
-    const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !currentSession || !currentSession.access_token) {
-      console.error('No valid session available for Realtime subscription:', sessionError);
-      return;
-    }
-
-    // Check if token is expired
-    try {
-      const parts = currentSession.access_token.split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]));
-        const exp = payload.exp;
-        if (exp && Date.now() >= exp * 1000) {
-          console.warn('Session token expired, refreshing...');
-          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError || !refreshedSession) {
-            console.error('Failed to refresh session for Realtime:', refreshError);
-            return;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Could not parse token, proceeding anyway:', e);
-    }
-
-    // Clean up existing subscriptions
-    if (messagesSubscriptionRef.current) {
-      supabase.removeChannel(messagesSubscriptionRef.current);
-    }
-    if (conversationsSubscriptionRef.current) {
-      supabase.removeChannel(conversationsSubscriptionRef.current);
-    }
-
-    // Subscribe to new messages in this conversation
-    const messagesChannel = supabase
-      .channel(`chat_messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log('Realtime message event:', payload.eventType, payload);
-          
-          if (payload.eventType === 'INSERT') {
-            // New message received
-            const newMessage = payload.new as ChatMessage;
-            setMessages((prev) => {
-              // Check if message already exists to avoid duplicates
-              if (prev.some((msg) => msg.id === newMessage.id)) {
-                return prev;
-              }
-              return [...prev, newMessage];
-            });
-            // Reload conversations to update unread counts
-            loadConversations();
-          } else if (payload.eventType === 'UPDATE') {
-            // Message updated (e.g., read_at changed)
-            const updatedMessage = payload.new as ChatMessage;
-            setMessages((prev) =>
-              prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            // Message deleted
-            const deletedMessage = payload.old as ChatMessage;
-            setMessages((prev) => prev.filter((msg) => msg.id !== deletedMessage.id));
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Messages subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to chat messages');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to chat messages');
-        }
-      });
-
-    messagesSubscriptionRef.current = messagesChannel;
-
-    // Subscribe to conversation updates (for unread counts, last_message_at, etc.)
-    const conversationsChannel = supabase
-      .channel(`chat_conversations:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'chat_conversations',
-          filter: `id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log('Realtime conversation event:', payload);
-          // Reload conversations to get updated data
-          loadConversations();
-        }
-      )
-      .subscribe((status) => {
-        console.log('Conversations subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to chat conversations');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to chat conversations');
-        }
-      });
-
-    conversationsSubscriptionRef.current = conversationsChannel;
-  }, [user?.id, session]);
+    // Realtime disabled - polling will handle updates
+    console.log('Realtime subscriptions disabled, using polling instead');
+  }, []);
 
   useEffect(() => {
     console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
@@ -170,6 +62,20 @@ const ChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Poll for new messages (Realtime disabled due to WebSocket auth issues)
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const interval = setInterval(() => {
+      if (selectedConversation) {
+        loadMessages(selectedConversation.id);
+        loadConversations();
+      }
+    }, 3000); // Poll every 3 seconds (more frequent than before since Realtime is disabled)
+
+    return () => clearInterval(interval);
+  }, [selectedConversation?.id]);
+
   const loadConversations = async () => {
     try {
       setLoading(true);
@@ -194,7 +100,8 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // NOTE: Realtime subscriptions are enabled for instant updates
+  // NOTE: Realtime subscriptions disabled due to WebSocket authentication issues
+  // Using efficient polling (every 3 seconds) instead
 
   const markAllAsRead = async (conversationId: string) => {
     try {
