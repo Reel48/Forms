@@ -86,7 +86,8 @@ const CustomerChatWidget: React.FC = () => {
     }
   };
 
-  // Realtime subscriptions disabled - using polling instead
+  // NOTE: Realtime subscriptions are completely disabled to prevent WebSocket errors
+  // All updates are handled via polling (every 5 seconds)
 
   const checkUnreadCount = async (conv?: ChatConversation) => {
     const convToCheck = conv || conversation;
@@ -168,7 +169,10 @@ const CustomerChatWidget: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Messages will be updated via realtime subscription
+      // Reload messages after sending (polling will handle updates)
+      if (conversation) {
+        loadMessages(conversation.id);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');

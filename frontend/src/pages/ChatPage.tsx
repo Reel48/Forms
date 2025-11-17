@@ -69,7 +69,8 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // Realtime subscriptions disabled - using polling instead
+  // NOTE: Realtime subscriptions are completely disabled to prevent WebSocket errors
+  // All updates are handled via polling (every 5 seconds)
 
   const markAllAsRead = async (conversationId: string) => {
     try {
@@ -91,7 +92,11 @@ const ChatPage: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Messages will be updated via realtime subscription
+      // Reload messages after sending (polling will handle updates)
+      if (selectedConversation) {
+        loadMessages(selectedConversation.id);
+        loadConversations();
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -115,7 +120,11 @@ const ChatPage: React.FC = () => {
         file_name: uploadResponse.data.file_name,
         file_size: uploadResponse.data.file_size,
       });
-      // Messages will be updated via realtime subscription
+      // Reload messages after sending (polling will handle updates)
+      if (selectedConversation) {
+        loadMessages(selectedConversation.id);
+        loadConversations();
+      }
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');
