@@ -909,16 +909,37 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                         if user_email:
                             # Normalize email to lowercase for comparison (emails are case-insensitive)
                             user_email_lower = user_email.lower().strip()
-                            # Check for submissions with case-insensitive email match
-                            # Note: Supabase Postgres is case-sensitive by default, so we need to use ilike or get all and filter
-                            # For now, we'll query and filter in Python to ensure case-insensitive matching
-                            all_submissions = supabase_storage.table("form_submissions").select("id, submitter_email, status").eq("form_id", form["id"]).execute()
-                            matching_submissions = [s for s in (all_submissions.data or []) if s.get("submitter_email", "").lower().strip() == user_email_lower]
-                            form["is_completed"] = len(matching_submissions) > 0
-                            # Count only this customer's completed submissions
-                            completed_submissions = [s for s in matching_submissions if s.get("status") == "completed"]
-                            form["submissions_count"] = len(completed_submissions)
+                            logger.info(f"Checking form completion for user email: {user_email_lower} (form_id: {form['id']})")
+                            try:
+                                # Query submissions for this form and user email (case-insensitive)
+                                # Get all submissions and filter in Python to ensure case-insensitive matching
+                                all_submissions = supabase_storage.table("form_submissions").select("id, submitter_email, status").eq("form_id", form["id"]).execute()
+                                logger.info(f"Found {len(all_submissions.data or [])} total submissions for form {form['id']}")
+                                
+                                # Filter submissions by case-insensitive email match
+                                matching_submissions = []
+                                for s in (all_submissions.data or []):
+                                    submission_email = s.get("submitter_email", "")
+                                    if submission_email:
+                                        submission_email_lower = submission_email.lower().strip()
+                                        if submission_email_lower == user_email_lower:
+                                            matching_submissions.append(s)
+                                
+                                logger.info(f"Found {len(matching_submissions)} matching submissions for email {user_email_lower}")
+                                
+                                form["is_completed"] = len(matching_submissions) > 0
+                                # Count only completed submissions
+                                completed_submissions = [s for s in matching_submissions if s.get("status") == "completed"]
+                                form["submissions_count"] = len(completed_submissions)
+                                logger.info(f"Form {form['id']} - is_completed: {form['is_completed']}, submissions_count: {form['submissions_count']}")
+                            except Exception as e:
+                                logger.error(f"Error checking form completion for user {user_email}: {str(e)}")
+                                import traceback
+                                logger.error(traceback.format_exc())
+                                form["is_completed"] = False
+                                form["submissions_count"] = 0
                         else:
+                            logger.warning(f"No email found for user {user.get('id')} when checking form completion")
                             form["is_completed"] = False
                             form["submissions_count"] = 0
                 except Exception:
