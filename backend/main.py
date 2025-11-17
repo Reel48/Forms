@@ -178,6 +178,23 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+@app.get("/debug/routes")
+async def debug_routes():
+    """Debug endpoint to list all registered routes"""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods),
+                "name": getattr(route, 'name', 'N/A')
+            })
+    return {
+        "total_routes": len(routes),
+        "routes": routes,
+        "chat_router_available": chat_router is not None
+    }
+
 @app.get("/debug/jwt-config")
 async def debug_jwt_config():
     """Debug endpoint to check JWT configuration (remove in production)"""
