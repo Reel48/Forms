@@ -24,9 +24,8 @@ try:
 except Exception as e:
     logger.error(f"Failed to import chat router: {str(e)}")
     logger.error(traceback.format_exc())
-    # Create a dummy router to prevent app from crashing
-    from fastapi import APIRouter
-    chat = type('chat', (), {'router': APIRouter(prefix="/api/chat", tags=["chat"])})()
+    # Re-raise the exception to prevent silent failure
+    raise
 
 # FastAPI JSON encoder for Decimal (converts to string for JSON serialization)
 app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal: str})
