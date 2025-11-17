@@ -18,6 +18,8 @@ const CustomerChatWidget: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Version check - ensure new code is running (no Realtime subscriptions)
+    console.log('CustomerChatWidget: Realtime subscriptions DISABLED - using polling only');
     loadConversation();
   }, []);
 

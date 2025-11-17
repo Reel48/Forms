@@ -17,6 +17,8 @@ const ChatPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Version check - ensure new code is running (no Realtime subscriptions)
+    console.log('ChatPage: Realtime subscriptions DISABLED - using polling only');
     loadConversations();
   }, []);
 
