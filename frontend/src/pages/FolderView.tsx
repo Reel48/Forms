@@ -9,7 +9,7 @@ import './FolderView.css';
 const FolderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const [content, setContent] = useState<FolderContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
