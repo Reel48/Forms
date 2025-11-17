@@ -4,7 +4,7 @@ import sys
 import os
 import uuid
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import ChatMessage, ChatMessageCreate, ChatConversation, ChatConversationList
+from models import ChatMessage, ChatMessageCreate, ChatConversation
 from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
 from datetime import datetime
