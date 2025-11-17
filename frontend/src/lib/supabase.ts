@@ -28,10 +28,11 @@ export const getRealtimeClient = (): SupabaseClient => {
   // Check if service role key is available
   const hasServiceRoleKey = !!supabaseServiceRoleKey;
   
-  console.log('Realtime client check:', {
+  console.log('🔍 Realtime client check:', {
     hasServiceRoleKey,
     serviceRoleKeyLength: supabaseServiceRoleKey?.length || 0,
     usingServiceRole: hasServiceRoleKey,
+    environment: import.meta.env.MODE,
   });
 
   if (hasServiceRoleKey) {
@@ -44,12 +45,16 @@ export const getRealtimeClient = (): SupabaseClient => {
           },
         },
       });
+      console.log('✅ Realtime client created with service role key');
+    } else {
+      console.log('♻️ Reusing existing Realtime client instance');
     }
     return realtimeClientInstance;
   }
   
   // Fallback to regular client if service role key not available
-  console.warn('Service role key not available, using anon key for Realtime (may fail with RLS)');
+  console.warn('⚠️ Service role key not available, using anon key for Realtime (may fail with RLS)');
+  console.warn('💡 To fix: Add VITE_SUPABASE_SERVICE_ROLE_KEY to Vercel environment variables');
   return supabase;
 };
 

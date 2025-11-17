@@ -74,13 +74,16 @@ const ChatPage: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('Messages subscription status:', status);
+        console.log('📨 Messages subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to chat messages via Realtime');
+          console.log('✅ Successfully subscribed to chat messages via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to chat messages:', status);
+          console.error('❌ Error subscribing to chat messages:', status);
+          console.error('💡 Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
         } else if (status === 'TIMED_OUT') {
-          console.warn('Realtime subscription timed out, will retry');
+          console.warn('⏱️ Realtime subscription timed out, will retry');
+        } else if (status === 'CLOSED') {
+          console.warn('🔌 Realtime subscription closed');
         }
       });
 
@@ -104,13 +107,16 @@ const ChatPage: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('Conversations subscription status:', status);
+        console.log('💬 Conversations subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to chat conversations via Realtime');
+          console.log('✅ Successfully subscribed to chat conversations via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to chat conversations:', status);
+          console.error('❌ Error subscribing to chat conversations:', status);
+          console.error('💡 Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
         } else if (status === 'TIMED_OUT') {
-          console.warn('Realtime subscription timed out, will retry');
+          console.warn('⏱️ Realtime subscription timed out, will retry');
+        } else if (status === 'CLOSED') {
+          console.warn('🔌 Realtime subscription closed');
         }
       });
 
