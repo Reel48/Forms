@@ -368,7 +368,6 @@ export const quotesAPI = {
 export const stripeAPI = {
   createInvoice: (quoteId: string) => api.post<{ invoice_id: string; invoice_url: string; invoice_pdf: string; status: string }>(`/api/stripe/quotes/${quoteId}/create-invoice`),
   getInvoice: (invoiceId: string) => api.get<{ id: string; status: string; amount_due: number; amount_paid: number; hosted_invoice_url: string; invoice_pdf: string; paid: boolean }>(`/api/stripe/invoices/${invoiceId}`),
-  syncPaymentStatus: (quoteId: string) => api.post<{ status: string; payment_status: string; invoice_id: string; invoice_paid: boolean; invoice_status: string }>(`/api/stripe/quotes/${quoteId}/sync-payment-status`),
 };
 
 // Clients API
