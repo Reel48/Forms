@@ -79,18 +79,16 @@ function FilesList() {
 
   const uniqueFileTypes = Array.from(new Set(files.map((f) => formatFileType(f.file_type))));
 
-  if (loading) {
-    return (
-      <div className="container">
-        <div className="card">
-          <p className="text-center">Loading files...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container">
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Loading files...</p>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <div className="files-header">
         <div>
           <h1>File Templates</h1>
@@ -287,6 +285,8 @@ function FilesList() {
           itemType="file"
           itemName={selectedFile.name}
         />
+      )}
+        </>
       )}
     </div>
   );

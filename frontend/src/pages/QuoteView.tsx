@@ -400,11 +400,7 @@ function QuoteView() {
     }
   }, [quote?.stripe_invoice_id]);
 
-  if (loading) {
-    return <div className="container">Loading...</div>;
-  }
-
-  if (!quote) {
+  if (!loading && !quote) {
     return <div className="container">Quote not found</div>;
   }
 
@@ -476,7 +472,15 @@ function QuoteView() {
           </button>
         </div>
 
-        {/* Tabs for Admin */}
+        {loading && (
+          <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>Loading quote...</p>
+          </div>
+        )}
+
+        {!loading && quote && (
+          <>
+            {/* Tabs for Admin */}
         {role === 'admin' && (
           <div className="no-print card mb-4" style={{ padding: '0' }}>
             <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>

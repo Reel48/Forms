@@ -275,19 +275,18 @@ function CustomerDashboard() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container">
-        <div className="card">
-          <p className="text-center">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container">
       <CustomerChatWidget />
+      
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Loading...</p>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       {/* Filters and Search */}
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -562,6 +561,8 @@ function CustomerDashboard() {
             </tbody>
           </table>
         </div>
+      )}
+        </>
       )}
     </div>
   );

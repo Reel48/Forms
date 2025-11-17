@@ -103,11 +103,7 @@ function FormView() {
     }
   };
 
-  if (loading) {
-    return <div className="container">Loading...</div>;
-  }
-
-  if (error) {
+  if (error && !loading) {
     return (
       <div className="container">
         <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
@@ -120,18 +116,6 @@ function FormView() {
     );
   }
 
-  if (!form) {
-    return (
-      <div className="container">
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>Form not found</p>
-          <button onClick={() => navigate('/forms')} className="btn-secondary" style={{ marginTop: '1rem' }}>
-            Back to Forms
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container">
@@ -140,6 +124,15 @@ function FormView() {
           ← Back to Forms
         </button>
       </div>
+
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Loading form...</p>
+        </div>
+      )}
+
+      {!loading && form && (
+        <>
       <div className="flex-between mb-4">
         <div>
           <h1>{form.name || 'Form Details'}</h1>
@@ -1143,6 +1136,8 @@ function FormVersionsSection({ formId }: FormVersionsSectionProps) {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

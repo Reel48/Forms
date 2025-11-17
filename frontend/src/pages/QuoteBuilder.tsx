@@ -516,12 +516,16 @@ function QuoteBuilder() {
     closeLinkDialog();
   };
 
-  if (loading && isEdit) {
-    return <div className="container">Loading...</div>;
-  }
-
   return (
     <div className="container">
+      {loading && isEdit && (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Loading quote...</p>
+        </div>
+      )}
+
+      {!(loading && isEdit) && (
+        <>
       <div className="card">
         <div className="flex-between mb-4" style={{ flexWrap: 'wrap', gap: '1rem' }}>
           <h1>{isEdit ? 'Edit Quote' : 'Create New Quote'}</h1>
@@ -977,6 +981,8 @@ function QuoteBuilder() {
           onInsert={insertLink}
           onClose={closeLinkDialog}
         />
+      )}
+        </>
       )}
     </div>
   );

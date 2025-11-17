@@ -1,8 +1,13 @@
 # Realtime Setup Instructions - Service Role Key
 
-## Current Issue
+## ⚠️ IMPORTANT: You Need BOTH Keys
 
-The WebSocket connection is still using the anon key because `VITE_SUPABASE_SERVICE_ROLE_KEY` is not set in Vercel environment variables.
+**Both** `VITE_SUPABASE_ANON_KEY` and `VITE_SUPABASE_SERVICE_ROLE_KEY` are required:
+
+- **Anon Key:** Used for authentication, session management, and regular operations
+- **Service Role Key:** Used ONLY for Realtime WebSocket subscriptions
+
+If you deleted the anon key from non-production environments, **you must re-add it** or the app will break!
 
 ## Required Setup
 

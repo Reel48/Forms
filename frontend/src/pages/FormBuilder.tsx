@@ -127,10 +127,6 @@ function FormBuilder() {
     }
   };
 
-  if (loading) {
-    return <div className="container">Loading...</div>;
-  }
-
   const selectedField = selectedFieldIndex !== null ? formData.fields?.[selectedFieldIndex] : null;
 
   // Form Preview Component
@@ -226,6 +222,14 @@ function FormBuilder() {
 
   return (
     <div className="container">
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Loading form...</p>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <div className="flex-between mb-4">
         <h1>{id ? 'Edit Form' : 'Create New Form'}</h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -357,6 +361,8 @@ function FormBuilder() {
             )}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
