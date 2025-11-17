@@ -214,11 +214,9 @@ const ChatPage: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Realtime will handle the new message update, but reload to ensure consistency
-      if (selectedConversation) {
-        loadMessages(selectedConversation.id);
-        loadConversations();
-      }
+      // Realtime will handle the new message update automatically
+      // Only reload conversations to update unread counts (Realtime handles messages)
+      loadConversations();
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -242,11 +240,9 @@ const ChatPage: React.FC = () => {
         file_name: uploadResponse.data.file_name,
         file_size: uploadResponse.data.file_size,
       });
-      // Reload messages after sending (polling will handle updates)
-      if (selectedConversation) {
-        loadMessages(selectedConversation.id);
-        loadConversations();
-      }
+      // Realtime will handle the new message update automatically
+      // Only reload conversations to update unread counts (Realtime handles messages)
+      loadConversations();
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');

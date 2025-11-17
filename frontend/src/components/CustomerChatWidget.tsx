@@ -278,10 +278,7 @@ const CustomerChatWidget: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Realtime will handle the new message update, but reload to ensure consistency
-      if (conversation) {
-        loadMessages(conversation.id);
-      }
+      // Realtime will handle the new message update automatically - no need to reload
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -315,10 +312,7 @@ const CustomerChatWidget: React.FC = () => {
         file_name: uploadResponse.data.file_name,
         file_size: uploadResponse.data.file_size,
       });
-      // Realtime will handle the new message update
-      if (conversation) {
-        loadMessages(conversation.id);
-      }
+      // Realtime will handle the new message update automatically
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');

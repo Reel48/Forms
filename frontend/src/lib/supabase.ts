@@ -39,13 +39,18 @@ export const getRealtimeClient = (): SupabaseClient => {
     if (!realtimeClientInstance) {
       console.warn('⚠️ Using service role key for Realtime - RLS is bypassed!');
       realtimeClientInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
         realtime: {
           params: {
             eventsPerSecond: 10,
           },
         },
       });
-      console.log('✅ Realtime client created with service role key');
+      console.log('✅ Realtime client created with service role key (auth disabled)');
     } else {
       console.log('♻️ Reusing existing Realtime client instance');
     }
