@@ -518,8 +518,8 @@ const FolderView: React.FC = () => {
                           {form.status || 'Active'} • {form.submissions_count || 0} {form.submissions_count === 1 ? 'submission' : 'submissions'}
                         </span>
                       </td>
-                      {role === 'admin' && (
-                        <td onClick={(e) => e.stopPropagation()}>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {role === 'admin' && (
                           <button
                             className="btn-danger btn-sm"
                             onClick={async (e) => {
@@ -536,8 +536,8 @@ const FolderView: React.FC = () => {
                           >
                             Remove
                           </button>
-                        </td>
-                      )}
+                        )}
+                      </td>
                     </tr>
                   ))}
                   
