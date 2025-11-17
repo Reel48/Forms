@@ -18,14 +18,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Import chat router with error handling
+chat_router = None
 try:
     from routers import chat
+    chat_router = chat
     logger.info("Chat router imported successfully")
+    logger.info(f"Chat router object: {chat_router}")
+    logger.info(f"Chat router has router attribute: {hasattr(chat_router, 'router')}")
+    if hasattr(chat_router, 'router'):
+        logger.info(f"Chat router routes: {[r.path for r in chat_router.router.routes]}")
 except Exception as e:
     logger.error(f"Failed to import chat router: {str(e)}")
     logger.error(traceback.format_exc())
-    # Re-raise the exception to prevent silent failure
-    raise
+    # Don't re-raise - allow app to start without chat if there's an issue
+    chat_router = None
 
 # FastAPI JSON encoder for Decimal (converts to string for JSON serialization)
 app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal: str})
@@ -157,7 +163,11 @@ app.include_router(forms.router)
 app.include_router(files.router)
 app.include_router(esignature.router)
 app.include_router(folders.router)
-app.include_router(chat.router)
+if chat_router and hasattr(chat_router, 'router'):
+    app.include_router(chat_router.router)
+    logger.info("Chat router registered successfully")
+else:
+    logger.warning("Chat router not available - skipping registration")
 app.include_router(email_debug.router)
 
 @app.get("/")
