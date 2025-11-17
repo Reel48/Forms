@@ -5,10 +5,11 @@ import os
 import uuid
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import ChatMessage, ChatMessageCreate, ChatConversation, ChatConversationList
-from database import supabase_storage, supabase_service_role_key
+from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
 from datetime import datetime
 from supabase import create_client, Client
+import requests
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -25,9 +26,12 @@ async def get_conversations(user = Depends(get_current_user)):
             conversations = conversations_response.data if conversations_response.data else []
             
             # Enrich with customer info and unread counts
-            # Use Supabase Admin API to get user emails
-            from database import supabase_url
-            admin_client: Client = create_client(supabase_url, supabase_service_role_key)
+            # Use Supabase Admin REST API to get user emails
+            headers = {
+                "apikey": supabase_service_role_key,
+                "Authorization": f"Bearer {supabase_service_role_key}",
+                "Content-Type": "application/json"
+            }
             
             for conv in conversations:
                 # Get customer info from clients table (which has user_id)
@@ -37,12 +41,14 @@ async def get_conversations(user = Depends(get_current_user)):
                         conv["customer_name"] = client_response.data.get("name")
                         conv["customer_email"] = client_response.data.get("email")
                     else:
-                        # Fallback: get email from auth.users via admin API
+                        # Fallback: get email from auth.users via REST API
                         try:
-                            user_response = admin_client.auth.admin.get_user_by_id(conv["customer_id"])
-                            if user_response.user:
-                                conv["customer_email"] = user_response.user.email
-                                conv["customer_name"] = None
+                            user_url = f"{supabase_url}/auth/v1/admin/users/{conv['customer_id']}"
+                            user_response = requests.get(user_url, headers=headers, timeout=10)
+                            if user_response.status_code == 200:
+                                user_data = user_response.json()
+                                conv["customer_email"] = user_data.get("email")
+                                conv["customer_name"] = user_data.get("user_metadata", {}).get("name")
                             else:
                                 conv["customer_email"] = None
                                 conv["customer_name"] = None
@@ -50,12 +56,14 @@ async def get_conversations(user = Depends(get_current_user)):
                             conv["customer_email"] = None
                             conv["customer_name"] = None
                 except:
-                    # If no client record, try to get from auth admin API
+                    # If no client record, try to get from auth REST API
                     try:
-                        user_response = admin_client.auth.admin.get_user_by_id(conv["customer_id"])
-                        if user_response.user:
-                            conv["customer_email"] = user_response.user.email
-                            conv["customer_name"] = None
+                        user_url = f"{supabase_url}/auth/v1/admin/users/{conv['customer_id']}"
+                        user_response = requests.get(user_url, headers=headers, timeout=10)
+                        if user_response.status_code == 200:
+                            user_data = user_response.json()
+                            conv["customer_email"] = user_data.get("email")
+                            conv["customer_name"] = user_data.get("user_metadata", {}).get("name")
                         else:
                             conv["customer_email"] = None
                             conv["customer_name"] = None

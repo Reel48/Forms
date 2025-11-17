@@ -138,17 +138,21 @@ const CustomerChatWidget: React.FC = () => {
     const messageDate = new Date(message.created_at);
     const hoursSinceMessage = (Date.now() - messageDate.getTime()) / (1000 * 60 * 60);
 
-    if (
-      (!lastNotificationDate || lastNotificationDate !== today) ||
-      hoursSinceMessage >= 24
-    ) {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('New message from Reel48', {
-          body: message.message.substring(0, 100),
-          icon: '/favicon.ico',
-        });
-        localStorage.setItem('lastChatNotificationDate', today);
-      }
+    const shouldNotify = 
+      (!lastNotificationDate || lastNotificationDate !== today) || // First message of the day
+      hoursSinceMessage >= 24; // Unread for 24+ hours
+
+    if (shouldNotify && 'Notification' in window && Notification.permission === 'granted') {
+      const notificationBody = message.message_type === 'file' || message.message_type === 'image'
+        ? `📎 ${message.file_name || 'File'}`
+        : message.message.substring(0, 100);
+      
+      new Notification('New message from Reel48', {
+        body: notificationBody,
+        icon: '/favicon.ico',
+        tag: 'reel48-chat', // Prevent duplicate notifications
+      });
+      localStorage.setItem('lastChatNotificationDate', today);
     }
   };
 
