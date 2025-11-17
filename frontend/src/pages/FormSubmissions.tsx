@@ -865,7 +865,7 @@ function FormSubmissions() {
                             }}
                             title="Remove tag"
                           >
-                            ×
+                            <FaTimes />
                           </button>
                         </span>
                       ))}

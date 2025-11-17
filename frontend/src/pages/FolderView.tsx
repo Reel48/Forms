@@ -458,7 +458,7 @@ const FolderView: React.FC = () => {
                           title={form.is_completed ? 'Completed' : 'Not completed'}
                         >
                           {form.is_completed && (
-                            <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                            <FaCheck style={{ color: 'white', fontSize: '12px' }} />
                           )}
                         </div>
                       </td>
@@ -543,7 +543,7 @@ const FolderView: React.FC = () => {
                           title={esig.is_completed ? 'Completed' : 'Not completed'}
                         >
                           {esig.is_completed && (
-                            <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                            <FaCheck style={{ color: 'white', fontSize: '12px' }} />
                           )}
                         </div>
                       </td>

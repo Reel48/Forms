@@ -831,7 +831,7 @@ function QuotesList() {
                                 fontSize: '0.75rem'
                               }}
                             >
-                              ×
+                              <FaTimes />
                             </button>
                           </div>
                         ))}

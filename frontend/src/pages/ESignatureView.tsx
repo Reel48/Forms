@@ -338,7 +338,7 @@ const ESignatureView: React.FC = () => {
       {isSigned ? (
         <div className="signed-document-view">
           <div className="success-message">
-            <h2>✓ Document Signed</h2>
+            <h2>Document Signed</h2>
             <p>This document has been successfully signed.</p>
             <div className="signed-actions">
               <button

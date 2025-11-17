@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { formsAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -287,7 +288,9 @@ function TemplateModal({ template, availableVariables, onSave, onClose }: Templa
       <div className="card" style={{ maxWidth: '900px', width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
         <div className="flex-between mb-3">
           <h2 style={{ margin: 0 }}>{template ? 'Edit Template' : 'Create Template'}</h2>
-          <button onClick={onClose} className="btn-outline" style={{ padding: '0.5rem' }}>×</button>
+          <button onClick={onClose} className="btn-outline" style={{ padding: '0.5rem' }} aria-label="Close">
+            <FaTimes />
+          </button>
         </div>
 
         <div className="form-group">

@@ -831,7 +831,7 @@ function QuoteBuilder() {
                                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                                 title="Remove"
                               >
-                                ×
+                                <FaTimes />
                               </button>
                             </div>
                           </td>
@@ -925,7 +925,12 @@ function QuoteBuilder() {
                 />
                 <span style={{ fontSize: '1rem' }}>
                   {quoteHasFolder && isEdit 
-                    ? '✓ This quote already has a folder' 
+                    ? (
+                      <>
+                        <FaCheck style={{ marginRight: '0.5rem' }} />
+                        This quote already has a folder
+                      </>
+                    ) 
                     : 'Create a folder for this quote'}
                 </span>
               </label>

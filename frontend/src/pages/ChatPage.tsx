@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { FaPaperclip, FaCheck } from 'react-icons/fa';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
@@ -123,7 +124,7 @@ const ChatPage: React.FC = () => {
       const uploadResponse = await chatAPI.uploadFile(file);
       await chatAPI.sendMessage({
         conversation_id: selectedConversation.id,
-        message: `📎 ${uploadResponse.data.file_name}`,
+        message: `File: ${uploadResponse.data.file_name}`,
         message_type: uploadResponse.data.message_type,
         file_url: uploadResponse.data.file_url,
         file_name: uploadResponse.data.file_name,
@@ -192,7 +193,10 @@ const ChatPage: React.FC = () => {
                 {conv.last_message && (
                   <div className="conversation-preview">
                     {conv.last_message.message_type === 'file' || conv.last_message.message_type === 'image' ? (
-                      <span className="file-indicator">📎 {conv.last_message.file_name}</span>
+                      <span className="file-indicator">
+                        <FaPaperclip style={{ marginRight: '0.25rem', fontSize: '0.75rem' }} />
+                        {conv.last_message.file_name}
+                      </span>
                     ) : (
                       <span>{conv.last_message.message.substring(0, 50)}</span>
                     )}
@@ -238,14 +242,20 @@ const ChatPage: React.FC = () => {
                             rel="noopener noreferrer"
                             className="message-file"
                           >
-                            📎 {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
+                            <FaPaperclip style={{ marginRight: '0.5rem' }} />
+                            {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
                           </a>
                         ) : (
                           <div className="message-text">{message.message}</div>
                         )}
                         <div className="message-time">
                           {formatTime(message.created_at)}
-                          {isAdmin && message.read_at && <span className="read-indicator">✓ Read</span>}
+                          {isAdmin && message.read_at && (
+                            <span className="read-indicator">
+                              <FaCheck style={{ marginRight: '0.25rem', fontSize: '0.75rem' }} />
+                              Read
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -269,7 +279,7 @@ const ChatPage: React.FC = () => {
                 disabled={uploading}
                 title="Attach file"
               >
-                📎
+                <FaPaperclip />
               </button>
               <input
                 type="text"

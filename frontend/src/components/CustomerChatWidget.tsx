@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
 import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
@@ -144,7 +145,7 @@ const CustomerChatWidget: React.FC = () => {
 
     if (shouldNotify && 'Notification' in window && Notification.permission === 'granted') {
       const notificationBody = message.message_type === 'file' || message.message_type === 'image'
-        ? `📎 ${message.file_name || 'File'}`
+        ? `File: ${message.file_name || 'File'}`
         : message.message.substring(0, 100);
       
       new Notification('New message from Reel48', {
@@ -222,7 +223,7 @@ const CustomerChatWidget: React.FC = () => {
 
       await chatAPI.sendMessage({
         conversation_id: convId,
-        message: `📎 ${uploadResponse.data.file_name}`,
+        message: `File: ${uploadResponse.data.file_name}`,
         message_type: uploadResponse.data.message_type,
         file_url: uploadResponse.data.file_url,
         file_name: uploadResponse.data.file_name,
@@ -271,7 +272,7 @@ const CustomerChatWidget: React.FC = () => {
           onClick={() => setIsOpen(true)}
           title="Chat with Reel48"
         >
-          💬
+          <FaComments />
           {unreadCount > 0 && <span className="chat-widget-badge">{unreadCount}</span>}
         </button>
       )}
@@ -288,7 +289,7 @@ const CustomerChatWidget: React.FC = () => {
               onClick={() => setIsOpen(false)}
               aria-label="Close chat"
             >
-              ×
+              <FaTimes />
             </button>
           </div>
 
@@ -317,7 +318,8 @@ const CustomerChatWidget: React.FC = () => {
                           rel="noopener noreferrer"
                           className="chat-widget-file"
                         >
-                          📎 {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
+                          <FaPaperclip style={{ marginRight: '0.5rem' }} />
+                          {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
                         </a>
                       ) : (
                         <div className="chat-widget-text">{message.message}</div>
@@ -345,7 +347,7 @@ const CustomerChatWidget: React.FC = () => {
               disabled={uploading}
               title="Attach file"
             >
-              📎
+              <FaPaperclip />
             </button>
             <input
               type="text"

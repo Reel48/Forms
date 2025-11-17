@@ -103,7 +103,9 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
+            <FaTimes />
+          </button>
         </div>
 
         <div className="modal-body">

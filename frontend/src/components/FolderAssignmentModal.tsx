@@ -64,7 +64,9 @@ const FolderAssignmentModal: React.FC<FolderAssignmentModalProps> = ({
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Use Template in Folder</h2>
-          <button onClick={onClose} className="modal-close">×</button>
+          <button onClick={onClose} className="modal-close" aria-label="Close">
+            <FaTimes />
+          </button>
         </div>
 
         <div className="modal-body">

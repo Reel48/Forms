@@ -110,7 +110,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 lineHeight: '1',
               }}
             >
-              ×
+              <FaTimes />
             </button>
           </div>
         ))}

@@ -374,7 +374,7 @@ export function FieldConfigPanel({
                   className="btn-danger"
                   style={{ padding: '0.25rem 0.5rem' }}
                 >
-                  ×
+                  <FaTimes />
                 </button>
               </div>
             );

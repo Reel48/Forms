@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { FaTimes } from 'react-icons/fa';
 import api, { quotesAPI, foldersAPI } from '../api';
 import type { Quote, Form, Folder } from '../api';
 import CustomerChatWidget from '../components/CustomerChatWidget';
@@ -333,7 +334,7 @@ function CustomerDashboard() {
                   color: '#666',
                 }}
               >
-                ×
+                <FaTimes />
               </button>
             )}
           </div>

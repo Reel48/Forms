@@ -121,7 +121,7 @@ function SortableFieldItem({
             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
             title="Remove field"
           >
-            ×
+            <FaTimes />
           </button>
         </div>
       </div>
