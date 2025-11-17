@@ -1,6 +1,7 @@
 import type { FormField, FormCreate } from '../../api';
 import { FIELD_TYPES, getFieldTypeDefinition } from '../../lib/fieldRegistry';
 import { formsAPI } from '../../api';
+import { FaTimes } from 'react-icons/fa';
 
 interface FieldConfigPanelProps {
   field: FormField;

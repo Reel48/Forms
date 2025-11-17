@@ -1,6 +1,7 @@
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { FaTimes } from 'react-icons/fa';
 import type { FormField } from '../../api';
 import { FIELD_TYPE_LABELS } from '../../lib/fieldRegistry';
 

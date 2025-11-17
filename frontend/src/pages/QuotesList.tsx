@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { FaTimes } from 'react-icons/fa';
 import { quotesAPI, clientsAPI } from '../api';
 import type { Quote, QuoteFilters, Client } from '../api';
 import { useAuth } from '../contexts/AuthContext';

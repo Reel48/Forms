@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { FaTimes, FaCheck } from 'react-icons/fa';
 import { quotesAPI, clientsAPI } from '../api';
 import type { QuoteCreate, Client, LineItem } from '../api';
 import { renderTextWithLinks } from '../utils/textUtils';

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { FaTimes } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { formsAPI } from '../api';
 import type { Form, FormSubmission } from '../api';
