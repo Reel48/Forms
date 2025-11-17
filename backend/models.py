@@ -4,6 +4,42 @@ from datetime import datetime
 from decimal import Decimal
 import json
 
+# Chat Models
+class ChatMessageBase(BaseModel):
+    message: str
+    message_type: str = "text"  # text, file, image
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
+    file_size: Optional[int] = None
+
+class ChatMessageCreate(ChatMessageBase):
+    conversation_id: Optional[str] = None  # Will be created if not provided
+
+class ChatMessage(ChatMessageBase):
+    id: str
+    conversation_id: str
+    sender_id: str
+    read_at: Optional[datetime] = None
+    created_at: datetime
+
+class ChatConversationBase(BaseModel):
+    status: str = "active"  # active, resolved, archived
+
+class ChatConversation(ChatConversationBase):
+    id: str
+    customer_id: str
+    last_message_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    unread_count: Optional[int] = 0  # For admin view
+    last_message: Optional[ChatMessage] = None  # For admin view
+    customer_email: Optional[str] = None  # For admin view
+    customer_name: Optional[str] = None  # For admin view
+
+class ChatConversationList(BaseModel):
+    conversations: List[ChatConversation]
+    total: int
+
 # Client Models
 class ClientBase(BaseModel):
     name: str

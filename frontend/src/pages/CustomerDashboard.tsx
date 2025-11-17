@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { quotesAPI, foldersAPI } from '../api';
 import type { Quote, Form, Folder } from '../api';
+import CustomerChatWidget from '../components/CustomerChatWidget';
 
 interface TimelineItem {
   id: string;
@@ -285,6 +286,7 @@ function CustomerDashboard() {
 
   return (
     <div className="container">
+      <CustomerChatWidget />
       {/* Filters and Search */}
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

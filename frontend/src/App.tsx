@@ -27,6 +27,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 const QuoteAnalytics = lazy(() => import('./pages/QuoteAnalytics'));
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -141,6 +142,14 @@ function Navigation() {
                 className={`nav-tab ${isESignatureActive ? 'active' : ''}`}
               >
                 E-Signatures
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/chat"
+                className={`nav-tab ${location.pathname.startsWith('/chat') ? 'active' : ''}`}
+              >
+                Chat
               </Link>
             </li>
             <li 
@@ -273,6 +282,7 @@ function AppContent() {
           <Route path="/esignature/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ESignatureView /></Suspense></ProtectedRoute>} />
           <Route path="/folders" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FoldersList /></Suspense></ProtectedRoute>} />
           <Route path="/folders/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FolderView /></Suspense></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><ChatPage /></Suspense></ProtectedRoute>} />
           
           {/* Admin-only routes */}
           <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />

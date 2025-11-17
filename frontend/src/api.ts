@@ -722,6 +722,59 @@ export const foldersAPI = {
 };
 
 // Auth API
+// Chat Types
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  message: string;
+  message_type: string; // text, file, image
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  read_at?: string;
+  created_at: string;
+}
+
+export interface ChatMessageCreate {
+  conversation_id?: string;
+  message: string;
+  message_type?: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+}
+
+export interface ChatConversation {
+  id: string;
+  customer_id: string;
+  status: string; // active, resolved, archived
+  last_message_at?: string;
+  created_at: string;
+  updated_at: string;
+  unread_count?: number;
+  last_message?: ChatMessage;
+  customer_email?: string;
+  customer_name?: string;
+}
+
+export const chatAPI = {
+  getConversations: () => api.get<ChatConversation[]>('/api/chat/conversations'),
+  getMessages: (conversationId: string) => api.get<ChatMessage[]>(`/api/chat/conversations/${conversationId}/messages`),
+  sendMessage: (message: ChatMessageCreate) => api.post<ChatMessage>('/api/chat/messages', message),
+  markMessageRead: (messageId: string) => api.post<{ message: string }>(`/api/chat/messages/${messageId}/read`),
+  markAllRead: (conversationId: string) => api.post<{ message: string }>(`/api/chat/conversations/${conversationId}/read-all`),
+  uploadFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ file_url: string; file_name: string; file_size: number; message_type: string }>('/api/chat/messages/upload-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+
 export const authAPI = {
   requestPasswordReset: (email: string) => api.post<{ message: string }>('/api/auth/password-reset/request', { email }),
   confirmPasswordReset: (token: string, newPassword: string) => api.post<{ message: string }>('/api/auth/password-reset/confirm', { token, new_password: newPassword }),
