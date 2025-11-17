@@ -91,22 +91,26 @@ async def get_conversations(user = Depends(get_current_user)):
             return conversations
         else:
             # Customer: Get their own conversation
-            conversation_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).single().execute()
-            if conversation_response.data:
-                return [conversation_response.data]
-            else:
-                # Create conversation if it doesn't exist
-                new_conv = {
-                    "id": str(uuid.uuid4()),
-                    "customer_id": user["id"],
-                    "status": "active",
-                    "created_at": datetime.now().isoformat(),
-                    "updated_at": datetime.now().isoformat()
-                }
-                create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
-                if create_response.data:
-                    return [create_response.data[0]]
-                return []
+            try:
+                conversation_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
+                if conversation_response.data and len(conversation_response.data) > 0:
+                    return conversation_response.data
+            except Exception as e:
+                # If no conversation exists, create one
+                pass
+            
+            # Create conversation if it doesn't exist
+            new_conv = {
+                "id": str(uuid.uuid4()),
+                "customer_id": user["id"],
+                "status": "active",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
+            if create_response.data:
+                return [create_response.data[0]]
+            return []
     except Exception as e:
         print(f"Error getting conversations: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get conversations: {str(e)}")
@@ -162,10 +166,13 @@ async def send_message(message: ChatMessageCreate, user = Depends(get_current_us
                 raise HTTPException(status_code=400, detail="Admins must specify conversation_id")
             
             # Get or create conversation
-            conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).single().execute()
-            if conv_response.data:
-                conversation_id = conv_response.data["id"]
-            else:
+            try:
+                conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
+                if conv_response.data and len(conv_response.data) > 0:
+                    conversation_id = conv_response.data[0]["id"]
+                else:
+                    raise Exception("No conversation found")
+            except:
                 # Create new conversation
                 new_conv = {
                     "id": str(uuid.uuid4()),
