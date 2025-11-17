@@ -11,7 +11,7 @@ const CustomerChatWidget: React.FC = () => {
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -109,8 +109,15 @@ const CustomerChatWidget: React.FC = () => {
         },
         (payload) => {
           console.log('Realtime conversation event:', payload);
-          // Reload conversation to get updated data
-          loadConversation();
+          // Update conversation state directly without reloading (avoids widget disappearing)
+          if (payload.new) {
+            setConversation((prev) => {
+              if (prev && prev.id === payload.new.id) {
+                return { ...prev, ...payload.new };
+              }
+              return prev;
+            });
+          }
         }
       )
       .subscribe((status) => {
@@ -132,7 +139,7 @@ const CustomerChatWidget: React.FC = () => {
 
   useEffect(() => {
     console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
-    loadConversation();
+    loadConversation(true); // Pass true to indicate initial load
 
     // Cleanup subscriptions on unmount
     return () => {
@@ -186,9 +193,11 @@ const CustomerChatWidget: React.FC = () => {
     return () => clearInterval(interval);
   }, [conversation?.id, isOpen]);
 
-  const loadConversation = async () => {
+  const loadConversation = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setInitialLoading(true);
+      }
       const response = await chatAPI.getConversations();
       if (response.data.length > 0) {
         setConversation(response.data[0]);
@@ -200,7 +209,9 @@ const CustomerChatWidget: React.FC = () => {
     } catch (error) {
       console.error('Failed to load conversation:', error);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setInitialLoading(false);
+      }
     }
   };
 
@@ -344,8 +355,9 @@ const CustomerChatWidget: React.FC = () => {
     requestNotificationPermission();
   }, []);
 
-  if (loading) {
-    return null; // Don't show widget while loading
+  // Only hide widget during initial load, not during updates
+  if (initialLoading) {
+    return null; // Don't show widget while initially loading
   }
 
   return (
