@@ -106,33 +106,6 @@ const CustomerChatWidget: React.FC = () => {
     }
   };
 
-  const checkAndShowNotification = (message: ChatMessage) => {
-    // Only show notification if:
-    // 1. First message of the day, OR
-    // 2. Message is unread for 24+ hours
-    const lastNotificationDate = localStorage.getItem('lastChatNotificationDate');
-    const today = new Date().toDateString();
-    const messageDate = new Date(message.created_at);
-    const hoursSinceMessage = (Date.now() - messageDate.getTime()) / (1000 * 60 * 60);
-
-    const shouldNotify = 
-      (!lastNotificationDate || lastNotificationDate !== today) || // First message of the day
-      hoursSinceMessage >= 24; // Unread for 24+ hours
-
-    if (shouldNotify && 'Notification' in window && Notification.permission === 'granted') {
-      const notificationBody = message.message_type === 'file' || message.message_type === 'image'
-        ? `File: ${message.file_name || 'File'}`
-        : message.message.substring(0, 100);
-      
-      new Notification('New message from Reel48', {
-        body: notificationBody,
-        icon: '/favicon.ico',
-        tag: 'reel48-chat', // Prevent duplicate notifications
-      });
-      localStorage.setItem('lastChatNotificationDate', today);
-    }
-  };
-
   const markAllAsRead = async () => {
     if (!conversation) return;
     try {
