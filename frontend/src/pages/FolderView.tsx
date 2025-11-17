@@ -396,7 +396,7 @@ const FolderView: React.FC = () => {
                           >
                             View
                           </button>
-                          {(role === 'admin' || file.uploaded_by === user?.id) && (
+                          {role === 'admin' && (
                             <button
                               className="btn-danger btn-sm"
                               onClick={async (e) => {
