@@ -3,12 +3,15 @@ from typing import List, Optional
 import sys
 import os
 import uuid
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from datetime import datetime
+import requests
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from models import ChatMessage, ChatMessageCreate, ChatConversation
 from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
-from datetime import datetime
-import requests
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
