@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
 import './CustomerChatWidget.css';
 
@@ -18,18 +19,38 @@ const CustomerChatWidget: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const markingAsReadRef = useRef(false);
   const lastMarkAsReadRef = useRef<number>(0);
+  const messagesSubscriptionRef = useRef<any>(null);
+  const conversationsSubscriptionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Version check - ensure new code is running (no Realtime subscriptions)
-    console.log('CustomerChatWidget: Realtime subscriptions DISABLED - using polling only');
+    console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
     loadConversation();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
+      if (conversationsSubscriptionRef.current) {
+        supabase.removeChannel(conversationsSubscriptionRef.current);
+        conversationsSubscriptionRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (conversation) {
       loadMessages(conversation.id);
+      setupRealtimeSubscriptions(conversation.id);
+    } else {
+      // Clean up subscriptions when no conversation
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
     }
-  }, [conversation?.id]);
+  }, [conversation?.id, setupRealtimeSubscriptions]);
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
@@ -49,29 +70,108 @@ const CustomerChatWidget: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, conversation?.id]);
 
-  // Poll for new messages (Realtime disabled)
+  // Setup Realtime subscriptions for messages and conversations
+  const setupRealtimeSubscriptions = useCallback((conversationId: string) => {
+    // Clean up existing subscriptions
+    if (messagesSubscriptionRef.current) {
+      supabase.removeChannel(messagesSubscriptionRef.current);
+    }
+    if (conversationsSubscriptionRef.current) {
+      supabase.removeChannel(conversationsSubscriptionRef.current);
+    }
+
+    // Subscribe to new messages in this conversation
+    const messagesChannel = supabase
+      .channel(`chat_messages:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Realtime message event:', payload.eventType, payload);
+          
+          if (payload.eventType === 'INSERT') {
+            // New message received
+            const newMessage = payload.new as ChatMessage;
+            setMessages((prev) => {
+              // Check if message already exists to avoid duplicates
+              if (prev.some((msg) => msg.id === newMessage.id)) {
+                return prev;
+              }
+              return [...prev, newMessage];
+            });
+            
+            // Update unread count if message is from someone else
+            if (newMessage.sender_id !== user?.id) {
+              setUnreadCount((prev) => prev + 1);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Message updated (e.g., read_at changed)
+            const updatedMessage = payload.new as ChatMessage;
+            setMessages((prev) =>
+              prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // Message deleted
+            const deletedMessage = payload.old as ChatMessage;
+            setMessages((prev) => prev.filter((msg) => msg.id !== deletedMessage.id));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Messages subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to chat messages');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to chat messages');
+        }
+      });
+
+    messagesSubscriptionRef.current = messagesChannel;
+
+    // Subscribe to conversation updates (for unread counts, last_message_at, etc.)
+    const conversationsChannel = supabase
+      .channel(`chat_conversations:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_conversations',
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Realtime conversation event:', payload);
+          // Reload conversation to get updated data
+          loadConversation();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Conversations subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to chat conversations');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to chat conversations');
+        }
+      });
+
+    conversationsSubscriptionRef.current = conversationsChannel;
+  }, [user?.id]);
+
+  // Fallback: Check for unread messages periodically when chat is closed (as backup)
   useEffect(() => {
-    if (!conversation) return;
-
-    const interval = setInterval(() => {
-      if (conversation) {
-        loadMessages(conversation.id);
+    if (!isOpen && conversation) {
+      // Only check occasionally when closed, Realtime handles most updates
+      const interval = setInterval(() => {
         checkUnreadCount();
-      }
-    }, 5000); // Poll every 5 seconds
+      }, 60000); // Check every 60 seconds as fallback
 
-    return () => clearInterval(interval);
-  }, [conversation?.id]);
-
-  // Check for unread messages periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isOpen && conversation) {
-        checkUnreadCount();
-      }
-    }, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    }
   }, [isOpen, conversation]);
 
   const loadConversation = async () => {
@@ -101,8 +201,8 @@ const CustomerChatWidget: React.FC = () => {
     }
   };
 
-  // NOTE: Realtime subscriptions are completely disabled to prevent WebSocket errors
-  // All updates are handled via polling (every 5 seconds)
+  // NOTE: Realtime subscriptions are enabled for instant updates
+  // Polling is only used as a fallback when chat is closed
 
   const checkUnreadCount = async (conv?: ChatConversation) => {
     const convToCheck = conv || conversation;
@@ -166,7 +266,7 @@ const CustomerChatWidget: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Reload messages after sending (polling will handle updates)
+      // Realtime will handle the new message update, but reload to ensure consistency
       if (conversation) {
         loadMessages(conversation.id);
       }
@@ -203,6 +303,10 @@ const CustomerChatWidget: React.FC = () => {
         file_name: uploadResponse.data.file_name,
         file_size: uploadResponse.data.file_size,
       });
+      // Realtime will handle the new message update
+      if (conversation) {
+        loadMessages(conversation.id);
+      }
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');

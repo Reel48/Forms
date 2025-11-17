@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { FaPaperclip, FaCheck } from 'react-icons/fa';
 import './ChatPage.css';
 
@@ -15,37 +16,132 @@ const ChatPage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesSubscriptionRef = useRef<any>(null);
+  const conversationsSubscriptionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Version check - ensure new code is running (no Realtime subscriptions)
-    console.log('ChatPage: Realtime subscriptions DISABLED - using polling only');
+    console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
     loadConversations();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
+      if (conversationsSubscriptionRef.current) {
+        supabase.removeChannel(conversationsSubscriptionRef.current);
+        conversationsSubscriptionRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation.id);
       markAllAsRead(selectedConversation.id);
+      setupRealtimeSubscriptions(selectedConversation.id);
+    } else {
+      // Clean up subscriptions when no conversation selected
+      if (messagesSubscriptionRef.current) {
+        supabase.removeChannel(messagesSubscriptionRef.current);
+        messagesSubscriptionRef.current = null;
+      }
     }
-  }, [selectedConversation?.id]);
+  }, [selectedConversation?.id, setupRealtimeSubscriptions]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Poll for new messages (Realtime disabled)
-  useEffect(() => {
-    if (!selectedConversation) return;
+  // Setup Realtime subscriptions for messages and conversations
+  const setupRealtimeSubscriptions = useCallback((conversationId: string) => {
+    // Clean up existing subscriptions
+    if (messagesSubscriptionRef.current) {
+      supabase.removeChannel(messagesSubscriptionRef.current);
+    }
+    if (conversationsSubscriptionRef.current) {
+      supabase.removeChannel(conversationsSubscriptionRef.current);
+    }
 
-    const interval = setInterval(() => {
-      if (selectedConversation) {
-        loadMessages(selectedConversation.id);
-        loadConversations();
-      }
-    }, 5000); // Poll every 5 seconds
+    // Subscribe to new messages in this conversation
+    const messagesChannel = supabase
+      .channel(`chat_messages:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Realtime message event:', payload.eventType, payload);
+          
+          if (payload.eventType === 'INSERT') {
+            // New message received
+            const newMessage = payload.new as ChatMessage;
+            setMessages((prev) => {
+              // Check if message already exists to avoid duplicates
+              if (prev.some((msg) => msg.id === newMessage.id)) {
+                return prev;
+              }
+              return [...prev, newMessage];
+            });
+            // Reload conversations to update unread counts
+            loadConversations();
+          } else if (payload.eventType === 'UPDATE') {
+            // Message updated (e.g., read_at changed)
+            const updatedMessage = payload.new as ChatMessage;
+            setMessages((prev) =>
+              prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // Message deleted
+            const deletedMessage = payload.old as ChatMessage;
+            setMessages((prev) => prev.filter((msg) => msg.id !== deletedMessage.id));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Messages subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to chat messages');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to chat messages');
+        }
+      });
 
-    return () => clearInterval(interval);
-  }, [selectedConversation?.id]);
+    messagesSubscriptionRef.current = messagesChannel;
+
+    // Subscribe to conversation updates (for unread counts, last_message_at, etc.)
+    const conversationsChannel = supabase
+      .channel(`chat_conversations:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_conversations',
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Realtime conversation event:', payload);
+          // Reload conversations to get updated data
+          loadConversations();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Conversations subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to chat conversations');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to chat conversations');
+        }
+      });
+
+    conversationsSubscriptionRef.current = conversationsChannel;
+  }, [user?.id]);
 
   const loadConversations = async () => {
     try {
@@ -71,8 +167,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // NOTE: Realtime subscriptions are completely disabled to prevent WebSocket errors
-  // All updates are handled via polling (every 5 seconds)
+  // NOTE: Realtime subscriptions are enabled for instant updates
 
   const markAllAsRead = async (conversationId: string) => {
     try {
@@ -94,7 +189,7 @@ const ChatPage: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Reload messages after sending (polling will handle updates)
+      // Realtime will handle the new message update, but reload to ensure consistency
       if (selectedConversation) {
         loadMessages(selectedConversation.id);
         loadConversations();
