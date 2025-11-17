@@ -133,11 +133,11 @@ function FormView() {
 
       {!loading && form && (
         <>
-      <div className="flex-between mb-4">
-        <div>
-          <h1>{form.name || 'Form Details'}</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+          <div className="flex-between mb-4">
+            <div>
+              <h1>{form.name || 'Form Details'}</h1>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem' }}>
           {role === 'admin' && (
             <button onClick={() => setShowAssignmentModal(true)} className="btn-primary">
               Assign to Customers
@@ -493,53 +493,55 @@ function FormView() {
         )}
       </div>
 
-      {/* Analytics Section */}
-      {role === 'admin' && (
-        <FormAnalytics form={form} submissions={submissions} loading={loadingSubmissions} />
-      )}
+          {/* Analytics Section */}
+          {role === 'admin' && (
+            <FormAnalytics form={form} submissions={submissions} loading={loadingSubmissions} />
+          )}
 
-      {/* Webhooks Section */}
-      {role === 'admin' && (
-        <WebhooksSection formId={id || ''} />
-      )}
+          {/* Webhooks Section */}
+          {role === 'admin' && (
+            <WebhooksSection formId={id || ''} />
+          )}
 
-      {/* Form Versions Section */}
-      {role === 'admin' && (
-        <FormVersionsSection formId={id || ''} />
-      )}
+          {/* Form Versions Section */}
+          {role === 'admin' && (
+            <FormVersionsSection formId={id || ''} />
+          )}
 
-      {/* Submissions Section */}
-      {role === 'admin' && (
-        <div className="card mt-4">
-          <div className="flex-between">
-            <div>
-              <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Submissions</h3>
-              <p className="text-muted" style={{ margin: 0, fontSize: '0.875rem' }}>
-                View and manage all form responses
-              </p>
+          {/* Submissions Section */}
+          {role === 'admin' && (
+            <div className="card mt-4">
+              <div className="flex-between">
+                <div>
+                  <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Submissions</h3>
+                  <p className="text-muted" style={{ margin: 0, fontSize: '0.875rem' }}>
+                    View and manage all form responses
+                  </p>
+                </div>
+                <button onClick={() => navigate(`/forms/${id}/submissions`)} className="btn-primary">
+                  View Submissions
+                </button>
+              </div>
             </div>
-            <button onClick={() => navigate(`/forms/${id}/submissions`)} className="btn-primary">
-              View Submissions
-            </button>
-          </div>
-        </div>
-      )}
+          )}
 
-      {role === 'admin' && (
-        <AssignmentsList
-          formId={id}
-          onUnassign={loadAssignments}
-        />
-      )}
+          {role === 'admin' && (
+            <AssignmentsList
+              formId={id}
+              onUnassign={loadAssignments}
+            />
+          )}
 
-      {role === 'admin' && (
-        <AssignmentModal
-          isOpen={showAssignmentModal}
-          onClose={() => setShowAssignmentModal(false)}
-          onAssign={handleAssign}
-          title={`Assign Form: ${form.name}`}
-          existingAssignments={assignments}
-        />
+          {role === 'admin' && (
+            <AssignmentModal
+              isOpen={showAssignmentModal}
+              onClose={() => setShowAssignmentModal(false)}
+              onAssign={handleAssign}
+              title={`Assign Form: ${form.name}`}
+              existingAssignments={assignments}
+            />
+          )}
+        </>
       )}
     </div>
   );
@@ -1136,8 +1138,6 @@ function FormVersionsSection({ formId }: FormVersionsSectionProps) {
             </div>
           ))}
         </div>
-      )}
-        </>
       )}
     </div>
   );
