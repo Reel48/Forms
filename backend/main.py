@@ -4,15 +4,6 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
 from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders
-try:
-    from routers import chat
-    logger.info("Chat router imported successfully")
-except Exception as e:
-    logger.error(f"Failed to import chat router: {str(e)}")
-    logger.error(traceback.format_exc())
-    # Create a dummy router to prevent app from crashing
-    from fastapi import APIRouter
-    chat = type('chat', (), {'router': APIRouter(prefix="/api/chat", tags=["chat"])})()
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
@@ -25,6 +16,17 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Import chat router with error handling
+try:
+    from routers import chat
+    logger.info("Chat router imported successfully")
+except Exception as e:
+    logger.error(f"Failed to import chat router: {str(e)}")
+    logger.error(traceback.format_exc())
+    # Create a dummy router to prevent app from crashing
+    from fastapi import APIRouter
+    chat = type('chat', (), {'router': APIRouter(prefix="/api/chat", tags=["chat"])})()
 
 # FastAPI JSON encoder for Decimal (converts to string for JSON serialization)
 app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal: str})
