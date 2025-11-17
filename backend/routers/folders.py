@@ -907,11 +907,17 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                         # Customer: check if current user has submitted this form and count their submissions
                         user_email = user.get("email")
                         if user_email:
-                            submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).eq("submitter_email", user_email).limit(1).execute()
-                            form["is_completed"] = len(submission_check.data or []) > 0
+                            # Normalize email to lowercase for comparison (emails are case-insensitive)
+                            user_email_lower = user_email.lower().strip()
+                            # Check for submissions with case-insensitive email match
+                            # Note: Supabase Postgres is case-sensitive by default, so we need to use ilike or get all and filter
+                            # For now, we'll query and filter in Python to ensure case-insensitive matching
+                            all_submissions = supabase_storage.table("form_submissions").select("id, submitter_email, status").eq("form_id", form["id"]).execute()
+                            matching_submissions = [s for s in (all_submissions.data or []) if s.get("submitter_email", "").lower().strip() == user_email_lower]
+                            form["is_completed"] = len(matching_submissions) > 0
                             # Count only this customer's completed submissions
-                            count_response = supabase_storage.table("form_submissions").select("id", count="exact").eq("form_id", form["id"]).eq("submitter_email", user_email).eq("status", "completed").execute()
-                            form["submissions_count"] = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
+                            completed_submissions = [s for s in matching_submissions if s.get("status") == "completed"]
+                            form["submissions_count"] = len(completed_submissions)
                         else:
                             form["is_completed"] = False
                             form["submissions_count"] = 0

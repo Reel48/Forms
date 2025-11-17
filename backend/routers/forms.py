@@ -1950,7 +1950,7 @@ async def update_submission_review_status(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{form_id}/submit", response_model=FormSubmission)
-async def submit_form(form_id: str, submission: FormSubmissionCreate, request: Request):
+async def submit_form(form_id: str, submission: FormSubmissionCreate, request: Request, current_user: Optional[dict] = Depends(get_optional_user)):
     """Submit a form response"""
     try:
         from datetime import datetime
@@ -2041,11 +2041,27 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
         submission_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
         
+        # Use authenticated user's email if available, otherwise use provided email
+        submitter_email = submission.submitter_email
+        submitter_name = submission.submitter_name
+        if current_user:
+            # If user is authenticated, use their email and name
+            user_email = current_user.get("email")
+            user_name = current_user.get("name")
+            if user_email:
+                submitter_email = user_email
+            if user_name:
+                submitter_name = user_name or submitter_name
+        
+        # Normalize email to lowercase (emails are case-insensitive)
+        if submitter_email:
+            submitter_email = submitter_email.lower().strip()
+        
         submission_data = {
             "id": submission_id,
             "form_id": form_id,
-            "submitter_email": submission.submitter_email,
-            "submitter_name": submission.submitter_name,
+            "submitter_email": submitter_email,
+            "submitter_name": submitter_name,
             "ip_address": submission.ip_address,
             "user_agent": submission.user_agent,
             "started_at": submission.started_at.isoformat() if hasattr(submission.started_at, 'isoformat') else (submission.started_at if isinstance(submission.started_at, str) else now),
