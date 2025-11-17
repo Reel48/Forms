@@ -708,15 +708,13 @@ function QuoteView() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       {invoiceUrl && (
-                        <a 
-                          href={invoiceUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <button 
+                          onClick={() => window.open(invoiceUrl, '_blank', 'noopener,noreferrer')}
                           className="btn-primary"
                           style={{ fontSize: '0.875rem' }}
                         >
                           View Invoice
-                        </a>
+                        </button>
                       )}
                       <button 
                         onClick={loadQuote} 

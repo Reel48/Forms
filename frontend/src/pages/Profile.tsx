@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { clientsAPI, authAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
@@ -345,9 +346,9 @@ function Profile() {
                 <p><strong>Email Verified:</strong> {user?.email_confirmed_at ? 'Yes' : 'No'}</p>
                 {!user?.email_confirmed_at && (
                   <p style={{ marginTop: '0.5rem' }}>
-                    <a href="/resend-verification" style={{ color: '#007bff' }}>
+                    <Link to="/resend-verification" className="btn-outline btn-sm" style={{ textDecoration: 'none', display: 'inline-block' }}>
                       Resend verification email
-                    </a>
+                    </Link>
                   </p>
                 )}
               </div>
