@@ -16,6 +16,8 @@ const CustomerChatWidget: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const markingAsReadRef = useRef(false);
+  const lastMarkAsReadRef = useRef<number>(0);
 
   useEffect(() => {
     // Version check - ensure new code is running (no Realtime subscriptions)
@@ -32,9 +34,20 @@ const CustomerChatWidget: React.FC = () => {
   useEffect(() => {
     if (isOpen && messages.length > 0) {
       scrollToBottom();
-      markAllAsRead();
     }
   }, [messages, isOpen]);
+
+  // Mark messages as read when chat is opened
+  useEffect(() => {
+    if (isOpen && conversation) {
+      const now = Date.now();
+      // Only mark as read if it's been at least 2 seconds since last call
+      if (now - lastMarkAsReadRef.current > 2000) {
+        markAllAsRead();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, conversation?.id]);
 
   // Poll for new messages (Realtime disabled)
   useEffect(() => {
@@ -107,13 +120,22 @@ const CustomerChatWidget: React.FC = () => {
   };
 
   const markAllAsRead = async () => {
-    if (!conversation) return;
+    if (!conversation || markingAsReadRef.current) return;
+    
+    markingAsReadRef.current = true;
+    lastMarkAsReadRef.current = Date.now();
+    
     try {
       await chatAPI.markAllRead(conversation.id);
       setUnreadCount(0);
-      loadConversation();
+      // Update messages to reflect read status without reloading conversation
+      setMessages(prevMessages => 
+        prevMessages.map(msg => ({ ...msg, read_at: msg.read_at || new Date().toISOString() }))
+      );
     } catch (error) {
       console.error('Failed to mark messages as read:', error);
+    } finally {
+      markingAsReadRef.current = false;
     }
   };
 
