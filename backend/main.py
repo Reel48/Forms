@@ -3,7 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat
+from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders
+try:
+    from routers import chat
+    logger.info("Chat router imported successfully")
+except Exception as e:
+    logger.error(f"Failed to import chat router: {str(e)}")
+    logger.error(traceback.format_exc())
+    # Create a dummy router to prevent app from crashing
+    from fastapi import APIRouter
+    chat = type('chat', (), {'router': APIRouter(prefix="/api/chat", tags=["chat"])})()
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
