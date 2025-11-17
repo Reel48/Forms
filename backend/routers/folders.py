@@ -889,27 +889,35 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             else:
                 templates = []
             
-            # Check completion status for each form
-            # For admins: check if ANY user has submitted it
-            # For customers: check if the current user has submitted it
+            # Check completion status and submission count for each form
+            # For admins: check if ANY user has submitted it and count all submissions
+            # For customers: check if the current user has submitted it and count their submissions
             # Note: Forms use submitter_email instead of user_id, so we'll check by email
             for form in templates:
                 form["item_type"] = "form"
                 try:
                     if is_admin:
-                        # Admin: check if any user has submitted this form
+                        # Admin: check if any user has submitted this form and count all submissions
                         submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).limit(1).execute()
                         form["is_completed"] = len(submission_check.data or []) > 0
+                        # Count all completed submissions for admin
+                        count_response = supabase_storage.table("form_submissions").select("id", count="exact").eq("form_id", form["id"]).eq("status", "completed").execute()
+                        form["submissions_count"] = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
                     else:
-                        # Customer: check if current user has submitted this form
+                        # Customer: check if current user has submitted this form and count their submissions
                         user_email = user.get("email")
                         if user_email:
                             submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).eq("submitter_email", user_email).limit(1).execute()
                             form["is_completed"] = len(submission_check.data or []) > 0
+                            # Count only this customer's completed submissions
+                            count_response = supabase_storage.table("form_submissions").select("id", count="exact").eq("form_id", form["id"]).eq("submitter_email", user_email).eq("status", "completed").execute()
+                            form["submissions_count"] = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
                         else:
                             form["is_completed"] = False
+                            form["submissions_count"] = 0
                 except Exception:
                     form["is_completed"] = False
+                    form["submissions_count"] = 0
             forms = templates
         except Exception as e:
             logger.warning(f"Error fetching forms: {str(e)}")
