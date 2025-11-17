@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { FaPaperclip, FaCheck } from 'react-icons/fa';
 import './ChatPage.css';
 
@@ -16,7 +15,6 @@ const ChatPage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const subscriptionFailedRef = useRef<boolean>(false);
 
   useEffect(() => {
     loadConversations();
@@ -26,34 +24,26 @@ const ChatPage: React.FC = () => {
     if (selectedConversation) {
       loadMessages(selectedConversation.id);
       markAllAsRead(selectedConversation.id);
-      subscribeToMessages(selectedConversation.id);
     }
-    return () => {
-      // Cleanup subscription when conversation changes
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-    };
-  }, [selectedConversation?.id]); // Only depend on conversation ID to prevent re-subscription
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Poll for new messages if Realtime subscription failed
+  // Poll for new messages (Realtime disabled)
   useEffect(() => {
-    if (!selectedConversation || !subscriptionFailedRef.current) return;
+    if (!selectedConversation) return;
 
     const interval = setInterval(() => {
       if (selectedConversation) {
         loadMessages(selectedConversation.id);
         loadConversations();
       }
-    }, 5000); // Poll every 5 seconds if Realtime is not available
+    }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
-  }, [selectedConversation?.id, subscriptionFailedRef.current]);
+  }, [selectedConversation?.id]);
 
   const loadConversations = async () => {
     try {
@@ -79,56 +69,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const subscriptionRef = useRef<any>(null);
-
-  const subscribeToMessages = (conversationId: string) => {
-    // Don't retry if subscription has failed
-    if (subscriptionFailedRef.current) {
-      console.log('Realtime subscription previously failed, using polling instead');
-      return;
-    }
-
-    // Clean up existing subscription
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
-    }
-
-    // Subscribe to new messages via Supabase Realtime
-    const channel = supabase
-      .channel(`chat_messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as ChatMessage;
-          setMessages((prev) => [...prev, newMessage]);
-          // Refresh conversations to update last_message_at
-          loadConversations();
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Chat subscription active');
-          subscriptionFailedRef.current = false;
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('Chat subscription error:', status, '- Falling back to polling');
-          subscriptionFailedRef.current = true;
-          // Clean up failed subscription
-          if (subscriptionRef.current) {
-            supabase.removeChannel(subscriptionRef.current);
-            subscriptionRef.current = null;
-          }
-        }
-      });
-
-    subscriptionRef.current = channel;
-  };
+  // Realtime subscriptions disabled - using polling instead
 
   const markAllAsRead = async (conversationId: string) => {
     try {

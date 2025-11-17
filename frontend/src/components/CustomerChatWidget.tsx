@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
 import './CustomerChatWidget.css';
 
@@ -17,31 +16,16 @@ const CustomerChatWidget: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const subscriptionRef = useRef<any>(null);
-  const subscriptionFailedRef = useRef<boolean>(false);
 
   useEffect(() => {
     loadConversation();
-    return () => {
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-      }
-    };
   }, []);
 
   useEffect(() => {
     if (conversation) {
       loadMessages(conversation.id);
-      subscribeToMessages(conversation.id);
     }
-    return () => {
-      // Cleanup subscription when conversation changes
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-    };
-  }, [conversation?.id]); // Only depend on conversation ID to prevent re-subscription
+  }, [conversation?.id]);
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
@@ -50,19 +34,19 @@ const CustomerChatWidget: React.FC = () => {
     }
   }, [messages, isOpen]);
 
-  // Poll for new messages if Realtime subscription failed
+  // Poll for new messages (Realtime disabled)
   useEffect(() => {
-    if (!conversation || !subscriptionFailedRef.current) return;
+    if (!conversation) return;
 
     const interval = setInterval(() => {
       if (conversation) {
         loadMessages(conversation.id);
         checkUnreadCount();
       }
-    }, 5000); // Poll every 5 seconds if Realtime is not available
+    }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
-  }, [conversation?.id, subscriptionFailedRef.current]);
+  }, [conversation?.id]);
 
   // Check for unread messages periodically
   useEffect(() => {
@@ -102,60 +86,7 @@ const CustomerChatWidget: React.FC = () => {
     }
   };
 
-  const subscribeToMessages = (conversationId: string) => {
-    // Don't retry if subscription has failed
-    if (subscriptionFailedRef.current) {
-      console.log('Realtime subscription previously failed, using polling instead');
-      return;
-    }
-
-    // Clean up existing subscription
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
-    }
-
-    // Subscribe to new messages via Supabase Realtime
-    const channel = supabase
-      .channel(`customer_chat:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as ChatMessage;
-          setMessages((prev) => [...prev, newMessage]);
-          // Update unread count if widget is closed
-          if (!isOpen) {
-            setUnreadCount((prev) => prev + 1);
-            // Show browser notification if conditions are met
-            checkAndShowNotification(newMessage);
-          }
-          // Refresh conversation
-          loadConversation();
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Chat subscription active');
-          subscriptionFailedRef.current = false;
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('Chat subscription error:', status, '- Falling back to polling');
-          subscriptionFailedRef.current = true;
-          // Clean up failed subscription
-          if (subscriptionRef.current) {
-            supabase.removeChannel(subscriptionRef.current);
-            subscriptionRef.current = null;
-          }
-        }
-      });
-
-    subscriptionRef.current = channel;
-  };
+  // Realtime subscriptions disabled - using polling instead
 
   const checkUnreadCount = async (conv?: ChatConversation) => {
     const convToCheck = conv || conversation;
