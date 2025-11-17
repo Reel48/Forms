@@ -7,7 +7,6 @@ import logging
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from stripe_service import StripeService
-from database import supabase, supabase_url, supabase_service_role_key, supabase_storage
 from email_service import email_service
 from email_utils import get_admin_emails
 from auth import get_current_user
@@ -25,7 +24,24 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import database after logger is set up
+try:
+    from database import supabase, supabase_url, supabase_service_role_key, supabase_storage
+except ImportError as e:
+    logger.error(f"Failed to import from database: {e}")
+    raise
+except Exception as e:
+    logger.error(f"Error importing database module: {e}")
+    raise
+
 router = APIRouter(prefix="/api/stripe", tags=["stripe"])
+
+# Verify imports are available
+try:
+    if 'supabase_storage' not in globals() or supabase_storage is None:
+        raise RuntimeError("supabase_storage is not available - check database.py imports")
+except NameError:
+    raise RuntimeError("supabase_storage is not defined - import failed")
 
 def store_webhook_event(
     stripe_event_id: str,
