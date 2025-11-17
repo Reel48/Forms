@@ -52,6 +52,11 @@
   transition: background-color var(--transition-base, 0.2s);
 }
 
+.modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
 .modal-close:hover {
   background-color: var(--color-bg-secondary, #f9fafb);
 }
