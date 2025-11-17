@@ -888,11 +888,11 @@ function QuoteView() {
                 </>
               )}
 
-              {/* Activities Tab */}
-              {activeTab === 'activities' && role === 'admin' && (
-                <div>
-                  <h2>Activity Timeline</h2>
-                  {activities.length === 0 ? (
+            {/* Activities Tab */}
+            {activeTab === 'activities' && role === 'admin' && (
+              <div>
+                <h2>Activity Timeline</h2>
+                {activities.length === 0 ? (
                     <p className="text-muted">No activities yet.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
@@ -940,11 +940,11 @@ function QuoteView() {
                 </div>
               )}
 
-              {/* Comments Tab */}
-              {activeTab === 'comments' && role === 'admin' && (
-                <div>
-                  <h2>Internal Comments</h2>
-                  <div className="mb-4" style={{ marginTop: '1rem' }}>
+            {/* Comments Tab */}
+            {activeTab === 'comments' && role === 'admin' && (
+              <div>
+                <h2>Internal Comments</h2>
+                <div className="mb-4" style={{ marginTop: '1rem' }}>
                     <textarea
                       id="quote-comment"
                       name="quote-comment"
@@ -1004,11 +1004,11 @@ function QuoteView() {
                 </div>
               )}
 
-              {/* Versions Tab */}
-              {activeTab === 'versions' && role === 'admin' && (
-                <div>
-                  <h2>Version History</h2>
-                  {versions.length === 0 ? (
+            {/* Versions Tab */}
+            {activeTab === 'versions' && role === 'admin' && (
+              <div>
+                <h2>Version History</h2>
+                {versions.length === 0 ? (
                     <p className="text-muted">No version history yet.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
@@ -1042,11 +1042,11 @@ function QuoteView() {
                 </div>
               )}
 
-              {/* Client History Tab */}
-              {activeTab === 'client-history' && role === 'admin' && quote?.client_id && (
-                <div>
-                  <h2>Client Quote History</h2>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+            {/* Client History Tab */}
+            {activeTab === 'client-history' && role === 'admin' && quote?.client_id && (
+              <div>
+                <h2>Client Quote History</h2>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
                     All quotes for {quote.clients?.name || 'this client'}
                   </p>
                   {loadingClientHistory ? (
@@ -1097,9 +1097,9 @@ function QuoteView() {
                   )}
                 </div>
               )}
-            </>
-          )}
-        </div>
+          </>
+        )}
+      </div>
 
       {/* Modals */}
       {role === 'admin' && (
