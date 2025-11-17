@@ -112,9 +112,13 @@ def handle_invoice_event(event_type: str, invoice_data: Dict[str, Any]) -> Optio
     
     # Find quote by invoice ID
     try:
+        logger.info(f"Looking for quote with invoice_id: {invoice_id}")
         quote_response = supabase_storage.table("quotes").select("id, payment_status, status").eq("stripe_invoice_id", invoice_id).execute()
         if not quote_response.data:
-            logger.warning(f"No quote found for invoice {invoice_id}")
+            logger.warning(f"No quote found for invoice {invoice_id} - checking if invoice exists in Stripe")
+            # Log all quotes with stripe_invoice_id for debugging
+            all_quotes = supabase_storage.table("quotes").select("id, stripe_invoice_id, quote_number").not_.is_("stripe_invoice_id", "null").limit(10).execute()
+            logger.info(f"Found {len(all_quotes.data or [])} quotes with stripe_invoice_id")
             return None
         
         quote_id = quote_response.data[0]["id"]
@@ -460,13 +464,17 @@ async def stripe_webhook(
         
         logger.info(f"Received webhook event: {event_type} (ID: {stripe_event_id})")
         
+        # Extract invoice ID early for logging
+        invoice_id = event_data.get("id") if event_data.get("object") == "invoice" else None
+        if invoice_id:
+            logger.info(f"Processing webhook for invoice: {invoice_id}")
+        
         # Idempotency check - skip if already processed
         if stripe_event_id and check_event_processed(stripe_event_id):
             logger.info(f"Event {stripe_event_id} already processed, skipping")
             return {"status": "success", "message": "Event already processed"}
         
         # Store event in database (for audit trail and idempotency)
-        invoice_id = event_data.get("id") if event_data.get("object") == "invoice" else None
         store_webhook_event(
             stripe_event_id=stripe_event_id or "unknown",
             event_type=event_type or "unknown",
