@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { getRealtimeClient } from '../lib/supabase';
 import { FaPaperclip, FaCheck } from 'react-icons/fa';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -21,50 +21,22 @@ const ChatPage: React.FC = () => {
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
-    // Ensure we have a valid session before subscribing
-    if (!session?.access_token) {
-      console.warn('No session available for Realtime subscription, will retry when session is available');
-      return;
-    }
-
-    // Get the current session from Supabase client to ensure it's synced
-    const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !currentSession || !currentSession.access_token) {
-      console.error('Failed to get session for Realtime:', sessionError);
-      return;
-    }
-
-    // Explicitly set the session on the client to ensure it's used for Realtime
-    // This ensures the access token is available for WebSocket authentication
-    const { error: setSessionError } = await supabase.auth.setSession({
-      access_token: currentSession.access_token,
-      refresh_token: currentSession.refresh_token || '',
-    });
-
-    if (setSessionError) {
-      console.error('Failed to set session for Realtime:', setSessionError);
-      return;
-    }
+    // Get Realtime client (uses service role key if available, otherwise anon key)
+    const realtimeClient = getRealtimeClient();
 
     // Clean up existing subscriptions
     if (messagesSubscriptionRef.current) {
-      supabase.removeChannel(messagesSubscriptionRef.current);
+      realtimeClient.removeChannel(messagesSubscriptionRef.current);
       messagesSubscriptionRef.current = null;
     }
     if (conversationsSubscriptionRef.current) {
-      supabase.removeChannel(conversationsSubscriptionRef.current);
+      realtimeClient.removeChannel(conversationsSubscriptionRef.current);
       conversationsSubscriptionRef.current = null;
     }
 
     // Subscribe to new messages in this conversation
-    const messagesChannel = supabase
-      .channel(`chat_messages:${conversationId}`, {
-        config: {
-          // The client should automatically use the session's access token
-          // but we ensure the session is set above
-        },
-      })
+    const messagesChannel = realtimeClient
+      .channel(`chat_messages:${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -115,12 +87,8 @@ const ChatPage: React.FC = () => {
     messagesSubscriptionRef.current = messagesChannel;
 
     // Subscribe to conversation updates (for unread counts, last_message_at, etc.)
-    const conversationsChannel = supabase
-      .channel(`chat_conversations:${conversationId}`, {
-        config: {
-          // The client should automatically use the session's access token
-        },
-      })
+    const conversationsChannel = realtimeClient
+      .channel(`chat_conversations:${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -147,7 +115,7 @@ const ChatPage: React.FC = () => {
       });
 
     conversationsSubscriptionRef.current = conversationsChannel;
-  }, [user?.id, session]);
+  }, [user?.id]);
 
   useEffect(() => {
     console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
@@ -155,29 +123,25 @@ const ChatPage: React.FC = () => {
 
     // Cleanup subscriptions on unmount
     return () => {
+      const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
+        realtimeClient.removeChannel(messagesSubscriptionRef.current);
         messagesSubscriptionRef.current = null;
       }
       if (conversationsSubscriptionRef.current) {
-        supabase.removeChannel(conversationsSubscriptionRef.current);
+        realtimeClient.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
       }
     };
   }, []);
 
   useEffect(() => {
-    if (selectedConversation && session?.access_token) {
+    if (selectedConversation) {
       loadMessages(selectedConversation.id);
       markAllAsRead(selectedConversation.id);
       setupRealtimeSubscriptions(selectedConversation.id);
-    } else if (selectedConversation && !session?.access_token) {
-      // If we have a conversation but no session, just load messages
-      // Realtime will be set up when session becomes available
-      loadMessages(selectedConversation.id);
-      markAllAsRead(selectedConversation.id);
     }
-  }, [selectedConversation?.id, session?.access_token, setupRealtimeSubscriptions]);
+  }, [selectedConversation?.id, setupRealtimeSubscriptions]);
 
   useEffect(() => {
     scrollToBottom();
@@ -221,7 +185,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // NOTE: Realtime subscriptions enabled with proper session handling
+  // NOTE: Realtime subscriptions use service role key (bypasses RLS)
   // Fallback polling runs occasionally as backup
 
   const markAllAsRead = async (conversationId: string) => {
