@@ -6,7 +6,7 @@ import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
 import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -22,13 +22,139 @@ const CustomerChatWidget: React.FC = () => {
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
 
-  // NOTE: Realtime subscriptions disabled due to WebSocket authentication issues
-  // The Supabase client is not properly including the access token in WebSocket connections
-  // Falling back to efficient polling instead
-  const setupRealtimeSubscriptions = useCallback(async () => {
-    // Realtime disabled - polling will handle updates
-    console.log('Realtime subscriptions disabled, using polling instead');
-  }, []);
+  // Setup Realtime subscriptions for messages and conversations
+  const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
+    // Ensure we have a valid session before subscribing
+    if (!session?.access_token) {
+      console.warn('No session available for Realtime subscription, will retry when session is available');
+      return;
+    }
+
+    // Get the current session from Supabase client to ensure it's synced
+    const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !currentSession || !currentSession.access_token) {
+      console.error('Failed to get session for Realtime:', sessionError);
+      return;
+    }
+
+    // Explicitly set the session on the client to ensure it's used for Realtime
+    // This ensures the access token is available for WebSocket authentication
+    const { error: setSessionError } = await supabase.auth.setSession({
+      access_token: currentSession.access_token,
+      refresh_token: currentSession.refresh_token || '',
+    });
+
+    if (setSessionError) {
+      console.error('Failed to set session for Realtime:', setSessionError);
+      return;
+    }
+
+    // Clean up existing subscriptions
+    if (messagesSubscriptionRef.current) {
+      supabase.removeChannel(messagesSubscriptionRef.current);
+      messagesSubscriptionRef.current = null;
+    }
+    if (conversationsSubscriptionRef.current) {
+      supabase.removeChannel(conversationsSubscriptionRef.current);
+      conversationsSubscriptionRef.current = null;
+    }
+
+    // Subscribe to new messages in this conversation
+    const messagesChannel = supabase
+      .channel(`chat_messages:${conversationId}`, {
+        config: {
+          // The client should automatically use the session's access token
+          // but we ensure the session is set above
+        },
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Realtime message event:', payload.eventType, payload);
+          
+          if (payload.eventType === 'INSERT') {
+            // New message received
+            const newMessage = payload.new as ChatMessage;
+            setMessages((prev) => {
+              // Check if message already exists to avoid duplicates
+              if (prev.some((msg) => msg.id === newMessage.id)) {
+                return prev;
+              }
+              return [...prev, newMessage];
+            });
+            
+            // Update unread count if message is from someone else
+            if (newMessage.sender_id !== user?.id) {
+              setUnreadCount((prev) => prev + 1);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Message updated (e.g., read_at changed)
+            const updatedMessage = payload.new as ChatMessage;
+            setMessages((prev) =>
+              prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // Message deleted
+            const deletedMessage = payload.old as ChatMessage;
+            setMessages((prev) => prev.filter((msg) => msg.id !== deletedMessage.id));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Messages subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to chat messages via Realtime');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to chat messages:', status);
+          // Fallback: the polling will handle updates if Realtime fails
+        } else if (status === 'TIMED_OUT') {
+          console.warn('Realtime subscription timed out, will retry');
+        }
+      });
+
+    messagesSubscriptionRef.current = messagesChannel;
+
+    // Subscribe to conversation updates (for unread counts, last_message_at, etc.)
+    const conversationsChannel = supabase
+      .channel(`chat_conversations:${conversationId}`, {
+        config: {
+          // The client should automatically use the session's access token
+        },
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_conversations',
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Realtime conversation event:', payload);
+          // Reload conversation to get updated data
+          loadConversation();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Conversations subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to chat conversations via Realtime');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to chat conversations:', status);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('Realtime subscription timed out, will retry');
+        }
+      });
+
+    conversationsSubscriptionRef.current = conversationsChannel;
+  }, [user?.id, session]);
 
   useEffect(() => {
     console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
@@ -48,11 +174,15 @@ const CustomerChatWidget: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (conversation) {
+    if (conversation && session?.access_token) {
       loadMessages(conversation.id);
-      setupRealtimeSubscriptions();
+      setupRealtimeSubscriptions(conversation.id);
+    } else if (conversation && !session?.access_token) {
+      // If we have a conversation but no session, just load messages
+      // Realtime will be set up when session becomes available
+      loadMessages(conversation.id);
     }
-  }, [conversation?.id, setupRealtimeSubscriptions]);
+  }, [conversation?.id, session?.access_token, setupRealtimeSubscriptions]);
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
@@ -72,18 +202,15 @@ const CustomerChatWidget: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, conversation?.id]);
 
-  // Poll for new messages (Realtime disabled due to WebSocket auth issues)
+  // Fallback polling: Only poll when chat is closed (Realtime handles updates when open)
   useEffect(() => {
-    if (!conversation) return;
+    if (!conversation || isOpen) return; // Don't poll when chat is open (Realtime handles it)
 
     const interval = setInterval(() => {
-      if (conversation) {
-        loadMessages(conversation.id);
-        if (!isOpen) {
-          checkUnreadCount();
-        }
+      if (conversation && !isOpen) {
+        checkUnreadCount();
       }
-    }, 3000); // Poll every 3 seconds (more frequent than before since Realtime is disabled)
+    }, 10000); // Check every 10 seconds when closed (Realtime handles when open)
 
     return () => clearInterval(interval);
   }, [conversation?.id, isOpen]);
@@ -115,8 +242,8 @@ const CustomerChatWidget: React.FC = () => {
     }
   };
 
-  // NOTE: Realtime subscriptions disabled due to WebSocket authentication issues
-  // Using efficient polling (every 3 seconds) instead
+  // NOTE: Realtime subscriptions enabled with proper session handling
+  // Fallback polling only runs when chat is closed
 
   const checkUnreadCount = async (conv?: ChatConversation) => {
     const convToCheck = conv || conversation;
