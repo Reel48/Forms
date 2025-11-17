@@ -8,7 +8,6 @@ from models import ChatMessage, ChatMessageCreate, ChatConversation, ChatConvers
 from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
 from datetime import datetime
-from supabase import create_client, Client
 import requests
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
