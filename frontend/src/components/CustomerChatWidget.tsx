@@ -33,7 +33,14 @@ const CustomerChatWidget: React.FC = () => {
       loadMessages(conversation.id);
       subscribeToMessages(conversation.id);
     }
-  }, [conversation]);
+    return () => {
+      // Cleanup subscription when conversation changes
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [conversation?.id]); // Only depend on conversation ID to prevent re-subscription
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
@@ -84,6 +91,7 @@ const CustomerChatWidget: React.FC = () => {
     // Clean up existing subscription
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
     }
 
     // Subscribe to new messages via Supabase Realtime
@@ -110,7 +118,14 @@ const CustomerChatWidget: React.FC = () => {
           loadConversation();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Chat subscription active');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('Chat subscription error:', status);
+          // Don't retry automatically - let the component handle it
+        }
+      });
 
     subscriptionRef.current = channel;
   };

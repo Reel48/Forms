@@ -29,8 +29,12 @@ const ChatPage: React.FC = () => {
     }
     return () => {
       // Cleanup subscription when conversation changes
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
     };
-  }, [selectedConversation]);
+  }, [selectedConversation?.id]); // Only depend on conversation ID to prevent re-subscription
 
   useEffect(() => {
     scrollToBottom();
@@ -60,7 +64,15 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const subscriptionRef = useRef<any>(null);
+
   const subscribeToMessages = (conversationId: string) => {
+    // Clean up existing subscription
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+
     // Subscribe to new messages via Supabase Realtime
     const channel = supabase
       .channel(`chat_messages:${conversationId}`)
@@ -79,11 +91,16 @@ const ChatPage: React.FC = () => {
           loadConversations();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Chat subscription active');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('Chat subscription error:', status);
+          // Don't retry automatically - let the component handle it
+        }
+      });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    subscriptionRef.current = channel;
   };
 
   const markAllAsRead = async (conversationId: string) => {
