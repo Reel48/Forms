@@ -120,8 +120,8 @@ function FormView() {
   return (
     <div className="container">
       <div style={{ marginBottom: '1rem' }}>
-        <button onClick={() => navigate('/forms')} className="btn-outline" style={{ marginBottom: '1rem' }}>
-          ← Back to Forms
+        <button onClick={() => navigate(role === 'admin' ? '/forms' : '/')} className="btn-outline" style={{ marginBottom: '1rem' }}>
+          ← {role === 'admin' ? 'Back to Forms' : 'Back to Dashboard'}
         </button>
       </div>
 

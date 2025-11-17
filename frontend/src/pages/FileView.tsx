@@ -9,6 +9,14 @@ function FileView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { role } = useAuth();
+  
+  const getBackPath = () => {
+    return role === 'admin' ? '/files' : '/';
+  };
+  
+  const getBackLabel = () => {
+    return role === 'admin' ? 'Back to Files' : 'Back to Dashboard';
+  };
   const [file, setFile] = useState<FileItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +102,7 @@ function FileView() {
     setDeleting(true);
     try {
       await filesAPI.delete(file.id);
-      navigate('/files');
+      navigate(getBackPath());
     } catch (error: any) {
       console.error('Delete error:', error);
       alert(error?.response?.data?.detail || error?.message || 'Failed to delete file. Please try again.');
@@ -126,8 +134,8 @@ function FileView() {
       <div className="container">
         <div className="card error-message">
           <p>{error || 'File not found'}</p>
-          <button className="btn-primary" onClick={() => navigate('/files')}>
-            Back to Files
+          <button className="btn-primary" onClick={() => navigate(getBackPath())}>
+            {getBackLabel()}
           </button>
         </div>
       </div>
@@ -137,8 +145,8 @@ function FileView() {
   return (
     <div className="container">
       <div className="file-view-header">
-        <button className="btn-secondary" onClick={() => navigate('/files')}>
-          ← Back to Files
+        <button className="btn-secondary" onClick={() => navigate(getBackPath())}>
+          ← {getBackLabel()}
         </button>
         <div className="file-view-actions">
           <button

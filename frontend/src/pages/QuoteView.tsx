@@ -468,8 +468,8 @@ function QuoteView() {
       `}</style>
       <div className="container">
         <div className="no-print" style={{ marginBottom: '1rem' }}>
-          <button onClick={() => navigate('/')} className="btn-outline" style={{ marginBottom: '1rem' }}>
-            ← Back to Quotes
+          <button onClick={() => navigate(role === 'admin' ? '/' : '/')} className="btn-outline" style={{ marginBottom: '1rem' }}>
+            ← {role === 'admin' ? 'Back to Quotes' : 'Back to Dashboard'}
           </button>
         </div>
 

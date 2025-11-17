@@ -262,8 +262,8 @@ const FolderView: React.FC = () => {
     <div className="folder-view-container">
       <div className="folder-header">
         <div className="folder-header-top">
-          <button onClick={() => navigate('/folders')} className="btn-back">
-            ← Back
+          <button onClick={() => navigate(role === 'admin' ? '/folders' : '/')} className="btn-back">
+            ← {role === 'admin' ? 'Back' : 'Back to Dashboard'}
           </button>
           <h1>{folder.name}</h1>
         </div>
