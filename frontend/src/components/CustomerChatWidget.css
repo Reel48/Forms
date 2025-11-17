@@ -16,7 +16,6 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.2s, box-shadow 0.2s;
-  position: relative;
 }
 
 .chat-widget-button:hover {
