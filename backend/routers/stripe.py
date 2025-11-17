@@ -7,13 +7,17 @@ import logging
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from stripe_service import StripeService
-from database import supabase, supabase_url, supabase_service_role_key
+from database import supabase, supabase_url, supabase_service_role_key, supabase_storage
 from email_service import email_service
 from email_utils import get_admin_emails
 from auth import get_current_user
 import stripe
 from dotenv import load_dotenv
 import requests
+
+# Ensure Stripe is initialized (stripe_service.py sets stripe.api_key)
+# Import stripe_service to trigger initialization
+import stripe_service
 
 load_dotenv()
 
@@ -338,6 +342,12 @@ async def get_invoice(invoice_id: str):
 async def sync_payment_status(quote_id: str, current_user: dict = Depends(get_current_user)):
     """Manually sync payment status from Stripe invoice"""
     try:
+        # Ensure Stripe API key is set
+        if not stripe.api_key:
+            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+            if not stripe.api_key:
+                raise HTTPException(status_code=500, detail="Stripe API key not configured")
+        
         # Get quote with invoice ID
         quote_response = supabase_storage.table("quotes").select("id, stripe_invoice_id, payment_status").eq("id", quote_id).execute()
         if not quote_response.data:
@@ -352,8 +362,12 @@ async def sync_payment_status(quote_id: str, current_user: dict = Depends(get_cu
         # Get invoice from Stripe
         try:
             invoice = stripe.Invoice.retrieve(invoice_id)
-        except stripe.error.InvalidRequestError:
-            raise HTTPException(status_code=404, detail="Invoice not found in Stripe")
+        except stripe.error.InvalidRequestError as e:
+            logger.error(f"Stripe API error retrieving invoice {invoice_id}: {str(e)}")
+            raise HTTPException(status_code=404, detail=f"Invoice not found in Stripe: {str(e)}")
+        except stripe.error.AuthenticationError as e:
+            logger.error(f"Stripe authentication error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Stripe authentication failed: {str(e)}")
         
         # Determine payment status from Stripe invoice
         payment_status = "unpaid"
@@ -388,7 +402,9 @@ async def sync_payment_status(quote_id: str, current_user: dict = Depends(get_cu
         raise
     except Exception as e:
         logger.error(f"Error syncing payment status for quote {quote_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to sync payment status: {str(e)}")
 
 @router.post("/webhook")
 async def stripe_webhook(
