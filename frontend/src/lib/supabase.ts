@@ -20,18 +20,36 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Service role client for Realtime (bypasses RLS - use with caution!)
 // WARNING: This bypasses Row Level Security. Only use for Realtime subscriptions where
 // authentication via access token is not working properly.
+
+// Singleton instance to avoid creating multiple clients
+let realtimeClientInstance: SupabaseClient | null = null;
+
 export const getRealtimeClient = (): SupabaseClient => {
-  if (supabaseServiceRoleKey) {
-    console.warn('Using service role key for Realtime - RLS is bypassed!');
-    return createClient(supabaseUrl, supabaseServiceRoleKey, {
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
+  // Check if service role key is available
+  const hasServiceRoleKey = !!supabaseServiceRoleKey;
+  
+  console.log('Realtime client check:', {
+    hasServiceRoleKey,
+    serviceRoleKeyLength: supabaseServiceRoleKey?.length || 0,
+    usingServiceRole: hasServiceRoleKey,
+  });
+
+  if (hasServiceRoleKey) {
+    if (!realtimeClientInstance) {
+      console.warn('⚠️ Using service role key for Realtime - RLS is bypassed!');
+      realtimeClientInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
+        realtime: {
+          params: {
+            eventsPerSecond: 10,
+          },
         },
-      },
-    });
+      });
+    }
+    return realtimeClientInstance;
   }
+  
   // Fallback to regular client if service role key not available
+  console.warn('Service role key not available, using anon key for Realtime (may fail with RLS)');
   return supabase;
 };
 
