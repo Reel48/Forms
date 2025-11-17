@@ -315,6 +315,27 @@ function QuoteView() {
     }
   };
 
+  const handleSyncPaymentStatus = async () => {
+    if (!quote?.stripe_invoice_id) {
+      alert('This quote does not have a Stripe invoice.');
+      return;
+    }
+
+    try {
+      const response = await stripeAPI.syncPaymentStatus(id!);
+      await loadQuote();
+      if (response.data.payment_status === 'paid') {
+        alert('Payment status updated! The invoice has been paid.');
+      } else {
+        alert(`Payment status synced: ${response.data.payment_status}`);
+      }
+    } catch (error: any) {
+      console.error('Failed to sync payment status:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to sync payment status. Please try again.';
+      alert(errorMessage);
+    }
+  };
+
   const handleSendEmail = async (toEmail: string, customMessage?: string, includePdf?: boolean) => {
     try {
       setSendingEmail(true);
@@ -723,6 +744,16 @@ function QuoteView() {
                       >
                         Refresh
                       </button>
+                      {quote.stripe_invoice_id && (
+                        <button 
+                          onClick={handleSyncPaymentStatus} 
+                          className="btn-outline"
+                          style={{ fontSize: '0.875rem' }}
+                          title="Sync payment status from Stripe"
+                        >
+                          Sync Payment
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

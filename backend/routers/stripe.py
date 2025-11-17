@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request, Header
+from fastapi import APIRouter, HTTPException, Request, Header, Depends
 from typing import Optional, Dict, Any
 import sys
 import os
@@ -10,6 +10,7 @@ from stripe_service import StripeService
 from database import supabase, supabase_url, supabase_service_role_key
 from email_service import email_service
 from email_utils import get_admin_emails
+from auth import get_current_user
 import stripe
 from dotenv import load_dotenv
 import requests
@@ -331,6 +332,62 @@ async def get_invoice(invoice_id: str):
     except stripe.error.InvalidRequestError:
         raise HTTPException(status_code=404, detail="Invoice not found")
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/quotes/{quote_id}/sync-payment-status")
+async def sync_payment_status(quote_id: str, current_user: dict = Depends(get_current_user)):
+    """Manually sync payment status from Stripe invoice"""
+    try:
+        # Get quote with invoice ID
+        quote_response = supabase_storage.table("quotes").select("id, stripe_invoice_id, payment_status").eq("id", quote_id).execute()
+        if not quote_response.data:
+            raise HTTPException(status_code=404, detail="Quote not found")
+        
+        quote = quote_response.data[0]
+        invoice_id = quote.get("stripe_invoice_id")
+        
+        if not invoice_id:
+            raise HTTPException(status_code=400, detail="Quote does not have a Stripe invoice")
+        
+        # Get invoice from Stripe
+        try:
+            invoice = stripe.Invoice.retrieve(invoice_id)
+        except stripe.error.InvalidRequestError:
+            raise HTTPException(status_code=404, detail="Invoice not found in Stripe")
+        
+        # Determine payment status from Stripe invoice
+        payment_status = "unpaid"
+        if invoice.paid:
+            payment_status = "paid"
+        elif invoice.status == "void":
+            payment_status = "voided"
+        elif invoice.status == "uncollectible":
+            payment_status = "uncollectible"
+        elif invoice.status == "open":
+            payment_status = "unpaid"
+        
+        # Update quote with current payment status
+        update_data = {
+            "payment_status": payment_status,
+            "updated_at": datetime.now().isoformat()
+        }
+        
+        supabase_storage.table("quotes").update(update_data).eq("id", quote_id).execute()
+        
+        logger.info(f"Synced payment status for quote {quote_id}: {payment_status} (invoice {invoice_id})")
+        
+        return {
+            "status": "success",
+            "payment_status": payment_status,
+            "invoice_id": invoice_id,
+            "invoice_paid": invoice.paid,
+            "invoice_status": invoice.status
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error syncing payment status for quote {quote_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/webhook")
