@@ -6,7 +6,7 @@ import { FaPaperclip, FaCheck } from 'react-icons/fa';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -20,7 +20,34 @@ const ChatPage: React.FC = () => {
   const conversationsSubscriptionRef = useRef<any>(null);
 
   // Setup Realtime subscriptions for messages and conversations
-  const setupRealtimeSubscriptions = useCallback((conversationId: string) => {
+  const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
+    // Get the current session from Supabase (required for RLS in Realtime)
+    const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !currentSession || !currentSession.access_token) {
+      console.error('No valid session available for Realtime subscription:', sessionError);
+      return;
+    }
+
+    // Check if token is expired
+    try {
+      const parts = currentSession.access_token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        const exp = payload.exp;
+        if (exp && Date.now() >= exp * 1000) {
+          console.warn('Session token expired, refreshing...');
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError || !refreshedSession) {
+            console.error('Failed to refresh session for Realtime:', refreshError);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not parse token, proceeding anyway:', e);
+    }
+
     // Clean up existing subscriptions
     if (messagesSubscriptionRef.current) {
       supabase.removeChannel(messagesSubscriptionRef.current);
@@ -106,7 +133,7 @@ const ChatPage: React.FC = () => {
       });
 
     conversationsSubscriptionRef.current = conversationsChannel;
-  }, [user?.id]);
+  }, [user?.id, session]);
 
   useEffect(() => {
     console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
