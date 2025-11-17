@@ -967,13 +967,19 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 esig["item_type"] = "esignature"
                 try:
                     if is_admin:
-                        # Admin: check if any user has signed this document
-                        signature_check = supabase_storage.table("esignature_signatures").select("id").eq("document_id", esig["id"]).limit(1).execute()
+                        # Admin: check if any user has signed this document and get signed_file_id
+                        signature_check = supabase_storage.table("esignature_signatures").select("id, signed_file_id, signed_file_url").eq("document_id", esig["id"]).limit(1).execute()
                         esig["is_completed"] = len(signature_check.data or []) > 0
+                        if signature_check.data and len(signature_check.data) > 0:
+                            esig["signed_file_id"] = signature_check.data[0].get("signed_file_id")
+                            esig["signed_file_url"] = signature_check.data[0].get("signed_file_url")
                     else:
-                        # Customer: check if current user has signed this document
-                        signature_check = supabase_storage.table("esignature_signatures").select("id").eq("document_id", esig["id"]).eq("user_id", user["id"]).limit(1).execute()
+                        # Customer: check if current user has signed this document and get signed_file_id
+                        signature_check = supabase_storage.table("esignature_signatures").select("id, signed_file_id, signed_file_url").eq("document_id", esig["id"]).eq("user_id", user["id"]).limit(1).execute()
                         esig["is_completed"] = len(signature_check.data or []) > 0
+                        if signature_check.data and len(signature_check.data) > 0:
+                            esig["signed_file_id"] = signature_check.data[0].get("signed_file_id")
+                            esig["signed_file_url"] = signature_check.data[0].get("signed_file_url")
                 except Exception:
                     esig["is_completed"] = False
             esignatures = instances

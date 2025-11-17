@@ -600,11 +600,16 @@ async def sign_document(
             "uploaded_by": user["id"]
         }
         
+        # Create file record but don't assign it to folder (so it doesn't appear in folder's files section)
+        # We still need the file record so FileView can access it via signed_file_id
+        signed_file_data_no_folder = signed_file_data.copy()
+        signed_file_data_no_folder.pop("folder_id", None)  # Remove folder_id so it doesn't show in folder files
+        
         try:
-            signed_file_response = supabase_storage.table("files").insert(signed_file_data).execute()
+            signed_file_response = supabase_storage.table("files").insert(signed_file_data_no_folder).execute()
             signed_file_id = signed_file_response.data[0]["id"] if signed_file_response.data else file_id
         except Exception as file_error:
-            print(f"Warning: Could not create file record: {str(file_error)}")
+            logger.warning(f"Could not create file record: {str(file_error)}")
             signed_file_id = file_id
         
         # Get client IP and user agent
