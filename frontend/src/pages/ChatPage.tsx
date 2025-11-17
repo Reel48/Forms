@@ -6,7 +6,7 @@ import { FaPaperclip, FaCheck } from 'react-icons/fa';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -22,7 +22,7 @@ const ChatPage: React.FC = () => {
   // NOTE: Realtime subscriptions disabled due to WebSocket authentication issues
   // The Supabase client is not properly including the access token in WebSocket connections
   // Falling back to efficient polling instead
-  const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
+  const setupRealtimeSubscriptions = useCallback(async () => {
     // Realtime disabled - polling will handle updates
     console.log('Realtime subscriptions disabled, using polling instead');
   }, []);
@@ -48,13 +48,7 @@ const ChatPage: React.FC = () => {
     if (selectedConversation) {
       loadMessages(selectedConversation.id);
       markAllAsRead(selectedConversation.id);
-      setupRealtimeSubscriptions(selectedConversation.id);
-    } else {
-      // Clean up subscriptions when no conversation selected
-      if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
-        messagesSubscriptionRef.current = null;
-      }
+      setupRealtimeSubscriptions();
     }
   }, [selectedConversation?.id, setupRealtimeSubscriptions]);
 

@@ -6,7 +6,7 @@ import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
 import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -25,7 +25,7 @@ const CustomerChatWidget: React.FC = () => {
   // NOTE: Realtime subscriptions disabled due to WebSocket authentication issues
   // The Supabase client is not properly including the access token in WebSocket connections
   // Falling back to efficient polling instead
-  const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
+  const setupRealtimeSubscriptions = useCallback(async () => {
     // Realtime disabled - polling will handle updates
     console.log('Realtime subscriptions disabled, using polling instead');
   }, []);
@@ -50,13 +50,7 @@ const CustomerChatWidget: React.FC = () => {
   useEffect(() => {
     if (conversation) {
       loadMessages(conversation.id);
-      setupRealtimeSubscriptions(conversation.id);
-    } else {
-      // Clean up subscriptions when no conversation
-      if (messagesSubscriptionRef.current) {
-        supabase.removeChannel(messagesSubscriptionRef.current);
-        messagesSubscriptionRef.current = null;
-      }
+      setupRealtimeSubscriptions();
     }
   }, [conversation?.id, setupRealtimeSubscriptions]);
 
