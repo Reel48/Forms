@@ -1097,6 +1097,7 @@ function QuoteView() {
                   )}
                 </div>
               )}
+            </div>
           </>
         )}
       </div>
