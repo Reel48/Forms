@@ -428,7 +428,7 @@ function QuoteView() {
   };
 
   const getPaymentStatusDetails = () => {
-    if (!quote.payment_status) return null;
+    if (!quote || !quote.payment_status) return null;
     
     const status = quote.payment_status.toLowerCase();
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
@@ -1103,7 +1103,7 @@ function QuoteView() {
       </div>
 
       {/* Modals */}
-      {role === 'admin' && (
+      {role === 'admin' && quote && (
         <>
           {/* Send Email Modal */}
           {showSendEmailModal && (
@@ -1193,7 +1193,7 @@ function QuoteView() {
               >
                 <h3 style={{ marginTop: 0 }}>Set Reminder</h3>
                 <ReminderForm
-                  currentReminder={quote.reminder_date}
+                  currentReminder={quote?.reminder_date}
                   onSet={handleSetReminder}
                   onCancel={() => setShowReminderModal(false)}
                 />
@@ -1205,7 +1205,7 @@ function QuoteView() {
             isOpen={showAssignmentModal}
             onClose={() => setShowAssignmentModal(false)}
             onAssign={handleAssign}
-            title={`Assign Quote: ${quote.title}`}
+            title={`Assign Quote: ${quote?.title || ''}`}
             existingAssignments={assignments}
           />
         </>
