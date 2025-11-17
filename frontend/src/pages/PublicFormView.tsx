@@ -3,10 +3,12 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 function PublicFormView() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth(); // Get authenticated user if available
   const [form, setForm] = useState<Form | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -558,6 +560,9 @@ function PublicFormView() {
         started_at: new Date(startTime).toISOString(),
         time_spent_seconds: timeSpent,
         status: 'completed',
+        // Include user's email if authenticated (backend will use this or override with auth token email)
+        submitter_email: user?.email || undefined,
+        submitter_name: user?.user_metadata?.name || user?.user_metadata?.full_name || undefined,
         answers: form.fields?.map((field) => {
           const fieldId = field.id || '';
           const value = formValues[fieldId];
