@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import { NotificationProvider } from './components/NotificationSystem';
+import { FaTimes } from 'react-icons/fa';
 import './App.css';
 
 // Lazy load components for better performance
@@ -45,9 +46,11 @@ const LoadingFallback = () => (
 function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, role, signOut } = useAuth();
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLLIElement>(null);
+  const searchTerm = searchParams.get('search') || '';
   
   // Determine active tab based on path
   const isFormsActive = location.pathname.startsWith('/forms');
@@ -229,6 +232,59 @@ function Navigation() {
           </>
         )}
       </ul>
+
+      {/* Search Bar */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '0.5rem',
+        marginLeft: 'auto',
+        marginRight: '1rem',
+        position: 'relative',
+        minWidth: '200px',
+        maxWidth: '400px',
+        flex: '1'
+      }}>
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => {
+            const newSearch = e.target.value;
+            if (newSearch) {
+              setSearchParams({ search: newSearch });
+            } else {
+              setSearchParams({});
+            }
+          }}
+          style={{
+            width: '100%',
+            padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '0.375rem',
+            fontSize: '0.875rem',
+            outline: 'none',
+          }}
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchParams({})}
+            style={{
+              position: 'absolute',
+              right: '0.5rem',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#666',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <FaTimes />
+          </button>
+        )}
+      </div>
 
       {/* User Info */}
       {user && (

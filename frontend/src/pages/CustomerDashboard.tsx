@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaTimes } from 'react-icons/fa';
 import api, { quotesAPI, foldersAPI } from '../api';
 import type { Quote, Form, Folder } from '../api';
 import CustomerChatWidget from '../components/CustomerChatWidget';
@@ -17,7 +16,6 @@ interface TimelineItem {
   data: Folder | Quote | Form;
 }
 
-const FOLDER_STATUSES = ['active', 'completed', 'archived', 'cancelled'] as const;
 const SORT_OPTIONS = [
   { value: 'date', label: 'Date (Newest)' },
   { value: 'date_oldest', label: 'Date (Oldest)' },
@@ -26,14 +24,14 @@ const SORT_OPTIONS = [
 
 function CustomerDashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { role } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('date');
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
+  const searchTerm = searchParams.get('search') || '';
 
   useEffect(() => {
     if (role === 'customer') {
@@ -56,8 +54,8 @@ function CustomerDashboard() {
     }
   };
 
-  // Convert folders to timeline items
-  const timelineItems = useMemo(() => {
+  // Convert folders to timeline items and group by status
+  const foldersByStatus = useMemo(() => {
     const items: TimelineItem[] = folders.map(folder => ({
       id: folder.id,
       type: 'folder' as const,
@@ -69,14 +67,8 @@ function CustomerDashboard() {
       data: folder,
     }));
 
-    // Apply status filter
-    let filtered = items;
-    if (statusFilter) {
-      filtered = items.filter(item => item.status === statusFilter);
-    }
-
-    // Sort items
-    return filtered.sort((a, b) => {
+    // Sort items within each status group
+    const sortedItems = items.sort((a, b) => {
       switch (sortBy) {
         case 'date':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -92,21 +84,49 @@ function CustomerDashboard() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [folders, statusFilter, sortBy]);
 
-  // Filter timeline items by search term
-  const filteredItems = useMemo(() => {
+    // Group by status
+    const grouped: Record<string, TimelineItem[]> = {
+      active: [],
+      completed: [],
+      archived: [],
+      cancelled: [],
+    };
+
+    sortedItems.forEach(item => {
+      const status = item.status.toLowerCase();
+      if (grouped[status]) {
+        grouped[status].push(item);
+      } else {
+        grouped.active.push(item); // Default to active if status unknown
+      }
+    });
+
+    return grouped;
+  }, [folders, sortBy]);
+
+  // Filter folders by search term
+  const filteredFoldersByStatus = useMemo(() => {
     if (!searchTerm.trim()) {
-      return timelineItems;
+      return foldersByStatus;
     }
 
     const searchLower = searchTerm.toLowerCase();
-    return timelineItems.filter(item => 
-      item.title.toLowerCase().includes(searchLower) ||
-      item.description?.toLowerCase().includes(searchLower) ||
-      (item.type === 'quote' && (item.data as Quote).quote_number?.toLowerCase().includes(searchLower))
-    );
-  }, [timelineItems, searchTerm]);
+    const filterItems = (items: TimelineItem[]) => {
+      return items.filter(item => 
+        item.title.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower) ||
+        (item.type === 'quote' && (item.data as Quote).quote_number?.toLowerCase().includes(searchLower))
+      );
+    };
+
+    return {
+      active: filterItems(foldersByStatus.active),
+      completed: filterItems(foldersByStatus.completed),
+      archived: filterItems(foldersByStatus.archived),
+      cancelled: filterItems(foldersByStatus.cancelled),
+    };
+  }, [foldersByStatus, searchTerm]);
 
   // Handle accept quote
   const handleAcceptQuote = async (quoteId: string) => {
@@ -287,125 +307,30 @@ function CustomerDashboard() {
 
       {!loading && (
         <>
-      {/* Filters and Search */}
+      {/* Sort Control */}
       <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Search Input */}
-          <div style={{ position: 'relative' }}>
-            <label htmlFor="customer-dashboard-search" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-              Search
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+          <div style={{ flex: '1', minWidth: '150px', maxWidth: '250px' }}>
+            <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+              Sort By
             </label>
-            <input
-              type="text"
-              id="customer-dashboard-search"
-              name="customer-dashboard-search"
-              placeholder="Search quotes and forms..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '1rem 1.5rem',
-                fontSize: '1.125rem',
-                border: '2px solid #e0e0e0',
-                borderRadius: '8px',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e0e0e0';
-              }}
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                style={{
-                  position: 'absolute',
-                  right: '1rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#666',
-                }}
-              >
-                <FaTimes />
-              </button>
-            )}
-          </div>
-
-          {/* Filter Row */}
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: '1', minWidth: '150px' }}>
-              <label htmlFor="status-filter" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-                Status
-              </label>
-              <select
-                id="status-filter"
-                name="status-filter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-              >
-                <option value="">All Statuses</option>
-                {FOLDER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ flex: '1', minWidth: '150px' }}>
-              <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-                Sort By
-              </label>
-              <select
-                id="sort-by"
-                name="sort-by"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {(statusFilter || searchTerm) && (
-              <div>
-                <button
-                  onClick={() => {
-                    setStatusFilter('');
-                    setSearchTerm('');
-                  }}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
+            <select
+              id="sort-by"
+              name="sort-by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
 
-      {/* Timeline */}
-      {filteredItems.length === 0 ? (
+      {/* Folders Grouped by Status */}
+      {filteredFoldersByStatus.active.length === 0 && filteredFoldersByStatus.completed.length === 0 && filteredFoldersByStatus.archived.length === 0 && filteredFoldersByStatus.cancelled.length === 0 ? (
         <div className="card">
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <h2 style={{ marginBottom: '1rem' }}>
@@ -419,21 +344,25 @@ function CustomerDashboard() {
           </div>
         </div>
       ) : (
-        <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Description</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item) => (
+        <>
+          {/* Active Folders */}
+          {filteredFoldersByStatus.active.length > 0 && (
+            <div className="card" style={{ marginBottom: '2rem' }}>
+              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Active Orders</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFoldersByStatus.active.map((item) => (
                 <tr
                   key={`${item.type}-${item.id}`}
                   style={{
@@ -558,9 +487,290 @@ function CustomerDashboard() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Completed Folders */}
+          {filteredFoldersByStatus.completed.length > 0 && (
+            <div className="card" style={{ marginBottom: '2rem' }}>
+              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Completed Orders</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFoldersByStatus.completed.map((item) => (
+                    <tr
+                      key={`${item.type}-${item.id}`}
+                      style={{
+                        cursor: 'pointer',
+                        ...(item.priority === 'high' ? {
+                          backgroundColor: '#fef2f2',
+                        } : {}),
+                      }}
+                      onClick={() => handleItemClick(item)}
+                    >
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                      </td>
+                      <td>
+                        {getStatusBadge(item.status, item.type)}
+                      </td>
+                      <td>
+                        {item.priority === 'high' ? (
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                          }}>
+                            High Priority
+                          </span>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {item.description || '-'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {formatDate(item.created_at)}
+                        </span>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleItemClick(item)}
+                            className="btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            View
+                          </button>
+                          {item.type === 'folder' && (
+                            <button
+                              onClick={() => handleItemClick(item)}
+                              className="btn-primary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              Open
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Archived Folders */}
+          {filteredFoldersByStatus.archived.length > 0 && (
+            <div className="card" style={{ marginBottom: '2rem' }}>
+              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Archived Orders</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFoldersByStatus.archived.map((item) => (
+                    <tr
+                      key={`${item.type}-${item.id}`}
+                      style={{
+                        cursor: 'pointer',
+                        ...(item.priority === 'high' ? {
+                          backgroundColor: '#fef2f2',
+                        } : {}),
+                      }}
+                      onClick={() => handleItemClick(item)}
+                    >
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                      </td>
+                      <td>
+                        {getStatusBadge(item.status, item.type)}
+                      </td>
+                      <td>
+                        {item.priority === 'high' ? (
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                          }}>
+                            High Priority
+                          </span>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {item.description || '-'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {formatDate(item.created_at)}
+                        </span>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleItemClick(item)}
+                            className="btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            View
+                          </button>
+                          {item.type === 'folder' && (
+                            <button
+                              onClick={() => handleItemClick(item)}
+                              className="btn-primary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              Open
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Cancelled Folders */}
+          {filteredFoldersByStatus.cancelled.length > 0 && (
+            <div className="card" style={{ marginBottom: '2rem' }}>
+              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Cancelled Orders</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFoldersByStatus.cancelled.map((item) => (
+                    <tr
+                      key={`${item.type}-${item.id}`}
+                      style={{
+                        cursor: 'pointer',
+                        ...(item.priority === 'high' ? {
+                          backgroundColor: '#fef2f2',
+                        } : {}),
+                      }}
+                      onClick={() => handleItemClick(item)}
+                    >
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                      </td>
+                      <td>
+                        {getStatusBadge(item.status, item.type)}
+                      </td>
+                      <td>
+                        {item.priority === 'high' ? (
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                          }}>
+                            High Priority
+                          </span>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {item.description || '-'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {formatDate(item.created_at)}
+                        </span>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleItemClick(item)}
+                            className="btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            View
+                          </button>
+                          {item.type === 'folder' && (
+                            <button
+                              onClick={() => handleItemClick(item)}
+                              className="btn-primary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              Open
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
         </>
       )}
