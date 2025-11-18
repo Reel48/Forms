@@ -316,20 +316,14 @@ function PublicFormView() {
       if (field.required) {
         const valueObj = typeof value === 'object' ? value : {};
         const hasPantone = valueObj.pantone_code && valueObj.pantone_code.trim();
-        const hasHex = valueObj.hex && valueObj.hex.trim() && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(valueObj.hex.trim());
+        const hasHex = valueObj.hex && valueObj.hex.trim();
         const hasSelectedOption = value && typeof value === 'object' && value.value && !value.is_custom;
         
         if (!hasPantone && !hasHex && !hasSelectedOption) {
           return rules.errorMessage || `${field.label} requires either a Pantone code or hex color`;
         }
       }
-      // Validate hex format if provided
-      if (value && typeof value === 'object' && value.hex && value.hex.trim()) {
-        const hexValue = value.hex.trim();
-        if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hexValue)) {
-          return 'Invalid hex color format (use #RRGGBB or #RGB)';
-        }
-      }
+      // No hex format validation - allow any input
       return null; // Pass validation for component_color_selector
     }
     
