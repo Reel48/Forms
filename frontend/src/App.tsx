@@ -101,12 +101,108 @@ function Navigation() {
   };
   
   return (
-    <nav role="navigation" aria-label="Main navigation">
+    <nav role="navigation" aria-label="Main navigation" className="navbar-two-row">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      {/* Main Navigation Tabs */}
-      <ul className="nav-tabs" role="menubar">
+      
+      {/* Row 1: Logo, Search, User Info */}
+      <div className="navbar-top-row">
+        {/* Company Logo */}
+        <div className="navbar-logo">
+          <Link to={isAdmin ? "/" : "/dashboard"} style={{ display: 'flex', alignItems: 'center' }}>
+            <img 
+              src="/logo-placeholder.png" 
+              alt="Company Logo" 
+              onError={(e) => {
+                // Fallback to a simple text logo if image doesn't exist
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                if (!target.nextElementSibling) {
+                  const fallback = document.createElement('span');
+                  fallback.textContent = 'LOGO';
+                  fallback.style.cssText = 'font-weight: 700; font-size: 1.25rem; color: #2563eb; padding: 0.5rem 1rem; background: #eff6ff; border-radius: 6px;';
+                  target.parentElement?.appendChild(fallback);
+                }
+              }}
+              style={{
+                height: '45px',
+                width: 'auto',
+                objectFit: 'contain'
+              }}
+            />
+          </Link>
+        </div>
+
+        {/* Search Bar */}
+        <div className="navbar-search">
+          <input
+            type="text"
+            placeholder="Search folders, files, forms, e-signatures..."
+            value={searchTerm}
+            onChange={(e) => {
+              const newSearch = e.target.value;
+              if (newSearch) {
+                setSearchParams({ search: newSearch });
+              } else {
+                setSearchParams({});
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '0.375rem',
+              fontSize: '0.875rem',
+              outline: 'none',
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchParams({})}
+              style={{
+                position: 'absolute',
+                right: '0.5rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#666',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              aria-label="Clear search"
+            >
+              <FaTimes />
+            </button>
+          )}
+        </div>
+
+        {/* User Info */}
+        {user && (
+          <div className="navbar-user-section">
+            <span 
+              className="user-email" 
+              title={user.email}
+              style={{
+                maxWidth: '200px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {user.email}
+            </span>
+            <span className="user-role-badge">{role}</span>
+            <button onClick={handleLogout} className="logout-button">Logout</button>
+          </div>
+        )}
+      </div>
+
+      {/* Row 2: Navigation Links */}
+      <div className="navbar-bottom-row">
         {isAdmin ? (
-          <>
+          <ul className="nav-tabs" role="menubar">
             <li>
               <Link 
                 to="/folders"
@@ -210,9 +306,9 @@ function Navigation() {
                 </ul>
               )}
             </li>
-          </>
+          </ul>
         ) : (
-          <>
+          <ul className="nav-tabs" role="menubar">
             <li>
               <Link 
                 to="/dashboard" 
@@ -229,71 +325,9 @@ function Navigation() {
                 Profile
               </Link>
             </li>
-          </>
-        )}
-      </ul>
-
-      {/* Search Bar */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem',
-        marginLeft: 'auto',
-        marginRight: '1rem',
-        position: 'relative',
-        minWidth: '200px',
-        maxWidth: '400px',
-        flex: '1'
-      }}>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchTerm}
-          onChange={(e) => {
-            const newSearch = e.target.value;
-            if (newSearch) {
-              setSearchParams({ search: newSearch });
-            } else {
-              setSearchParams({});
-            }
-          }}
-          style={{
-            width: '100%',
-            padding: '0.5rem 2.5rem 0.5rem 0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.375rem',
-            fontSize: '0.875rem',
-            outline: 'none',
-          }}
-        />
-        {searchTerm && (
-          <button
-            onClick={() => setSearchParams({})}
-            style={{
-              position: 'absolute',
-              right: '0.5rem',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#666',
-              padding: '0.25rem',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <FaTimes />
-          </button>
+          </ul>
         )}
       </div>
-
-      {/* User Info */}
-      {user && (
-        <div className="user-info">
-          <span className="user-email">{user.email}</span>
-          <span className="user-role">({role})</span>
-          <button onClick={handleLogout} className="logout-button">Logout</button>
-        </div>
-      )}
     </nav>
   );
 }
