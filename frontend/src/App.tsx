@@ -168,7 +168,7 @@ function Navigation() {
         </div>
 
         {/* Search Bar */}
-        <div className="navbar-search" style={{ paddingLeft: '1.5rem' }}>
+        <div className="navbar-search" style={{ paddingLeft: '0.75rem' }}>
           <input
             type="text"
             placeholder="Search folders, files, forms, e-signatures..."
