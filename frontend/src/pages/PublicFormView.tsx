@@ -2001,29 +2001,21 @@ function PublicFormView() {
         );
 
       case 'component_color_selector':
-        const selectedColorValue = typeof value === 'object' && value?.value ? value.value : value;
-        const selectedColorOption = field.options?.find((opt: any) => {
-          const optValue = typeof opt === 'object' ? opt.value : opt;
-          return optValue === selectedColorValue;
-        });
-        const colorOptions = field.options || [];
-        
-        // Get current custom color values or use selected option values
+        // Get current custom color values
         const currentValue = typeof value === 'object' ? value : {};
-        const customHex = currentValue.hex || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.hex : '') || '';
-        const customPantone = currentValue.pantone_code || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.pantone_code : '') || '';
-        const customLabel = currentValue.label || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.label : '') || '';
+        const customHex = currentValue.hex || '';
+        const customPantone = currentValue.pantone_code || '';
+        const customLabel = currentValue.label || '';
         
-        // Determine if we have a selected color (either from options or custom)
-        // Show preview if we have hex, pantone, or a selected option
-        const hasSelectedColor = customHex || customPantone || selectedColorOption;
-        const displayHex = customHex || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.hex : '') || '#000000';
+        // Determine if we have a selected color (show preview if hex or pantone is entered)
+        const hasSelectedColor = customHex || customPantone;
+        const displayHex = customHex || '#000000';
         const isValidHex = customHex ? /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customHex) : true; // Only validate if hex is provided
         
         return (
-          <div key={fieldId} className="form-group component-color-selector">
+          <div key={fieldId} className="form-group component-color-selector" style={{ marginTop: 0, paddingTop: 0 }}>
             {mediaElement}
-            <label htmlFor={fieldId}>
+            <label htmlFor={fieldId} style={{ marginBottom: '0.75rem', marginTop: 0 }}>
               {field.label}
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
@@ -2113,7 +2105,6 @@ function PublicFormView() {
             
             {/* CUSTOM COLOR INPUT SECTION */}
             <div style={{
-              marginBottom: colorOptions.length > 0 ? '2rem' : '0',
               padding: '1.5rem',
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               borderRadius: '12px',
@@ -2236,80 +2227,6 @@ function PublicFormView() {
               </div>
             </div>
             
-            {/* COLOR SELECTION SWATCHES - Only show if admin has configured options */}
-            {colorOptions.length > 0 && (
-              <>
-                <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>OR Select from Options</span>
-                </div>
-                <div className="color-swatches" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                  gap: '1rem',
-                }}>
-                  {colorOptions.map((option: any, optIndex: number) => {
-                    const colorOpt = typeof option === 'object' ? option : { label: option, value: option, hex: '#000000' };
-                    const optValue = colorOpt.value || colorOpt.label || option;
-                    const optHex = colorOpt.hex || '#000000';
-                    const isSelected = selectedColorValue === optValue && !currentValue.is_custom;
-                    
-                    return (
-                      <button
-                        key={optIndex}
-                        type="button"
-                        onClick={() => {
-                          handleFieldChange(fieldId, {
-                            value: optValue,
-                            label: colorOpt.label,
-                            hex: optHex,
-                            pantone_code: colorOpt.pantone_code,
-                            is_custom: false,
-                          });
-                        }}
-                        className={`color-swatch ${isSelected ? 'selected' : ''}`}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '1rem',
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: isSelected ? `3px solid ${optHex}` : '2px solid #e5e7eb',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          boxShadow: isSelected ? `0 4px 12px ${optHex}40` : '0 1px 3px rgba(0,0,0,0.1)',
-                        }}
-                        aria-label={`${colorOpt.label} ${optHex}`}
-                      >
-                        <div 
-                          className="color-swatch-preview"
-                          style={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '8px',
-                            backgroundColor: optHex,
-                            border: '2px solid #ffffff',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                          }}
-                        />
-                        <span className="color-name" style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>
-                          {colorOpt.label || 'Color'}
-                        </span>
-                        {colorOpt.pantone_code && (
-                          <span className="color-pantone" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                            {colorOpt.pantone_code}
-                          </span>
-                        )}
-                        {isSelected && (
-                          <span style={{ fontSize: '1.25rem', color: optHex }}>✓</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
             {error && (
               <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.5rem' }}>{error}</p>
             )}
