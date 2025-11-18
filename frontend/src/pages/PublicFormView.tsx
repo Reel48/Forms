@@ -1295,7 +1295,7 @@ function PublicFormView() {
                 </div>
               ) : value?.upload_error ? (
                 <div>
-                  <p style={{ margin: 0, color: '#dc2626', fontWeight: '500' }}>Upload failed: {value.upload_error}</p>
+                  <p style={{ margin: 0, color: 'var(--color-danger)', fontWeight: '500' }}>Upload failed: {value.upload_error}</p>
                   <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
                     File: {value.file_name} ({(value.file_size / 1024).toFixed(2)} KB)
                   </p>
