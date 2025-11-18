@@ -128,8 +128,19 @@ function Navigation() {
         </div>
       </div>
       
-      {/* Row 1: Logo, Search, User Info */}
+      {/* Row 1: Hamburger, Search, Logo, User Info */}
       <div className="navbar-top-row">
+        {/* Hamburger Menu */}
+        <div className="navbar-hamburger" style={{ paddingLeft: '1.5rem' }}>
+          <button
+            onClick={() => setIsNavMenuOpen(!isNavMenuOpen)}
+            className="hamburger-button"
+            aria-label="Toggle navigation menu"
+          >
+            {isNavMenuOpen ? <FaTimes /> : <FaBars />}
+          </button>
+        </div>
+        
         {/* Company Logo */}
         <div className="navbar-logo" style={{ paddingLeft: '1.5rem' }}>
           <Link to={isAdmin ? "/" : "/dashboard"} style={{ display: 'flex', alignItems: 'center' }}>
@@ -242,8 +253,9 @@ function Navigation() {
         )}
       </div>
 
-      {/* Row 2: Navigation Links */}
-      <div className="navbar-bottom-row" style={{ paddingLeft: '1.5rem' }}>
+      {/* Row 2: Navigation Links - Only shown when hamburger menu is open */}
+      {isNavMenuOpen && (
+        <div className="navbar-bottom-row" style={{ paddingLeft: '1.5rem' }}>
         {isAdmin ? (
           <ul className="nav-tabs" role="menubar">
             <li>
@@ -371,6 +383,7 @@ function Navigation() {
           </ul>
         )}
         </div>
+      )}
     </nav>
   );
 }
