@@ -580,17 +580,13 @@ nav .nav-tabs li {
   }
 
   .navbar-logo {
-    position: static;
-    transform: none;
-    order: 1;
-    padding-left: 0 !important;
-    margin: 0 auto; /* Center the logo on mobile */
-    flex: 1;
-    display: flex;
-    justify-content: center;
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    order: 1;
+    padding-left: 0 !important;
+    display: flex;
+    justify-content: center;
   }
 
   .navbar-logo img {
