@@ -139,7 +139,7 @@ function Navigation() {
       <div className="navbar-utility-bar">
         <div className="utility-bar-thin"></div>
         <div className="utility-bar-role-container">
-          <div className="role-badge-wrapper" ref={roleDropdownRef}>
+          <div className={`role-badge-wrapper ${isRoleDropdownOpen ? 'open' : ''}`} ref={roleDropdownRef}>
             <span 
               className="role-badge" 
               onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
