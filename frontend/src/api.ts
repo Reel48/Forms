@@ -445,6 +445,7 @@ export const formsAPI = {
   submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
   getSubmissions: (formId: string) => api.get<FormSubmission[]>(`/api/forms/${formId}/submissions`),
   getSubmission: (formId: string, submissionId: string) => api.get<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}`),
+  getMySubmission: (formId: string) => api.get<FormSubmission>(`/api/forms/${formId}/my-submission`),
   updateSubmissionReviewStatus: (formId: string, submissionId: string, reviewStatus: string) => 
     api.patch<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}/review-status`, { review_status: reviewStatus }),
   // Short URLs

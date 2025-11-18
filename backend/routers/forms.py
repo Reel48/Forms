@@ -865,6 +865,57 @@ async def get_form_submission(form_id: str, submission_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/{form_id}/my-submission", response_model=FormSubmission)
+async def get_my_submission(form_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """Get the current user's submission for a form (customer access)"""
+    try:
+        # Check if form exists
+        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
+        
+        if not form_response.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Get user email (must be authenticated)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        user_email = current_user.get("email")
+        if not user_email:
+            raise HTTPException(status_code=400, detail="User email not found")
+        
+        # Normalize email to lowercase for comparison
+        user_email_lower = user_email.lower().strip()
+        
+        # Get all submissions for this form
+        all_submissions = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
+        
+        # Find matching submission by case-insensitive email match
+        matching_submission = None
+        for s in (all_submissions.data or []):
+            submission_email = s.get("submitter_email", "")
+            if submission_email:
+                submission_email_lower = submission_email.lower().strip()
+                if submission_email_lower == user_email_lower:
+                    matching_submission = s
+                    break
+        
+        if not matching_submission:
+            raise HTTPException(status_code=404, detail="No submission found for this user")
+        
+        # Map form_submission_answers to answers
+        answers = matching_submission.get("form_submission_answers", [])
+        matching_submission["answers"] = answers
+        # Remove form_submission_answers to avoid confusion
+        if "form_submission_answers" in matching_submission:
+            del matching_submission["form_submission_answers"]
+        
+        return matching_submission
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/{form_id}/short-url", response_model=dict)
 async def create_short_url(form_id: str, request: Request, current_admin: dict = Depends(get_current_admin)):
     """Create a short URL for a form (admin only)"""

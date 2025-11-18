@@ -15,6 +15,9 @@ function PublicFormView() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [previousSubmission, setPreviousSubmission] = useState<any>(null);
+  const [loadingPreviousSubmission, setLoadingPreviousSubmission] = useState(false);
+  const [viewMode, setViewMode] = useState<'fill' | 'view'>('fill'); // 'fill' or 'view' (view previous answers)
   const [startTime] = useState(Date.now());
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [paymentIntents, setPaymentIntents] = useState<Record<string, { clientSecret: string; paymentIntentId: string }>>({});
@@ -113,6 +116,44 @@ function PublicFormView() {
         
         // Set form and loading together - React will batch these
         setForm(formData);
+        
+        // Check if user has already submitted this form (if authenticated)
+        if (user && user.email && formData?.id) {
+          try {
+            setLoadingPreviousSubmission(true);
+            const submissionResponse = await formsAPI.getMySubmission(formData.id);
+            if (submissionResponse.data) {
+              setPreviousSubmission(submissionResponse.data);
+              setViewMode('view');
+              // Pre-fill form values with previous answers for display
+              const previousAnswers: Record<string, any> = {};
+              submissionResponse.data.answers?.forEach((answer: any) => {
+                if (answer.field_id) {
+                  // Handle different answer types
+                  if (answer.answer_value) {
+                    try {
+                      // Try to parse JSON if it's a complex value
+                      const parsed = JSON.parse(answer.answer_value);
+                      previousAnswers[answer.field_id] = parsed;
+                    } catch {
+                      // If not JSON, use as-is
+                      previousAnswers[answer.field_id] = answer.answer_value;
+                    }
+                  }
+                }
+              });
+              setFormValues(previousAnswers);
+            }
+          } catch (err: any) {
+            // 404 means no previous submission, which is fine
+            if (err.response?.status !== 404) {
+              console.warn('Failed to load previous submission:', err);
+            }
+            setViewMode('fill');
+          } finally {
+            setLoadingPreviousSubmission(false);
+          }
+        }
         
         // Check if form has password protection
         const passwordRequired = formData?.settings?.password_required;
