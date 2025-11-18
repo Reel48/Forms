@@ -1283,8 +1283,8 @@ function PublicFormView() {
                       marginTop: '0.5rem', 
                       padding: '0.5rem 1rem', 
                       fontSize: '0.875rem',
-                      background: '#fee2e2',
-                      color: '#dc2626',
+                      background: 'var(--color-danger-light)',
+                      color: 'var(--color-danger)',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer'
@@ -1314,8 +1314,8 @@ function PublicFormView() {
                       marginTop: '0.5rem', 
                       padding: '0.5rem 1rem', 
                       fontSize: '0.875rem',
-                      background: '#fee2e2',
-                      color: '#dc2626',
+                      background: 'var(--color-danger-light)',
+                      color: 'var(--color-danger)',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer'
