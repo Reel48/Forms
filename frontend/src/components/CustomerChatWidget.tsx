@@ -65,6 +65,8 @@ const CustomerChatWidget: React.FC = () => {
             // Update unread count if message is from someone else
             if (newMessage.sender_id !== user?.id) {
               setUnreadCount((prev) => prev + 1);
+              // Show browser notification if chat is closed
+              showNotification(newMessage);
             }
           } else if (payload.eventType === 'UPDATE') {
             // Message updated (e.g., read_at changed)
@@ -265,6 +267,29 @@ const CustomerChatWidget: React.FC = () => {
   const requestNotificationPermission = async () => {
     if ('Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission();
+    }
+  };
+
+  const showNotification = (message: ChatMessage) => {
+    // Only show notification if:
+    // 1. Chat widget is closed
+    // 2. Notification permission is granted
+    // 3. Message is from someone else (not the current user)
+    if (isOpen || message.sender_id === user?.id) return;
+    
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const messagePreview = message.message_type === 'file' || message.message_type === 'image'
+        ? `📎 ${message.file_name || 'File'}`
+        : message.message.length > 50
+        ? message.message.substring(0, 50) + '...'
+        : message.message;
+      
+      new Notification('New message from Reel48', {
+        body: messagePreview,
+        icon: '/logo-light.png', // Use company logo if available
+        tag: `chat-${conversation?.id}`, // Group notifications by conversation
+        requireInteraction: false,
+      });
     }
   };
 

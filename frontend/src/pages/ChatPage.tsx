@@ -22,6 +22,7 @@ const ChatPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+  const notificationPermissionRequested = useRef(false);
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -74,6 +75,9 @@ const ChatPage: React.FC = () => {
             // Only reload if this is not the currently selected conversation (to avoid flicker)
             if (selectedConversation?.id !== newMessage.conversation_id) {
               loadConversations();
+              // Show notification for messages in other conversations
+              const conversation = conversations.find(c => c.id === newMessage.conversation_id);
+              showNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
             } else {
               // For current conversation, just update the conversation's last_message_at in state
               setConversations((prev) =>
@@ -147,9 +151,45 @@ const ChatPage: React.FC = () => {
     conversationsSubscriptionRef.current = conversationsChannel;
   }, [user?.id]);
 
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window && Notification.permission === 'default' && !notificationPermissionRequested.current) {
+      notificationPermissionRequested.current = true;
+      await Notification.requestPermission();
+    }
+  };
+
+  const showNotification = (message: ChatMessage, customerName?: string) => {
+    // Only show notification if:
+    // 1. Notification permission is granted
+    // 2. Message is from someone else (not the current user)
+    // 3. This conversation is not currently selected (user is viewing another conversation)
+    if (message.sender_id === user?.id) return;
+    if (selectedConversation?.id === message.conversation_id) return; // Don't notify if viewing this conversation
+    
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const messagePreview = message.message_type === 'file' || message.message_type === 'image'
+        ? `📎 ${message.file_name || 'File'}`
+        : message.message.length > 50
+        ? message.message.substring(0, 50) + '...'
+        : message.message;
+      
+      const title = customerName 
+        ? `New message from ${customerName}`
+        : 'New message from customer';
+      
+      new Notification(title, {
+        body: messagePreview,
+        icon: '/logo-light.png',
+        tag: `chat-${message.conversation_id}`,
+        requireInteraction: false,
+      });
+    }
+  };
+
   useEffect(() => {
     console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
     loadConversations();
+    requestNotificationPermission();
 
     // Cleanup subscriptions on unmount
     return () => {
