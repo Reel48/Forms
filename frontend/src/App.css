@@ -383,12 +383,9 @@ nav .nav-tabs li {
   }
 
   .navbar-user-section {
-    padding-right: 1rem !important;
-  }
-
-  .navbar-user-section {
     order: 2;
     margin-left: auto;
+    padding-right: 1rem !important;
   }
 
   .navbar-bottom-row {
