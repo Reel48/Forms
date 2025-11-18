@@ -362,7 +362,7 @@ nav .nav-tabs li {
 
   .navbar-top-row {
     flex-wrap: wrap;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0;
     gap: 1rem;
   }
 
@@ -370,6 +370,7 @@ nav .nav-tabs li {
     position: static;
     transform: none;
     order: 1;
+    padding-left: 1rem !important;
   }
 
   .navbar-search {
@@ -378,6 +379,11 @@ nav .nav-tabs li {
     max-width: 100%;
     min-width: 100%;
     margin: 0.5rem 0 0 0;
+    padding-left: 1rem !important;
+  }
+
+  .navbar-user-section {
+    padding-right: 1rem !important;
   }
 
   .navbar-user-section {
@@ -387,6 +393,7 @@ nav .nav-tabs li {
 
   .navbar-bottom-row {
     padding: 0;
+    padding-left: 1rem !important;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
