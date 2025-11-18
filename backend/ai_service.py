@@ -23,10 +23,17 @@ class AIService:
     """Service for interacting with Google Gemini AI"""
     
     def __init__(self):
+        if not genai:
+            raise ValueError("google-generativeai package is not installed")
         if not GEMINI_API_KEY:
+            logger.warning("GEMINI_API_KEY not set - AI service will not be available")
             raise ValueError("GEMINI_API_KEY environment variable is required")
-        self.model = genai.GenerativeModel('gemini-pro')
-        self.embedding_model = None  # Will be set when needed
+        try:
+            self.model = genai.GenerativeModel('gemini-pro')
+            self.embedding_model = None  # Will be set when needed
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini model: {str(e)}")
+            raise
     
     def generate_embedding(self, text: str) -> List[float]:
         """

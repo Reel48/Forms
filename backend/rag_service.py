@@ -4,6 +4,12 @@ Retrieves relevant context from database for AI responses
 """
 import logging
 from typing import List, Dict, Optional
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from database import supabase_storage
 
 logger = logging.getLogger(__name__)
