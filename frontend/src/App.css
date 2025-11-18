@@ -615,6 +615,11 @@ nav .nav-tabs li {
     justify-content: center;
   }
 
+  /* Customer Dashboard - Smaller company name on mobile */
+  .customer-company-name {
+    font-size: 1.75rem !important; /* Reduced from 2.5rem for mobile */
+  }
+
   .navbar-bottom-row {
     padding: 0;
     padding-left: 1rem !important;

@@ -303,7 +303,7 @@ function CustomerDashboard() {
       {/* Customer Header */}
       {customerProfile && (
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{
+          <h1 className="customer-company-name" style={{
             fontSize: '2.5rem',
             fontWeight: '700',
             textTransform: 'uppercase',
