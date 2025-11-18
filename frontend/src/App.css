@@ -136,15 +136,16 @@ select:focus-visible {
   width: 100%;
   max-width: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   position: relative;
-  background-color: #ffc700;
+  background-color: transparent;
 }
 
 .utility-bar-thin {
   flex: 1;
   height: 2px;
   background-color: #ffc700;
+  margin-top: 0;
 }
 
 .utility-bar-role-container {
@@ -153,6 +154,9 @@ select:focus-visible {
   align-items: center;
   height: 32px;
   padding-right: 1.5rem;
+  background-color: #ffc700;
+  padding-left: 0.75rem;
+  margin-top: -2px; /* Overlap with thin bar */
 }
 
 .role-badge-wrapper {
@@ -162,13 +166,13 @@ select:focus-visible {
 }
 
 .role-badge {
-  background-color: #FF9900;
+  background-color: transparent;
   color: #131A22;
   font-size: 12px;
   font-weight: bold;
   text-transform: uppercase;
   padding: 4px 8px;
-  border-radius: 12px;
+  border-radius: 0;
   display: inline-block;
   user-select: none;
   transition: opacity 0.2s;
