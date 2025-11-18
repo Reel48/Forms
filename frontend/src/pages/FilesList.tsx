@@ -18,6 +18,8 @@ function FilesList() {
   const [showUpload, setShowUpload] = useState(false);
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [renamingFileName, setRenamingFileName] = useState<string>('');
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -48,6 +50,25 @@ function FilesList() {
 
   const handleUploadError = (errorMessage: string) => {
     alert(errorMessage);
+  };
+
+  const handleRename = async (fileId: string, newName: string) => {
+    if (!newName.trim()) {
+      alert('File name cannot be empty');
+      return;
+    }
+
+    try {
+      await filesAPI.update(fileId, { name: newName.trim() });
+      setFiles((prev) =>
+        prev.map((file) => (file.id === fileId ? { ...file, name: newName.trim() } : file))
+      );
+      setRenamingFileId(null);
+      setRenamingFileName('');
+    } catch (error: any) {
+      console.error('Rename error:', error);
+      alert(error?.response?.data?.detail || 'Failed to rename file. Please try again.');
+    }
   };
 
   const handleDelete = (fileId: string) => {
@@ -169,9 +190,60 @@ function FilesList() {
             </thead>
             <tbody>
               {filteredFiles.map((file) => (
-                <tr key={file.id} style={{ cursor: 'pointer' }} onClick={() => handleView(file)}>
+                <tr key={file.id} style={{ cursor: 'pointer' }} onClick={() => !renamingFileId && handleView(file)}>
                   <td className="mobile-name-column">
-                    <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
+                    {renamingFileId === file.id ? (
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={renamingFileName}
+                          onChange={(e) => setRenamingFileName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleRename(file.id, renamingFileName);
+                            } else if (e.key === 'Escape') {
+                              setRenamingFileId(null);
+                              setRenamingFileName('');
+                            }
+                          }}
+                          onBlur={() => {
+                            if (renamingFileName.trim() && renamingFileName !== file.name) {
+                              handleRename(file.id, renamingFileName);
+                            } else {
+                              setRenamingFileId(null);
+                              setRenamingFileName('');
+                            }
+                          }}
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            padding: '0.25rem 0.5rem',
+                            border: '1px solid var(--color-primary)',
+                            borderRadius: '4px',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            color: 'var(--color-primary)'
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <strong
+                        style={{
+                          color: 'var(--color-primary, #2563eb)',
+                          cursor: 'pointer'
+                        }}
+                        onDoubleClick={(e) => {
+                          if (role === 'admin') {
+                            e.stopPropagation();
+                            setRenamingFileId(file.id);
+                            setRenamingFileName(file.name);
+                          }
+                        }}
+                        title={role === 'admin' ? 'Double-click to rename' : undefined}
+                      >
+                        {file.name}
+                      </strong>
+                    )}
                   </td>
                   <td>
                     <span className="text-muted">{formatFileType(file.file_type)}</span>
@@ -208,6 +280,18 @@ function FilesList() {
                           style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
                         >
                           View
+                        </button>
+                        <button
+                          className="btn-outline btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenamingFileId(file.id);
+                            setRenamingFileName(file.name);
+                          }}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          title="Rename file"
+                        >
+                          Rename
                         </button>
                         <button
                           className="btn-outline btn-sm"

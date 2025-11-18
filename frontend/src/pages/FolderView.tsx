@@ -23,6 +23,8 @@ const FolderView: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [renamingFileName, setRenamingFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isNewFolder = id === 'new';
@@ -128,6 +130,24 @@ const FolderView: React.FC = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleRenameFile = async (fileId: string, newName: string) => {
+    if (!newName.trim()) {
+      alert('File name cannot be empty');
+      return;
+    }
+
+    try {
+      await filesAPI.update(fileId, { name: newName.trim() });
+      // Reload folder content to get updated file name
+      await loadFolderContent();
+      setRenamingFileId(null);
+      setRenamingFileName('');
+    } catch (error: any) {
+      console.error('Rename error:', error);
+      alert(error?.response?.data?.detail || 'Failed to rename file. Please try again.');
     }
   };
 
@@ -401,10 +421,61 @@ const FolderView: React.FC = () => {
                     <tr
                       key={file.id}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/files/${file.id}`)}
+                      onClick={() => !renamingFileId && navigate(`/files/${file.id}`)}
                     >
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
+                        {renamingFileId === file.id ? (
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={renamingFileName}
+                              onChange={(e) => setRenamingFileName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleRenameFile(file.id, renamingFileName);
+                                } else if (e.key === 'Escape') {
+                                  setRenamingFileId(null);
+                                  setRenamingFileName('');
+                                }
+                              }}
+                              onBlur={() => {
+                                if (renamingFileName.trim() && renamingFileName !== file.name) {
+                                  handleRenameFile(file.id, renamingFileName);
+                                } else {
+                                  setRenamingFileId(null);
+                                  setRenamingFileName('');
+                                }
+                              }}
+                              autoFocus
+                              style={{
+                                flex: 1,
+                                padding: '0.25rem 0.5rem',
+                                border: '1px solid var(--color-primary)',
+                                borderRadius: '4px',
+                                fontSize: '1rem',
+                                fontWeight: '600',
+                                color: 'var(--color-primary)'
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <strong
+                            style={{
+                              color: 'var(--color-primary, #2563eb)',
+                              cursor: 'pointer'
+                            }}
+                            onDoubleClick={(e) => {
+                              if (role === 'admin') {
+                                e.stopPropagation();
+                                setRenamingFileId(file.id);
+                                setRenamingFileName(file.name);
+                              }
+                            }}
+                            title={role === 'admin' ? 'Double-click to rename' : undefined}
+                          >
+                            {file.name}
+                          </strong>
+                        )}
                       </td>
                       <td>
                         <span className="text-muted" style={{ fontSize: '0.875rem' }}>{file.file_type}</span>
@@ -432,16 +503,30 @@ const FolderView: React.FC = () => {
                             View
                           </button>
                           {role === 'admin' && (
-                            <button
-                              className="btn-danger btn-sm"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                handleDeleteFile(file.id, file.name);
-                              }}
-                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                            >
-                              Delete
-                            </button>
+                            <>
+                              <button
+                                className="btn-outline btn-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRenamingFileId(file.id);
+                                  setRenamingFileName(file.name);
+                                }}
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                                title="Rename file"
+                              >
+                                Rename
+                              </button>
+                              <button
+                                className="btn-danger btn-sm"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFile(file.id, file.name);
+                                }}
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                              >
+                                Delete
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
