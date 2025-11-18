@@ -255,11 +255,22 @@ function Profile() {
               </p>
               <button
                 onClick={handleLogout}
-                className="btn-danger"
                 style={{
                   padding: '0.75rem 1.5rem',
                   fontSize: '1rem',
-                  fontWeight: '600'
+                  fontWeight: '600',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
                 }}
               >
                 Logout
