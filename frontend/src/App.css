@@ -505,8 +505,8 @@ nav .nav-tabs li {
   }
 
   .nav-tab {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
     white-space: nowrap;
   }
 
