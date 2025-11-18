@@ -16,19 +16,12 @@ interface TimelineItem {
   data: Folder | Quote | Form;
 }
 
-const SORT_OPTIONS = [
-  { value: 'date', label: 'Date (Newest)' },
-  { value: 'date_oldest', label: 'Date (Oldest)' },
-  { value: 'status', label: 'Status' },
-] as const;
-
 function CustomerDashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { role } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<string>('date');
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -67,22 +60,9 @@ function CustomerDashboard() {
       data: folder,
     }));
 
-    // Sort items within each status group
+    // Sort items by date (newest first)
     const sortedItems = items.sort((a, b) => {
-      switch (sortBy) {
-        case 'date':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'date_oldest':
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'status':
-          const statusOrder = { 'active': 0, 'completed': 1, 'archived': 2, 'cancelled': 3 };
-          const aOrder = statusOrder[a.status as keyof typeof statusOrder] ?? 4;
-          const bOrder = statusOrder[b.status as keyof typeof statusOrder] ?? 4;
-          if (aOrder !== bOrder) return aOrder - bOrder;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
     // Group by status
@@ -307,28 +287,6 @@ function CustomerDashboard() {
 
       {!loading && (
         <>
-      {/* Sort Control */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-          <div style={{ flex: '1', minWidth: '150px', maxWidth: '250px' }}>
-              <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-                Sort By
-              </label>
-              <select
-                id="sort-by"
-                name="sort-by"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-          </div>
-        </div>
-      </div>
-
       {/* Folders Grouped by Status */}
       {filteredFoldersByStatus.active.length === 0 && filteredFoldersByStatus.completed.length === 0 && filteredFoldersByStatus.archived.length === 0 && filteredFoldersByStatus.cancelled.length === 0 ? (
         <div className="card">
