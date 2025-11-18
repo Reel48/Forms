@@ -147,15 +147,61 @@ select:focus-visible {
   background-color: #ffc700;
 }
 
-.utility-bar-dropdown {
-  background-color: #ffc700;
-  padding: 0.5rem 1.5rem 0.5rem 1rem;
+.utility-bar-role-container {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  border-top-left-radius: 0.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  min-width: fit-content;
+  align-items: center;
+  height: 32px;
+  padding-right: 1.5rem;
+}
+
+.role-badge-wrapper {
+  position: relative;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.role-badge {
+  background-color: #FF9900;
+  color: #131A22;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+
+.role-badge:hover {
+  opacity: 0.9;
+}
+
+.role-dropdown-content {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 200px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: 8px 0;
+  margin-top: 4px;
+  border-radius: 6px;
+}
+
+.role-dropdown-content a {
+  display: block;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: #333;
+  transition: background-color 0.2s;
+}
+
+.role-dropdown-content a:hover {
+  background-color: #f5f5f5;
 }
 
 /* Row 1: Top Bar (Search, Logo, User Info) */
@@ -401,8 +447,8 @@ nav .nav-tabs li {
     padding: 0;
   }
 
-  .utility-bar-dropdown {
-    padding: 0.5rem 1rem 0.5rem 0.75rem;
+  .utility-bar-role-container {
+    padding-right: 1rem;
   }
 
   .navbar-top-row {

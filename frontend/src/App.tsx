@@ -48,7 +48,9 @@ function Navigation() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, role } = useAuth();
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLLIElement>(null);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
   
   // Determine active tab based on path
@@ -74,20 +76,24 @@ function Navigation() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsSettingsDropdownOpen(false);
       }
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target as Node)) {
+        setIsRoleDropdownOpen(false);
+      }
     };
 
-    if (isSettingsDropdownOpen) {
+    if (isSettingsDropdownOpen || isRoleDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSettingsDropdownOpen]);
+  }, [isSettingsDropdownOpen, isRoleDropdownOpen]);
 
   // Close dropdown when navigating
   useEffect(() => {
     setIsSettingsDropdownOpen(false);
+    setIsRoleDropdownOpen(false);
   }, [location.pathname]);
 
   
@@ -98,8 +104,25 @@ function Navigation() {
       {/* Row 0: Global Utility Bar - Role Badge */}
       <div className="navbar-utility-bar">
         <div className="utility-bar-thin"></div>
-        <div className="utility-bar-dropdown">
-          <span className="user-role-badge">{role}</span>
+        <div className="utility-bar-role-container">
+          <div className="role-badge-wrapper" ref={roleDropdownRef}>
+            <span 
+              className="role-badge" 
+              onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+            >
+              {role}
+            </span>
+            {isRoleDropdownOpen && (
+              <div className="role-dropdown-content">
+                <Link to="/profile" onClick={() => setIsRoleDropdownOpen(false)}>
+                  Profile
+                </Link>
+                <Link to="/settings" onClick={() => setIsRoleDropdownOpen(false)}>
+                  Settings
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
