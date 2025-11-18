@@ -141,7 +141,7 @@ function Navigation() {
                 if (!target.nextElementSibling) {
                   const fallback = document.createElement('span');
                   fallback.textContent = 'LOGO';
-                  fallback.style.cssText = 'font-weight: 700; font-size: 1.25rem; color: #ffffff; padding: 0.5rem 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 6px;';
+                  fallback.style.cssText = 'font-weight: 700; font-size: 1rem; color: #ffffff; padding: 0.375rem 0.75rem; background: rgba(255, 255, 255, 0.1); border-radius: 6px;';
                   target.parentElement?.appendChild(fallback);
                 }
               }}
