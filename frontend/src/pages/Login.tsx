@@ -40,7 +40,7 @@ export default function Login() {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
             style={{
-              maxHeight: '60px',
+              maxHeight: '48px',
               width: 'auto',
               objectFit: 'contain'
             }}
