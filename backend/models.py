@@ -6,11 +6,19 @@ import json
 
 # Chat Models
 class ChatMessageBase(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=5000, description="Message content (1-5000 characters)")
     message_type: str = "text"  # text, file, image
     file_url: Optional[str] = None
     file_name: Optional[str] = None
     file_size: Optional[int] = None
+    
+    @field_validator('message')
+    @classmethod
+    def validate_message(cls, v):
+        """Validate message is not empty after trimming"""
+        if not v or not v.strip():
+            raise ValueError("Message cannot be empty")
+        return v.strip()
 
 class ChatMessageCreate(ChatMessageBase):
     conversation_id: Optional[str] = None  # Will be created if not provided

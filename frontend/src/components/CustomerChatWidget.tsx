@@ -290,6 +290,7 @@ const CustomerChatWidget: React.FC = () => {
       });
       setNewMessage('');
       // Realtime will handle the new message update automatically - no need to reload
+      // The Realtime subscription will add the message to the UI automatically
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -324,6 +325,7 @@ const CustomerChatWidget: React.FC = () => {
         file_size: uploadResponse.data.file_size,
       });
       // Realtime will handle the new message update automatically
+      // The Realtime subscription will add the message to the UI automatically
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');

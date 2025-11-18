@@ -5,6 +5,7 @@ import os
 import uuid
 from datetime import datetime
 import requests
+import logging
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,6 +15,21 @@ from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# File upload constants
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+ALLOWED_FILE_TYPES = {
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf', 'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain', 'text/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+}
+ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.csv', '.xls', '.xlsx'}
 
 @router.get("/conversations", response_model=List[ChatConversation])
 async def get_conversations(user = Depends(get_current_user)):
@@ -52,13 +68,16 @@ async def get_conversations(user = Depends(get_current_user)):
                                 conv["customer_email"] = user_data.get("email")
                                 conv["customer_name"] = user_data.get("user_metadata", {}).get("name")
                             else:
+                                logger.warning(f"Failed to get user info for {conv['customer_id']}: HTTP {user_response.status_code}")
                                 conv["customer_email"] = None
                                 conv["customer_name"] = None
-                        except:
+                        except requests.RequestException as e:
+                            logger.warning(f"Error fetching user info from auth API for {conv['customer_id']}: {str(e)}")
                             conv["customer_email"] = None
                             conv["customer_name"] = None
-                except:
+                except Exception as e:
                     # If no client record, try to get from auth REST API
+                    logger.warning(f"Error fetching client info for {conv['customer_id']}: {str(e)}")
                     try:
                         user_url = f"{supabase_url}/auth/v1/admin/users/{conv['customer_id']}"
                         user_response = requests.get(user_url, headers=headers, timeout=10)
@@ -67,9 +86,11 @@ async def get_conversations(user = Depends(get_current_user)):
                             conv["customer_email"] = user_data.get("email")
                             conv["customer_name"] = user_data.get("user_metadata", {}).get("name")
                         else:
+                            logger.warning(f"Failed to get user info for {conv['customer_id']}: HTTP {user_response.status_code}")
                             conv["customer_email"] = None
                             conv["customer_name"] = None
-                    except:
+                    except requests.RequestException as e:
+                        logger.warning(f"Error fetching user info from auth API for {conv['customer_id']}: {str(e)}")
                         conv["customer_email"] = None
                         conv["customer_name"] = None
                 
@@ -77,7 +98,8 @@ async def get_conversations(user = Depends(get_current_user)):
                 try:
                     unread_response = supabase_storage.table("chat_messages").select("id", count="exact").eq("conversation_id", conv["id"]).is_("read_at", "null").neq("sender_id", user["id"]).execute()
                     conv["unread_count"] = unread_response.count if unread_response.count else 0
-                except:
+                except Exception as e:
+                    logger.warning(f"Error fetching unread count for conversation {conv['id']}: {str(e)}")
                     conv["unread_count"] = 0
                 
                 # Get last message
@@ -85,7 +107,8 @@ async def get_conversations(user = Depends(get_current_user)):
                     last_message_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conv["id"]).order("created_at", desc=True).limit(1).single().execute()
                     if last_message_response.data:
                         conv["last_message"] = last_message_response.data
-                except:
+                except Exception as e:
+                    logger.debug(f"No last message found for conversation {conv['id']}: {str(e)}")
                     pass
             
             return conversations
@@ -96,23 +119,29 @@ async def get_conversations(user = Depends(get_current_user)):
                 if conversation_response.data and len(conversation_response.data) > 0:
                     return conversation_response.data
             except Exception as e:
-                # If no conversation exists, create one
-                pass
+                logger.warning(f"Error fetching conversation for customer {user['id']}: {str(e)}")
+                # If no conversation exists, create one below
             
             # Create conversation if it doesn't exist
-            new_conv = {
-                "id": str(uuid.uuid4()),
-                "customer_id": user["id"],
-                "status": "active",
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
-            }
-            create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
-            if create_response.data:
-                return [create_response.data[0]]
-            return []
+            try:
+                new_conv = {
+                    "id": str(uuid.uuid4()),
+                    "customer_id": user["id"],
+                    "status": "active",
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat()
+                }
+                create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
+                if create_response.data:
+                    return [create_response.data[0]]
+                return []
+            except Exception as e:
+                logger.error(f"Error creating conversation for customer {user['id']}: {str(e)}")
+                raise HTTPException(status_code=500, detail="Failed to create conversation")
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error getting conversations: {str(e)}")
+        logger.error(f"Error getting conversations: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get conversations: {str(e)}")
 
 @router.get("/conversations/{conversation_id}/messages", response_model=List[ChatMessage])
@@ -139,7 +168,7 @@ async def get_messages(conversation_id: str, user = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error getting messages: {str(e)}")
+        logger.error(f"Error getting messages for conversation {conversation_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get messages: {str(e)}")
 
 @router.post("/messages", response_model=ChatMessage)
@@ -187,6 +216,7 @@ async def send_message(message: ChatMessageCreate, user = Depends(get_current_us
                 conversation_id = create_response.data[0]["id"]
         
         # Create message
+        message_created_at = datetime.now().isoformat()
         message_data = {
             "id": str(uuid.uuid4()),
             "conversation_id": conversation_id,
@@ -196,18 +226,29 @@ async def send_message(message: ChatMessageCreate, user = Depends(get_current_us
             "file_url": message.file_url,
             "file_name": message.file_name,
             "file_size": message.file_size,
-            "created_at": datetime.now().isoformat()
+            "created_at": message_created_at
         }
         
         message_response = supabase_storage.table("chat_messages").insert(message_data).execute()
         if not message_response.data:
             raise HTTPException(status_code=500, detail="Failed to send message")
         
+        # Explicitly update last_message_at and updated_at in conversation
+        # (Database trigger also does this, but explicit update ensures consistency)
+        try:
+            supabase_storage.table("chat_conversations").update({
+                "last_message_at": message_created_at,
+                "updated_at": message_created_at
+            }).eq("id", conversation_id).execute()
+        except Exception as e:
+            logger.warning(f"Failed to update last_message_at for conversation {conversation_id}: {str(e)}")
+            # Don't fail the request if this update fails - trigger should handle it
+        
         return message_response.data[0]
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error sending message: {str(e)}")
+        logger.error(f"Error sending message: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to send message: {str(e)}")
 
 @router.post("/messages/{message_id}/read")
@@ -245,7 +286,7 @@ async def mark_message_read(message_id: str, user = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error marking message as read: {str(e)}")
+        logger.error(f"Error marking message {message_id} as read: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to mark message as read: {str(e)}")
 
 @router.post("/conversations/{conversation_id}/read-all")
@@ -273,7 +314,7 @@ async def mark_all_messages_read(conversation_id: str, user = Depends(get_curren
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error marking all messages as read: {str(e)}")
+        logger.error(f"Error marking all messages as read for conversation {conversation_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to mark all messages as read: {str(e)}")
 
 @router.post("/messages/upload-file")
@@ -283,14 +324,37 @@ async def upload_file(
 ):
     """Upload a file attachment for a chat message."""
     try:
+        # Validate file
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="File must have a filename")
+        
+        # Check file extension
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        if file_extension and file_extension not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+        
         # Read file content
         file_content = await file.read()
         file_size = len(file_content)
         
+        # Validate file size
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE / (1024 * 1024):.1f}MB"
+            )
+        
+        # Validate content type (if provided)
+        if file.content_type and file.content_type not in ALLOWED_FILE_TYPES:
+            logger.warning(f"File content type {file.content_type} not in allowed list, but extension is valid")
+            # Don't fail if extension is valid but content type is not recognized
+        
         # Generate unique filename
         file_id = str(uuid.uuid4())
-        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
-        unique_filename = f"chat/{file_id}/{uuid.uuid4().hex[:8]}.{file_extension}" if file_extension else f"chat/{file_id}/{uuid.uuid4().hex[:8]}"
+        unique_filename = f"chat/{file_id}/{uuid.uuid4().hex[:8]}{file_extension}" if file_extension else f"chat/{file_id}/{uuid.uuid4().hex[:8]}"
         
         # Upload to Supabase Storage
         try:
@@ -325,6 +389,6 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error uploading file: {str(e)}")
+        logger.error(f"Error uploading file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 

@@ -58,8 +58,20 @@ const ChatPage: React.FC = () => {
               }
               return [...prev, newMessage];
             });
-            // Reload conversations to update unread counts
-            loadConversations();
+            // Update conversations list to refresh unread counts and last_message_at
+            // Only reload if this is not the currently selected conversation (to avoid flicker)
+            if (selectedConversation?.id !== newMessage.conversation_id) {
+              loadConversations();
+            } else {
+              // For current conversation, just update the conversation's last_message_at in state
+              setConversations((prev) =>
+                prev.map((conv) =>
+                  conv.id === newMessage.conversation_id
+                    ? { ...conv, last_message_at: newMessage.created_at }
+                    : conv
+                )
+              );
+            }
           } else if (payload.eventType === 'UPDATE') {
             // Message updated (e.g., read_at changed)
             const updatedMessage = payload.new as ChatMessage;
@@ -215,8 +227,7 @@ const ChatPage: React.FC = () => {
       });
       setNewMessage('');
       // Realtime will handle the new message update automatically
-      // Only reload conversations to update unread counts (Realtime handles messages)
-      loadConversations();
+      // No need to reload conversations - Realtime subscription will update the UI
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -241,8 +252,7 @@ const ChatPage: React.FC = () => {
         file_size: uploadResponse.data.file_size,
       });
       // Realtime will handle the new message update automatically
-      // Only reload conversations to update unread counts (Realtime handles messages)
-      loadConversations();
+      // No need to reload conversations - Realtime subscription will update the UI
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');
