@@ -59,8 +59,15 @@ function Navigation() {
   // Load utility bar color from localStorage on mount
   useEffect(() => {
     const savedColor = localStorage.getItem('utilityBarColor');
-    if (savedColor) {
-      setUtilityBarColor(savedColor);
+    // Valid color options
+    const validColors = ['#00D0FF', '#FF4B6F', '#20E8A8', '#FF9900', '#FFE042', '#B788FF', '#FF66CC'];
+    if (savedColor && validColors.includes(savedColor.toUpperCase())) {
+      setUtilityBarColor(savedColor.toUpperCase());
+    } else {
+      // If no valid color is saved, use default and save it
+      const defaultColor = '#00D0FF';
+      setUtilityBarColor(defaultColor);
+      localStorage.setItem('utilityBarColor', defaultColor);
     }
   }, []);
   
