@@ -14,7 +14,11 @@ const ChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
@@ -56,7 +60,15 @@ const ChatPage: React.FC = () => {
               if (prev.some((msg) => msg.id === newMessage.id)) {
                 return prev;
               }
-              return [...prev, newMessage];
+              // Only add if it's newer than the newest message we have, or if we're at the bottom
+              const newestMessage = prev[prev.length - 1];
+              if (!newestMessage || new Date(newMessage.created_at) >= new Date(newestMessage.created_at)) {
+                // New message is at the end, enable auto-scroll
+                setShouldAutoScroll(true);
+                return [...prev, newMessage];
+              }
+              // Message is older, might be from loading more - don't add it
+              return prev;
             });
             // Update conversations list to refresh unread counts and last_message_at
             // Only reload if this is not the currently selected conversation (to avoid flicker)
@@ -153,17 +165,86 @@ const ChatPage: React.FC = () => {
     };
   }, []);
 
+  const loadMoreMessages = useCallback(async () => {
+    if (!selectedConversation || loadingMore || !hasMoreMessages) return;
+    
+    try {
+      setLoadingMore(true);
+      const oldestMessage = messages[0];
+      if (!oldestMessage) return;
+      
+      const response = await chatAPI.getMessages(selectedConversation.id, 50, oldestMessage.id);
+      const olderMessages = response.data;
+      
+      if (olderMessages.length > 0) {
+        // Save current scroll position
+        const container = messagesContainerRef.current;
+        const previousScrollHeight = container?.scrollHeight || 0;
+        
+        // Prepend older messages
+        setMessages((prev) => [...olderMessages, ...prev]);
+        setHasMoreMessages(olderMessages.length === 50);
+        
+        // Restore scroll position after messages are rendered
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - previousScrollHeight;
+          }
+        }, 0);
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch (error) {
+      console.error('Failed to load more messages:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [selectedConversation?.id, loadingMore, hasMoreMessages, messages]);
+
   useEffect(() => {
     if (selectedConversation) {
-      loadMessages(selectedConversation.id);
+      loadMessages(selectedConversation.id, true);
       markAllAsRead(selectedConversation.id);
       setupRealtimeSubscriptions(selectedConversation.id);
+      setShouldAutoScroll(true); // Reset auto-scroll when switching conversations
     }
   }, [selectedConversation?.id, setupRealtimeSubscriptions]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only auto-scroll if user is near bottom (within 100px) or if shouldAutoScroll is true
+    if (shouldAutoScroll) {
+      scrollToBottom();
+    }
+  }, [messages, shouldAutoScroll]);
+
+  // Check if user is near bottom of messages container
+  const checkIfNearBottom = () => {
+    if (!messagesContainerRef.current) return true;
+    const container = messagesContainerRef.current;
+    const threshold = 100; // pixels from bottom
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    setShouldAutoScroll(isNearBottom);
+    return isNearBottom;
+  };
+
+  // Handle scroll events to detect if user is reading old messages
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      checkIfNearBottom();
+      
+      // Load more messages when scrolling to top
+      if (container.scrollTop === 0 && hasMoreMessages && !loadingMore) {
+        loadMoreMessages();
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hasMoreMessages, loadingMore, loadMoreMessages]);
 
   // Fallback polling: Only poll occasionally as backup (Realtime handles most updates)
   useEffect(() => {
@@ -194,10 +275,25 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const loadMessages = async (conversationId: string) => {
+  const loadMessages = async (conversationId: string, reset: boolean = true) => {
     try {
-      const response = await chatAPI.getMessages(conversationId);
-      setMessages(response.data);
+      if (reset) {
+        setMessages([]);
+        setHasMoreMessages(false);
+        setShouldAutoScroll(true);
+      }
+      const response = await chatAPI.getMessages(conversationId, 50);
+      const loadedMessages = response.data;
+      
+      if (reset) {
+        setMessages(loadedMessages);
+        // If we got 50 messages, there might be more
+        setHasMoreMessages(loadedMessages.length === 50);
+      } else {
+        // Prepend older messages
+        setMessages((prev) => [...loadedMessages, ...prev]);
+        setHasMoreMessages(loadedMessages.length === 50);
+      }
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
@@ -343,7 +439,12 @@ const ChatPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="messages-container">
+            <div className="messages-container" ref={messagesContainerRef}>
+              {loadingMore && (
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-muted)' }}>
+                  Loading older messages...
+                </div>
+              )}
               {messages.length === 0 ? (
                 <div className="empty-messages">No messages yet. Start the conversation!</div>
               ) : (

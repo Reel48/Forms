@@ -145,8 +145,13 @@ async def get_conversations(user = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Failed to get conversations: {str(e)}")
 
 @router.get("/conversations/{conversation_id}/messages", response_model=List[ChatMessage])
-async def get_messages(conversation_id: str, user = Depends(get_current_user)):
-    """Get messages for a conversation."""
+async def get_messages(
+    conversation_id: str,
+    limit: int = Query(50, ge=1, le=100, description="Number of messages to return"),
+    before_id: Optional[str] = Query(None, description="Load messages before this message ID (for pagination)"),
+    user = Depends(get_current_user)
+):
+    """Get messages for a conversation with pagination support."""
     try:
         # Check if user has access to this conversation
         conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
@@ -160,9 +165,23 @@ async def get_messages(conversation_id: str, user = Depends(get_current_user)):
         if not is_admin and conv["customer_id"] != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
-        # Get messages
-        messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=False).execute()
+        # Build query
+        query = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id)
+        
+        # If before_id is provided, load messages before that message
+        if before_id:
+            # Get the created_at of the before_id message
+            before_message_response = supabase_storage.table("chat_messages").select("created_at").eq("id", before_id).single().execute()
+            if before_message_response.data:
+                before_created_at = before_message_response.data["created_at"]
+                query = query.lt("created_at", before_created_at)
+        
+        # Order by created_at descending (newest first) for pagination, then reverse to show oldest first
+        messages_response = query.order("created_at", desc=True).limit(limit).execute()
         messages = messages_response.data if messages_response.data else []
+        
+        # Reverse to show messages in chronological order (oldest first)
+        messages.reverse()
         
         return messages
     except HTTPException:

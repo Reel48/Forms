@@ -771,7 +771,13 @@ export interface ChatConversation {
 
 export const chatAPI = {
   getConversations: () => api.get<ChatConversation[]>('/api/chat/conversations'),
-  getMessages: (conversationId: string) => api.get<ChatMessage[]>(`/api/chat/conversations/${conversationId}/messages`),
+  getMessages: (conversationId: string, limit?: number, beforeId?: string) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (beforeId) params.append('before_id', beforeId);
+    const queryString = params.toString();
+    return api.get<ChatMessage[]>(`/api/chat/conversations/${conversationId}/messages${queryString ? `?${queryString}` : ''}`);
+  },
   sendMessage: (message: ChatMessageCreate) => api.post<ChatMessage>('/api/chat/messages', message),
   markMessageRead: (messageId: string) => api.post<{ message: string }>(`/api/chat/messages/${messageId}/read`),
   markAllRead: (conversationId: string) => api.post<{ message: string }>(`/api/chat/conversations/${conversationId}/read-all`),
