@@ -143,21 +143,22 @@ select:focus-visible {
 
 .utility-bar-thin {
   flex: 1;
-  height: 4px;
+  height: 6px;
   background-color: #ffc700;
   margin-top: 0;
 }
 
 .utility-bar-role-container {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 35px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  min-height: 70px; /* Match navbar-top-row height */
   padding-right: 1.5rem;
-  background-color: #ffc700;
   padding-left: 0.75rem;
-  margin-top: -4px; /* Overlap with thin bar */
-  position: relative;
+  background-color: #ffc700;
   z-index: 1;
 }
 
