@@ -1950,7 +1950,7 @@ function PublicFormView() {
                         color: '#ffffff',
                         background: isProcessing || value?.status === 'succeeded' 
                           ? '#9ca3af' 
-                          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          : 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%)',
                         border: 'none',
                         borderRadius: '8px',
                         cursor: isProcessing || value?.status === 'succeeded' ? 'not-allowed' : 'pointer',
@@ -1960,7 +1960,7 @@ function PublicFormView() {
                       {isProcessing ? 'Processing...' : value?.status === 'succeeded' ? 'Payment Complete' : 'Pay Now'}
                     </button>
                     {value?.status === 'succeeded' && (
-                      <p style={{ fontSize: '0.875rem', color: '#22c55e', marginTop: '1rem', fontWeight: '500' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-success)', marginTop: '1rem', fontWeight: '500' }}>
                         Payment successful
                       </p>
                     )}
