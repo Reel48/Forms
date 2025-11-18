@@ -1110,11 +1110,6 @@ table tbody tr:hover {
   box-shadow: var(--shadow-xl);
 }
 
-/* Reduce top padding when component-color-selector exists */
-.typeform-question:has(.component-color-selector) {
-  padding-top: 1rem;
-}
-
 .typeform-question .form-group {
   margin-bottom: 2rem;
 }
