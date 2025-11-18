@@ -45,9 +45,8 @@ const LoadingFallback = () => (
 
 function Navigation() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, role, signOut } = useAuth();
+  const { user, role } = useAuth();
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLLIElement>(null);
   const searchTerm = searchParams.get('search') || '';
