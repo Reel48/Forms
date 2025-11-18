@@ -141,17 +141,6 @@ select:focus-visible {
   min-height: 100vh;
 }
 
-/* Add padding to main content to account for fixed navbar */
-main#main-content {
-  padding-top: 126px; /* Approximate height: utility bar (6px) + top row (70px) + bottom row (50px) */
-}
-
-@media (max-width: 768px) {
-  main#main-content {
-    padding-top: 80px; /* Reduced height for mobile (no utility bar, smaller navbar) */
-  }
-}
-
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
   background-color: var(--brand-white);
@@ -163,10 +152,8 @@ main#main-content {
   max-width: 100%;
   margin: 0;
   padding: 0;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 1000;
 }
 
