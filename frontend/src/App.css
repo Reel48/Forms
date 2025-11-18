@@ -111,8 +111,10 @@ select:focus-visible {
 }
 
 #root {
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
+  margin: 0;
+  padding: 0;
   min-height: 100vh;
 }
 
@@ -140,6 +142,8 @@ select:focus-visible {
   min-height: 70px;
   gap: 1.5rem;
   position: relative;
+  width: 100%;
+  max-width: 100%;
 }
 
 .navbar-logo {
