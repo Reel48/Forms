@@ -51,7 +51,7 @@ function Navigation() {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [utilityBarColor, setUtilityBarColor] = useState('#ffc700');
+  const [utilityBarColor, setUtilityBarColor] = useState('#3b82f6');
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -145,6 +145,7 @@ function Navigation() {
               onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
             >
               {role}
+              <span className="role-badge-arrow">▼</span>
             </span>
             {isRoleDropdownOpen && (
               <div className="role-dropdown-content">
