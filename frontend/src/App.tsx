@@ -91,14 +91,6 @@ function Navigation() {
     setIsSettingsDropdownOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
   
   return (
     <nav role="navigation" aria-label="Main navigation" className="navbar-two-row">
@@ -200,19 +192,28 @@ function Navigation() {
         {/* User Info */}
         {user && (
           <div className="navbar-user-section" style={{ paddingRight: '1.5rem' }}>
-            <span 
-              className="user-email" 
+            <Link
+              to="/profile"
+              className="user-email"
               title={user.email}
               style={{
                 maxWidth: '200px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                textDecoration: 'none',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
               }}
             >
               {user.email}
-            </span>
-            <button onClick={handleLogout} className="logout-button">Logout</button>
+            </Link>
           </div>
         )}
       </div>
