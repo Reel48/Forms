@@ -152,12 +152,14 @@ select:focus-visible {
   position: absolute;
   right: 1.5rem; /* Match navbar-user-section padding-right */
   top: 0;
-  height: 35px;
+  height: 20px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   padding-left: 0.75rem;
+  padding-right: 0.75rem;
   background-color: #ffc700;
+  border-radius: 0 0 10px 10px; /* Curved bottom edges */
   z-index: 1;
 }
 
