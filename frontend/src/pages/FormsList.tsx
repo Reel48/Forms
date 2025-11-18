@@ -442,7 +442,7 @@ function FormsList() {
 
       {/* Bulk Actions Toolbar */}
       {role === 'admin' && selectedForms.size > 0 && (
-        <div className="card mb-4" style={{ backgroundColor: '#eff6ff', borderColor: '#3b82f6', padding: '1rem' }}>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-primary-light)', borderColor: 'var(--color-primary)', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span style={{ fontWeight: '500', color: '#1e40af' }}>
@@ -469,7 +469,7 @@ function FormsList() {
                 disabled={bulkActionLoading}
                 style={{
                   padding: '0.5rem',
-                  border: '1px solid #3b82f6',
+                  border: '1px solid var(--color-primary)',
                   borderRadius: '0.375rem',
                   backgroundColor: 'white',
                   cursor: bulkActionLoading ? 'not-allowed' : 'pointer',

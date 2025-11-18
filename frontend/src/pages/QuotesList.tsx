@@ -605,7 +605,7 @@ function QuotesList() {
       {role === 'admin' && selectedQuotes.size > 0 && (
         <div className="card mb-4" style={{ 
           backgroundColor: '#eff6ff', 
-          borderColor: '#3b82f6',
+          borderColor: 'var(--color-primary)',
           borderWidth: '2px',
           borderStyle: 'solid',
           padding: '1rem',

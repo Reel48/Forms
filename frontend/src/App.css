@@ -7,29 +7,52 @@
   --brand-dark: #292c2f;
   --brand-white: #ffffff;
   
-  /* Primary Colors */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #dbeafe;
-  --color-primary-focus: rgba(37, 99, 235, 0.1);
+  /* Color Palette - Main Colors */
+  --color-blue: #2d69ff;
+  --color-green: #4baa7d;
+  --color-red: #dc2626;
+  --color-orange: #f97316;
+  --color-yellow: #fbbf24;
+  --color-purple: #8b5cf6;
+  --color-pink: #ec4899;
+  --color-gray: #6b7280;
+  
+  /* Color Palette - Light/Badge Colors */
+  --color-blue-light: #e1f0ff;
+  --color-green-light: #dcfff0;
+  --color-red-light: #fee2e2;
+  --color-orange-light: #fff4ed;
+  --color-yellow-light: #fef3c7;
+  --color-purple-light: #ede9fe;
+  --color-pink-light: #fce7f3;
+  --color-gray-light: #f3f4f6;
+  
+  /* Primary Colors (using new blue) */
+  --color-primary: #2d69ff;
+  --color-primary-hover: #1e4fd9;
+  --color-primary-light: #e1f0ff;
+  --color-primary-focus: rgba(45, 105, 255, 0.1);
   
   /* Secondary Colors */
   --color-secondary: #6b7280;
   --color-secondary-hover: #4b5563;
   
-  /* Danger Colors */
+  /* Danger Colors (using new red) */
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-danger-light: #fee2e2;
   
-  /* Success Colors */
-  --color-success: #10b981;
-  --color-success-hover: #059669;
-  --color-success-light: #d1fae5;
+  /* Success Colors (using new green) */
+  --color-success: #4baa7d;
+  --color-success-hover: #3d8a6a;
+  --color-success-light: #dcfff0;
   
-  /* Warning Colors */
-  --color-warning: #f59e0b;
-  --color-warning-light: #fef3c7;
+  /* Warning Colors (using new orange) */
+  --color-warning: #f97316;
+  --color-warning-light: #fff4ed;
+  
+  /* Utility Bar Color (fixed blue) */
+  --utility-bar-color: #2d69ff;
   
   /* Neutral Colors */
   --color-text-primary: #1f2937;
@@ -144,7 +167,7 @@ select:focus-visible {
 .utility-bar-thin {
   flex: 1;
   height: 6px;
-  background-color: var(--utility-bar-color, #0089ff);
+  background-color: var(--utility-bar-color);
   margin-top: 0;
 }
 
@@ -158,7 +181,7 @@ select:focus-visible {
   align-items: center;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
-  background-color: var(--utility-bar-color, #0089ff);
+  background-color: var(--utility-bar-color);
   border-radius: 6px; /* Curved all corners, including where it meshes with thin bar */
   z-index: 1;
 }
@@ -227,45 +250,6 @@ select:focus-visible {
 
 .role-dropdown-content a:hover {
   background-color: #f5f5f5;
-}
-
-.dropdown-section {
-  padding: 8px 16px;
-}
-
-.dropdown-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.color-picker-container {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.color-picker {
-  width: 40px;
-  height: 32px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.color-select {
-  flex: 1;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  background-color: #fff;
 }
 
 .dropdown-divider {
@@ -913,37 +897,37 @@ table tbody tr:hover {
 }
 
 .badge-sent {
-  background-color: #dbeafe;
+  background-color: var(--color-primary-light);
   color: #1e40af;
 }
 
 .badge-viewed {
-  background-color: #fef3c7;
+  background-color: var(--color-warning-light);
   color: #92400e;
 }
 
 .badge-accepted {
-  background-color: #d1fae5;
+  background-color: var(--color-success-light);
   color: #065f46;
 }
 
 .badge-declined {
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
   color: #991b1b;
 }
 
 .badge-unpaid {
-  background-color: #fef3c7;
+  background-color: var(--color-warning-light);
   color: #92400e;
 }
 
 .badge-paid {
-  background-color: #d1fae5;
+  background-color: var(--color-success-light);
   color: #065f46;
 }
 
 .badge-partially_paid {
-  background-color: #dbeafe;
+  background-color: var(--color-primary-light);
   color: #1e40af;
 }
 

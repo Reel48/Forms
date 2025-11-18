@@ -2215,9 +2215,9 @@ function PublicFormView() {
             borderRadius: '12px', 
             padding: '2rem',
             marginBottom: '2rem',
-            border: '2px solid #10b981'
+            border: '2px solid var(--color-success)'
           }}>
-            <h2 style={{ marginTop: 0, color: '#10b981', fontSize: '1.5rem', fontWeight: '600' }}>
+            <h2 style={{ marginTop: 0, color: 'var(--color-success)', fontSize: '1.5rem', fontWeight: '600' }}>
               ✓ Form Already Submitted
             </h2>
             <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>

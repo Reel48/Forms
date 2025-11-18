@@ -51,31 +51,9 @@ function Navigation() {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [utilityBarColor, setUtilityBarColor] = useState('#0089ff');
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
-  
-  // Load utility bar color from localStorage on mount
-  useEffect(() => {
-    const savedColor = localStorage.getItem('utilityBarColor');
-    if (savedColor) {
-      setUtilityBarColor(savedColor);
-    }
-  }, []);
-  
-  // Save utility bar color to localStorage and update CSS variable
-  const handleColorChange = (color: string) => {
-    setUtilityBarColor(color);
-    localStorage.setItem('utilityBarColor', color);
-    // Update CSS custom property for the utility bar
-    document.documentElement.style.setProperty('--utility-bar-color', color);
-  };
-  
-  // Apply the color on mount and when it changes
-  useEffect(() => {
-    document.documentElement.style.setProperty('--utility-bar-color', utilityBarColor);
-  }, [utilityBarColor]);
   
   const handleLogout = async () => {
     try {
@@ -149,31 +127,6 @@ function Navigation() {
             </span>
             {isRoleDropdownOpen && (
               <div className="role-dropdown-content">
-                <div className="dropdown-section">
-                  <label className="dropdown-label">Utility Bar Color</label>
-                  <div className="color-picker-container">
-                    <input
-                      type="color"
-                      value={utilityBarColor}
-                      onChange={(e) => handleColorChange(e.target.value)}
-                      className="color-picker"
-                    />
-                    <select
-                      value={utilityBarColor}
-                      onChange={(e) => handleColorChange(e.target.value)}
-                      className="color-select"
-                    >
-                      <option value="#0089ff">Blue (Default)</option>
-                      <option value="#ffc700">Yellow</option>
-                      <option value="#ff7201">Orange</option>
-                      <option value="#03c35d">Green</option>
-                      <option value="#f23f3a">Red</option>
-                      <option value="#7559ff">Purple</option>
-                      <option value="#fe76b4">Pink</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="dropdown-divider"></div>
                 <Link to="/profile" onClick={() => setIsRoleDropdownOpen(false)} className="dropdown-link">
                   Profile
                 </Link>

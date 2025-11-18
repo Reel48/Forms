@@ -70,15 +70,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               padding: '1rem',
               borderRadius: '0.375rem',
               backgroundColor: 
-                notification.type === 'success' ? '#d1fae5' :
-                notification.type === 'error' ? '#fee2e2' :
-                notification.type === 'warning' ? '#fef3c7' :
-                '#dbeafe',
+                notification.type === 'success' ? 'var(--color-success-light)' :
+                notification.type === 'error' ? 'var(--color-danger-light)' :
+                notification.type === 'warning' ? 'var(--color-warning-light)' :
+                'var(--color-primary-light)',
               border: `1px solid ${
-                notification.type === 'success' ? '#10b981' :
-                notification.type === 'error' ? '#ef4444' :
-                notification.type === 'warning' ? '#f59e0b' :
-                '#3b82f6'
+                notification.type === 'success' ? 'var(--color-success)' :
+                notification.type === 'error' ? 'var(--color-danger)' :
+                notification.type === 'warning' ? 'var(--color-warning)' :
+                'var(--color-primary)'
               }`,
               color: 
                 notification.type === 'success' ? '#065f46' :

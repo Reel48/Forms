@@ -64,7 +64,7 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -118,7 +118,7 @@
 .submit-button {
   width: 100%;
   padding: 12px;
-  background-color: #2563eb;
+  background-color: var(--color-primary);
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -130,7 +130,7 @@
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  background-color: var(--color-primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
@@ -156,7 +156,7 @@
 }
 
 .signup-link a {
-  color: #2563eb;
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: 500;
 }
@@ -171,7 +171,7 @@
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 20px;
-  border: 1px solid #10b981;
+  border: 1px solid var(--color-success);
   text-align: center;
 }
 

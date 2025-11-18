@@ -690,7 +690,7 @@ function QuoteView() {
                 <div className="mb-4 p-3" style={{ 
                   backgroundColor: paymentStatusDetails?.color === '#065f46' ? '#d1fae5' : '#e3f2fd', 
                   borderRadius: '8px',
-                  border: `2px solid ${paymentStatusDetails?.color || '#3b82f6'}` 
+                  border: `2px solid ${paymentStatusDetails?.color || 'var(--color-primary)'}` 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
@@ -1061,7 +1061,7 @@ function QuoteView() {
                             padding: '1rem',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem',
-                            borderLeft: '4px solid #3b82f6',
+                            borderLeft: '4px solid var(--color-primary)',
                             cursor: 'pointer'
                           }}
                           onClick={() => navigate(`/quotes/${historyQuote.id}`)}

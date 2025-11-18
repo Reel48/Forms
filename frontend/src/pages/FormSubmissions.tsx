@@ -529,7 +529,7 @@ function FormSubmissions() {
                             'badge-info'
                           }`}
                           style={{ 
-                            backgroundColor: submission.review_status === 'new' ? '#3b82f6' : undefined,
+                            backgroundColor: submission.review_status === 'new' ? 'var(--color-primary)' : undefined,
                             color: submission.review_status === 'new' ? 'white' : undefined
                           }}
                         >
