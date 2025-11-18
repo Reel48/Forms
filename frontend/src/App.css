@@ -567,8 +567,9 @@ nav .nav-tabs li {
     padding: 0;
   }
 
-  .utility-bar-role-container {
-    padding-right: 1rem;
+  /* Hide utility bar on mobile */
+  .navbar-utility-bar {
+    display: none !important;
   }
 
   .navbar-top-row {
