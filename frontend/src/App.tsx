@@ -157,7 +157,7 @@ function Navigation() {
         <div className="navbar-logo" style={{ paddingLeft: '1.5rem' }}>
           <Link to={isAdmin ? "/" : "/dashboard"} style={{ display: 'flex', alignItems: 'center' }}>
             <img 
-              src="/logo-placeholder.png" 
+              src={getLogoForDarkBackground('/logo-placeholder.png')} 
               alt="Company Logo" 
               onError={(e) => {
                 // Fallback to a simple text logo if image doesn't exist

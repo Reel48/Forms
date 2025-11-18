@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getLogoForDarkBackground } from '../utils/logoUtils';
 import './Login.css';
 
 export default function Login() {
@@ -30,6 +31,21 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
+        {/* Company Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <img 
+            src={getLogoForDarkBackground()} 
+            alt="Company Logo" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+            style={{
+              maxHeight: '60px',
+              width: 'auto',
+              objectFit: 'contain'
+            }}
+          />
+        </div>
         <h1>Sign In</h1>
         <form onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
