@@ -346,13 +346,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-
-    setUser(null);
-    setSession(null);
-    setRole(null);
-    delete api.defaults.headers.common['Authorization'];
+    try {
+      const { error } = await supabase.auth.signOut();
+      // If error is about missing session, that's okay - we still want to clear local state
+      if (error && !error.message?.includes('session missing') && !error.message?.includes('Auth session missing')) {
+        throw error;
+      }
+    } catch (error: any) {
+      // If it's a session missing error, we'll continue with clearing local state
+      if (error?.message?.includes('session missing') || error?.message?.includes('Auth session missing')) {
+        // This is fine - session was already expired/missing
+      } else {
+        // For other errors, re-throw
+        throw error;
+      }
+    } finally {
+      // Always clear local state regardless of signOut result
+      setUser(null);
+      setSession(null);
+      setRole(null);
+      delete api.defaults.headers.common['Authorization'];
+    }
   };
 
   const value: AuthContextType = {

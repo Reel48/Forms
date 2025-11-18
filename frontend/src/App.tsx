@@ -59,9 +59,14 @@ function Navigation() {
   const handleLogout = async () => {
     try {
       await signOut();
+    } catch (error: any) {
+      // If session is already missing or expired, that's okay - we still want to logout
+      // Clear local state and navigate to login regardless
+      console.warn('Logout warning (session may already be expired):', error?.message || error);
+    } finally {
+      // Always clear local state and navigate to login, even if signOut fails
+      // This ensures users can always logout, even with expired sessions
       navigate('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
     }
   };
   
