@@ -96,7 +96,7 @@ function CustomerDashboard() {
     });
 
     return grouped;
-  }, [folders, sortBy]);
+  }, [folders]);
 
   // Filter folders by search term
   const filteredFoldersByStatus = useMemo(() => {
