@@ -284,9 +284,9 @@ const FolderView: React.FC = () => {
         )}
         <div className="folder-meta-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span className={`status-badge status-${folder.status}`}>
-              {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
-            </span>
+          <span className={`status-badge status-${folder.status}`}>
+            {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
+          </span>
             {role === 'admin' && (
               <select
                 value={folder.status}
@@ -562,7 +562,7 @@ const FolderView: React.FC = () => {
                         </span>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        {role === 'admin' && (
+                      {role === 'admin' && (
                           <button
                             className="btn-danger btn-sm"
                             onClick={async (e) => {
@@ -580,7 +580,7 @@ const FolderView: React.FC = () => {
                             Remove
                           </button>
                         )}
-                      </td>
+                        </td>
                     </tr>
                   ))}
                   
@@ -660,26 +660,26 @@ const FolderView: React.FC = () => {
                               View
                             </button>
                           )}
-                          {role === 'admin' && (
-                            <button
-                              className="btn-danger btn-sm"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (!confirm(`Remove "${esig.name}" from this folder?`)) return;
-                                try {
-                                  await foldersAPI.removeESignature(folder.id, esig.id);
-                                  loadFolderContent();
-                                } catch (err: any) {
-                                  alert(err.response?.data?.detail || 'Failed to remove e-signature from folder');
-                                }
-                              }}
-                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                            >
-                              Remove
-                            </button>
+                      {role === 'admin' && (
+                          <button
+                            className="btn-danger btn-sm"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Remove "${esig.name}" from this folder?`)) return;
+                              try {
+                                await foldersAPI.removeESignature(folder.id, esig.id);
+                                loadFolderContent();
+                              } catch (err: any) {
+                                alert(err.response?.data?.detail || 'Failed to remove e-signature from folder');
+                              }
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            Remove
+                          </button>
                           )}
                         </div>
-                      </td>
+                        </td>
                     </tr>
                   ))}
                 </tbody>

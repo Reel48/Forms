@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import { NotificationProvider } from './components/NotificationSystem';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaBars } from 'react-icons/fa';
 import './App.css';
 
 // Lazy load components for better performance
@@ -49,6 +49,7 @@ function Navigation() {
   const { user, role } = useAuth();
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -94,6 +95,7 @@ function Navigation() {
   useEffect(() => {
     setIsSettingsDropdownOpen(false);
     setIsRoleDropdownOpen(false);
+    setIsNavMenuOpen(false); // Close nav menu when navigating
   }, [location.pathname]);
 
   
@@ -141,12 +143,12 @@ function Navigation() {
                 if (!target.nextElementSibling) {
                   const fallback = document.createElement('span');
                   fallback.textContent = 'LOGO';
-                  fallback.style.cssText = 'font-weight: 700; font-size: 1rem; color: #ffffff; padding: 0.375rem 0.75rem; background: rgba(255, 255, 255, 0.1); border-radius: 6px;';
+                  fallback.style.cssText = 'font-weight: 700; font-size: 1.25rem; color: #ffffff; padding: 0.5rem 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 6px;';
                   target.parentElement?.appendChild(fallback);
                 }
               }}
               style={{
-                height: '32px',
+                height: '45px',
                 width: 'auto',
                 objectFit: 'contain'
               }}
@@ -170,10 +172,10 @@ function Navigation() {
             }}
             style={{
               width: '100%',
-              padding: '0.375rem 2rem 0.375rem 0.625rem',
+              padding: '0.5rem 2.5rem 0.5rem 0.75rem',
               border: '1px solid rgba(255, 255, 255, 0.3)',
               borderRadius: '0.375rem',
-              fontSize: '0.75rem',
+              fontSize: '0.875rem',
               outline: 'none',
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               color: '#ffffff',
@@ -368,7 +370,7 @@ function Navigation() {
             </li>
           </ul>
         )}
-      </div>
+        </div>
     </nav>
   );
 }

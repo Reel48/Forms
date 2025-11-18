@@ -114,10 +114,10 @@ function CustomerDashboard() {
     const searchLower = searchTerm.toLowerCase();
     const filterItems = (items: TimelineItem[]) => {
       return items.filter(item => 
-        item.title.toLowerCase().includes(searchLower) ||
-        item.description?.toLowerCase().includes(searchLower) ||
-        (item.type === 'quote' && (item.data as Quote).quote_number?.toLowerCase().includes(searchLower))
-      );
+      item.title.toLowerCase().includes(searchLower) ||
+      item.description?.toLowerCase().includes(searchLower) ||
+      (item.type === 'quote' && (item.data as Quote).quote_number?.toLowerCase().includes(searchLower))
+    );
     };
 
     return {
@@ -311,20 +311,20 @@ function CustomerDashboard() {
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
           <div style={{ flex: '1', minWidth: '150px', maxWidth: '250px' }}>
-            <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-              Sort By
-            </label>
-            <select
-              id="sort-by"
-              name="sort-by"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+              <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                Sort By
+              </label>
+              <select
+                id="sort-by"
+                name="sort-by"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
           </div>
         </div>
       </div>
@@ -349,19 +349,19 @@ function CustomerDashboard() {
           {filteredFoldersByStatus.active.length > 0 && (
             <div className="card" style={{ marginBottom: '2rem' }}>
               <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Active Orders</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Description</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Description</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
                   {filteredFoldersByStatus.active.map((item) => (
                 <tr
                   key={`${item.type}-${item.id}`}
@@ -487,9 +487,9 @@ function CustomerDashboard() {
                   </td>
                 </tr>
               ))}
-                </tbody>
-              </table>
-            </div>
+            </tbody>
+          </table>
+        </div>
           )}
 
           {/* Completed Folders */}

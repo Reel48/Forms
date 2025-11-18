@@ -44,7 +44,7 @@ function FormView() {
       // For admins, load form details
       loadForm(id);
       loadAssignments();
-      loadSubmissions();
+        loadSubmissions();
     }
   }, [id, role]);
 
