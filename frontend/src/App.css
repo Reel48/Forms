@@ -1117,10 +1117,17 @@ table tbody tr:hover {
 .typeform-question .component-color-selector {
   margin-top: 0;
   padding-top: 0;
+  margin-bottom: 0;
 }
 
 .typeform-question .component-color-selector > label {
   margin-top: 0;
+  padding-top: 0;
+}
+
+.typeform-question .component-color-selector:first-child {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .typeform-question label {
