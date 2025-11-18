@@ -58,6 +58,18 @@ const FolderView: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id || !content?.folder) return;
+    
+    try {
+      await foldersAPI.update(id, { status: newStatus });
+      // Reload folder content to get updated status
+      await loadFolderContent();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to update folder status');
+    }
+  };
+
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -271,9 +283,32 @@ const FolderView: React.FC = () => {
           <p className="folder-description">{folder.description}</p>
         )}
         <div className="folder-meta-header">
-          <span className={`status-badge status-${folder.status}`}>
-            {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span className={`status-badge status-${folder.status}`}>
+              {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
+            </span>
+            {role === 'admin' && (
+              <select
+                value={folder.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                style={{
+                  padding: '0.375rem 0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border, #e5e7eb)',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            )}
+          </div>
           <span className="folder-date">Created: {formatDate(folder.created_at)}</span>
         </div>
       </div>
