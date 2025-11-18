@@ -85,11 +85,14 @@ function FormView() {
     try {
       const response = await formsAPI.getById(formId);
       const formData = response.data;
-      // Redirect to public form view using the slug
+      // For customers, redirect to public form view using the slug
+      // If no slug exists, we need to generate one or use form ID
       if (formData.public_url_slug) {
         navigate(`/public/form/${formData.public_url_slug}`);
       } else {
-        setError('This form is not available for public access.');
+        // If form doesn't have a slug, try to use form ID as fallback
+        // Or show an error - but ideally we should ensure all forms have slugs
+        setError('This form is not properly configured for access. Please contact support.');
         setLoading(false);
       }
     } catch (error: any) {

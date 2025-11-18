@@ -328,8 +328,10 @@ async def get_forms(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/public/{slug}", response_model=Form)
-async def get_form_by_slug(slug: str):
-    """Get a form by public URL slug (for public access)"""
+async def get_form_by_slug(slug: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """Get a form by public URL slug (for public access)
+    Allows authenticated customers to access assigned forms even if not published
+    """
     try:
         from datetime import datetime
         
@@ -341,7 +343,23 @@ async def get_form_by_slug(slug: str):
         form = response.data
         
         # Check if form is published
-        if form.get("status") != "published":
+        # Exception: If user is authenticated and is a customer with access to this form, allow access even if not published
+        is_customer_with_access = False
+        if current_user and current_user.get("role") == "customer":
+            # Check if form is assigned to a folder that the customer has access to
+            try:
+                # Get folders assigned to user
+                folder_assignments_response = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", current_user["id"]).execute()
+                accessible_folder_ids = [fa["folder_id"] for fa in (folder_assignments_response.data or [])]
+                
+                if accessible_folder_ids:
+                    # Check if form is in any accessible folder
+                    form_assignments_response = supabase_storage.table("form_folder_assignments").select("id").eq("form_id", form.get("id")).in_("folder_id", accessible_folder_ids).execute()
+                    is_customer_with_access = bool(form_assignments_response.data)
+            except Exception as e:
+                logger.warning(f"Error checking customer form access: {str(e)}")
+        
+        if form.get("status") != "published" and not is_customer_with_access:
             raise HTTPException(status_code=404, detail="Form not found")
         
         # Check scheduling dates
