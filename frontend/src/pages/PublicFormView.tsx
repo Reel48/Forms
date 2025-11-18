@@ -311,7 +311,29 @@ function PublicFormView() {
   const validateField = useCallback((field: FormField, value: any): string | null => {
     const rules = field.validation_rules || {};
     
-    // Required validation
+    // Special validation for component_color_selector
+    if (field.field_type === 'component_color_selector') {
+      if (field.required) {
+        const valueObj = typeof value === 'object' ? value : {};
+        const hasPantone = valueObj.pantone_code && valueObj.pantone_code.trim();
+        const hasHex = valueObj.hex && valueObj.hex.trim() && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(valueObj.hex.trim());
+        const hasSelectedOption = value && typeof value === 'object' && value.value && !value.is_custom;
+        
+        if (!hasPantone && !hasHex && !hasSelectedOption) {
+          return rules.errorMessage || `${field.label} requires either a Pantone code or hex color`;
+        }
+      }
+      // Validate hex format if provided
+      if (value && typeof value === 'object' && value.hex && value.hex.trim()) {
+        const hexValue = value.hex.trim();
+        if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hexValue)) {
+          return 'Invalid hex color format (use #RRGGBB or #RGB)';
+        }
+      }
+      return null; // Pass validation for component_color_selector
+    }
+    
+    // Required validation for other field types
     if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
       return rules.errorMessage || `${field.label} is required`;
     }
@@ -1993,9 +2015,10 @@ function PublicFormView() {
         const customLabel = currentValue.label || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.label : '') || '';
         
         // Determine if we have a selected color (either from options or custom)
-        const hasSelectedColor = customHex || selectedColorOption;
+        // Show preview if we have hex, pantone, or a selected option
+        const hasSelectedColor = customHex || customPantone || selectedColorOption;
         const displayHex = customHex || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.hex : '') || '#000000';
-        const isValidHex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customHex || displayHex);
+        const isValidHex = customHex ? /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customHex) : true; // Only validate if hex is provided
         
         return (
           <div key={fieldId} className="form-group component-color-selector">
@@ -2010,43 +2033,78 @@ function PublicFormView() {
               </p>
             )}
             
-            {/* COLOR PREVIEW - Prominently displayed */}
+            {/* COLOR PREVIEW - Prominently displayed when hex or pantone is entered */}
             {hasSelectedColor && (
               <div className="color-preview" style={{
                 marginBottom: '2rem',
                 padding: '1.5rem',
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 borderRadius: '12px',
-                border: `2px solid ${isValidHex ? displayHex : '#000000'}`,
-                boxShadow: `0 4px 12px ${isValidHex ? displayHex : '#000000'}40`,
+                border: `2px solid ${isValidHex && displayHex !== '#000000' ? displayHex : '#6b7280'}`,
+                boxShadow: `0 4px 12px ${isValidHex && displayHex !== '#000000' ? displayHex : '#6b7280'}40`,
                 display: 'flex',
                 gap: '1.5rem',
                 alignItems: 'center',
               }}>
-                <div 
-                  className="color-preview-swatch"
-                  style={{
-                    width: '120px',
-                    height: '120px',
-                    borderRadius: '12px',
-                    backgroundColor: isValidHex ? displayHex : '#000000',
-                    border: '3px solid #ffffff',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    flexShrink: 0,
-                  }}
-                />
+                {/* Only show color swatch if we have a valid hex */}
+                {isValidHex && displayHex !== '#000000' && (
+                  <div 
+                    className="color-preview-swatch"
+                    style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '12px',
+                      backgroundColor: displayHex,
+                      border: '3px solid #ffffff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                {/* Show placeholder if only Pantone is provided */}
+                {(!isValidHex || displayHex === '#000000') && customPantone && (
+                  <div 
+                    className="color-preview-swatch"
+                    style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '12px',
+                      backgroundColor: '#f3f4f6',
+                      border: '3px solid #d1d5db',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      textAlign: 'center',
+                      padding: '0.5rem',
+                    }}
+                  >
+                    Pantone Only
+                  </div>
+                )}
                 <div className="color-preview-info" style={{ flex: 1 }}>
                   {customLabel && (
                     <div className="color-preview-name" style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem', color: '#111827' }}>
                       {customLabel}
                     </div>
                   )}
-                  <div className="color-preview-hex" style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#6b7280', marginBottom: '0.25rem' }}>
-                    {displayHex || 'No color selected'}
-                  </div>
+                  {/* Prioritize Pantone display */}
                   {customPantone && (
-                    <div className="color-preview-pantone" style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
+                    <div className="color-preview-pantone" style={{ fontSize: '1rem', fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
                       {customPantone}
+                    </div>
+                  )}
+                  {customHex && isValidHex && (
+                    <div className="color-preview-hex" style={{ fontSize: '0.875rem', fontFamily: 'monospace', color: '#6b7280' }}>
+                      {customHex}
+                    </div>
+                  )}
+                  {!customPantone && !customHex && displayHex && displayHex !== '#000000' && (
+                    <div className="color-preview-hex" style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#111827', marginBottom: '0.25rem' }}>
+                      {displayHex}
                     </div>
                   )}
                 </div>
@@ -2065,9 +2123,40 @@ function PublicFormView() {
                 Enter Custom Color
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                {/* Pantone Code - Preferred/First */}
+                <div>
+                  <label htmlFor={`${fieldId}-custom-pantone`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
+                    Pantone Code {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400', marginLeft: '0.25rem' }}>(Preferred)</span>
+                  </label>
+                  <input
+                    type="text"
+                    id={`${fieldId}-custom-pantone`}
+                    value={customPantone}
+                    onChange={(e) => {
+                      handleFieldChange(fieldId, {
+                        value: (customPantone || customHex) ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
+                        label: customLabel || 'Custom Color',
+                        hex: customHex || '',
+                        pantone_code: e.target.value,
+                        is_custom: true,
+                      });
+                    }}
+                    placeholder="e.g., Pantone 19-4052 TCX"
+                    required={field.required}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid #d1d5db',
+                      borderRadius: '8px',
+                      backgroundColor: '#ffffff',
+                    }}
+                  />
+                </div>
+                {/* Hex Color - Optional */}
                 <div>
                   <label htmlFor={`${fieldId}-custom-hex`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
-                    Hex Color {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
+                    Hex Color (Optional)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <input
@@ -2077,7 +2166,7 @@ function PublicFormView() {
                       onChange={(e) => {
                         const hex = e.target.value;
                         handleFieldChange(fieldId, {
-                          value: `custom-${Date.now()}`,
+                          value: (customPantone || hex) ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
                           label: customLabel || 'Custom Color',
                           hex: hex,
                           pantone_code: customPantone,
@@ -2098,10 +2187,10 @@ function PublicFormView() {
                     />
                     <input
                       type="color"
-                      value={isValidHex ? displayHex : '#000000'}
+                      value={isValidHex && customHex ? customHex : '#000000'}
                       onChange={(e) => {
                         handleFieldChange(fieldId, {
-                          value: `custom-${Date.now()}`,
+                          value: (customPantone || e.target.value) ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
                           label: customLabel || 'Custom Color',
                           hex: e.target.value,
                           pantone_code: customPantone,
@@ -2117,33 +2206,6 @@ function PublicFormView() {
                     </p>
                   )}
                 </div>
-                <div>
-                  <label htmlFor={`${fieldId}-custom-pantone`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
-                    Pantone Code (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    id={`${fieldId}-custom-pantone`}
-                    value={customPantone}
-                    onChange={(e) => {
-                      handleFieldChange(fieldId, {
-                        value: customHex ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
-                        label: customLabel || 'Custom Color',
-                        hex: customHex || displayHex,
-                        pantone_code: e.target.value,
-                        is_custom: true,
-                      });
-                    }}
-                    placeholder="e.g., Pantone 19-4052 TCX"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #d1d5db',
-                      borderRadius: '8px',
-                      backgroundColor: '#ffffff',
-                    }}
-                  />
-                </div>
               </div>
               <div>
                 <label htmlFor={`${fieldId}-custom-label`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
@@ -2155,9 +2217,9 @@ function PublicFormView() {
                   value={customLabel}
                   onChange={(e) => {
                     handleFieldChange(fieldId, {
-                      value: customHex ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
+                      value: (customPantone || customHex) ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
                       label: e.target.value || 'Custom Color',
-                      hex: customHex || displayHex,
+                      hex: customHex || '',
                       pantone_code: customPantone,
                       is_custom: true,
                     });
