@@ -972,7 +972,7 @@ function QuoteView() {
                             padding: '1rem',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem',
-                            borderLeft: '4px solid #667eea'
+                            borderLeft: '4px solid var(--color-primary)'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -984,7 +984,7 @@ function QuoteView() {
                                   padding: '0.125rem 0.5rem',
                                   fontSize: '0.75rem',
                                   backgroundColor: '#dbeafe',
-                                  color: '#1e40af',
+                                  color: 'var(--color-primary)',
                                   borderRadius: '0.25rem'
                                 }}>
                                   Internal
@@ -1018,7 +1018,7 @@ function QuoteView() {
                             padding: '1rem',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem',
-                            borderLeft: '4px solid #10b981'
+                            borderLeft: '4px solid var(--color-success)'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -1073,7 +1073,7 @@ function QuoteView() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <Link 
                                   to={`/quotes/${historyQuote.id}`}
-                                  style={{ fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}
+                                  style={{ fontWeight: '600', color: 'var(--color-primary)', textDecoration: 'none' }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {historyQuote.title}

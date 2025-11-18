@@ -42,7 +42,7 @@
 
 .conversation-item.active {
   background-color: var(--color-primary-light, #eff6ff);
-  border-left: 3px solid var(--color-primary, #2563eb);
+  border-left: 3px solid var(--color-primary);
 }
 
 .conversation-header {
@@ -59,7 +59,7 @@
 }
 
 .unread-badge {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary);
   color: white;
   border-radius: 50%;
   width: 20px;
@@ -156,7 +156,7 @@
 }
 
 .message-sent .message-content {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary);
   color: white;
 }
 

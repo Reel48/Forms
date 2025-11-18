@@ -273,7 +273,7 @@ select:focus-visible {
 .dropdown-button-logout {
   width: 100%;
   padding: 8px 16px;
-  background-color: #dc2626;
+  background-color: var(--color-danger);
   color: #ffffff;
   border: none;
   border-radius: 0;
@@ -898,7 +898,7 @@ table tbody tr:hover {
 
 .badge-sent {
   background-color: var(--color-primary-light);
-  color: #1e40af;
+  color: var(--color-primary);
 }
 
 .badge-viewed {
@@ -928,7 +928,7 @@ table tbody tr:hover {
 
 .badge-partially_paid {
   background-color: var(--color-primary-light);
-  color: #1e40af;
+  color: var(--color-primary);
 }
 
 .badge-refunded {
@@ -1025,7 +1025,7 @@ table tbody tr:hover {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%);
   padding: 0;
   margin: 0;
 }
@@ -1163,7 +1163,7 @@ table tbody tr:hover {
 }
 
 .typeform-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%);
   color: white;
 }
 
