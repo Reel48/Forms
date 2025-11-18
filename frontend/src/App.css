@@ -158,6 +158,7 @@ select:focus-visible {
   align-items: center;
   padding-right: 1.5rem;
   padding-left: 0.75rem;
+  padding-top: 17.5px; /* Center vertically: (70px navbar - 35px container) / 2 */
   background-color: #ffc700;
   z-index: 1;
 }
