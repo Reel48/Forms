@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import { NotificationProvider } from './components/NotificationSystem';
 import { FaTimes, FaBars } from 'react-icons/fa';
+import { getLogoForDarkBackground } from './utils/logoUtils';
 import './App.css';
 
 // Lazy load components for better performance
