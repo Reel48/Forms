@@ -2001,10 +2001,6 @@ function PublicFormView() {
         const customPantone = currentValue.pantone_code || '';
         const customLabel = currentValue.label || '';
         
-        // Determine if we have a selected color (show preview only if hex is entered)
-        const hasSelectedColor = customHex;
-        const displayHex = customHex || '#000000';
-        
         return (
           <div key={fieldId} className="form-group component-color-selector" style={{ marginTop: 0, paddingTop: 0 }}>
             {mediaElement && (
@@ -2020,46 +2016,6 @@ function PublicFormView() {
               <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
                 {field.description}
               </p>
-            )}
-            
-            {/* COLOR PREVIEW - Only displayed when hex color is entered */}
-            {hasSelectedColor && displayHex !== '#000000' && (
-              <div className="color-preview" style={{
-                marginBottom: '2rem',
-                padding: '1.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderRadius: '12px',
-                border: `2px solid ${displayHex}`,
-                boxShadow: `0 4px 12px ${displayHex}40`,
-                display: 'flex',
-                gap: '1.5rem',
-                alignItems: 'center',
-              }}>
-                <div 
-                  className="color-preview-swatch"
-                  style={{
-                    width: '120px',
-                    height: '120px',
-                    borderRadius: '12px',
-                    backgroundColor: displayHex,
-                    border: '3px solid #ffffff',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    flexShrink: 0,
-                  }}
-                />
-                <div className="color-preview-info" style={{ flex: 1 }}>
-                  {customLabel && (
-                    <div className="color-preview-name" style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem', color: '#111827' }}>
-                      {customLabel}
-                    </div>
-                  )}
-                  {customHex && (
-                    <div className="color-preview-hex" style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#111827', marginBottom: '0.25rem' }}>
-                      {customHex}
-                    </div>
-                  )}
-                </div>
-              </div>
             )}
             
             {/* CUSTOM COLOR INPUT SECTION */}
