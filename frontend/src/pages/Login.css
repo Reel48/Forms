@@ -3,21 +3,9 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  /* Subtle brand color integration - dark background with gradient overlay */
-  background: linear-gradient(135deg, #292c2f 0%, #3a3d41 50%, #292c2f 100%);
+  background-color: #292c2f;
   padding: 20px;
   position: relative;
-}
-
-.login-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
-  pointer-events: none;
 }
 
 .login-card {
