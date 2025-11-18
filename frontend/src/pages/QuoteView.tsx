@@ -438,11 +438,11 @@ function QuoteView() {
       'partially_paid': { label: 'Partially Paid', color: '#92400e', icon: '' },
       'refunded': { label: 'Refunded', color: '#7c2d12', icon: '' },
       'failed': { label: 'Payment Failed', color: '#991b1b', icon: '' },
-      'voided': { label: 'Voided', color: '#6b7280', icon: '' },
+      'voided': { label: 'Voided', color: 'var(--color-text-muted)', icon: '' },
       'uncollectible': { label: 'Uncollectible', color: '#991b1b', icon: '' },
     };
     
-    return statusMap[status] || { label: status, color: '#6b7280', icon: '' };
+    return statusMap[status] || { label: status, color: 'var(--color-text-muted)', icon: '' };
   };
 
   const paymentStatusDetails = getPaymentStatusDetails();
@@ -492,8 +492,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'details' ? '2px solid #667eea' : '2px solid transparent',
-                      color: activeTab === 'details' ? '#667eea' : '#6b7280',
+                      borderBottom: activeTab === 'details' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                      color: activeTab === 'details' ? 'var(--color-primary)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'details' ? '600' : '400',
                     }}
                   >
@@ -506,8 +506,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'activities' ? '2px solid #667eea' : '2px solid transparent',
-                      color: activeTab === 'activities' ? '#667eea' : '#6b7280',
+                      borderBottom: activeTab === 'activities' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                      color: activeTab === 'activities' ? 'var(--color-primary)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'activities' ? '600' : '400',
                     }}
                   >
@@ -520,8 +520,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'comments' ? '2px solid #667eea' : '2px solid transparent',
-                      color: activeTab === 'comments' ? '#667eea' : '#6b7280',
+                      borderBottom: activeTab === 'comments' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                      color: activeTab === 'comments' ? 'var(--color-primary)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'comments' ? '600' : '400',
                     }}
                   >
@@ -534,8 +534,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'versions' ? '2px solid #667eea' : '2px solid transparent',
-                      color: activeTab === 'versions' ? '#667eea' : '#6b7280',
+                      borderBottom: activeTab === 'versions' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                      color: activeTab === 'versions' ? 'var(--color-primary)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'versions' ? '600' : '400',
                     }}
                   >
@@ -549,8 +549,8 @@ function QuoteView() {
                         border: 'none',
                         background: 'none',
                         cursor: 'pointer',
-                        borderBottom: activeTab === 'client-history' ? '2px solid #667eea' : '2px solid transparent',
-                        color: activeTab === 'client-history' ? '#667eea' : '#6b7280',
+                        borderBottom: activeTab === 'client-history' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                        color: activeTab === 'client-history' ? 'var(--color-primary)' : 'var(--color-text-muted)',
                         fontWeight: activeTab === 'client-history' ? '600' : '400',
                       }}
                     >
@@ -673,7 +673,7 @@ function QuoteView() {
                         padding: '0.25rem 0.5rem',
                         fontSize: '0.75rem',
                         border: 'none',
-                        background: '#ef4444',
+                        background: 'var(--color-danger)',
                         color: 'white',
                         borderRadius: '0.25rem',
                         cursor: 'pointer'
@@ -698,11 +698,11 @@ function QuoteView() {
                       <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: paymentStatusDetails?.color }}>
                         {paymentStatusDetails?.icon} {paymentStatusDetails?.label}
                       </p>
-                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                         Invoice ID: {quote.stripe_invoice_id}
                       </p>
                       {quote.updated_at && (
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                           Last updated: {formatDate(quote.updated_at)}
                         </p>
                       )}
@@ -742,12 +742,12 @@ function QuoteView() {
                         </button>
                       </div>
                       {quote.status === 'draft' && role === 'customer' && (
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
                           Accept this quote to proceed with payment.
                         </p>
                       )}
                       {quote.status === 'draft' && role === 'admin' && (
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
                           Accept this quote to create a Stripe invoice for payment collection.
                         </p>
                       )}
@@ -900,7 +900,7 @@ function QuoteView() {
                           key={activity.id} 
                           style={{
                             padding: '1rem',
-                            borderLeft: '4px solid #667eea',
+                            borderLeft: '4px solid var(--color-primary)',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem'
                           }}

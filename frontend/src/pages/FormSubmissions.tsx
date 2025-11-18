@@ -20,7 +20,7 @@ function FormSubmissions() {
   const [editingNoteText, setEditingNoteText] = useState('');
   const [tags, setTags] = useState<Array<{id: string; tag_name: string; color: string; created_at: string}>>([]);
   const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#667eea');
+  const [newTagColor, setNewTagColor] = useState('var(--color-primary)');
   const [, setLoadingTags] = useState(false);
   const [availableTags, setAvailableTags] = useState<Array<{tag_name: string; color: string}>>([]);
 
@@ -201,7 +201,7 @@ function FormSubmissions() {
       });
       setTags(prev => [...prev, { ...response.data, created_at: new Date().toISOString() }]);
       setNewTagName('');
-      setNewTagColor('#667eea');
+      setNewTagColor('var(--color-primary)');
       loadAvailableTags();
     } catch (error: any) {
       console.error('Failed to add tag:', error);
@@ -397,8 +397,8 @@ function FormSubmissions() {
   if (error && !form) {
     return (
       <div className="container">
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>{error}</p>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-danger-light)', borderColor: 'var(--color-danger-light)', padding: '1rem' }}>
+          <p style={{ color: 'var(--color-danger)', margin: 0 }}>{error}</p>
           <button onClick={() => navigate('/forms')} className="btn-secondary" style={{ marginTop: '1rem' }}>
             Back to Forms
           </button>
@@ -410,8 +410,8 @@ function FormSubmissions() {
   if (!form) {
     return (
       <div className="container">
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>Form not found</p>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-danger-light)', borderColor: 'var(--color-danger-light)', padding: '1rem' }}>
+          <p style={{ color: 'var(--color-danger)', margin: 0 }}>Form not found</p>
           <button onClick={() => navigate('/forms')} className="btn-secondary" style={{ marginTop: '1rem' }}>
             Back to Forms
           </button>
@@ -445,15 +445,15 @@ function FormSubmissions() {
       </div>
 
       {error && (
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-danger-light)', borderColor: 'var(--color-danger-light)', padding: '1rem' }}>
+          <p style={{ color: 'var(--color-danger)', margin: 0 }}>
             {error}
             <button
               onClick={() => id && loadFormAndSubmissions(id)}
               style={{
                 marginLeft: '1rem',
                 padding: '0.25rem 0.75rem',
-                backgroundColor: '#dc2626',
+                backgroundColor: 'var(--color-danger)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.25rem',
@@ -470,7 +470,7 @@ function FormSubmissions() {
       {submissions.length === 0 ? (
         <div className="card">
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <h2 style={{ color: '#374151', marginBottom: '1rem' }}>No submissions yet</h2>
+            <h2 style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>No submissions yet</h2>
             <p className="text-muted" style={{ marginBottom: '2rem' }}>
               When people submit this form, their responses will appear here.
             </p>
@@ -486,7 +486,7 @@ function FormSubmissions() {
             <div className="flex-between mb-3">
               <h2 style={{ margin: 0 }}>All Submissions ({submissions.length})</h2>
               {loading && (
-                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Loading...</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>Loading...</span>
               )}
             </div>
             <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
@@ -506,7 +506,7 @@ function FormSubmissions() {
                     <tr
                       key={submission.id}
                       style={{
-                        backgroundColor: selectedSubmission?.id === submission.id ? '#eff6ff' : undefined,
+                        backgroundColor: selectedSubmission?.id === submission.id ? 'var(--color-primary-light)' : undefined,
                         cursor: 'pointer',
                       }}
                       onClick={() => setSelectedSubmission(submission)}
@@ -577,53 +577,53 @@ function FormSubmissions() {
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                         Submitted At
                       </label>
-                      <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontSize: '0.875rem' }}>
+                      <p style={{ margin: 0, padding: '0.625rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', fontSize: '0.875rem' }}>
                         {formatDate(selectedSubmission.submitted_at)}
                       </p>
                     </div>
                     {selectedSubmission.started_at && (
                       <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                           Started At
                         </label>
-                        <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontSize: '0.875rem' }}>
+                        <p style={{ margin: 0, padding: '0.625rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', fontSize: '0.875rem' }}>
                           {formatDate(selectedSubmission.started_at)}
                         </p>
                       </div>
                     )}
                     {selectedSubmission.submitter_name && (
                       <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                           Name
                         </label>
-                        <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontSize: '0.875rem' }}>
+                        <p style={{ margin: 0, padding: '0.625rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', fontSize: '0.875rem' }}>
                           {selectedSubmission.submitter_name}
                         </p>
                       </div>
                     )}
                     {selectedSubmission.submitter_email && (
                       <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                           Email
                         </label>
-                        <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontSize: '0.875rem' }}>
+                        <p style={{ margin: 0, padding: '0.625rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', fontSize: '0.875rem' }}>
                           {selectedSubmission.submitter_email}
                         </p>
                       </div>
                     )}
                     <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                         Time Spent
                       </label>
-                      <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px', fontSize: '0.875rem' }}>
+                      <p style={{ margin: 0, padding: '0.625rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', fontSize: '0.875rem' }}>
                         {formatTimeSpent(selectedSubmission.time_spent_seconds)}
                       </p>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                         Status
                       </label>
                       <p style={{ margin: 0 }}>
@@ -633,7 +633,7 @@ function FormSubmissions() {
                       </p>
                     </div>
                     <div>
-                      <label htmlFor="submission-review-status" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                      <label htmlFor="submission-review-status" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                         Review Status
                       </label>
                       <select
@@ -680,10 +680,10 @@ function FormSubmissions() {
                           className="card"
                           style={{ border: '1px solid #e5e7eb', padding: '1rem' }}
                         >
-                          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
                             {getFieldLabel(answer.field_id)}
                           </label>
-                          <p style={{ margin: 0, padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                          <p style={{ margin: 0, padding: '0.75rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                             {getAnswerDisplay(answer)}
                           </p>
                         </div>
@@ -700,7 +700,7 @@ function FormSubmissions() {
                   
                   {/* Add Note */}
                   <div style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="submission-new-note" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                    <label htmlFor="submission-new-note" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                       Add Note
                     </label>
                     <textarea
@@ -732,7 +732,7 @@ function FormSubmissions() {
 
                   {/* Notes List */}
                   {loadingNotes ? (
-                    <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading notes...</p>
+                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading notes...</p>
                   ) : notes.length === 0 ? (
                     <p className="text-muted" style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem' }}>
                       No notes yet. Add a note to track comments or observations about this submission.
@@ -743,11 +743,11 @@ function FormSubmissions() {
                         <div
                           key={note.id}
                           className="card"
-                          style={{ border: '1px solid #e5e7eb', padding: '1rem', backgroundColor: '#f9fafb' }}
+                          style={{ border: '1px solid var(--color-border)', padding: '1rem', backgroundColor: 'var(--color-bg-secondary)' }}
                         >
                           {editingNoteId === note.id ? (
                             <div>
-                              <label htmlFor={`edit-note-${note.id}`} style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280', fontSize: '0.875rem' }}>
+                              <label htmlFor={`edit-note-${note.id}`} style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                                 Edit Note
                               </label>
                               <textarea
@@ -794,7 +794,7 @@ function FormSubmissions() {
                                 {note.note_text}
                               </p>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                                   {formatDate(note.created_at)}
                                   {note.updated_at !== note.created_at && ' (edited)'}
                                 </span>
@@ -876,7 +876,7 @@ function FormSubmissions() {
                   {/* Quick Add from Available Tags */}
                   {availableTags.length > 0 && (
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: '#6b7280' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-muted)' }}>
                         Quick Add:
                       </label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

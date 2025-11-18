@@ -324,7 +324,7 @@ function FormsList() {
       <div className="flex-between mb-4">
         <div>
           <h1>Form Templates</h1>
-          <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Reusable templates for your projects</p>
+          <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Reusable templates for your projects</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {role === 'admin' && (
@@ -418,15 +418,15 @@ function FormsList() {
       </div>
 
       {error && (
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-danger-light)', borderColor: 'var(--color-danger-light)', padding: '1rem' }}>
+          <p style={{ color: 'var(--color-danger)', margin: 0 }}>
             {error}
             <button
               onClick={loadForms}
               style={{
                 marginLeft: '1rem',
                 padding: '0.25rem 0.75rem',
-                backgroundColor: '#dc2626',
+                backgroundColor: 'var(--color-danger)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.25rem',
@@ -445,7 +445,7 @@ function FormsList() {
         <div className="card mb-4" style={{ backgroundColor: 'var(--color-primary-light)', borderColor: 'var(--color-primary)', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontWeight: '500', color: '#1e40af' }}>
+              <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                 {selectedForms.size} form{selectedForms.size > 1 ? 's' : ''} selected
               </span>
               <button
@@ -497,7 +497,7 @@ function FormsList() {
       {forms.length === 0 ? (
         <div className="card">
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <h2 style={{ color: '#374151', marginBottom: '1rem' }}>
+            <h2 style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
               {(statusFilter || searchQuery || dateFrom || dateTo) ? 'No forms found' : 'No forms yet'}
             </h2>
             <p className="text-muted" style={{ marginBottom: '2rem' }}>
@@ -517,7 +517,7 @@ function FormsList() {
       ) : (
         <div className="card">
           {loading && forms.length > 0 && (
-            <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
+            <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
               Updating...
             </div>
           )}
@@ -564,7 +564,7 @@ function FormsList() {
                     </td>
                   )}
                   <td>
-                    <Link to={`/forms/${form.id}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
+                    <Link to={`/forms/${form.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '500' }}>
                       {form.name || 'Untitled Form'}
                     </Link>
                   </td>
@@ -583,7 +583,7 @@ function FormsList() {
                       <span
                         className="badge"
                         style={{
-                          backgroundColor: submissionCounts[form.id] > 0 ? '#22c55e' : '#9ca3af',
+                          backgroundColor: submissionCounts[form.id] > 0 ? 'var(--color-success)' : 'var(--color-text-light)',
                           color: 'white',
                           padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
@@ -660,7 +660,7 @@ function FormsList() {
                             <button
                               onClick={() => handleAssignToFolder(form)}
                               className="btn-primary"
-                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#10b981', borderColor: '#10b981' }}
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}
                               title="Use this template in a folder"
                             >
                               Use Template

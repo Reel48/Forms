@@ -565,7 +565,7 @@ function QuotesList() {
               width: '40px',
               height: '40px',
               border: '4px solid #f3f3f3',
-              borderTop: '4px solid #667eea',
+              borderTop: '4px solid var(--color-primary)',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               marginBottom: '1rem'
@@ -604,7 +604,7 @@ function QuotesList() {
       {/* Bulk Actions Bar */}
       {role === 'admin' && selectedQuotes.size > 0 && (
         <div className="card mb-4" style={{ 
-          backgroundColor: '#eff6ff', 
+          backgroundColor: 'var(--color-primary-light)', 
           borderColor: 'var(--color-primary)',
           borderWidth: '2px',
           borderStyle: 'solid',
@@ -615,7 +615,7 @@ function QuotesList() {
           flexWrap: 'wrap',
           gap: '1rem'
         }}>
-          <div style={{ fontWeight: '600', color: '#1e40af' }}>
+          <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
             {selectedQuotes.size} quote(s) selected
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -683,8 +683,8 @@ function QuotesList() {
                   padding: '0.5rem 1rem',
                   borderRadius: '0.375rem',
                   border: '1px solid #d1d5db',
-                  backgroundColor: statusFilter === '' ? '#667eea' : 'white',
-                  color: statusFilter === '' ? 'white' : '#374151',
+                  backgroundColor: statusFilter === '' ? 'var(--color-primary)' : 'white',
+                  color: statusFilter === '' ? 'white' : 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
                   fontWeight: statusFilter === '' ? '600' : '400',
@@ -700,8 +700,8 @@ function QuotesList() {
                     padding: '0.5rem 1rem',
                     borderRadius: '0.375rem',
                     border: '1px solid #d1d5db',
-                    backgroundColor: statusFilter === status ? '#667eea' : 'white',
-                    color: statusFilter === status ? 'white' : '#374151',
+                    backgroundColor: statusFilter === status ? 'var(--color-primary)' : 'white',
+                    color: statusFilter === status ? 'white' : 'var(--color-text-secondary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     fontWeight: statusFilter === status ? '600' : '400',
@@ -764,7 +764,7 @@ function QuotesList() {
                     onClick={() => setShowFilterPresets(!showFilterPresets)}
                     style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: '#10b981',
+                      backgroundColor: 'var(--color-success)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.375rem',
@@ -825,7 +825,7 @@ function QuotesList() {
                               style={{
                                 padding: '0.25rem 0.5rem',
                                 border: 'none',
-                                background: '#ef4444',
+                                background: 'var(--color-danger)',
                                 color: 'white',
                                 borderRadius: '0.25rem',
                                 cursor: 'pointer',
@@ -864,7 +864,7 @@ function QuotesList() {
                   onClick={clearFilters}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: '#6b7280',
+                    backgroundColor: 'var(--color-secondary)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.375rem',
@@ -885,7 +885,7 @@ function QuotesList() {
                   }}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: '#10b981',
+                    backgroundColor: 'var(--color-success)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.375rem',
@@ -934,7 +934,7 @@ function QuotesList() {
           {/* Result Count and Sort */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             {!loading && totalCount !== null && (
-              <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                 {hasActiveFilters ? (
                   <>Showing {startItem}-{endItem} of {totalCount} {totalCount === 1 ? 'quote' : 'quotes'}</>
                 ) : (
@@ -1048,15 +1048,15 @@ function QuotesList() {
 
       {/* Error Message */}
       {error && (
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-danger-light)', borderColor: 'var(--color-danger-light)', padding: '1rem' }}>
+          <p style={{ color: 'var(--color-danger)', margin: 0 }}>
             {error}
             <button
               onClick={loadQuotes}
               style={{
                 marginLeft: '1rem',
                 padding: '0.25rem 0.75rem',
-                backgroundColor: '#dc2626',
+                backgroundColor: 'var(--color-danger)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.25rem',
@@ -1125,10 +1125,10 @@ function QuotesList() {
                       <div style={{ paddingRight: role === 'admin' ? '2.5rem' : '0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                           <div>
-                            <Link to={`/quotes/${quote.id}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
+                            <Link to={`/quotes/${quote.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '600' }}>
                               {quote.title}
                             </Link>
-                            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
                               {quote.quote_number}
                             </div>
                           </div>
@@ -1148,7 +1148,7 @@ function QuotesList() {
                             </div>
                           </div>
                         </div>
-                        <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.75rem' }}>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.75rem' }}>
                           <div><strong>Client:</strong> {quote.clients?.name || '-'}</div>
                           <div style={{ marginTop: '0.25rem' }}><strong>Created:</strong> {formatDate(quote.created_at)}</div>
                           {role === 'admin' && (
@@ -1213,7 +1213,7 @@ function QuotesList() {
                 // Desktop Table View
                 <div className="card">
                   {loading && quotes.length > 0 && (
-                    <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                       Updating results...
                     </div>
                   )}
@@ -1298,7 +1298,7 @@ function QuotesList() {
                             {visibleColumns.quoteNumber && <td>{quote.quote_number}</td>}
                             {visibleColumns.title && (
                               <td>
-                                <Link to={`/quotes/${quote.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>
+                                <Link to={`/quotes/${quote.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
                                   {quote.title}
                                 </Link>
                               </td>
@@ -1398,7 +1398,7 @@ function QuotesList() {
                                             display: 'block',
                                             padding: '0.5rem 1rem',
                                             textDecoration: 'none',
-                                            color: '#374151',
+                                            color: 'var(--color-text-secondary)',
                                             fontSize: '0.875rem'
                                           }}
                                           onClick={() => setShowQuickActions(null)}
@@ -1413,7 +1413,7 @@ function QuotesList() {
                                                 display: 'block',
                                                 padding: '0.5rem 1rem',
                                                 textDecoration: 'none',
-                                                color: '#374151',
+                                                color: 'var(--color-text-secondary)',
                                                 fontSize: '0.875rem',
                                                 borderTop: '1px solid #e5e7eb'
                                               }}
@@ -1433,7 +1433,7 @@ function QuotesList() {
                                                 textAlign: 'left',
                                                 border: 'none',
                                                 backgroundColor: 'transparent',
-                                                color: '#374151',
+                                                color: 'var(--color-text-secondary)',
                                                 fontSize: '0.875rem',
                                                 cursor: 'pointer',
                                                 borderTop: '1px solid #e5e7eb'
@@ -1453,7 +1453,7 @@ function QuotesList() {
                                                 textAlign: 'left',
                                                 border: 'none',
                                                 backgroundColor: 'transparent',
-                                                color: '#374151',
+                                                color: 'var(--color-text-secondary)',
                                                 fontSize: '0.875rem',
                                                 cursor: 'pointer',
                                                 borderTop: '1px solid #e5e7eb'
@@ -1481,7 +1481,7 @@ function QuotesList() {
                                                 textAlign: 'left',
                                                 border: 'none',
                                                 backgroundColor: 'transparent',
-                                                color: '#dc2626',
+                                                color: 'var(--color-danger)',
                                                 fontSize: '0.875rem',
                                                 cursor: 'pointer',
                                                 borderTop: '1px solid #e5e7eb'
