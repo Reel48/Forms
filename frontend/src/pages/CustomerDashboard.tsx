@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api, { quotesAPI, foldersAPI } from '../api';
-import type { Quote, Form, Folder } from '../api';
+import api, { quotesAPI, foldersAPI, clientsAPI } from '../api';
+import type { Quote, Form, Folder, Client } from '../api';
 import CustomerChatWidget from '../components/CustomerChatWidget';
 
 interface TimelineItem {
@@ -24,13 +24,26 @@ function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
+  const [customerProfile, setCustomerProfile] = useState<Client | null>(null);
   const searchTerm = searchParams.get('search') || '';
 
   useEffect(() => {
     if (role === 'customer') {
       loadData();
+      loadCustomerProfile();
     }
   }, [role]);
+
+  const loadCustomerProfile = async () => {
+    try {
+      const response = await clientsAPI.getMyProfile();
+      if (response.data) {
+        setCustomerProfile(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load customer profile:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -287,6 +300,30 @@ function CustomerDashboard() {
 
       {!loading && (
         <>
+      {/* Customer Header */}
+      {customerProfile && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ 
+            fontSize: '2.5rem', 
+            fontWeight: '700', 
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            margin: '0 0 0.5rem 0',
+            color: 'var(--color-text-primary)'
+          }}>
+            {customerProfile.company || 'Company Name'}
+          </h1>
+          <p style={{ 
+            fontSize: '1.125rem', 
+            fontWeight: '400',
+            margin: '0',
+            color: 'var(--color-text-secondary)'
+          }}>
+            {customerProfile.name || 'Customer Name'}
+          </p>
+        </div>
+      )}
+
       {/* Folders Grouped by Status */}
       {filteredFoldersByStatus.active.length === 0 && filteredFoldersByStatus.completed.length === 0 && filteredFoldersByStatus.archived.length === 0 && filteredFoldersByStatus.cancelled.length === 0 ? (
         <div className="card">
