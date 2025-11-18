@@ -2303,7 +2303,7 @@ function PublicFormView() {
                     transition: 'background-color 0.2s'
                   }}
                   onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
                 >
                   Back to Dashboard
                 </button>
