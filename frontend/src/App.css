@@ -453,8 +453,9 @@ nav .nav-tabs li {
 
   .navbar-top-row {
     flex-wrap: wrap;
-    padding: 0.75rem 0;
-    gap: 1rem;
+    padding: 0.5rem 0;
+    gap: 0.75rem;
+    min-height: auto;
   }
 
   .navbar-logo {
