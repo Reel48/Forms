@@ -171,7 +171,7 @@ function Navigation() {
         <div className="navbar-search" style={{ paddingLeft: '0.75rem' }}>
           <input
             type="text"
-            placeholder="Search folders, files, forms, e-signatures..."
+            placeholder="Search"
             value={searchTerm}
             onChange={(e) => {
               const newSearch = e.target.value;
