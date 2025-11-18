@@ -177,8 +177,8 @@ select:focus-visible {
   flex-shrink: 0;
 }
 
-.user-email {
-  color: #ffffff;
+.navbar-user-section .user-email {
+  color: #ffffff !important;
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -438,8 +438,9 @@ nav .nav-tabs li {
     font-size: 0.875rem;
   }
 
-  .user-email {
+  .navbar-user-section .user-email {
     font-size: 0.875rem;
+    color: #ffffff !important;
   }
 
   .user-role {
