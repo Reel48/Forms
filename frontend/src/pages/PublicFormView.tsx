@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { getLogoForDarkBackground } from '../utils/logoUtils';
 
 function PublicFormView() {
   const { slug } = useParams<{ slug: string }>();
@@ -2685,6 +2686,32 @@ function PublicFormView() {
             <p>{error}</p>
           </motion.div>
         )}
+      </div>
+
+      {/* Light Logo at Bottom - Always shown on all forms */}
+      <div style={{ 
+        position: 'fixed', 
+        bottom: '1.5rem', 
+        left: '50%', 
+        transform: 'translateX(-50%)', 
+        zIndex: 100,
+        maxHeight: '40px',
+        maxWidth: '150px'
+      }}>
+        <img 
+          src={getLogoForDarkBackground()} 
+          alt="Company Logo" 
+          style={{ 
+            maxHeight: '100%', 
+            maxWidth: '100%', 
+            objectFit: 'contain',
+            opacity: 0.9
+          }} 
+          onError={(e) => {
+            // Hide logo if image fails to load
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
       </div>
     </div>
   );
