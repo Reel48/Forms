@@ -107,7 +107,7 @@ function Navigation() {
       {/* Row 1: Logo, Search, User Info */}
       <div className="navbar-top-row">
         {/* Company Logo */}
-        <div className="navbar-logo">
+        <div className="navbar-logo" style={{ paddingLeft: '1.5rem' }}>
           <Link to={isAdmin ? "/" : "/dashboard"} style={{ display: 'flex', alignItems: 'center' }}>
             <img 
               src="/logo-placeholder.png" 
@@ -133,7 +133,7 @@ function Navigation() {
         </div>
 
         {/* Search Bar */}
-        <div className="navbar-search">
+        <div className="navbar-search" style={{ paddingLeft: '1.5rem' }}>
           <input
             type="text"
             placeholder="Search folders, files, forms, e-signatures..."
@@ -191,7 +191,7 @@ function Navigation() {
 
         {/* User Info */}
         {user && (
-          <div className="navbar-user-section">
+          <div className="navbar-user-section" style={{ paddingRight: '1.5rem' }}>
             <span 
               className="user-email" 
               title={user.email}
@@ -211,7 +211,7 @@ function Navigation() {
       </div>
 
       {/* Row 2: Navigation Links */}
-      <div className="navbar-bottom-row">
+      <div className="navbar-bottom-row" style={{ paddingLeft: '1.5rem' }}>
         {isAdmin ? (
           <ul className="nav-tabs" role="menubar">
             <li>

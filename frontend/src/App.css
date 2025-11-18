@@ -130,7 +130,7 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 0;
   background: #292c2f;
   border-bottom: 1px solid #3a3d41;
   min-height: 70px;
@@ -207,7 +207,7 @@ select:focus-visible {
 /* Row 2: Navigation Links */
 .navbar-bottom-row {
   background: white;
-  padding: 0 1.5rem;
+  padding: 0;
   min-height: 50px;
   display: flex;
   align-items: center;
@@ -386,7 +386,7 @@ nav .nav-tabs li {
   }
 
   .navbar-bottom-row {
-    padding: 0 1rem;
+    padding: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
