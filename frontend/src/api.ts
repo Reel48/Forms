@@ -108,6 +108,7 @@ export interface Client {
   phone?: string;
   address?: string;  // Keep for backward compatibility
   notes?: string;
+  profile_picture_url?: string;
   created_at: string;
   stripe_customer_id?: string;
   user_id?: string;
