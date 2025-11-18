@@ -2014,8 +2014,12 @@ function PublicFormView() {
         
         return (
           <div key={fieldId} className="form-group component-color-selector" style={{ marginTop: 0, paddingTop: 0 }}>
-            {mediaElement}
-            <label htmlFor={fieldId} style={{ marginBottom: '0.75rem', marginTop: 0 }}>
+            {mediaElement && (
+              <div style={{ marginBottom: '1rem' }}>
+                {mediaElement}
+              </div>
+            )}
+            <label htmlFor={fieldId} style={{ marginBottom: '0.75rem', marginTop: 0, display: 'block' }}>
               {field.label}
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
