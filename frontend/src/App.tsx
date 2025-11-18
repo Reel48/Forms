@@ -146,7 +146,7 @@ function Navigation() {
                 }
               }}
               style={{
-                height: '45px',
+                height: '32px',
                 width: 'auto',
                 objectFit: 'contain'
               }}
@@ -170,10 +170,10 @@ function Navigation() {
             }}
             style={{
               width: '100%',
-              padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+              padding: '0.375rem 2rem 0.375rem 0.625rem',
               border: '1px solid rgba(255, 255, 255, 0.3)',
               borderRadius: '0.375rem',
-              fontSize: '0.875rem',
+              fontSize: '0.75rem',
               outline: 'none',
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               color: '#ffffff',
