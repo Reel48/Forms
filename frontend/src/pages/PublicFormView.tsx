@@ -2092,7 +2092,7 @@ function PublicFormView() {
 
   // Apply theme
   const theme = form?.theme || {};
-  const primaryColor = theme.primaryColor || '#667eea';
+  const primaryColor = theme.primaryColor || 'var(--color-primary)';
   const secondaryColor = theme.secondaryColor || '#764ba2';
   const fontFamily = theme.fontFamily || 'Inter, system-ui, sans-serif';
   const logoUrl = theme.logoUrl || '';
@@ -2296,7 +2296,7 @@ function PublicFormView() {
                     fontSize: '1rem',
                     fontWeight: '600',
                     color: 'white',
-                    backgroundColor: '#2563eb',
+                    backgroundColor: 'var(--color-primary)',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
