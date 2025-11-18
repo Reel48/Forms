@@ -2007,10 +2007,10 @@ function PublicFormView() {
         const customPantone = currentValue.pantone_code || '';
         const customLabel = currentValue.label || '';
         
-        // Determine if we have a selected color (show preview if hex or pantone is entered)
-        const hasSelectedColor = customHex || customPantone;
+        // Determine if we have a selected color (show preview only if hex is entered)
+        const hasSelectedColor = customHex;
         const displayHex = customHex || '#000000';
-        const isValidHex = customHex ? /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customHex) : true; // Only validate if hex is provided
+        const isValidHex = true; // No validation - allow any input
         
         return (
           <div key={fieldId} className="form-group component-color-selector" style={{ marginTop: 0, paddingTop: 0 }}>
@@ -2029,78 +2029,40 @@ function PublicFormView() {
               </p>
             )}
             
-            {/* COLOR PREVIEW - Prominently displayed when hex or pantone is entered */}
-            {hasSelectedColor && (
+            {/* COLOR PREVIEW - Only displayed when hex color is entered */}
+            {hasSelectedColor && displayHex !== '#000000' && (
               <div className="color-preview" style={{
                 marginBottom: '2rem',
                 padding: '1.5rem',
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 borderRadius: '12px',
-                border: `2px solid ${isValidHex && displayHex !== '#000000' ? displayHex : '#6b7280'}`,
-                boxShadow: `0 4px 12px ${isValidHex && displayHex !== '#000000' ? displayHex : '#6b7280'}40`,
+                border: `2px solid ${displayHex}`,
+                boxShadow: `0 4px 12px ${displayHex}40`,
                 display: 'flex',
                 gap: '1.5rem',
                 alignItems: 'center',
               }}>
-                {/* Only show color swatch if we have a valid hex */}
-                {isValidHex && displayHex !== '#000000' && (
-                  <div 
-                    className="color-preview-swatch"
-                    style={{
-                      width: '120px',
-                      height: '120px',
-                      borderRadius: '12px',
-                      backgroundColor: displayHex,
-                      border: '3px solid #ffffff',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                {/* Show placeholder if only Pantone is provided */}
-                {(!isValidHex || displayHex === '#000000') && customPantone && (
-                  <div 
-                    className="color-preview-swatch"
-                    style={{
-                      width: '120px',
-                      height: '120px',
-                      borderRadius: '12px',
-                      backgroundColor: '#f3f4f6',
-                      border: '3px solid #d1d5db',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      color: '#6b7280',
-                      textAlign: 'center',
-                      padding: '0.5rem',
-                    }}
-                  >
-                    Pantone Only
-                  </div>
-                )}
+                <div 
+                  className="color-preview-swatch"
+                  style={{
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '12px',
+                    backgroundColor: displayHex,
+                    border: '3px solid #ffffff',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    flexShrink: 0,
+                  }}
+                />
                 <div className="color-preview-info" style={{ flex: 1 }}>
                   {customLabel && (
                     <div className="color-preview-name" style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem', color: '#111827' }}>
                       {customLabel}
                     </div>
                   )}
-                  {/* Prioritize Pantone display */}
-                  {customPantone && (
-                    <div className="color-preview-pantone" style={{ fontSize: '1rem', fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
-                      {customPantone}
-                    </div>
-                  )}
-                  {customHex && isValidHex && (
-                    <div className="color-preview-hex" style={{ fontSize: '0.875rem', fontFamily: 'monospace', color: '#6b7280' }}>
-                      {customHex}
-                    </div>
-                  )}
-                  {!customPantone && !customHex && displayHex && displayHex !== '#000000' && (
+                  {customHex && (
                     <div className="color-preview-hex" style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#111827', marginBottom: '0.25rem' }}>
-                      {displayHex}
+                      {customHex}
                     </div>
                   )}
                 </div>
