@@ -51,7 +51,7 @@ function Navigation() {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [utilityBarColor, setUtilityBarColor] = useState('#3b82f6');
+  const [utilityBarColor, setUtilityBarColor] = useState('#00D0FF');
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -163,14 +163,13 @@ function Navigation() {
                       onChange={(e) => handleColorChange(e.target.value)}
                       className="color-select"
                     >
-                      <option value="#ffc700">Yellow (Default)</option>
-                      <option value="#3b82f6">Blue</option>
-                      <option value="#10b981">Green</option>
-                      <option value="#f59e0b">Orange</option>
-                      <option value="#ef4444">Red</option>
-                      <option value="#8b5cf6">Purple</option>
-                      <option value="#06b6d4">Cyan</option>
-                      <option value="#ec4899">Pink</option>
+                      <option value="#00D0FF">Electric Blue</option>
+                      <option value="#FF4B6F">Infrared Red</option>
+                      <option value="#20E8A8">Vibrant Green</option>
+                      <option value="#FF9900">Safety Orange</option>
+                      <option value="#FFE042">Energy Yellow</option>
+                      <option value="#B788FF">Deep Lavender</option>
+                      <option value="#FF66CC">Hot Pink</option>
                     </select>
                   </div>
                 </div>
