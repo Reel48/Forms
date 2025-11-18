@@ -131,6 +131,24 @@ select:focus-visible {
   padding: 0;
 }
 
+/* Row 0: Global Utility Bar - Role Badge */
+.navbar-utility-bar {
+  background-color: #ffc700;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.utility-bar-content {
+  padding-left: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
 /* Row 1: Top Bar (Search, Logo, User Info) */
 .navbar-top-row {
   display: flex;
@@ -185,13 +203,14 @@ select:focus-visible {
 
 .user-role-badge {
   display: inline-block;
-  padding: 0.25rem 0.5rem;
-  background-color: #eff6ff;
-  color: #2563eb;
+  padding: 0.375rem 0.75rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #1f2937;
   border-radius: 0.375rem;
   font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .logout-button {

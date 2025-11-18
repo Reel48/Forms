@@ -104,6 +104,13 @@ function Navigation() {
     <nav role="navigation" aria-label="Main navigation" className="navbar-two-row">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       
+      {/* Row 0: Global Utility Bar - Role Badge */}
+      <div className="navbar-utility-bar">
+        <div className="utility-bar-content">
+          <span className="user-role-badge">{role}</span>
+        </div>
+      </div>
+      
       {/* Row 1: Logo, Search, User Info */}
       <div className="navbar-top-row">
         {/* Company Logo */}
@@ -204,7 +211,6 @@ function Navigation() {
             >
               {user.email}
             </span>
-            <span className="user-role-badge">{role}</span>
             <button onClick={handleLogout} className="logout-button">Logout</button>
           </div>
         )}
