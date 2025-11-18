@@ -983,7 +983,7 @@ function QuoteView() {
                                   marginLeft: '0.5rem',
                                   padding: '0.125rem 0.5rem',
                                   fontSize: '0.75rem',
-                                  backgroundColor: '#dbeafe',
+                                  backgroundColor: 'var(--color-primary-light)',
                                   color: 'var(--color-primary)',
                                   borderRadius: '0.25rem'
                                 }}>
