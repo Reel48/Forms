@@ -493,3 +493,135 @@ async def update_conversation_status(
         logger.error(f"Error updating conversation status: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to update conversation status: {str(e)}")
 
+@router.post("/conversations/{conversation_id}/ai-response", response_model=ChatMessage)
+async def generate_ai_response(
+    conversation_id: str,
+    user = Depends(get_current_user)
+):
+    """
+    Generate AI response for a conversation.
+    This endpoint can be called after a customer sends a message to get an AI response.
+    """
+    try:
+        # Verify conversation exists and user has access
+        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
+        if not conv_response.data:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        conv = conv_response.data
+        is_admin = user.get("role") == "admin"
+        
+        # Check access
+        if not is_admin and conv["customer_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Only generate AI responses for customer conversations (not admin-to-admin)
+        if is_admin and conv["customer_id"] == user["id"]:
+            raise HTTPException(status_code=400, detail="AI responses are only available for customer conversations")
+        
+        # Get recent messages for context
+        messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(10).execute()
+        messages = messages_response.data if messages_response.data else []
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No messages found in conversation")
+        
+        # Get the most recent user message (not from AI)
+        latest_message = None
+        for msg in messages:
+            if msg.get("sender_id") != "ai-assistant" and msg.get("message"):
+                latest_message = msg
+                break
+        
+        if not latest_message:
+            raise HTTPException(status_code=400, detail="No user message found to respond to")
+        
+        user_query = latest_message.get("message", "")
+        
+        # Format conversation history (excluding the current message we're responding to)
+        conversation_history = []
+        for msg in reversed(messages):
+            if msg.get("id") == latest_message.get("id"):
+                continue  # Skip the message we're responding to
+            
+            sender_id = msg.get("sender_id", "")
+            content = msg.get("message", "")
+            
+            if content and sender_id:
+                # Determine role: "user" for customer/admin, "model" for AI
+                if sender_id == "ai-assistant":
+                    role = "model"
+                else:
+                    role = "user"
+                
+                conversation_history.append({
+                    "role": role,
+                    "content": content
+                })
+        
+        # Retrieve relevant context using RAG
+        rag_service = get_rag_service()
+        customer_id = conv.get("customer_id") if not is_admin else None
+        context = rag_service.retrieve_context(user_query, customer_id=customer_id)
+        
+        # Get customer-specific context
+        customer_context = None
+        if customer_id:
+            try:
+                client_response = supabase_storage.table("clients").select("name, company").eq("user_id", customer_id).single().execute()
+                if client_response.data:
+                    customer_context = {
+                        "company": client_response.data.get("company"),
+                        "name": client_response.data.get("name")
+                    }
+            except Exception as e:
+                logger.warning(f"Error getting customer context: {str(e)}")
+        
+        # Generate AI response
+        try:
+            ai_service = get_ai_service()
+            ai_response = ai_service.generate_response(
+                user_message=user_query,
+                conversation_history=conversation_history,
+                context=context,
+                customer_context=customer_context
+            )
+        except ValueError as e:
+            # AI service not configured
+            logger.error(f"AI service not available: {str(e)}")
+            raise HTTPException(status_code=503, detail="AI service is not configured. Please set GEMINI_API_KEY environment variable.")
+        except Exception as e:
+            logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
+        
+        # Create AI message in the conversation
+        ai_message_data = {
+            "id": str(uuid.uuid4()),
+            "conversation_id": conversation_id,
+            "sender_id": "ai-assistant",  # Special ID for AI messages
+            "message": ai_response,
+            "message_type": "text",
+            "created_at": datetime.now().isoformat()
+        }
+        
+        message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
+        if not message_response.data:
+            raise HTTPException(status_code=500, detail="Failed to save AI response")
+        
+        # Update conversation timestamp
+        try:
+            supabase_storage.table("chat_conversations").update({
+                "last_message_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }).eq("id", conversation_id).execute()
+        except Exception as e:
+            logger.warning(f"Failed to update conversation timestamp: {str(e)}")
+        
+        return message_response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
+
