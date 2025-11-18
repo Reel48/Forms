@@ -2004,7 +2004,6 @@ function PublicFormView() {
         // Determine if we have a selected color (show preview only if hex is entered)
         const hasSelectedColor = customHex;
         const displayHex = customHex || '#000000';
-        const isValidHex = true; // No validation - allow any input
         
         return (
           <div key={fieldId} className="form-group component-color-selector" style={{ marginTop: 0, paddingTop: 0 }}>
