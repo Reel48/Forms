@@ -17,6 +17,8 @@ const ChatPage: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -352,6 +354,34 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const updateConversationStatus = async (conversationId: string, newStatus: 'active' | 'resolved' | 'archived') => {
+    try {
+      setUpdatingStatus(true);
+      await chatAPI.updateConversationStatus(conversationId, newStatus);
+      // Update conversation in state
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === conversationId ? { ...conv, status: newStatus } : conv
+        )
+      );
+      // Update selected conversation if it's the one being updated
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation({ ...selectedConversation, status: newStatus });
+      }
+    } catch (error) {
+      console.error('Failed to update conversation status:', error);
+      alert('Failed to update conversation status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Filter conversations by status
+  const filteredConversations = conversations.filter((conv) => {
+    if (statusFilter === 'all') return true;
+    return conv.status === statusFilter;
+  });
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || sending) return;
 
@@ -429,12 +459,29 @@ const ChatPage: React.FC = () => {
       <div className="chat-sidebar">
         <div className="chat-sidebar-header">
           <h2>Conversations</h2>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              marginTop: '0.5rem',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              border: '1px solid var(--color-border)',
+              fontSize: '0.875rem',
+              width: '100%'
+            }}
+          >
+            <option value="all">All Conversations</option>
+            <option value="active">Active</option>
+            <option value="resolved">Resolved</option>
+            <option value="archived">Archived</option>
+          </select>
         </div>
         <div className="conversations-list">
-          {conversations.length === 0 ? (
-            <div className="empty-state">No conversations yet</div>
+          {filteredConversations.length === 0 ? (
+            <div className="empty-state">No conversations found</div>
           ) : (
-            conversations.map((conv) => (
+            filteredConversations.map((conv) => (
               <div
                 key={conv.id}
                 className={`conversation-item ${selectedConversation?.id === conv.id ? 'active' : ''}`}
@@ -444,9 +491,31 @@ const ChatPage: React.FC = () => {
                   <div className="conversation-name">
                     {conv.customer_name || conv.customer_email || 'Unknown Customer'}
                   </div>
-                  {conv.unread_count && conv.unread_count > 0 && (
-                    <span className="unread-badge">{conv.unread_count}</span>
-                  )}
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {conv.status && conv.status !== 'active' && (
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          backgroundColor:
+                            conv.status === 'resolved'
+                              ? 'var(--color-success-light)'
+                              : 'var(--color-gray-light)',
+                          color:
+                            conv.status === 'resolved'
+                              ? 'var(--color-success)'
+                              : 'var(--color-gray)',
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {conv.status}
+                      </span>
+                    )}
+                    {conv.unread_count && conv.unread_count > 0 && (
+                      <span className="unread-badge">{conv.unread_count}</span>
+                    )}
+                  </div>
                 </div>
                 {conv.last_message && (
                   <div className="conversation-preview">
@@ -475,7 +544,48 @@ const ChatPage: React.FC = () => {
             <div className="chat-header">
               <div>
                 <h3>{selectedConversation.customer_name || selectedConversation.customer_email || 'Customer'}</h3>
-                <span className="chat-status">Active</span>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                  <span
+                    className="chat-status"
+                    style={{
+                      backgroundColor:
+                        selectedConversation.status === 'active'
+                          ? 'var(--color-primary-light)'
+                          : selectedConversation.status === 'resolved'
+                          ? 'var(--color-success-light)'
+                          : 'var(--color-gray-light)',
+                      color:
+                        selectedConversation.status === 'active'
+                          ? 'var(--color-primary)'
+                          : selectedConversation.status === 'resolved'
+                          ? 'var(--color-success)'
+                          : 'var(--color-gray)',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {selectedConversation.status || 'active'}
+                  </span>
+                  <select
+                    value={selectedConversation.status || 'active'}
+                    onChange={(e) => {
+                      const newStatus = e.target.value as 'active' | 'resolved' | 'archived';
+                      updateConversationStatus(selectedConversation.id, newStatus);
+                    }}
+                    disabled={updatingStatus}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--brand-white)',
+                      cursor: updatingStatus ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <option value="active">Active</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
               </div>
             </div>
 

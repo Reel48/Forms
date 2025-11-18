@@ -411,3 +411,42 @@ async def upload_file(
         logger.error(f"Error uploading file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
+@router.patch("/conversations/{conversation_id}/status")
+async def update_conversation_status(
+    conversation_id: str,
+    status: str = Query(..., description="New status: active, resolved, or archived"),
+    user = Depends(get_current_user)
+):
+    """Update conversation status. Only admins can update status."""
+    try:
+        # Only admins can update conversation status
+        is_admin = user.get("role") == "admin"
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Only admins can update conversation status")
+        
+        # Validate status
+        valid_statuses = ["active", "resolved", "archived"]
+        if status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        
+        # Verify conversation exists
+        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
+        if not conv_response.data:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        # Update status
+        update_response = supabase_storage.table("chat_conversations").update({
+            "status": status,
+            "updated_at": datetime.now().isoformat()
+        }).eq("id", conversation_id).execute()
+        
+        if not update_response.data:
+            raise HTTPException(status_code=500, detail="Failed to update conversation status")
+        
+        return {"message": f"Conversation status updated to {status}", "status": status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating conversation status: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update conversation status: {str(e)}")
+

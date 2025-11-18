@@ -790,6 +790,9 @@ export const chatAPI = {
       },
     });
   },
+  updateConversationStatus: (conversationId: string, status: 'active' | 'resolved' | 'archived') => {
+    return api.patch<{ message: string; status: string }>(`/api/chat/conversations/${conversationId}/status?status=${status}`);
+  },
 };
 
 export const authAPI = {
