@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import ChatMessage, ChatMessageCreate, ChatConversation
 from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
+from ai_service import get_ai_service
+from rag_service import get_rag_service
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -291,6 +293,18 @@ async def send_message(message: ChatMessageCreate, user = Depends(get_current_us
         except Exception as e:
             logger.warning(f"Failed to update last_message_at for conversation {conversation_id}: {str(e)}")
             # Don't fail the request if this update fails - trigger should handle it
+        
+        # Generate AI response if enabled (for customer messages)
+        # Only respond to customer messages, not admin messages
+        if not is_admin and message.message and len(message.message.strip()) > 0:
+            try:
+                # Generate AI response asynchronously (don't block the user's message)
+                # We'll create a background task or handle it separately
+                # For now, we'll add it as a separate endpoint that can be called
+                pass  # AI response generation will be handled by separate endpoint
+            except Exception as e:
+                logger.warning(f"Failed to generate AI response: {str(e)}")
+                # Don't fail the message send if AI fails
         
         return message_response.data[0]
     except HTTPException:
