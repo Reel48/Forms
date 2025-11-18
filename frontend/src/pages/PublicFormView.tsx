@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
@@ -8,7 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 function PublicFormView() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth(); // Get authenticated user if available
+  const navigate = useNavigate();
+  const { user, role } = useAuth(); // Get authenticated user if available
   const [form, setForm] = useState<Form | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -2024,9 +2025,19 @@ function PublicFormView() {
           <h1 style={{ color: '#22c55e', marginBottom: '1rem' }}>{thankYouMessage}</h1>
           <p className="text-muted" style={{ marginBottom: '2rem' }}>{thankYouDescription}</p>
           {redirectUrl && (
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
               Redirecting in 3 seconds...
             </p>
+          )}
+          {/* Back to Dashboard button for customers */}
+          {role === 'customer' && (
+            <button
+              onClick={() => navigate('/')}
+              className="btn-primary"
+              style={{ fontSize: '1rem', padding: '0.75rem 1.5rem', marginTop: '1rem' }}
+            >
+              Back to Dashboard
+            </button>
           )}
         </div>
       </div>
@@ -2274,6 +2285,30 @@ function PublicFormView() {
                 </div>
               );
             })}
+            
+            {/* Back to Dashboard button for customers */}
+            {role === 'customer' && (
+              <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                <button
+                  onClick={() => navigate('/')}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: 'white',
+                    backgroundColor: '#2563eb',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                >
+                  Back to Dashboard
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

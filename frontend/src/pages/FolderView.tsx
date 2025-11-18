@@ -496,7 +496,15 @@ const FolderView: React.FC = () => {
                     <tr
                       key={`form-${form.id}`}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/forms/${form.id}`)}
+                      onClick={(e) => {
+                        // For customers, open in new tab; for admins, navigate in same tab
+                        if (role === 'customer') {
+                          e.preventDefault();
+                          window.open(`/forms/${form.id}`, '_blank');
+                        } else {
+                          navigate(`/forms/${form.id}`);
+                        }
+                      }}
                     >
                       <td onClick={(e) => e.stopPropagation()}>
                         <div
