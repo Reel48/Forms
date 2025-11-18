@@ -149,12 +149,23 @@ function Navigation() {
             style={{
               width: '100%',
               padding: '0.5rem 2.5rem 0.5rem 0.75rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
               outline: 'none',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
             }}
           />
+          <style>{`
+            .navbar-search input::placeholder {
+              color: rgba(255, 255, 255, 0.6);
+            }
+            .navbar-search input:focus {
+              border-color: rgba(255, 255, 255, 0.5);
+              background-color: rgba(255, 255, 255, 0.15);
+            }
+          `}</style>
           {searchTerm && (
             <button
               onClick={() => setSearchParams({})}
@@ -166,7 +177,7 @@ function Navigation() {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: '#666',
+                color: 'rgba(255, 255, 255, 0.7)',
                 padding: '0.25rem',
                 display: 'flex',
                 alignItems: 'center',
