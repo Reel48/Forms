@@ -170,7 +170,7 @@ function FilesList() {
             <tbody>
               {filteredFiles.map((file) => (
                 <tr key={file.id} style={{ cursor: 'pointer' }} onClick={() => handleView(file)}>
-                  <td>
+                  <td className="mobile-name-column">
                     <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
                   </td>
                   <td>

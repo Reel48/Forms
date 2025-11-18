@@ -403,7 +403,7 @@ const FolderView: React.FC = () => {
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/files/${file.id}`)}
                     >
-                      <td>
+                      <td className="mobile-name-column">
                         <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
                       </td>
                       <td>
@@ -539,7 +539,7 @@ const FolderView: React.FC = () => {
                           Form
                         </span>
                       </td>
-                      <td>
+                      <td className="mobile-name-column">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{form.name}</strong>
                           {form.is_template && (
@@ -624,7 +624,7 @@ const FolderView: React.FC = () => {
                           E-Signature
                         </span>
                       </td>
-                      <td>
+                      <td className="mobile-name-column">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{esig.name}</strong>
                           {esig.is_template && (

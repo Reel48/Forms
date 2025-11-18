@@ -267,7 +267,7 @@ function ClientsList() {
             <tbody>
               {clients.map((client) => (
                 <tr key={client.id}>
-                  <td>{client.name}</td>
+                  <td className="mobile-name-column">{client.name}</td>
                   <td>{client.company || '-'}</td>
                   <td>{client.email || '-'}</td>
                   <td>{client.phone || '-'}</td>

@@ -1297,7 +1297,7 @@ function QuotesList() {
                             )}
                             {visibleColumns.quoteNumber && <td>{quote.quote_number}</td>}
                             {visibleColumns.title && (
-                              <td>
+                              <td className="mobile-name-column">
                                 <Link to={`/quotes/${quote.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
                                   {quote.title}
                                 </Link>

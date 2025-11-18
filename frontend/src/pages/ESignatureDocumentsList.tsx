@@ -158,7 +158,7 @@ const ESignatureDocumentsList: React.FC = () => {
                   style={{ cursor: 'pointer' }}
                   onClick={() => navigate(`/esignature/${doc.id}`)}
                 >
-                  <td>
+                  <td className="mobile-name-column">
                     <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{doc.name}</strong>
                     {doc.description && (
                       <div className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>

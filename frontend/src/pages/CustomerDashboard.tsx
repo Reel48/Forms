@@ -373,7 +373,7 @@ function CustomerDashboard() {
                       {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
                     </span>
                   </td>
-                  <td>
+                  <td className="mobile-name-column">
                     <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
                   </td>
                   <td>
@@ -520,7 +520,7 @@ function CustomerDashboard() {
                           {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
                         </span>
                       </td>
-                      <td>
+                      <td className="mobile-name-column">
                         <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
                       </td>
                       <td>
@@ -613,7 +613,7 @@ function CustomerDashboard() {
                           {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
                         </span>
                       </td>
-                      <td>
+                      <td className="mobile-name-column">
                         <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
                       </td>
                       <td>
@@ -706,7 +706,7 @@ function CustomerDashboard() {
                           {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
                         </span>
                       </td>
-                      <td>
+                      <td className="mobile-name-column">
                         <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
                       </td>
                       <td>

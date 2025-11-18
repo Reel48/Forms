@@ -563,7 +563,7 @@ function FormsList() {
                       />
                     </td>
                   )}
-                  <td>
+                  <td className="mobile-name-column">
                     <Link to={`/forms/${form.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '500' }}>
                       {form.name || 'Untitled Form'}
                     </Link>

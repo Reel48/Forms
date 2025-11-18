@@ -1372,3 +1372,66 @@ table tbody tr:hover {
     transform: none;
   }
 }
+
+/* Mobile Table Optimization - Show only name/title column on mobile */
+@media (max-width: 768px) {
+  /* Convert tables to card/list view on mobile */
+  table {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    display: block;
+  }
+  
+  /* Hide all table headers on mobile */
+  table thead {
+    display: none;
+  }
+  
+  /* Convert table body to block */
+  table tbody {
+    display: block;
+  }
+  
+  /* Convert table rows to block-level cards */
+  table tbody tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--brand-white);
+    box-shadow: var(--shadow-sm);
+    padding: 0;
+  }
+  
+  /* Convert all table cells to block elements and hide by default */
+  table tbody td {
+    display: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+  }
+  
+  /* Show only the name/title column using the mobile-name-column class */
+  table tbody td.mobile-name-column {
+    display: block !important;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  /* Style the name/title content */
+  table tbody td.mobile-name-column strong,
+  table tbody td.mobile-name-column a {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    display: block;
+  }
+  
+  /* Ensure links are clickable */
+  table tbody td.mobile-name-column a {
+    text-decoration: none;
+  }
+}
