@@ -2194,6 +2194,92 @@ function PublicFormView() {
     );
   }
 
+  // Show previous submission view if available
+  if (viewMode === 'view' && previousSubmission && !loadingPreviousSubmission) {
+    return (
+      <div className="typeform-container" style={containerStyle}>
+        <div className="typeform-content" style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
+          <div style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+            borderRadius: '12px', 
+            padding: '2rem',
+            marginBottom: '2rem',
+            border: '2px solid #10b981'
+          }}>
+            <h2 style={{ marginTop: 0, color: '#10b981', fontSize: '1.5rem', fontWeight: '600' }}>
+              ✓ Form Already Submitted
+            </h2>
+            <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+              You have already submitted this form. Below are your previous answers.
+            </p>
+            {previousSubmission.submitted_at && (
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem', margin: 0 }}>
+                Submitted on: {new Date(previousSubmission.submitted_at).toLocaleString()}
+              </p>
+            )}
+          </div>
+          
+          <div style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+            borderRadius: '12px', 
+            padding: '2rem'
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600' }}>
+              Your Answers
+            </h3>
+            {form?.fields && form.fields.map((field) => {
+              const answer = previousSubmission.answers?.find((a: any) => a.field_id === field.id);
+              if (!answer || field.field_type === 'section') return null;
+              
+              let displayValue = answer.answer_value || 'No answer provided';
+              try {
+                const parsed = JSON.parse(displayValue);
+                if (Array.isArray(parsed)) {
+                  displayValue = parsed.join(', ');
+                } else if (typeof parsed === 'object') {
+                  displayValue = JSON.stringify(parsed);
+                } else {
+                  displayValue = parsed;
+                }
+              } catch {
+                // Not JSON, use as-is
+              }
+              
+              return (
+                <div key={field.id} style={{ 
+                  marginBottom: '1.5rem', 
+                  paddingBottom: '1.5rem',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '600', 
+                    color: '#374151',
+                    fontSize: '1rem'
+                  }}>
+                    {field.label}
+                    {field.required && <span style={{ color: '#ef4444' }}> *</span>}
+                  </label>
+                  <div style={{ 
+                    padding: '0.75rem', 
+                    backgroundColor: '#f9fafb', 
+                    borderRadius: '6px',
+                    color: '#1f2937',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
+                  }}>
+                    {displayValue}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="typeform-container" style={containerStyle}>
       {/* Logo */}
