@@ -6,6 +6,7 @@ import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import { NotificationProvider } from './components/NotificationSystem';
 import { FaTimes, FaBars } from 'react-icons/fa';
 import { getLogoForDarkBackground } from './utils/logoUtils';
+import { clientsAPI } from './api';
 import './App.css';
 
 // Lazy load components for better performance
@@ -52,6 +53,8 @@ function Navigation() {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -86,6 +89,24 @@ function Navigation() {
 
   // Check if any settings-related page is active
   const isSettingsSectionActive = isSettingsActive || isClientsActive || isEmailTemplatesActive || isAnalyticsActive;
+
+  // Load profile picture for mobile navbar
+  useEffect(() => {
+    const loadProfilePicture = async () => {
+      if (user) {
+        try {
+          const response = await clientsAPI.getMyProfile();
+          if (response.data) {
+            setProfilePictureUrl(response.data.profile_picture_url || null);
+            setClientName(response.data.name || null);
+          }
+        } catch (error) {
+          console.error('Failed to load profile picture:', error);
+        }
+      }
+    };
+    loadProfilePicture();
+  }, [user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -245,9 +266,10 @@ function Navigation() {
         {/* User Info */}
         {user && (
           <div className="navbar-user-section" style={{ paddingRight: '1.5rem' }}>
+            {/* Desktop: Show email */}
             <Link
               to="/profile"
-              className="user-email"
+              className="user-email desktop-only"
               title={user.email}
               style={{
                 maxWidth: '200px',
@@ -266,6 +288,49 @@ function Navigation() {
               }}
             >
               {user.email}
+            </Link>
+            {/* Mobile: Show profile picture avatar */}
+            <Link
+              to="/profile"
+              className="user-avatar mobile-only"
+              title={user.email}
+              style={{
+                display: 'none', // Hidden by default, shown via CSS on mobile
+                textDecoration: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {profilePictureUrl ? (
+                <img
+                  src={profilePictureUrl}
+                  alt="Profile"
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid rgba(255, 255, 255, 0.3)'
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1rem',
+                    color: '#ffffff',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {clientName ? clientName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
             </Link>
           </div>
         )}

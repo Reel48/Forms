@@ -303,13 +303,14 @@ function CustomerDashboard() {
       {/* Customer Header */}
       {customerProfile && (
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ 
-            fontSize: '2.5rem', 
-            fontWeight: '700', 
+          <h1 style={{
+            fontSize: '2.5rem',
+            fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
             margin: '0 0 0.5rem 0',
-            color: 'var(--color-text-primary)'
+            color: 'var(--color-text-primary)',
+            fontFamily: '"Rubik", sans-serif'
           }}>
             {customerProfile.company || 'Company Name'}
           </h1>

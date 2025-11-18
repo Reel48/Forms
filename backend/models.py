@@ -48,6 +48,7 @@ class ClientBase(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None  # Keep for backward compatibility
     notes: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     # Structured address fields
     address_line1: Optional[str] = None
     address_line2: Optional[str] = None

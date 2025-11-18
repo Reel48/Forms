@@ -10,6 +10,8 @@ function Profile() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -51,6 +53,7 @@ function Profile() {
           address_postal_code: client.address_postal_code || '',
           address_country: client.address_country || 'US',
         });
+        setProfilePictureUrl(client.profile_picture_url || null);
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -88,6 +91,40 @@ function Profile() {
       alert(errorMessage);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingPicture(true);
+      const response = await clientsAPI.uploadProfilePicture(file);
+      if (response.data?.profile_picture_url) {
+        setProfilePictureUrl(response.data.profile_picture_url);
+        alert('Profile picture uploaded successfully!');
+      }
+    } catch (error: any) {
+      console.error('Failed to upload profile picture:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to upload profile picture. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setUploadingPicture(false);
+      // Reset input
+      e.target.value = '';
     }
   };
 
@@ -147,6 +184,73 @@ function Profile() {
             <p className="text-muted" style={{ marginBottom: '2rem' }}>
               Update your profile information. This information will be used for quotes and invoices.
             </p>
+
+            {/* Profile Picture Section */}
+            <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                {profilePictureUrl ? (
+                  <img
+                    src={profilePictureUrl}
+                    alt="Profile"
+                    style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '3px solid var(--color-border)',
+                      boxShadow: 'var(--shadow-md)'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-bg-secondary)',
+                      border: '3px solid var(--color-border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '3rem',
+                      color: 'var(--color-text-muted)',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {formData.name ? formData.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <label
+                  htmlFor="profile-picture-upload"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'white',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: uploadingPicture ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    opacity: uploadingPicture ? 0.6 : 1,
+                    pointerEvents: uploadingPicture ? 'none' : 'auto'
+                  }}
+                >
+                  {uploadingPicture ? 'Uploading...' : profilePictureUrl ? 'Change Picture' : 'Upload Picture'}
+                </label>
+                <input
+                  type="file"
+                  id="profile-picture-upload"
+                  accept="image/*"
+                  onChange={handleProfilePictureUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploadingPicture}
+                />
+                <p className="text-muted" style={{ fontSize: '0.75rem', margin: 0 }}>
+                  Max size: 5MB. JPG, PNG, or GIF.
+                </p>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit}>
           <div className="form-row">

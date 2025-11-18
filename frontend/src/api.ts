@@ -379,6 +379,15 @@ export const clientsAPI = {
   delete: (id: string) => api.delete(`/api/clients/${id}`),
   getMyProfile: () => api.get<Client>('/api/clients/profile/me'),
   updateMyProfile: (client: Partial<Client>) => api.put<Client>('/api/clients/profile/me', client),
+  uploadProfilePicture: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<Client>('/api/clients/profile/me/picture', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
 
 // Company Settings API

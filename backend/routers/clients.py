@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile
+from typing import List, Dict, Any, Optional
 import sys
 import os
+import uuid
+import hashlib
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Client, ClientCreate
 from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
@@ -341,6 +343,121 @@ async def update_my_profile(
         update_response = supabase_storage.table("clients").update(client_data).eq("id", client_id).execute()
         if not update_response.data:
             raise HTTPException(status_code=404, detail="Client profile not found after update")
+        
+        # Fetch the complete updated client
+        updated_response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
+        if not updated_response.data:
+            raise HTTPException(status_code=404, detail="Client profile not found after update")
+        return updated_response.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Profile picture size limit: 5MB
+MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024
+
+@router.post("/profile/me/picture", response_model=Client)
+async def upload_profile_picture(
+    file: UploadFile = FastAPIFile(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload a profile picture for the current user"""
+    try:
+        user_id = current_user.get("id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+        
+        # Find client record for this user
+        response = supabase_storage.table("clients").select("*").eq("user_id", user_id).execute()
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Client profile not found")
+        
+        client_id = response.data[0]["id"]
+        existing_client = response.data[0]
+        
+        # Validate file type (only images)
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Validate file size
+        file_content = await file.read()
+        if len(file_content) > MAX_PROFILE_PICTURE_SIZE:
+            raise HTTPException(status_code=400, detail=f"File size exceeds {MAX_PROFILE_PICTURE_SIZE / (1024*1024)}MB limit")
+        
+        # Generate unique filename
+        file_hash = hashlib.md5(file_content).hexdigest()[:8]
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+        file_id = str(uuid.uuid4())
+        unique_filename = f"profile-pictures/{user_id}/{file_id}_{file_hash}.{file_extension}"
+        
+        # Delete old profile picture if it exists
+        old_picture_url = existing_client.get("profile_picture_url")
+        if old_picture_url:
+            try:
+                # Extract path from URL if it's a full URL
+                old_path = old_picture_url
+                if "/storage/v1/object/public/" in old_picture_url:
+                    old_path = old_picture_url.split("/storage/v1/object/public/profile-pictures/")[-1]
+                elif "profile-pictures/" in old_picture_url:
+                    old_path = old_picture_url.split("profile-pictures/")[-1]
+                
+                if old_path:
+                    full_old_path = f"profile-pictures/{old_path}" if not old_path.startswith("profile-pictures/") else old_path
+                    supabase_storage.storage.from_("profile-pictures").remove([full_old_path])
+            except Exception as e:
+                print(f"Warning: Could not delete old profile picture: {e}")
+        
+        # Upload to Supabase Storage (bucket: profile-pictures)
+        try:
+            upload_response = supabase_storage.storage.from_("profile-pictures").upload(
+                unique_filename,
+                file_content,
+                file_options={
+                    "content-type": file.content_type,
+                    "upsert": "false"
+                }
+            )
+            print(f"Profile picture uploaded successfully: {unique_filename}")
+        except Exception as storage_error:
+            error_msg = str(storage_error)
+            print(f"Storage upload error: {error_msg}")
+            if "bucket" in error_msg.lower() or "not found" in error_msg.lower():
+                raise HTTPException(
+                    status_code=500, 
+                    detail="Storage bucket 'profile-pictures' not configured. Please create it in Supabase Storage dashboard."
+                )
+            elif "permission" in error_msg.lower() or "policy" in error_msg.lower():
+                raise HTTPException(
+                    status_code=500,
+                    detail="Storage permissions not configured. Please check Supabase Storage policies for 'profile-pictures' bucket."
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to upload profile picture to storage: {error_msg}"
+                )
+        
+        # Get public URL
+        try:
+            public_url = supabase_storage.storage.from_("profile-pictures").get_public_url(unique_filename)
+        except Exception as url_error:
+            print(f"Warning: Could not get public URL: {str(url_error)}")
+            # Fallback: construct URL manually
+            public_url = f"{supabase_url}/storage/v1/object/public/profile-pictures/{unique_filename}"
+        
+        # Update client record with new profile picture URL
+        update_response = supabase_storage.table("clients").update({
+            "profile_picture_url": public_url
+        }).eq("id", client_id).execute()
+        
+        if not update_response.data:
+            # Try to delete uploaded file if database update fails
+            try:
+                supabase_storage.storage.from_("profile-pictures").remove([unique_filename])
+            except:
+                pass
+            raise HTTPException(status_code=500, detail="Failed to update profile picture URL")
         
         # Fetch the complete updated client
         updated_response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
