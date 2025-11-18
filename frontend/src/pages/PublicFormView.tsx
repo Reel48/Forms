@@ -2125,20 +2125,19 @@ function PublicFormView() {
                         });
                       }}
                       placeholder="#000000"
-                      pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
                       style={{
                         flex: 1,
                         padding: '0.75rem',
                         fontFamily: 'monospace',
                         fontSize: '0.875rem',
-                        border: `2px solid ${isValidHex ? '#d1d5db' : '#ef4444'}`,
+                        border: '2px solid #d1d5db',
                         borderRadius: '8px',
                         backgroundColor: '#ffffff',
                       }}
                     />
                     <input
                       type="color"
-                      value={isValidHex && customHex ? customHex : '#000000'}
+                      value={customHex || '#000000'}
                       onChange={(e) => {
                         handleFieldChange(fieldId, {
                           value: (customPantone || e.target.value) ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
@@ -2151,11 +2150,6 @@ function PublicFormView() {
                       style={{ width: '60px', height: '48px', cursor: 'pointer', border: 'none', borderRadius: '8px' }}
                     />
                   </div>
-                  {!isValidHex && customHex && (
-                    <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
-                      Invalid hex format (use #RRGGBB or #RGB)
-                    </p>
-                  )}
                 </div>
               </div>
               <div>
