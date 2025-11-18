@@ -871,7 +871,7 @@ function PublicFormView() {
               <p id={`${fieldId}-description`} className="sr-only">{field.description}</p>
             )}
             {error && (
-              <p id={`${fieldId}-error`} role="alert" style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+              <p id={`${fieldId}-error`} role="alert" style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
             )}
           </div>
         );
@@ -903,7 +903,7 @@ function PublicFormView() {
               style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
-              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+              <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
             )}
           </div>
         );
@@ -936,7 +936,7 @@ function PublicFormView() {
               style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
-              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+              <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
             )}
           </div>
         );
@@ -968,7 +968,7 @@ function PublicFormView() {
               style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
-              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+              <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
             )}
           </div>
         );
@@ -1001,7 +1001,7 @@ function PublicFormView() {
               style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
-              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+              <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
             )}
           </div>
         );
@@ -1034,7 +1034,7 @@ function PublicFormView() {
               style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
-              <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+              <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
             )}
           </div>
         );
@@ -2162,7 +2162,7 @@ function PublicFormView() {
                     padding: '0.75rem',
                     fontSize: '1rem',
                     borderRadius: '8px',
-                    border: passwordError ? '2px solid #ef4444' : '2px solid rgba(255, 255, 255, 0.3)',
+                    border: passwordError ? '2px solid var(--color-danger)' : '2px solid rgba(255, 255, 255, 0.3)',
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     color: 'white',
                   }}
@@ -2270,7 +2270,7 @@ function PublicFormView() {
                     fontSize: '1rem'
                   }}>
                     {field.label}
-                    {field.required && <span style={{ color: '#ef4444' }}> *</span>}
+                    {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
                   </label>
                   <div style={{ 
                     padding: '0.75rem', 
