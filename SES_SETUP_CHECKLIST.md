@@ -133,3 +133,4 @@ Once all steps are complete:
 - ✅ No SendGrid API key needed
 - ✅ Cost-effective email sending
 
+

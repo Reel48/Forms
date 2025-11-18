@@ -51,7 +51,7 @@ function Navigation() {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [utilityBarColor, setUtilityBarColor] = useState('#00D0FF');
+  const [utilityBarColor, setUtilityBarColor] = useState('#0089ff');
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -59,15 +59,8 @@ function Navigation() {
   // Load utility bar color from localStorage on mount
   useEffect(() => {
     const savedColor = localStorage.getItem('utilityBarColor');
-    // Valid color options
-    const validColors = ['#00D0FF', '#FF4B6F', '#20E8A8', '#FF9900', '#FFE042', '#B788FF', '#FF66CC'];
-    if (savedColor && validColors.includes(savedColor.toUpperCase())) {
-      setUtilityBarColor(savedColor.toUpperCase());
-    } else {
-      // If no valid color is saved, use default and save it
-      const defaultColor = '#00D0FF';
-      setUtilityBarColor(defaultColor);
-      localStorage.setItem('utilityBarColor', defaultColor);
+    if (savedColor) {
+      setUtilityBarColor(savedColor);
     }
   }, []);
   
@@ -170,13 +163,13 @@ function Navigation() {
                       onChange={(e) => handleColorChange(e.target.value)}
                       className="color-select"
                     >
-                      <option value="#00D0FF">Electric Blue</option>
-                      <option value="#FF4B6F">Infrared Red</option>
-                      <option value="#20E8A8">Vibrant Green</option>
-                      <option value="#FF9900">Safety Orange</option>
-                      <option value="#FFE042">Energy Yellow</option>
-                      <option value="#B788FF">Deep Lavender</option>
-                      <option value="#FF66CC">Hot Pink</option>
+                      <option value="#0089ff">Blue (Default)</option>
+                      <option value="#ffc700">Yellow</option>
+                      <option value="#ff7201">Orange</option>
+                      <option value="#03c35d">Green</option>
+                      <option value="#f23f3a">Red</option>
+                      <option value="#7559ff">Purple</option>
+                      <option value="#fe76b4">Pink</option>
                     </select>
                   </div>
                 </div>

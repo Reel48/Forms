@@ -291,3 +291,4 @@ Much cheaper than SendGrid's $15/month minimum!
 
 Once configured, your application will automatically use AWS SES for all email sending (password resets, form assignments, invoice notifications, etc.).
 
+

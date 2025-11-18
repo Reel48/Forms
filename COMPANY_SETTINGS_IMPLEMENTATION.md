@@ -89,3 +89,4 @@ The `company_settings` table stores:
 - Logo URL should be a publicly accessible image URL
 - All fields except company name are optional
 
+

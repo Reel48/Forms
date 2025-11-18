@@ -72,3 +72,4 @@ echo "   1. Go to: https://console.aws.amazon.com/apprunner/home?region=$AWS_REG
 echo "   2. Configuration → Security → Instance role → Set to: $ROLE_ARN"
 echo ""
 
+

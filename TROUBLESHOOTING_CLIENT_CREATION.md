@@ -142,3 +142,4 @@ If this works but the website doesn't, the issue is with the frontend configurat
 4. **Redeploy frontend** - After changing environment variables
 5. **Clear browser cache** - Hard refresh (Cmd+Shift+R / Ctrl+Shift+R)
 
+

@@ -167,3 +167,4 @@ Users can now:
 3. **Password Strength**: Add more password validation rules if needed
 4. **Email Templates**: Customize email templates to match your brand
 
+

@@ -54,3 +54,4 @@ CREATE POLICY "Admins can update form assignments" ON form_assignments
 GRANT EXECUTE ON FUNCTION is_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION is_admin(UUID) TO anon;
 
+

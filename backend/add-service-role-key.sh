@@ -58,3 +58,4 @@ echo ""
 echo "You can monitor the deployment in the AWS Console:"
 echo "https://console.aws.amazon.com/apprunner/home?region=$AWS_REGION#/services/forms"
 
+

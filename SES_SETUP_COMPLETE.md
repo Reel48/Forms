@@ -161,3 +161,4 @@ Same as above - IAM permissions are missing or not propagated yet.
 
 Once IAM permissions are added, you'll be ready to send emails! 🎉
 
+
