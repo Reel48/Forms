@@ -1229,7 +1229,7 @@ function PublicFormView() {
             onDragOver={(e) => {
               if (uploading) return;
               e.preventDefault();
-              e.currentTarget.style.borderColor = '#667eea';
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
               e.currentTarget.style.backgroundColor = '#f8f9ff';
             }}
             onDragLeave={(e) => {
@@ -1263,11 +1263,11 @@ function PublicFormView() {
               />
               {uploading ? (
                 <div>
-                  <p style={{ margin: 0, color: '#667eea' }}>Uploading...</p>
+                  <p style={{ margin: 0, color: 'var(--color-primary)' }}>Uploading...</p>
                 </div>
               ) : value?.file_url ? (
                 <div>
-                  <p style={{ margin: 0, color: '#22c55e', fontWeight: '500' }}>{value.file_name}</p>
+                  <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: '500' }}>{value.file_name}</p>
                   <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
                     {(value.file_size / 1024).toFixed(2)} KB
                   </p>
