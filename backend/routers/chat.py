@@ -51,6 +51,45 @@ async def get_conversations(user = Depends(get_current_user)):
                 "Content-Type": "application/json"
             }
             
+            # Get all conversation IDs for batch operations
+            conversation_ids = [conv["id"] for conv in conversations]
+            
+            # Batch fetch unread counts for all conversations in a single query
+            unread_counts = {}
+            if conversation_ids:
+                try:
+                    # Get all unread messages for all conversations at once
+                    # Note: Supabase doesn't support GROUP BY directly, so we'll fetch all unread messages
+                    # and count them in Python (still more efficient than N queries)
+                    unread_messages_response = supabase_storage.table("chat_messages").select("conversation_id").in_("conversation_id", conversation_ids).is_("read_at", "null").neq("sender_id", user["id"]).execute()
+                    unread_messages = unread_messages_response.data if unread_messages_response.data else []
+                    
+                    # Count unread messages per conversation
+                    for msg in unread_messages:
+                        conv_id = msg.get("conversation_id")
+                        if conv_id:
+                            unread_counts[conv_id] = unread_counts.get(conv_id, 0) + 1
+                except Exception as e:
+                    logger.warning(f"Error batch fetching unread counts: {str(e)}")
+            
+            # Batch fetch last messages for all conversations
+            last_messages = {}
+            if conversation_ids:
+                try:
+                    # Get last message for each conversation
+                    # We'll need to do this per conversation since Supabase doesn't support window functions easily
+                    # But we can optimize by doing it in parallel or using a more efficient approach
+                    for conv_id in conversation_ids:
+                        try:
+                            last_message_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conv_id).order("created_at", desc=True).limit(1).single().execute()
+                            if last_message_response.data:
+                                last_messages[conv_id] = last_message_response.data
+                        except Exception as e:
+                            logger.debug(f"No last message found for conversation {conv_id}: {str(e)}")
+                            pass
+                except Exception as e:
+                    logger.warning(f"Error batch fetching last messages: {str(e)}")
+            
             for conv in conversations:
                 # Get customer info from clients table (which has user_id)
                 try:
@@ -94,22 +133,12 @@ async def get_conversations(user = Depends(get_current_user)):
                         conv["customer_email"] = None
                         conv["customer_name"] = None
                 
-                # Get unread message count (messages not read by admin)
-                try:
-                    unread_response = supabase_storage.table("chat_messages").select("id", count="exact").eq("conversation_id", conv["id"]).is_("read_at", "null").neq("sender_id", user["id"]).execute()
-                    conv["unread_count"] = unread_response.count if unread_response.count else 0
-                except Exception as e:
-                    logger.warning(f"Error fetching unread count for conversation {conv['id']}: {str(e)}")
-                    conv["unread_count"] = 0
+                # Set unread count from batch fetch
+                conv["unread_count"] = unread_counts.get(conv["id"], 0)
                 
-                # Get last message
-                try:
-                    last_message_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conv["id"]).order("created_at", desc=True).limit(1).single().execute()
-                    if last_message_response.data:
-                        conv["last_message"] = last_message_response.data
-                except Exception as e:
-                    logger.debug(f"No last message found for conversation {conv['id']}: {str(e)}")
-                    pass
+                # Set last message from batch fetch
+                if conv["id"] in last_messages:
+                    conv["last_message"] = last_messages[conv["id"]]
             
             return conversations
         else:
