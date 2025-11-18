@@ -1986,6 +1986,17 @@ function PublicFormView() {
         });
         const colorOptions = field.options || [];
         
+        // Get current custom color values or use selected option values
+        const currentValue = typeof value === 'object' ? value : {};
+        const customHex = currentValue.hex || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.hex : '') || '';
+        const customPantone = currentValue.pantone_code || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.pantone_code : '') || '';
+        const customLabel = currentValue.label || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.label : '') || '';
+        
+        // Determine if we have a selected color (either from options or custom)
+        const hasSelectedColor = customHex || selectedColorOption;
+        const displayHex = customHex || (selectedColorOption && typeof selectedColorOption === 'object' ? selectedColorOption.hex : '') || '#000000';
+        const isValidHex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customHex || displayHex);
+        
         return (
           <div key={fieldId} className="form-group component-color-selector">
             {mediaElement}
@@ -2000,117 +2011,243 @@ function PublicFormView() {
             )}
             
             {/* COLOR PREVIEW - Prominently displayed */}
-            {selectedColorOption && (() => {
-              const colorOpt = typeof selectedColorOption === 'object' ? selectedColorOption : { label: selectedColorOption, hex: '#000000' };
-              const previewHex = colorOpt.hex || '#000000';
-              return (
-                <div className="color-preview" style={{
-                  marginBottom: '2rem',
-                  padding: '1.5rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  borderRadius: '12px',
-                  border: `2px solid ${previewHex}`,
-                  boxShadow: `0 4px 12px ${previewHex}40`,
-                  display: 'flex',
-                  gap: '1.5rem',
-                  alignItems: 'center',
-                }}>
-                  <div 
-                    className="color-preview-swatch"
-                    style={{
-                      width: '120px',
-                      height: '120px',
-                      borderRadius: '12px',
-                      backgroundColor: previewHex,
-                      border: '3px solid #ffffff',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div className="color-preview-info" style={{ flex: 1 }}>
+            {hasSelectedColor && (
+              <div className="color-preview" style={{
+                marginBottom: '2rem',
+                padding: '1.5rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: '12px',
+                border: `2px solid ${isValidHex ? displayHex : '#000000'}`,
+                boxShadow: `0 4px 12px ${isValidHex ? displayHex : '#000000'}40`,
+                display: 'flex',
+                gap: '1.5rem',
+                alignItems: 'center',
+              }}>
+                <div 
+                  className="color-preview-swatch"
+                  style={{
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '12px',
+                    backgroundColor: isValidHex ? displayHex : '#000000',
+                    border: '3px solid #ffffff',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    flexShrink: 0,
+                  }}
+                />
+                <div className="color-preview-info" style={{ flex: 1 }}>
+                  {customLabel && (
                     <div className="color-preview-name" style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem', color: '#111827' }}>
-                      {colorOpt.label || 'Selected Color'}
+                      {customLabel}
                     </div>
-                    <div className="color-preview-hex" style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#6b7280', marginBottom: '0.25rem' }}>
-                      {previewHex}
-                    </div>
-                    {colorOpt.pantone_code && (
-                      <div className="color-preview-pantone" style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-                        {colorOpt.pantone_code}
-                      </div>
-                    )}
+                  )}
+                  <div className="color-preview-hex" style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    {displayHex || 'No color selected'}
                   </div>
+                  {customPantone && (
+                    <div className="color-preview-pantone" style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
+                      {customPantone}
+                    </div>
+                  )}
                 </div>
-              );
-            })()}
+              </div>
+            )}
             
-            {/* COLOR SELECTION SWATCHES */}
-            <div className="color-swatches" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-              gap: '1rem',
-              marginTop: selectedColorOption ? '0' : '1rem',
+            {/* CUSTOM COLOR INPUT SECTION */}
+            <div style={{
+              marginBottom: colorOptions.length > 0 ? '2rem' : '0',
+              padding: '1.5rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              borderRadius: '12px',
+              border: '2px solid #e5e7eb',
             }}>
-              {colorOptions.map((option: any, optIndex: number) => {
-                const colorOpt = typeof option === 'object' ? option : { label: option, value: option, hex: '#000000' };
-                const optValue = colorOpt.value || colorOpt.label || option;
-                const optHex = colorOpt.hex || '#000000';
-                const isSelected = selectedColorValue === optValue;
-                
-                return (
-                  <button
-                    key={optIndex}
-                    type="button"
-                    onClick={() => {
-                      handleFieldChange(fieldId, {
-                        value: optValue,
-                        label: colorOpt.label,
-                        hex: optHex,
-                        pantone_code: colorOpt.pantone_code,
-                      });
-                    }}
-                    className={`color-swatch ${isSelected ? 'selected' : ''}`}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '1rem',
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: isSelected ? `3px solid ${optHex}` : '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: isSelected ? `0 4px 12px ${optHex}40` : '0 1px 3px rgba(0,0,0,0.1)',
-                    }}
-                    aria-label={`${colorOpt.label} ${optHex}`}
-                  >
-                    <div 
-                      className="color-swatch-preview"
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
+                Enter Custom Color
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label htmlFor={`${fieldId}-custom-hex`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
+                    Hex Color {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      id={`${fieldId}-custom-hex`}
+                      value={customHex}
+                      onChange={(e) => {
+                        const hex = e.target.value;
+                        handleFieldChange(fieldId, {
+                          value: `custom-${Date.now()}`,
+                          label: customLabel || 'Custom Color',
+                          hex: hex,
+                          pantone_code: customPantone,
+                          is_custom: true,
+                        });
+                      }}
+                      placeholder="#000000"
+                      pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
                       style={{
-                        width: '60px',
-                        height: '60px',
+                        flex: 1,
+                        padding: '0.75rem',
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        border: `2px solid ${isValidHex ? '#d1d5db' : '#ef4444'}`,
                         borderRadius: '8px',
-                        backgroundColor: optHex,
-                        border: '2px solid #ffffff',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        backgroundColor: '#ffffff',
                       }}
                     />
-                    <span className="color-name" style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>
-                      {colorOpt.label || 'Color'}
-                    </span>
-                    {colorOpt.pantone_code && (
-                      <span className="color-pantone" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        {colorOpt.pantone_code}
-                      </span>
-                    )}
-                    {isSelected && (
-                      <span style={{ fontSize: '1.25rem', color: optHex }}>✓</span>
-                    )}
-                  </button>
-                );
-              })}
+                    <input
+                      type="color"
+                      value={isValidHex ? displayHex : '#000000'}
+                      onChange={(e) => {
+                        handleFieldChange(fieldId, {
+                          value: `custom-${Date.now()}`,
+                          label: customLabel || 'Custom Color',
+                          hex: e.target.value,
+                          pantone_code: customPantone,
+                          is_custom: true,
+                        });
+                      }}
+                      style={{ width: '60px', height: '48px', cursor: 'pointer', border: 'none', borderRadius: '8px' }}
+                    />
+                  </div>
+                  {!isValidHex && customHex && (
+                    <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                      Invalid hex format (use #RRGGBB or #RGB)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor={`${fieldId}-custom-pantone`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
+                    Pantone Code (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id={`${fieldId}-custom-pantone`}
+                    value={customPantone}
+                    onChange={(e) => {
+                      handleFieldChange(fieldId, {
+                        value: customHex ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
+                        label: customLabel || 'Custom Color',
+                        hex: customHex || displayHex,
+                        pantone_code: e.target.value,
+                        is_custom: true,
+                      });
+                    }}
+                    placeholder="e.g., Pantone 19-4052 TCX"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid #d1d5db',
+                      borderRadius: '8px',
+                      backgroundColor: '#ffffff',
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor={`${fieldId}-custom-label`} style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#111827' }}>
+                  Color Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  id={`${fieldId}-custom-label`}
+                  value={customLabel}
+                  onChange={(e) => {
+                    handleFieldChange(fieldId, {
+                      value: customHex ? (typeof value === 'object' && value?.value ? value.value : `custom-${Date.now()}`) : `custom-${Date.now()}`,
+                      label: e.target.value || 'Custom Color',
+                      hex: customHex || displayHex,
+                      pantone_code: customPantone,
+                      is_custom: true,
+                    });
+                  }}
+                  placeholder="e.g., Classic Blue"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #d1d5db',
+                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                  }}
+                />
+              </div>
             </div>
+            
+            {/* COLOR SELECTION SWATCHES - Only show if admin has configured options */}
+            {colorOptions.length > 0 && (
+              <>
+                <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>OR Select from Options</span>
+                </div>
+                <div className="color-swatches" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                  gap: '1rem',
+                }}>
+                  {colorOptions.map((option: any, optIndex: number) => {
+                    const colorOpt = typeof option === 'object' ? option : { label: option, value: option, hex: '#000000' };
+                    const optValue = colorOpt.value || colorOpt.label || option;
+                    const optHex = colorOpt.hex || '#000000';
+                    const isSelected = selectedColorValue === optValue && !currentValue.is_custom;
+                    
+                    return (
+                      <button
+                        key={optIndex}
+                        type="button"
+                        onClick={() => {
+                          handleFieldChange(fieldId, {
+                            value: optValue,
+                            label: colorOpt.label,
+                            hex: optHex,
+                            pantone_code: colorOpt.pantone_code,
+                            is_custom: false,
+                          });
+                        }}
+                        className={`color-swatch ${isSelected ? 'selected' : ''}`}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '1rem',
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          border: isSelected ? `3px solid ${optHex}` : '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? `0 4px 12px ${optHex}40` : '0 1px 3px rgba(0,0,0,0.1)',
+                        }}
+                        aria-label={`${colorOpt.label} ${optHex}`}
+                      >
+                        <div 
+                          className="color-swatch-preview"
+                          style={{
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '8px',
+                            backgroundColor: optHex,
+                            border: '2px solid #ffffff',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          }}
+                        />
+                        <span className="color-name" style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>
+                          {colorOpt.label || 'Color'}
+                        </span>
+                        {colorOpt.pantone_code && (
+                          <span className="color-pantone" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                            {colorOpt.pantone_code}
+                          </span>
+                        )}
+                        {isSelected && (
+                          <span style={{ fontSize: '1.25rem', color: optHex }}>✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             {error && (
               <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.5rem' }}>{error}</p>
             )}
