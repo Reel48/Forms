@@ -172,7 +172,7 @@ function Navigation() {
                 }
               }}
               style={{
-                height: '45px',
+                height: '36px',
                 width: 'auto',
                 objectFit: 'contain'
               }}
