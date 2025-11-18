@@ -106,7 +106,8 @@ function Navigation() {
       
       {/* Row 0: Global Utility Bar - Role Badge */}
       <div className="navbar-utility-bar">
-        <div className="utility-bar-content">
+        <div className="utility-bar-thin"></div>
+        <div className="utility-bar-dropdown">
           <span className="user-role-badge">{role}</span>
         </div>
       </div>

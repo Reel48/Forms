@@ -133,20 +133,29 @@ select:focus-visible {
 
 /* Row 0: Global Utility Bar - Role Badge */
 .navbar-utility-bar {
-  background-color: #ffc700;
   width: 100%;
   max-width: 100%;
-  padding: 0.5rem 0;
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  align-items: flex-end;
+  position: relative;
+  background-color: #ffc700;
 }
 
-.utility-bar-content {
-  padding-left: 1.5rem;
+.utility-bar-thin {
+  flex: 1;
+  height: 2px;
+  background-color: #ffc700;
+}
+
+.utility-bar-dropdown {
+  background-color: #ffc700;
+  padding: 0.5rem 1.5rem 0.5rem 1rem;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  border-top-left-radius: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  min-width: fit-content;
 }
 
 /* Row 1: Top Bar (Search, Logo, User Info) */
@@ -392,12 +401,8 @@ nav .nav-tabs li {
     padding: 0;
   }
 
-  .navbar-utility-bar {
-    padding: 0.5rem 0;
-  }
-
-  .utility-bar-content {
-    padding-left: 1rem;
+  .utility-bar-dropdown {
+    padding: 0.5rem 1rem 0.5rem 0.75rem;
   }
 
   .navbar-top-row {
