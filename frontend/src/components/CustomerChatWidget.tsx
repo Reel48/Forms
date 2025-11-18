@@ -183,6 +183,7 @@ const CustomerChatWidget: React.FC = () => {
   }, [isOpen, conversation?.id]);
 
   // Fallback polling: Only poll when chat is closed (Realtime handles updates when open)
+  // Note: checkUnreadCount doesn't show loading, so this is fine
   useEffect(() => {
     if (!conversation || isOpen) return; // Don't poll when chat is open (Realtime handles it)
 
@@ -190,7 +191,7 @@ const CustomerChatWidget: React.FC = () => {
       if (conversation && !isOpen) {
         checkUnreadCount();
       }
-    }, 10000); // Check every 10 seconds when closed (Realtime handles when open)
+    }, 30000); // Check every 30 seconds when closed (Realtime handles when open) - reduced frequency
 
     return () => clearInterval(interval);
   }, [conversation?.id, isOpen]);

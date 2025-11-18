@@ -76,7 +76,7 @@ const ChatPage: React.FC = () => {
             // Update conversations list to refresh unread counts and last_message_at
             // Only reload if this is not the currently selected conversation (to avoid flicker)
             if (selectedConversation?.id !== newMessage.conversation_id) {
-              loadConversations();
+              loadConversations(false); // Silent refresh - no loading screen
               // Show notification for messages in other conversations
               const conversation = conversations.find(c => c.id === newMessage.conversation_id);
               showNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
@@ -132,8 +132,8 @@ const ChatPage: React.FC = () => {
         },
         (payload) => {
           console.log('Realtime conversation event:', payload);
-          // Reload conversations to get updated data
-          loadConversations();
+          // Reload conversations to get updated data (silent refresh - no loading screen)
+          loadConversations(false);
         }
       )
       .subscribe((status) => {
@@ -190,7 +190,7 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
-    loadConversations();
+    loadConversations(true); // Show loading on initial load only
     requestNotificationPermission();
 
     // Cleanup subscriptions on unmount
@@ -289,22 +289,26 @@ const ChatPage: React.FC = () => {
   }, [hasMoreMessages, loadingMore, loadMoreMessages]);
 
   // Fallback polling: Only poll occasionally as backup (Realtime handles most updates)
+  // Use silent refresh (no loading screen) for background updates
   useEffect(() => {
     if (!selectedConversation) return;
 
     const interval = setInterval(() => {
       if (selectedConversation) {
         // Only poll occasionally as backup - Realtime should handle most updates
-        loadConversations();
+        // Use silent refresh to avoid showing loading screen
+        loadConversations(false);
       }
-    }, 30000); // Check every 30 seconds as backup (Realtime handles real-time updates)
+    }, 60000); // Check every 60 seconds as backup (Realtime handles real-time updates)
 
     return () => clearInterval(interval);
   }, [selectedConversation?.id]);
 
-  const loadConversations = async () => {
+  const loadConversations = async (showLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const response = await chatAPI.getConversations();
       setConversations(response.data);
       if (response.data.length > 0 && !selectedConversation) {
@@ -313,7 +317,9 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to load conversations:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -347,8 +353,8 @@ const ChatPage: React.FC = () => {
   const markAllAsRead = async (conversationId: string) => {
     try {
       await chatAPI.markAllRead(conversationId);
-      // Refresh conversations to update unread counts
-      loadConversations();
+      // Refresh conversations to update unread counts (silent refresh - no loading screen)
+      loadConversations(false);
     } catch (error) {
       console.error('Failed to mark messages as read:', error);
     }
