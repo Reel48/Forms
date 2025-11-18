@@ -36,11 +36,15 @@ function FormView() {
 
   useEffect(() => {
     if (id) {
+      // For customers, redirect to public form view immediately
+      if (role === 'customer') {
+        loadFormAndRedirect(id);
+        return;
+      }
+      // For admins, load form details
       loadForm(id);
       loadAssignments();
-      if (role === 'admin') {
-        loadSubmissions();
-      }
+      loadSubmissions();
     }
   }, [id, role]);
 
@@ -72,6 +76,26 @@ function FormView() {
       await loadAssignments();
     } catch (error) {
       throw error;
+    }
+  };
+
+  const loadFormAndRedirect = async (formId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await formsAPI.getById(formId);
+      const formData = response.data;
+      // Redirect to public form view using the slug
+      if (formData.public_url_slug) {
+        navigate(`/public/form/${formData.public_url_slug}`);
+      } else {
+        setError('This form is not available for public access.');
+        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error('Failed to load form:', error);
+      setError(error?.response?.data?.detail || error?.message || 'Failed to load form. Please try again.');
+      setLoading(false);
     }
   };
 
