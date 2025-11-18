@@ -159,7 +159,7 @@ select:focus-visible {
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   background-color: #ffc700;
-  border-radius: 0 0 10px 10px; /* Curved bottom edges */
+  border-radius: 0 0 4px 4px; /* Curved bottom edges */
   z-index: 1;
 }
 
