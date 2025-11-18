@@ -150,15 +150,13 @@ select:focus-visible {
 
 .utility-bar-role-container {
   position: absolute;
-  right: 0;
+  right: 1.5rem; /* Match navbar-user-section padding-right */
   top: 0;
   height: 35px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding-right: 1.5rem;
   padding-left: 0.75rem;
-  padding-top: 17.5px; /* Center vertically: (70px navbar - 35px container) / 2 */
   background-color: #ffc700;
   z-index: 1;
 }
