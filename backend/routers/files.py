@@ -397,6 +397,31 @@ async def delete_file(file_id: str, user = Depends(get_current_user)):
         if not is_admin and file_data.get("uploaded_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
+        # Check if file is referenced by e-signature signatures (signed_file_id)
+        signature_check = supabase_storage.table("esignature_signatures").select("id, document_id").eq("signed_file_id", file_id).limit(1).execute()
+        if signature_check.data and len(signature_check.data) > 0:
+            # Get document name for better error message
+            try:
+                signature = signature_check.data[0]
+                doc_response = supabase_storage.table("esignature_documents").select("name").eq("id", signature.get("document_id")).single().execute()
+                doc_name = doc_response.data.get("name", "an e-signature document") if doc_response.data else "an e-signature document"
+            except Exception:
+                doc_name = "an e-signature document"
+            
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete file: This file is associated with a signed e-signature document ({doc_name}). Signed documents cannot be deleted to maintain record integrity."
+            )
+        
+        # Check if file is referenced by e-signature documents (file_id)
+        document_check = supabase_storage.table("esignature_documents").select("id, name").eq("file_id", file_id).limit(1).execute()
+        if document_check.data and len(document_check.data) > 0:
+            doc_name = document_check.data[0].get("name", "an e-signature document")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete file: This file is associated with an e-signature document ({doc_name}). Please remove the e-signature document first."
+            )
+        
         # Delete from storage
         storage_path = file_data.get("storage_path")
         if storage_path:
@@ -414,6 +439,13 @@ async def delete_file(file_id: str, user = Depends(get_current_user)):
         raise
     except Exception as e:
         print(f"Error deleting file: {str(e)}")
+        # Check if it's a foreign key constraint error
+        error_str = str(e)
+        if "foreign key constraint" in error_str.lower() or "23503" in error_str:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete file: This file is referenced by other records (e.g., signed e-signature documents). Please remove those references first."
+            )
         raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
 
 @router.get("/{file_id}/download")
