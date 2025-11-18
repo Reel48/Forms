@@ -597,7 +597,7 @@ function FormsList() {
                       <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
                     )}
                   </td>
-                  <td>
+                  <td className="mobile-status-column">
                     <span className={`badge ${getStatusBadgeClass(form.status)}`}>
                       {formatStatus(form.status)}
                     </span>

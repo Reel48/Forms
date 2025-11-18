@@ -159,7 +159,7 @@ const FoldersList: React.FC = () => {
                   <td className="mobile-name-column">
                     <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{folder.name}</strong>
                   </td>
-                  <td>
+                  <td className="mobile-status-column">
                     <span className={getStatusBadgeClass(folder.status)}>
                       {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
                     </span>

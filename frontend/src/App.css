@@ -152,6 +152,9 @@ select:focus-visible {
   max-width: 100%;
   margin: 0;
   padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 /* Row 0: Global Utility Bar - Role Badge */
@@ -575,6 +578,10 @@ nav .nav-tabs li {
     transform: none;
     order: 1;
     padding-left: 1rem !important;
+  }
+
+  .navbar-logo img {
+    height: 29px !important; /* 20% smaller than 36px (36px * 0.8 = 28.8px, rounded to 29px) */
   }
 
   .navbar-search {
@@ -1393,9 +1400,11 @@ table tbody tr:hover {
     display: block;
   }
   
-  /* Convert table rows to block-level cards */
+  /* Convert table rows to flex cards for side-by-side layout */
   table tbody tr {
-    display: block;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     margin-bottom: 0.75rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -1412,13 +1421,35 @@ table tbody tr:hover {
     text-align: left;
   }
   
-  /* Show only the name/title column using the mobile-name-column class */
-  table tbody td.mobile-name-column {
+  /* Show name/title, status, and checkmark columns on mobile */
+  table tbody td.mobile-name-column,
+  table tbody td.mobile-status-column,
+  table tbody td.mobile-checkmark-column {
     display: block !important;
-    width: 100%;
-    padding: 1rem;
-    font-size: 1rem;
-    font-weight: 500;
+  }
+  
+  /* Checkmark column - appears first on the left */
+  table tbody td.mobile-checkmark-column {
+    flex: 0 0 auto;
+    padding: 1rem 0.5rem 1rem 1rem;
+    order: -2; /* Place checkmark before status and name */
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Status column - appears after checkmark */
+  table tbody td.mobile-status-column {
+    flex: 0 0 auto;
+    padding: 1rem 0.5rem;
+    order: -1; /* Place status after checkmark but before name */
+  }
+  
+  /* Name column - takes up most of the space */
+  table tbody td.mobile-name-column {
+    flex: 1;
+    min-width: 0; /* Allows text to wrap if needed */
+    padding: 1rem 0.5rem 1rem 0.5rem;
   }
   
   /* Style the name/title content */
@@ -1433,5 +1464,12 @@ table tbody tr:hover {
   /* Ensure links are clickable */
   table tbody td.mobile-name-column a {
     text-decoration: none;
+  }
+  
+  /* Style status badges on mobile */
+  table tbody td.mobile-status-column .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
   }
 }

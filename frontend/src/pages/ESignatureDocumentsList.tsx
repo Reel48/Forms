@@ -166,7 +166,7 @@ const ESignatureDocumentsList: React.FC = () => {
                       </div>
                     )}
                   </td>
-                  <td>
+                  <td className="mobile-status-column">
                     <span className={getStatusBadgeClass(doc.status)}>
                       {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
                     </span>

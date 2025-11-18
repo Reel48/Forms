@@ -1306,7 +1306,7 @@ function QuotesList() {
                             {visibleColumns.client && <td>{quote.clients?.name || '-'}</td>}
                             {visibleColumns.total && <td className="text-right">${parseFloat(quote.total).toFixed(2)}</td>}
                             {visibleColumns.quoteStatus && (
-                              <td>
+                              <td className="mobile-status-column">
                                 <span className={`badge badge-${quote.status}`}>{formatStatus(quote.status)}</span>
                               </td>
                             )}

@@ -506,7 +506,7 @@ const FolderView: React.FC = () => {
                         }
                       }}
                     >
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td className="mobile-checkmark-column" onClick={(e) => e.stopPropagation()}>
                         <div
                           style={{
                             width: '20px',
@@ -591,7 +591,7 @@ const FolderView: React.FC = () => {
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/esignature/${esig.id}`)}
                     >
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td className="mobile-checkmark-column" onClick={(e) => e.stopPropagation()}>
                         <div
                           style={{
                             width: '20px',

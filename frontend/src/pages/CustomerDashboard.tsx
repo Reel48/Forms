@@ -376,7 +376,7 @@ function CustomerDashboard() {
                   <td className="mobile-name-column">
                     <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
                   </td>
-                  <td>
+                  <td className="mobile-status-column">
                     {getStatusBadge(item.status, item.type)}
                   </td>
                   <td>
