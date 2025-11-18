@@ -2007,7 +2007,7 @@ function PublicFormView() {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Form Not Available</h2>
+          <h2 style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>Form Not Available</h2>
           <p className="text-muted">{error}</p>
         </div>
       </div>
@@ -2022,7 +2022,7 @@ function PublicFormView() {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ color: '#22c55e', marginBottom: '1rem' }}>{thankYouMessage}</h1>
+          <h1 style={{ color: 'var(--color-success)', marginBottom: '1rem' }}>{thankYouMessage}</h1>
           <p className="text-muted" style={{ marginBottom: '2rem' }}>{thankYouDescription}</p>
           {redirectUrl && (
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
