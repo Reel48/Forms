@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useLocation, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -45,14 +45,46 @@ const LoadingFallback = () => (
 
 function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, role } = useAuth();
+  const { user, role, signOut } = useAuth();
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [utilityBarColor, setUtilityBarColor] = useState('#ffc700');
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
+  
+  // Load utility bar color from localStorage on mount
+  useEffect(() => {
+    const savedColor = localStorage.getItem('utilityBarColor');
+    if (savedColor) {
+      setUtilityBarColor(savedColor);
+    }
+  }, []);
+  
+  // Save utility bar color to localStorage and update CSS variable
+  const handleColorChange = (color: string) => {
+    setUtilityBarColor(color);
+    localStorage.setItem('utilityBarColor', color);
+    // Update CSS custom property for the utility bar
+    document.documentElement.style.setProperty('--utility-bar-color', color);
+  };
+  
+  // Apply the color on mount and when it changes
+  useEffect(() => {
+    document.documentElement.style.setProperty('--utility-bar-color', utilityBarColor);
+  }, [utilityBarColor]);
+  
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
   
   // Determine active tab based on path
   const isFormsActive = location.pathname.startsWith('/forms');
@@ -116,12 +148,39 @@ function Navigation() {
             </span>
             {isRoleDropdownOpen && (
               <div className="role-dropdown-content">
-                <Link to="/profile" onClick={() => setIsRoleDropdownOpen(false)}>
+                <div className="dropdown-section">
+                  <label className="dropdown-label">Utility Bar Color</label>
+                  <div className="color-picker-container">
+                    <input
+                      type="color"
+                      value={utilityBarColor}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      className="color-picker"
+                    />
+                    <select
+                      value={utilityBarColor}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      className="color-select"
+                    >
+                      <option value="#ffc700">Yellow (Default)</option>
+                      <option value="#3b82f6">Blue</option>
+                      <option value="#10b981">Green</option>
+                      <option value="#f59e0b">Orange</option>
+                      <option value="#ef4444">Red</option>
+                      <option value="#8b5cf6">Purple</option>
+                      <option value="#06b6d4">Cyan</option>
+                      <option value="#ec4899">Pink</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="dropdown-divider"></div>
+                <Link to="/profile" onClick={() => setIsRoleDropdownOpen(false)} className="dropdown-link">
                   Profile
                 </Link>
-                <Link to="/settings" onClick={() => setIsRoleDropdownOpen(false)}>
-                  Settings
-                </Link>
+                <div className="dropdown-divider"></div>
+                <button onClick={handleLogout} className="dropdown-button-logout">
+                  Logout
+                </button>
               </div>
             )}
           </div>
