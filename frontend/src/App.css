@@ -223,6 +223,7 @@ select:focus-visible {
   position: relative;
   width: 100%;
   max-width: 100%;
+  z-index: 0; /* Behind the utility bar dropdown */
 }
 
 .navbar-hamburger {
