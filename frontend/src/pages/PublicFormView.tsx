@@ -2510,6 +2510,32 @@ function PublicFormView() {
         </div>
       )}
 
+      {/* Light Logo Below Progress Bar - Always shown on all forms */}
+      <div style={{ 
+        position: 'fixed', 
+        top: visibleFields.length > 0 ? (logoUrl ? '140px' : '80px') : '1rem', 
+        left: '50%', 
+        transform: 'translateX(-50%)', 
+        zIndex: 100,
+        maxHeight: '40px',
+        maxWidth: '150px'
+      }}>
+        <img 
+          src={getLogoForDarkBackground()} 
+          alt="Company Logo" 
+          style={{ 
+            maxHeight: '100%', 
+            maxWidth: '100%', 
+            objectFit: 'contain',
+            opacity: 0.9
+          }} 
+          onError={(e) => {
+            // Hide logo if image fails to load
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      </div>
+
       {/* Question Container with Animation */}
       <div className="typeform-content">
         <AnimatePresence mode="wait">
@@ -2686,32 +2712,6 @@ function PublicFormView() {
             <p>{error}</p>
           </motion.div>
         )}
-      </div>
-
-      {/* Light Logo at Bottom - Always shown on all forms */}
-      <div style={{ 
-        position: 'fixed', 
-        bottom: '1.5rem', 
-        left: '50%', 
-        transform: 'translateX(-50%)', 
-        zIndex: 100,
-        maxHeight: '40px',
-        maxWidth: '150px'
-      }}>
-        <img 
-          src={getLogoForDarkBackground()} 
-          alt="Company Logo" 
-          style={{ 
-            maxHeight: '100%', 
-            maxWidth: '100%', 
-            objectFit: 'contain',
-            opacity: 0.9
-          }} 
-          onError={(e) => {
-            // Hide logo if image fails to load
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
       </div>
     </div>
   );
