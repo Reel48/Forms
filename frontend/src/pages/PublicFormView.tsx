@@ -862,7 +862,7 @@ function PublicFormView() {
               minLength={field.validation_rules?.minLength}
               maxLength={field.validation_rules?.maxLength}
               pattern={field.validation_rules?.pattern}
-              style={{ borderColor: error ? '#ef4444' : undefined }}
+              style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
               aria-required={field.required}
               aria-invalid={!!error}
               aria-describedby={error ? `${fieldId}-error` : field.description ? `${fieldId}-description` : undefined}
@@ -900,7 +900,7 @@ function PublicFormView() {
               autoComplete="off"
               minLength={field.validation_rules?.minLength}
               maxLength={field.validation_rules?.maxLength}
-              style={{ borderColor: error ? '#ef4444' : undefined }}
+              style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
               <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
@@ -933,7 +933,7 @@ function PublicFormView() {
               minLength={field.validation_rules?.minLength}
               maxLength={field.validation_rules?.maxLength}
               pattern={field.validation_rules?.pattern}
-              style={{ borderColor: error ? '#ef4444' : undefined }}
+              style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
               <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
@@ -965,7 +965,7 @@ function PublicFormView() {
               autoComplete="off"
               min={field.validation_rules?.min}
               max={field.validation_rules?.max}
-              style={{ borderColor: error ? '#ef4444' : undefined }}
+              style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
               <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
@@ -998,7 +998,7 @@ function PublicFormView() {
               minLength={field.validation_rules?.minLength}
               maxLength={field.validation_rules?.maxLength}
               pattern={field.validation_rules?.pattern}
-              style={{ borderColor: error ? '#ef4444' : undefined }}
+              style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
               <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
@@ -1031,7 +1031,7 @@ function PublicFormView() {
               minLength={field.validation_rules?.minLength}
               maxLength={field.validation_rules?.maxLength}
               pattern={field.validation_rules?.pattern}
-              style={{ borderColor: error ? '#ef4444' : undefined }}
+              style={{ borderColor: error ? 'var(--color-danger)' : undefined }}
             />
             {error && (
               <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>

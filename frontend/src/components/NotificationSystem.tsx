@@ -84,7 +84,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 notification.type === 'success' ? '#065f46' :
                 notification.type === 'error' ? '#991b1b' :
                 notification.type === 'warning' ? '#92400e' :
-                '#1e40af',
+                'var(--color-primary)',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',
