@@ -392,6 +392,14 @@ nav .nav-tabs li {
     padding: 0;
   }
 
+  .navbar-utility-bar {
+    padding: 0.5rem 0;
+  }
+
+  .utility-bar-content {
+    padding-left: 1rem;
+  }
+
   .navbar-top-row {
     flex-wrap: wrap;
     padding: 0.75rem 0;
