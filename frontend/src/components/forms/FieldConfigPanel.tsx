@@ -327,7 +327,230 @@ export function FieldConfigPanel({
         </div>
       )}
 
-      {needsOptions && (
+      {/* Component Color Selector Configuration */}
+      {field.field_type === 'component_color_selector' && (
+        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', marginBottom: '1rem', fontWeight: '600' }}>Component Settings</h3>
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label htmlFor={`component-name-${fieldIndex}`}>Component Name *</label>
+            <input
+              type="text"
+              id={`component-name-${fieldIndex}`}
+              value={field.validation_rules?.component_name || field.label || ''}
+              onChange={(e) => {
+                const componentName = e.target.value;
+                // Auto-generate component_id from name
+                const componentId = componentName
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '-')
+                  .replace(/^-+|-+$/g, '');
+                onUpdate({
+                  label: componentName,
+                  validation_rules: {
+                    ...field.validation_rules,
+                    component_name: componentName,
+                    component_id: componentId,
+                  },
+                });
+              }}
+              placeholder="e.g., Hat Crown"
+            />
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+              This will be displayed to customers
+            </p>
+          </div>
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label htmlFor={`component-id-${fieldIndex}`}>Component ID</label>
+            <input
+              type="text"
+              id={`component-id-${fieldIndex}`}
+              value={field.validation_rules?.component_id || ''}
+              onChange={(e) =>
+                onUpdate({
+                  validation_rules: {
+                    ...field.validation_rules,
+                    component_id: e.target.value,
+                  },
+                })
+              }
+              placeholder="Auto-generated from name"
+              style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}
+            />
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+              Unique identifier (auto-generated, editable)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {field.field_type === 'component_color_selector' ? (
+        <div className="form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontWeight: '500' }}>Color Options</span>
+            <button
+              type="button"
+              onClick={() => {
+                const newColor = {
+                  label: '',
+                  hex: '#000000',
+                  pantone_code: '',
+                  value: `color-${Date.now()}`,
+                };
+                onUpdate({
+                  options: [...(field.options || []), newColor],
+                });
+              }}
+              className="btn-outline"
+              style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
+            >
+              + Add Color
+            </button>
+          </div>
+          {field.options?.map((option: any, optIndex: number) => {
+            const colorOption = typeof option === 'object' ? option : { label: option, value: option, hex: '#000000' };
+            const hexValue = colorOption.hex || '#000000';
+            const isValidHex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hexValue);
+            
+            return (
+              <div
+                key={optIndex}
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1rem',
+                  backgroundColor: '#f9fafb',
+                }}
+              >
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ flex: '0 0 80px' }}>
+                    <div
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        backgroundColor: isValidHex ? hexValue : '#000000',
+                        border: '2px solid #e5e7eb',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '500', display: 'block', marginBottom: '0.25rem' }}>
+                        Color Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={colorOption.label || ''}
+                        onChange={(e) => {
+                          const updatedOptions = [...(field.options || [])];
+                          updatedOptions[optIndex] = {
+                            ...colorOption,
+                            label: e.target.value,
+                            value: colorOption.value || `color-${optIndex}`,
+                          };
+                          onUpdate({ options: updatedOptions });
+                        }}
+                        placeholder="e.g., Classic Blue"
+                        style={{ width: '100%', padding: '0.5rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', display: 'block', marginBottom: '0.25rem' }}>
+                          Hex Color *
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={hexValue}
+                            onChange={(e) => {
+                              const hex = e.target.value;
+                              const updatedOptions = [...(field.options || [])];
+                              updatedOptions[optIndex] = {
+                                ...colorOption,
+                                hex: hex,
+                                value: colorOption.value || `color-${optIndex}`,
+                              };
+                              onUpdate({ options: updatedOptions });
+                            }}
+                            placeholder="#000000"
+                            pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              fontFamily: 'monospace',
+                              fontSize: '0.875rem',
+                              borderColor: isValidHex ? '#d1d5db' : '#ef4444',
+                            }}
+                          />
+                          <input
+                            type="color"
+                            value={isValidHex ? hexValue : '#000000'}
+                            onChange={(e) => {
+                              const updatedOptions = [...(field.options || [])];
+                              updatedOptions[optIndex] = {
+                                ...colorOption,
+                                hex: e.target.value,
+                                value: colorOption.value || `color-${optIndex}`,
+                              };
+                              onUpdate({ options: updatedOptions });
+                            }}
+                            style={{ width: '50px', height: '40px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+                          />
+                        </div>
+                        {!isValidHex && hexValue && (
+                          <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                            Invalid hex format
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', display: 'block', marginBottom: '0.25rem' }}>
+                          Pantone Code (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={colorOption.pantone_code || ''}
+                          onChange={(e) => {
+                            const updatedOptions = [...(field.options || [])];
+                            updatedOptions[optIndex] = {
+                              ...colorOption,
+                              pantone_code: e.target.value,
+                              value: colorOption.value || `color-${optIndex}`,
+                            };
+                            onUpdate({ options: updatedOptions });
+                          }}
+                          placeholder="e.g., Pantone 19-4052 TCX"
+                          style={{ width: '100%', padding: '0.5rem' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedOptions = field.options?.filter((_: any, i: number) => i !== optIndex) || [];
+                      onUpdate({ options: updatedOptions });
+                    }}
+                    className="btn-danger"
+                    style={{ padding: '0.5rem', alignSelf: 'flex-start' }}
+                    title="Remove color"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {(!field.options || field.options.length === 0) && (
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '2rem' }}>
+              No colors added yet. Click "+ Add Color" to add color options.
+            </p>
+          )}
+        </div>
+      ) : needsOptions ? (
         <div className="form-group">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <span style={{ fontWeight: '500' }}>Options</span>
@@ -381,7 +604,7 @@ export function FieldConfigPanel({
             );
           })}
         </div>
-      )}
+      ) : null}
 
       {/* Validation Rules for Rating and Opinion Scale */}
       {(field.field_type === 'rating' || field.field_type === 'opinion_scale') && (

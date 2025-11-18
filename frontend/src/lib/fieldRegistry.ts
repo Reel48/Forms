@@ -33,6 +33,26 @@ export const FIELD_TYPES: FieldTypeDefinition[] = [
     },
   },
   {
+    value: 'component_color_selector',
+    label: 'Component Color Selector',
+    category: 'special',
+    defaultConfig: {
+      field_type: 'component_color_selector',
+      label: 'Component Name',
+      description: '',
+      placeholder: '',
+      required: false,
+      validation_rules: {
+        component_id: '',
+        component_name: '',
+      },
+      options: [],
+      order_index: 0,
+      conditional_logic: {},
+    },
+    needsOptions: true,
+  },
+  {
     value: 'text',
     label: 'Short Text',
     category: 'basic',
