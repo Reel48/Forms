@@ -625,6 +625,33 @@ async def update_conversation_status(
         logger.error(f"Error updating conversation status: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to update conversation status: {str(e)}")
 
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    user = Depends(get_current_user)
+):
+    """Delete a conversation. Only admins can delete conversations."""
+    try:
+        # Only admins can delete conversations
+        is_admin = user.get("role") == "admin"
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Only admins can delete conversations")
+        
+        # Verify conversation exists
+        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
+        if not conv_response.data:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        # Delete conversation (messages will be cascade deleted due to foreign key constraint)
+        delete_response = supabase_storage.table("chat_conversations").delete().eq("id", conversation_id).execute()
+        
+        return {"message": "Conversation deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting conversation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to delete conversation: {str(e)}")
+
 @router.post("/conversations/{conversation_id}/ai-response", response_model=ChatMessage)
 async def generate_ai_response(
     conversation_id: str,

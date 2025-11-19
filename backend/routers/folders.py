@@ -156,6 +156,12 @@ async def create_folder(
             except Exception as quote_error:
                 print(f"Warning: Could not update quote: {str(quote_error)}")
         
+        # Auto-assign "Reel48 Purchase Agreement" e-signature template to the folder
+        try:
+            _auto_assign_purchase_agreement(folder_id, user["id"])
+        except Exception as e:
+            logger.warning(f"Could not auto-assign Purchase Agreement e-signature: {str(e)}")
+        
         return created_folder
     except HTTPException:
         raise
