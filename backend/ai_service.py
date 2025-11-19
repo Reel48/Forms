@@ -23,23 +23,36 @@ class AIService:
     """Service for interacting with Google Gemini AI"""
     
     def __init__(self):
+        print(f"🔧 [AI SERVICE] Initializing AI service...")
+        logger.info(f"🔧 [AI SERVICE] Initializing AI service...")
         if not genai:
-            raise ValueError("google-generativeai package is not installed")
+            error_msg = "google-generativeai package is not installed"
+            print(f"❌ [AI SERVICE] {error_msg}")
+            raise ValueError(error_msg)
         if not GEMINI_API_KEY:
+            error_msg = "GEMINI_API_KEY environment variable is required"
+            print(f"❌ [AI SERVICE] {error_msg}")
             logger.warning("GEMINI_API_KEY not set - AI service will not be available")
-            raise ValueError("GEMINI_API_KEY environment variable is required")
+            raise ValueError(error_msg)
+        print(f"✅ [AI SERVICE] GEMINI_API_KEY found (length: {len(GEMINI_API_KEY)} chars)")
         try:
             # Try gemini-1.5-pro first (newer model), fallback to gemini-pro
             try:
+                print(f"🔧 [AI SERVICE] Trying gemini-1.5-pro...")
                 self.model = genai.GenerativeModel('gemini-1.5-pro')
-                logger.info("Initialized Gemini model: gemini-1.5-pro")
+                print(f"✅ [AI SERVICE] Initialized Gemini model: gemini-1.5-pro")
+                logger.info("✅ [AI SERVICE] Initialized Gemini model: gemini-1.5-pro")
             except Exception as e1:
-                logger.warning(f"Failed to initialize gemini-1.5-pro: {str(e1)}, trying gemini-pro")
+                print(f"⚠️ [AI SERVICE] Failed to initialize gemini-1.5-pro: {str(e1)}, trying gemini-pro")
+                logger.warning(f"⚠️ [AI SERVICE] Failed to initialize gemini-1.5-pro: {str(e1)}, trying gemini-pro")
                 self.model = genai.GenerativeModel('gemini-pro')
-                logger.info("Initialized Gemini model: gemini-pro")
+                print(f"✅ [AI SERVICE] Initialized Gemini model: gemini-pro")
+                logger.info("✅ [AI SERVICE] Initialized Gemini model: gemini-pro")
             self.embedding_model = None  # Will be set when needed
+            print(f"✅ [AI SERVICE] AI service initialization complete")
         except Exception as e:
-            logger.error(f"Failed to initialize Gemini model: {str(e)}", exc_info=True)
+            print(f"❌ [AI SERVICE] Failed to initialize Gemini model: {str(e)}")
+            logger.error(f"❌ [AI SERVICE] Failed to initialize Gemini model: {str(e)}", exc_info=True)
             raise
     
     def generate_embedding(self, text: str) -> List[float]:
@@ -104,23 +117,35 @@ class AIService:
             
             # Generate response using simple prompt format
             try:
+                print(f"🔧 [AI SERVICE] Calling Gemini API with prompt length: {len(full_prompt)} chars")
+                logger.debug(f"🔧 [AI SERVICE] Calling Gemini API with prompt length: {len(full_prompt)} chars")
                 response = self.model.generate_content(full_prompt)
+                print(f"🔧 [AI SERVICE] Received response from Gemini API")
                 
                 # Check if response has text
                 if not response or not hasattr(response, 'text'):
-                    logger.error(f"Invalid response from Gemini API: {response}")
+                    error_msg = f"Invalid response from Gemini API: {response}"
+                    print(f"❌ [AI SERVICE] {error_msg}")
+                    logger.error(f"❌ [AI SERVICE] {error_msg}")
                     raise ValueError("Invalid response from Gemini API")
                 
                 response_text = response.text
                 if not response_text or len(response_text.strip()) == 0:
-                    logger.warning("Empty response from Gemini API")
+                    error_msg = "Empty response from Gemini API"
+                    print(f"⚠️ [AI SERVICE] {error_msg}")
+                    logger.warning(f"⚠️ [AI SERVICE] {error_msg}")
                     raise ValueError("Empty response from Gemini API")
                 
-                logger.info(f"Successfully generated AI response: {len(response_text)} characters")
+                print(f"✅ [AI SERVICE] Successfully generated AI response: {len(response_text)} characters")
+                logger.info(f"✅ [AI SERVICE] Successfully generated AI response: {len(response_text)} characters")
                 return response_text
                 
             except Exception as api_error:
-                logger.error(f"Gemini API error: {str(api_error)}", exc_info=True)
+                error_msg = f"Gemini API error: {str(api_error)}"
+                print(f"❌ [AI SERVICE] {error_msg}")
+                logger.error(f"❌ [AI SERVICE] {error_msg}", exc_info=True)
+                import traceback
+                print(f"❌ [AI SERVICE] Traceback: {traceback.format_exc()}")
                 # Re-raise to be caught by outer exception handler
                 raise
             

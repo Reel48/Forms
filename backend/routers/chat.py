@@ -702,7 +702,9 @@ async def generate_ai_response(
 
 async def _generate_ai_response_async(conversation_id: str, customer_id: str) -> None:
     """Asynchronously generate AI response for a customer message"""
-    logger.info(f"Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
+    # Use print as well as logger to ensure we see this in logs
+    print(f"🤖 [AI TASK] Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
+    logger.info(f"🤖 [AI TASK] Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
     try:
         # Small delay to ensure message is saved
         logger.info(f"Waiting 1.5 seconds before generating AI response...")
@@ -824,24 +826,31 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             "created_at": datetime.now().isoformat()
         }
         
-        logger.info(f"Inserting AI message into database...")
+        print(f"🤖 [AI TASK] Inserting AI message into database...")
+        logger.info(f"🤖 [AI TASK] Inserting AI message into database...")
         message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
         if message_response.data:
-            logger.info(f"AI message inserted successfully: {message_response.data[0].get('id')}")
+            print(f"✅ [AI TASK] AI message inserted successfully: {message_response.data[0].get('id')}")
+            logger.info(f"✅ [AI TASK] AI message inserted successfully: {message_response.data[0].get('id')}")
             # Update conversation timestamp
             try:
                 supabase_storage.table("chat_conversations").update({
                     "last_message_at": datetime.now().isoformat(),
                     "updated_at": datetime.now().isoformat()
                 }).eq("id", conversation_id).execute()
-                logger.info(f"Conversation timestamp updated")
+                logger.info(f"✅ [AI TASK] Conversation timestamp updated")
             except Exception as e:
-                logger.warning(f"Failed to update conversation timestamp: {str(e)}")
+                logger.warning(f"⚠️ [AI TASK] Failed to update conversation timestamp: {str(e)}")
             
-            logger.info(f"✅ AI response successfully generated and saved for conversation {conversation_id}")
+            print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+            logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
         else:
-            logger.error(f"Failed to insert AI message - no data returned")
+            print(f"❌ [AI TASK] Failed to insert AI message - no data returned")
+            logger.error(f"❌ [AI TASK] Failed to insert AI message - no data returned")
     
     except Exception as e:
-        logger.error(f"❌ Error generating AI response asynchronously: {str(e)}", exc_info=True)
+        print(f"❌ [AI TASK] Error generating AI response asynchronously: {str(e)}")
+        logger.error(f"❌ [AI TASK] Error generating AI response asynchronously: {str(e)}", exc_info=True)
+        import traceback
+        print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
 
