@@ -771,11 +771,13 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         
         # Retrieve context using RAG
         rag_service = get_rag_service()
+        logger.info(f"Retrieving context for query: '{user_query[:100]}...'")
         context = rag_service.retrieve_context(
             user_query,
             customer_id=customer_id,
             is_admin=False
         )
+        logger.info(f"Context retrieved: {len(context)} characters")
         
         # Get customer context
         customer_context = None
@@ -793,19 +795,23 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         # Generate AI response
         try:
             ai_service = get_ai_service()
-            logger.info(f"AI service obtained, generating response...")
+            logger.info(f"AI service obtained, generating response for query: '{user_query[:100]}...'")
+            logger.info(f"Context retrieved (length: {len(context)} chars)")
             ai_response = ai_service.generate_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
                 customer_context=customer_context
             )
-            logger.info(f"AI response generated successfully (length: {len(ai_response) if ai_response else 0})")
+            if not ai_response or len(ai_response.strip()) == 0:
+                logger.warning(f"AI service returned empty response")
+                return
+            logger.info(f"✅ AI response generated successfully (length: {len(ai_response)} chars)")
         except ValueError as ve:
-            logger.error(f"AI service not configured: {str(ve)}")
+            logger.error(f"❌ AI service not configured: {str(ve)}")
             return  # Don't create an error message, just skip
         except Exception as ai_error:
-            logger.error(f"Error calling AI service: {str(ai_error)}", exc_info=True)
+            logger.error(f"❌ Error calling AI service: {str(ai_error)}", exc_info=True)
             return  # Don't create an error message, just skip
         
         # Create AI message
