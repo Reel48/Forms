@@ -697,7 +697,6 @@ const ChatPage: React.FC = () => {
                     >
                       <div className="message-content">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          {isAI && <FaRobot style={{ fontSize: '0.875rem', color: 'var(--color-primary)' }} />}
                           <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
                             {senderName}
                           </span>
