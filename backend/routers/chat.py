@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
 
 def _convert_proto_to_dict(obj):
-    """Convert proto objects (like MapComposite) to regular Python dicts/lists"""
+    """Convert proto objects (like MapComposite, RepeatedComposite) to regular Python dicts/lists"""
     if obj is None:
         return None
     
@@ -36,17 +36,49 @@ def _convert_proto_to_dict(obj):
     if isinstance(obj, list):
         return [_convert_proto_to_dict(item) for item in obj]
     
-    # Check if it's a proto MapComposite or similar object
+    # Check if it's a proto object
     if hasattr(obj, '__class__'):
         obj_type_str = str(type(obj)).lower()
-        if 'proto' in obj_type_str or 'mapcomposite' in obj_type_str:
+        obj_type_name = type(obj).__name__
+        
+        # Handle RepeatedComposite (list-like proto objects)
+        if 'repeatedcomposite' in obj_type_str or obj_type_name == 'RepeatedComposite':
             try:
-                # Try to convert to dict
+                # Convert to list by iterating
+                return [_convert_proto_to_dict(item) for item in obj]
+            except (TypeError, ValueError, AttributeError) as e:
+                logger.warning(f"Could not convert RepeatedComposite to list: {e}, type: {type(obj)}")
+                return []
+        
+        # Handle MapComposite (dict-like proto objects)
+        if 'mapcomposite' in obj_type_str or obj_type_name == 'MapComposite':
+            try:
+                # Try to convert to dict using keys() and values()
                 if hasattr(obj, 'keys') and hasattr(obj, 'values'):
                     return {k: _convert_proto_to_dict(v) for k, v in zip(obj.keys(), obj.values())}
                 # Try dict() constructor
                 if hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
-                    return {k: _convert_proto_to_dict(v) for k, v in obj}
+                    # Check if it's iterable as key-value pairs
+                    try:
+                        # Try to see if it can be unpacked as key-value pairs
+                        first_item = next(iter(obj))
+                        if isinstance(first_item, (list, tuple)) and len(first_item) == 2:
+                            return {k: _convert_proto_to_dict(v) for k, v in obj}
+                    except (StopIteration, TypeError, ValueError):
+                        pass
+                    # If not key-value pairs, try dict() constructor
+                    return dict(obj)
+            except (TypeError, ValueError, AttributeError) as e:
+                logger.warning(f"Could not convert MapComposite to dict: {e}, type: {type(obj)}")
+                # If conversion fails, try to get string representation
+                return str(obj)
+        
+        # Handle other proto objects
+        if 'proto' in obj_type_str:
+            try:
+                # Try to convert to dict using keys() and values()
+                if hasattr(obj, 'keys') and hasattr(obj, 'values'):
+                    return {k: _convert_proto_to_dict(v) for k, v in zip(obj.keys(), obj.values())}
                 # Try dict() constructor
                 return dict(obj)
             except (TypeError, ValueError, AttributeError) as e:
