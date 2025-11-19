@@ -417,18 +417,27 @@ class AIService:
                                     logger.warning(f"Could not parse function call args: {e}")
                                     args = {}
                             
-                            function_calls.append({
-                                "name": func_call.name if hasattr(func_call, 'name') else "",
-                                "arguments": args
-                            })
+                            func_name = func_call.name if hasattr(func_call, 'name') else ""
+                            # Only add function calls with valid names
+                            if func_name and func_name.strip():
+                                function_calls.append({
+                                    "name": func_name.strip(),
+                                    "arguments": args
+                                })
                         elif hasattr(part, 'text'):
                             response_text += part.text
             
-            # If no text but we have function calls, generate a response about what we're doing
-            if not response_text and function_calls:
+            # Filter out invalid function calls (empty names)
+            valid_function_calls = [fc for fc in function_calls if fc.get("name", "").strip()]
+            
+            # If no text but we have VALID function calls, generate a response about what we're doing
+            if not response_text and valid_function_calls:
                 response_text = "I'll help you with that. Let me create the quote and set everything up for you."
             elif not response_text:
                 response_text = response.text if hasattr(response, 'text') else ""
+            
+            # Return only valid function calls
+            function_calls = valid_function_calls
             
             # Post-process response
             response_text = self._format_urls_as_markdown(response_text)
@@ -512,6 +521,8 @@ You have the ability to create quotes and organize orders, but your PRIMARY role
 - If a customer asks "what quote?" or "tell me about quotes", just answer - don't create anything
 - The client_id will be automatically filled in - you don't need to ask the customer for it
 - When in doubt, just answer the question - don't use functions
+- **ALWAYS provide a text response** - even if you're using functions, explain what you're doing in your response
+- **NEVER use functions without also providing a text explanation** - your response should always include text
 """
         
         # Add retrieved context
