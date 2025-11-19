@@ -46,6 +46,11 @@ if not OCHO_USER_ID:
 if OCHO_USER_ID and OCHO_USER_ID != "00000000-0000-0000-0000-000000000000":
     logger.info(f"Using Ocho user ID for AI messages: {OCHO_USER_ID}")
 
+@router.get("/ocho-user-id")
+async def get_ocho_user_id():
+    """Get Ocho (AI assistant) user ID for frontend"""
+    return {"ocho_user_id": OCHO_USER_ID}
+
 # File upload constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_FILE_TYPES = {
