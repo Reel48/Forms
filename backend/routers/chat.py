@@ -22,6 +22,10 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Special UUID for AI assistant messages
+# Using all zeros UUID as a special identifier for AI messages
+AI_ASSISTANT_UUID = "00000000-0000-0000-0000-000000000000"
+
 # File upload constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_FILE_TYPES = {
@@ -312,7 +316,7 @@ async def send_message(
                 for msg in recent_messages:
                     sender_id = msg.get("sender_id", "")
                     # If sender is not the customer and not AI, it's likely an admin
-                    if sender_id != user["id"] and sender_id != "ai-assistant":
+                    if sender_id != user["id"] and sender_id != AI_ASSISTANT_UUID:
                         # Verify it's actually an admin by checking if sender_id exists in user_roles as admin
                         # For now, we'll use a simpler check: if it's not the customer and not AI, assume admin
                         admin_responded_recently = True
@@ -569,7 +573,7 @@ async def generate_ai_response(
         # Get the most recent user message (not from AI)
         latest_message = None
         for msg in messages:
-            if msg.get("sender_id") != "ai-assistant" and msg.get("message"):
+            if msg.get("sender_id") != AI_ASSISTANT_UUID and msg.get("message"):
                 latest_message = msg
                 break
         
@@ -589,7 +593,7 @@ async def generate_ai_response(
             
             if content and sender_id:
                 # Determine role: "user" for customer/admin, "model" for AI
-                if sender_id == "ai-assistant":
+                if sender_id == AI_ASSISTANT_UUID:
                     role = "model"
                 else:
                     role = "user"
@@ -646,7 +650,7 @@ async def generate_ai_response(
         ai_message_data = {
             "id": str(uuid.uuid4()),
             "conversation_id": conversation_id,
-            "sender_id": "ai-assistant",  # Special ID for AI messages
+            "sender_id": AI_ASSISTANT_UUID,  # Special UUID for AI messages
             "message": ai_response,
             "message_type": "text",
             "created_at": datetime.now().isoformat()
@@ -690,7 +694,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
         # If most recent message is from admin (not customer, not AI), skip AI response
         if recent_messages:
             latest = recent_messages[0]
-            if latest.get("sender_id") != customer_id and latest.get("sender_id") != "ai-assistant":
+            if latest.get("sender_id") != customer_id and latest.get("sender_id") != AI_ASSISTANT_UUID:
                 logger.info(f"Admin responded, skipping AI response for conversation {conversation_id}")
                 return
         
@@ -723,7 +727,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
             content = msg.get("message", "")
             
             if content and sender_id:
-                if sender_id == "ai-assistant":
+                if sender_id == AI_ASSISTANT_UUID:
                     role = "model"
                 else:
                     role = "user"
