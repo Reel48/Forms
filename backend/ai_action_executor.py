@@ -71,7 +71,8 @@ class AIActionExecutor:
             client_id = params.get("client_id")
             title = params.get("title", "New Quote")
             line_items_data = params.get("line_items", [])
-            tax_rate = params.get("tax_rate", "0.00")
+            # Default tax rate is 8.25% (stored as percentage, not decimal)
+            tax_rate = params.get("tax_rate", "8.25")
             create_folder = params.get("create_folder", True)
             
             if not client_id:
@@ -93,10 +94,13 @@ class AIActionExecutor:
             
             # Normalize line items data for calculate_quote_totals (expects discount_percent, not discount)
             # Handle case where line_items might be a JSON string
+            logger.info(f"Processing line_items_data: type={type(line_items_data)}, value={line_items_data}")
+            
             if isinstance(line_items_data, str):
                 try:
                     import json
                     line_items_data = json.loads(line_items_data)
+                    logger.info(f"Parsed line_items from JSON string: {line_items_data}")
                 except (json.JSONDecodeError, ValueError) as e:
                     logger.error(f"Could not parse line_items as JSON: {e}, value: {line_items_data}")
                     return {
@@ -106,10 +110,14 @@ class AIActionExecutor:
             
             # Ensure line_items_data is a list and each item is a dict
             if not isinstance(line_items_data, list):
+                logger.error(f"line_items_data is not a list: type={type(line_items_data)}, value={line_items_data}")
                 return {
                     "success": False,
                     "error": f"line_items must be a list, got {type(line_items_data).__name__}. Value: {str(line_items_data)[:100]}"
                 }
+            
+            if not line_items_data:
+                logger.warning("line_items_data is empty - quote will be created with no line items")
             
             normalized_line_items = []
             for idx, item in enumerate(line_items_data):
@@ -121,12 +129,21 @@ class AIActionExecutor:
                         "error": f"Line item {idx} must be a dictionary with description, quantity, and unit_price"
                     }
                 
+                # Validate required fields
+                if not item.get("description"):
+                    logger.warning(f"Line item {idx} missing description")
+                if not item.get("quantity"):
+                    logger.warning(f"Line item {idx} missing quantity, using default 1")
+                if not item.get("unit_price"):
+                    logger.warning(f"Line item {idx} missing unit_price, using default 0.00")
+                
                 normalized_item = {
                     "quantity": item.get("quantity", 1),
                     "unit_price": item.get("unit_price", "0.00"),
                     "discount_percent": item.get("discount", item.get("discount_percent", "0.00"))
                 }
                 normalized_line_items.append(normalized_item)
+                logger.debug(f"Normalized line item {idx}: {normalized_item}")
             
             # Calculate totals
             from routers.quotes import calculate_quote_totals
@@ -185,13 +202,18 @@ class AIActionExecutor:
                         "description": item.get("description", ""),
                         "quantity": str(item.get("quantity", 1)),
                         "unit_price": str(item.get("unit_price", "0.00")),
-                        "discount": str(item.get("discount", "0.00")),
+                        "discount_percent": str(item.get("discount", item.get("discount_percent", "0.00"))),  # Database column is discount_percent
                         "line_total": str(line_total),
                         "created_at": datetime.now().isoformat()
                     })
                 
                 if line_items_to_insert:
+                    logger.info(f"Inserting {len(line_items_to_insert)} line items for quote {quote_id}")
+                    logger.debug(f"Line items data: {line_items_to_insert}")
                     supabase_storage.table("line_items").insert(line_items_to_insert).execute()
+                    logger.info(f"Successfully inserted {len(line_items_to_insert)} line items")
+                else:
+                    logger.warning(f"No line items to insert for quote {quote_id}. Original line_items_data: {line_items_data}")
             
             # Create folder if requested
             folder_id = None
