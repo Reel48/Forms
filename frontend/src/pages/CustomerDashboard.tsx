@@ -31,13 +31,24 @@ function CustomerDashboard() {
     if (role === 'customer') {
       loadData();
       loadCustomerProfile();
+    }
+  }, [role]);
+
+  // Refresh data when page becomes visible (user switches back to tab/window)
+  useEffect(() => {
+    if (role === 'customer') {
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          // Page became visible, refresh data
+          loadData();
+        }
+      };
       
-      // Poll for folder updates every 30 seconds to catch deletions
-      const interval = setInterval(() => {
-        loadData();
-      }, 30000); // Refresh every 30 seconds
+      document.addEventListener('visibilitychange', handleVisibilityChange);
       
-      return () => clearInterval(interval);
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, [role]);
 
