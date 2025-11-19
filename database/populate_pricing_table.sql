@@ -1,92 +1,96 @@
--- Populate Pricing Table
--- This script helps you set up your pricing products, discounts, and tiers
--- Customize the values below to match your actual products and pricing
+-- Populate Pricing Table with Actual Products
+-- Custom Hats, Custom Coozies (with and without magnets)
 
 -- ============================================
--- STEP 1: Add Your Products/Services
+-- STEP 1: Add Products
 -- ============================================
--- Replace these examples with your actual products
 
+-- Custom Hats
 INSERT INTO pricing_products (product_name, product_code, description, base_price, unit, category, is_active) VALUES
-  ('Custom Hat', 'HAT-001', 'Custom designed hat with embroidered logo', 25.00, 'each', 'Headwear', true),
-  ('Custom Cap', 'CAP-001', 'Custom baseball cap with logo', 22.00, 'each', 'Headwear', true),
-  ('Embroidery Service', 'EMB-001', 'Custom embroidery on garments', 15.00, 'per_item', 'Services', true),
-  ('Screen Printing', 'PRINT-001', 'Screen printing on garments', 12.00, 'per_item', 'Services', true),
-  ('Logo Design', 'DESIGN-001', 'Custom logo design service', 150.00, 'per_project', 'Design', true),
-  ('Rush Order', 'RUSH-001', 'Expedited processing (2-3 business days)', 50.00, 'per_order', 'Services', true)
+  ('Custom Hats', 'HAT-001', 'Custom designed hats with embroidered logo. Minimum order: 100 hats.', 15.50, 'each', 'Headwear', true),
+  ('Custom Coozies (without magnet)', 'COOZIE-001', 'Custom coozies without magnet. Minimum order: 250 coozies.', 2.00, 'each', 'Accessories', true),
+  ('Custom Coozies (with magnet)', 'COOZIE-002', 'Custom coozies with magnet. Minimum order: 250 coozies.', 3.00, 'each', 'Accessories', true)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
--- STEP 2: Add Discounts
+-- STEP 2: Add Pricing Tiers for Custom Hats
 -- ============================================
--- Customize these discounts to match your business rules
 
--- Bulk order discount (10% off for orders of 10+ items)
-INSERT INTO pricing_discounts (discount_name, discount_type, discount_value, min_quantity, applicable_to, is_active) VALUES
-  ('Bulk Order Discount', 'percentage', 10.00, 10, 'all', true)
-ON CONFLICT DO NOTHING;
-
--- Volume discount (15% off for orders of 25+ items)
-INSERT INTO pricing_discounts (discount_name, discount_type, discount_value, min_quantity, applicable_to, is_active) VALUES
-  ('Volume Discount', 'percentage', 15.00, 25, 'all', true)
-ON CONFLICT DO NOTHING;
-
--- Category-specific discount (5% off all Headwear)
-INSERT INTO pricing_discounts (discount_name, discount_type, discount_value, applicable_to, applicable_category, is_active) VALUES
-  ('Headwear Special', 'percentage', 5.00, 'category', 'Headwear', true)
-ON CONFLICT DO NOTHING;
-
--- Fixed amount discount ($5 off orders over $100)
-INSERT INTO pricing_discounts (discount_name, discount_type, discount_value, min_quantity, applicable_to, is_active) VALUES
-  ('Large Order Discount', 'fixed_amount', 5.00, 100, 'all', true)
-ON CONFLICT DO NOTHING;
-
--- ============================================
--- STEP 3: Add Volume Pricing Tiers (Optional)
--- ============================================
--- If you want quantity-based pricing for specific products
-
--- Example: Custom Hat pricing tiers
--- Get the product ID first (you'll need to replace this with actual ID)
--- Or use product_code to find it
-
--- For Custom Hat (HAT-001) - if ordering 10-24 units, price is $23 each
--- For Custom Hat (HAT-001) - if ordering 25+ units, price is $20 each
-
--- First, let's create a helper query to get product IDs:
--- SELECT id, product_code FROM pricing_products WHERE product_code = 'HAT-001';
-
--- Then insert tiers (replace PRODUCT_ID with actual ID):
-/*
+-- Custom Hats pricing tiers (minimum 100 hats)
 INSERT INTO pricing_tiers (product_id, min_quantity, max_quantity, price_per_unit) VALUES
-  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 10, 24, 23.00),
-  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 25, NULL, 20.00);
-*/
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 100, 199, 15.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 200, 299, 14.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 300, 399, 13.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 400, 499, 13.00),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 500, 749, 12.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 750, 999, 12.00),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 1000, 1999, 11.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 2000, 2999, 11.00),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 3000, 3999, 10.75),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 4000, 4999, 10.45),
+  ((SELECT id FROM pricing_products WHERE product_code = 'HAT-001'), 5000, NULL, 10.15);
 
 -- ============================================
--- STEP 4: Verify Your Data
+-- STEP 3: Add Pricing Tiers for Custom Coozies (without magnet)
 -- ============================================
 
--- View all active products
--- SELECT * FROM pricing_products WHERE is_active = true ORDER BY category, product_name;
+-- Custom Coozies without magnet pricing tiers (minimum 250 coozies)
+INSERT INTO pricing_tiers (product_id, min_quantity, max_quantity, price_per_unit) VALUES
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-001'), 250, 499, 2.00),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-001'), 500, 999, 1.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-001'), 1000, 2499, 1.25),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-001'), 2500, 4999, 1.10),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-001'), 5000, NULL, 1.00);
 
--- View all active discounts
--- SELECT * FROM pricing_discounts WHERE is_active = true;
+-- ============================================
+-- STEP 4: Add Pricing Tiers for Custom Coozies (with magnet)
+-- ============================================
 
--- View pricing tiers
--- SELECT pt.*, pp.product_name, pp.product_code 
+-- Custom Coozies with magnet pricing tiers (minimum 250 coozies)
+INSERT INTO pricing_tiers (product_id, min_quantity, max_quantity, price_per_unit) VALUES
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-002'), 250, 499, 3.00),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-002'), 500, 999, 2.50),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-002'), 1000, 2499, 2.25),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-002'), 2500, 4999, 2.10),
+  ((SELECT id FROM pricing_products WHERE product_code = 'COOZIE-002'), 5000, NULL, 2.00);
+
+-- ============================================
+-- STEP 5: Verify Your Data
+-- ============================================
+
+-- View all products with their base prices
+-- SELECT product_name, product_code, base_price, unit, category FROM pricing_products WHERE is_active = true;
+
+-- View all pricing tiers for Custom Hats
+-- SELECT pp.product_name, pt.min_quantity, pt.max_quantity, pt.price_per_unit
 -- FROM pricing_tiers pt
 -- JOIN pricing_products pp ON pt.product_id = pp.id
+-- WHERE pp.product_code = 'HAT-001'
+-- ORDER BY pt.min_quantity;
+
+-- View all pricing tiers for Custom Coozies (without magnet)
+-- SELECT pp.product_name, pt.min_quantity, pt.max_quantity, pt.price_per_unit
+-- FROM pricing_tiers pt
+-- JOIN pricing_products pp ON pt.product_id = pp.id
+-- WHERE pp.product_code = 'COOZIE-001'
+-- ORDER BY pt.min_quantity;
+
+-- View all pricing tiers for Custom Coozies (with magnet)
+-- SELECT pp.product_name, pt.min_quantity, pt.max_quantity, pt.price_per_unit
+-- FROM pricing_tiers pt
+-- JOIN pricing_products pp ON pt.product_id = pp.id
+-- WHERE pp.product_code = 'COOZIE-002'
+-- ORDER BY pt.min_quantity;
+
+-- View all products with their pricing tiers
+-- SELECT 
+--   pp.product_name,
+--   pp.product_code,
+--   pp.base_price,
+--   pt.min_quantity,
+--   pt.max_quantity,
+--   pt.price_per_unit
+-- FROM pricing_products pp
+-- LEFT JOIN pricing_tiers pt ON pp.id = pt.product_id
+-- WHERE pp.is_active = true
 -- ORDER BY pp.product_name, pt.min_quantity;
-
--- ============================================
--- NOTES:
--- ============================================
--- 1. Product codes should be unique identifiers for your products
--- 2. Units can be: 'each', 'per_item', 'per_hour', 'per_project', 'per_order', etc.
--- 3. Categories help organize products (e.g., 'Headwear', 'Services', 'Design')
--- 4. Set is_active = false to hide products without deleting them
--- 5. Discounts can apply to 'all', 'category', or 'product'
--- 6. Pricing tiers override base_price when quantity thresholds are met
--- 7. The AI chatbot will automatically use this pricing information
-
