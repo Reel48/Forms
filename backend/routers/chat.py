@@ -23,6 +23,38 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # Configure logging
 logger = logging.getLogger(__name__)
 
+def _convert_proto_to_dict(obj):
+    """Convert proto objects (like MapComposite) to regular Python dicts/lists"""
+    if obj is None:
+        return None
+    
+    # If it's already a dict, recursively process values
+    if isinstance(obj, dict):
+        return {k: _convert_proto_to_dict(v) for k, v in obj.items()}
+    
+    # If it's a list, recursively process items
+    if isinstance(obj, list):
+        return [_convert_proto_to_dict(item) for item in obj]
+    
+    # Check if it's a proto MapComposite or similar object
+    if hasattr(obj, '__class__') and 'proto' in str(type(obj)).lower():
+        try:
+            # Try to convert to dict
+            if hasattr(obj, 'keys') and hasattr(obj, 'values'):
+                return {k: _convert_proto_to_dict(v) for k, v in zip(obj.keys(), obj.values())}
+            # Try dict() constructor
+            return dict(obj)
+        except (TypeError, ValueError):
+            # If conversion fails, try to get string representation
+            return str(obj)
+    
+    # For other types, try to convert to dict if possible
+    if hasattr(obj, '__dict__'):
+        return _convert_proto_to_dict(obj.__dict__)
+    
+    # Return as-is for primitives
+    return obj
+
 # Get Ocho (AI assistant) user ID from environment or use fallback
 # Ocho is a special user account for AI messages
 OCHO_USER_ID = os.getenv("OCHO_USER_ID")
@@ -720,9 +752,13 @@ async def generate_ai_response(
                         logger.warning(f"Skipping function call with empty name. Function call data: {func_call}")
                         continue
                     
-                    # Auto-fill client_id if not provided and we have it
-                    if not func_params.get("client_id") and client_id:
+                    # Convert any MapComposite or proto objects to dicts
+                    func_params = _convert_proto_to_dict(func_params)
+                    
+                    # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
+                    if client_id:
                         func_params["client_id"] = client_id
+                        logger.info(f"Using client_id from conversation context: {client_id}")
                     
                     logger.info(f"Executing function: {func_name} with params: {func_params}")
                     result = action_executor.execute_function(func_name, func_params)
@@ -974,9 +1010,13 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                         logger.warning(f"Skipping function call with empty name. Function call data: {func_call}")
                         continue
                     
-                    # Auto-fill client_id if not provided
-                    if not func_params.get("client_id") and client_id:
+                    # Convert any MapComposite or proto objects to dicts
+                    func_params = _convert_proto_to_dict(func_params)
+                    
+                    # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
+                    if client_id:
                         func_params["client_id"] = client_id
+                        logger.info(f"Using client_id from conversation context: {client_id}")
                     
                     logger.info(f"Executing function: {func_name} with params: {func_params}")
                     result = action_executor.execute_function(func_name, func_params)

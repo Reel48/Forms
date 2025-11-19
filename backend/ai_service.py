@@ -504,12 +504,14 @@ You have the ability to create quotes and organize orders, but your PRIMARY role
 **IF YOU USE FUNCTIONS:**
 
 1. **Creating Quotes**: Use create_quote ONLY when customer explicitly wants to order:
-   - The customer's client_id (automatically provided - don't ask for it)
-   - Product details (description, quantity, price)
+   - **DO NOT provide client_id** - it will be automatically retrieved from the conversation context
+   - **DO NOT provide customer name, email, or address** - these are automatically retrieved from the customer's account
+   - Product details (description, quantity, unit_price) - these are REQUIRED
    - Always create a folder with the quote (set create_folder=true)
    - Use pricing information from the context to calculate correct prices
    - For custom hats: Base price is $15.50 per hat for 100-199 units
    - For custom coozies: Base price is $2.00 per coozie (without magnet) or $3.00 per coozie (with magnet) for 250-499 units
+   - **line_items format**: [{"description": "Custom Hat", "quantity": 200, "unit_price": "15.50", "discount": "0.00"}]
 
 2. **Adding Forms**: After creating a quote/folder for hat orders:
    - Use assign_form_to_folder with form_slug='form-4f8ml8om'
