@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaCheck, FaRobot } from 'react-icons/fa';
+import { FaPaperclip, FaCheck, FaRobot, FaTrash } from 'react-icons/fa';
 import { renderTextWithLinks } from '../utils/textUtils';
 import './ChatPage.css';
 
@@ -20,6 +20,7 @@ const ChatPage: React.FC = () => {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -383,6 +384,26 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!selectedConversation) return;
+    
+    if (!window.confirm(`Are you sure you want to delete this conversation with ${selectedConversation.customer_name || selectedConversation.customer_email || 'this customer'}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await chatAPI.deleteConversation(selectedConversation.id);
+      // Remove from conversations list
+      setConversations((prev) => prev.filter((conv) => conv.id !== selectedConversation.id));
+      // Clear selected conversation
+      setSelectedConversation(null);
+      setMessages([]);
+    } catch (error: any) {
+      console.error('Failed to delete conversation:', error);
+      alert(error.response?.data?.detail || 'Failed to delete conversation');
+    }
+  };
+
   // Filter conversations by status
   const filteredConversations = conversations.filter((conv) => {
     if (statusFilter === 'all') return true;
@@ -606,6 +627,32 @@ const ChatPage: React.FC = () => {
                     <option value="resolved">Resolved</option>
                     <option value="archived">Archived</option>
                   </select>
+                  <button
+                    onClick={handleDeleteConversation}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-danger, #dc2626)',
+                      backgroundColor: 'var(--color-danger, #dc2626)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      transition: 'opacity 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.8';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    title="Delete conversation"
+                  >
+                    <FaTrash style={{ fontSize: '0.75rem' }} />
+                    Delete
+                  </button>
                   {/* AI auto-responds automatically - no manual button needed */}
                 </div>
               </div>
@@ -622,21 +669,30 @@ const ChatPage: React.FC = () => {
               ) : (
                 messages.map((message) => {
                   const isAdmin = message.sender_id === user?.id;
-                  const isAI = message.sender_id === 'ai-assistant';
+                  const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
+                  
+                  // Get sender name
+                  let senderName = '';
+                  if (isAI) {
+                    senderName = 'Ocho';
+                  } else if (isAdmin) {
+                    senderName = user?.email?.split('@')[0] || 'You';
+                  } else {
+                    senderName = selectedConversation?.customer_name || selectedConversation?.customer_email || 'Customer';
+                  }
+                  
                   return (
                     <div
                       key={message.id}
                       className={`message ${isAdmin ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
                     >
                       <div className="message-content">
-                        {isAI && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                            <FaRobot style={{ fontSize: '0.875rem', color: 'var(--color-primary)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
-                              Ocho
-                            </span>
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          {isAI && <FaRobot style={{ fontSize: '0.875rem', color: 'var(--color-primary)' }} />}
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
+                            {senderName}
+                          </span>
+                        </div>
                         {message.message_type === 'image' && message.file_url ? (
                           <img src={message.file_url} alt={message.file_name || 'Image'} className="message-image" />
                         ) : message.message_type === 'file' && message.file_url ? (
