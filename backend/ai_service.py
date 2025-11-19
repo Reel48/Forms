@@ -3,7 +3,7 @@ AI Service for Google Gemini Integration
 Handles AI response generation with RAG (Retrieval-Augmented Generation)
 """
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import logging
 
 logger = logging.getLogger(__name__)
