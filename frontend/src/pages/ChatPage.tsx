@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaCheck } from 'react-icons/fa';
+import { FaPaperclip, FaCheck, FaRobot } from 'react-icons/fa';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
@@ -19,6 +19,7 @@ const ChatPage: React.FC = () => {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -400,11 +401,40 @@ const ChatPage: React.FC = () => {
       setNewMessage('');
       // Realtime will handle the new message update automatically
       // No need to reload conversations - Realtime subscription will update the UI
+      
+      // Auto-generate AI response for customer messages (if admin is viewing)
+      const isAdmin = user?.role === 'admin';
+      if (isAdmin && selectedConversation.customer_id !== user?.id) {
+        // Customer sent a message, auto-generate AI response
+        setTimeout(() => {
+          generateAIResponse();
+        }, 1000); // Wait 1 second before generating AI response
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
     } finally {
       setSending(false);
+    }
+  };
+
+  const generateAIResponse = async () => {
+    if (!selectedConversation || generatingAI) return;
+
+    try {
+      setGeneratingAI(true);
+      await chatAPI.generateAIResponse(selectedConversation.id);
+      // Realtime will handle the AI message update automatically
+      // No need to reload messages - Realtime subscription will update the UI
+    } catch (error: any) {
+      console.error('Failed to generate AI response:', error);
+      if (error.response?.status === 503) {
+        alert('AI service is not configured. Please set GEMINI_API_KEY environment variable.');
+      } else {
+        alert('Failed to generate AI response. Please try again.');
+      }
+    } finally {
+      setGeneratingAI(false);
     }
   };
 
@@ -550,7 +580,7 @@ const ChatPage: React.FC = () => {
             <div className="chat-header">
               <div>
                 <h3>{selectedConversation.customer_name || selectedConversation.customer_email || 'Customer'}</h3>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem', flexWrap: 'wrap' }}>
                   <span
                     className="chat-status"
                     style={{
@@ -591,6 +621,30 @@ const ChatPage: React.FC = () => {
                     <option value="resolved">Resolved</option>
                     <option value="archived">Archived</option>
                   </select>
+                  {/* AI Response Button - Only show for admins viewing customer conversations */}
+                  {user?.role === 'admin' && selectedConversation.customer_id !== user?.id && (
+                    <button
+                      onClick={generateAIResponse}
+                      disabled={generatingAI}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.75rem',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '4px',
+                        border: '1px solid var(--color-primary)',
+                        backgroundColor: generatingAI ? 'var(--color-gray-light)' : 'var(--color-primary)',
+                        color: 'white',
+                        cursor: generatingAI ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      title="Generate AI response"
+                    >
+                      <FaRobot style={{ fontSize: '0.875rem' }} />
+                      {generatingAI ? 'Generating...' : 'AI Reply'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -606,12 +660,21 @@ const ChatPage: React.FC = () => {
               ) : (
                 messages.map((message) => {
                   const isAdmin = message.sender_id === user?.id;
+                  const isAI = message.sender_id === 'ai-assistant';
                   return (
                     <div
                       key={message.id}
-                      className={`message ${isAdmin ? 'message-sent' : 'message-received'}`}
+                      className={`message ${isAdmin ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
                     >
                       <div className="message-content">
+                        {isAI && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <FaRobot style={{ fontSize: '0.875rem', color: 'var(--color-primary)' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
+                              AI Assistant
+                            </span>
+                          </div>
+                        )}
                         {message.message_type === 'image' && message.file_url ? (
                           <img src={message.file_url} alt={message.file_name || 'Image'} className="message-image" />
                         ) : message.message_type === 'file' && message.file_url ? (

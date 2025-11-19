@@ -165,6 +165,15 @@
   color: var(--color-text, #111827);
 }
 
+.message-ai {
+  border-left: 3px solid var(--color-primary);
+}
+
+.message-ai .message-content {
+  background-color: rgba(45, 105, 255, 0.08);
+  border-left: 3px solid var(--color-primary);
+}
+
 .message-text {
   word-wrap: break-word;
 }

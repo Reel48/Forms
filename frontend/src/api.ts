@@ -793,6 +793,9 @@ export const chatAPI = {
   updateConversationStatus: (conversationId: string, status: 'active' | 'resolved' | 'archived') => {
     return api.patch<{ message: string; status: string }>(`/api/chat/conversations/${conversationId}/status?status=${status}`);
   },
+  generateAIResponse: (conversationId: string) => {
+    return api.post<ChatMessage>(`/api/chat/conversations/${conversationId}/ai-response`);
+  },
 };
 
 export const authAPI = {
