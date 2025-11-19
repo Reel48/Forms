@@ -37,22 +37,28 @@ def _convert_proto_to_dict(obj):
         return [_convert_proto_to_dict(item) for item in obj]
     
     # Check if it's a proto MapComposite or similar object
-    if hasattr(obj, '__class__') and 'proto' in str(type(obj)).lower():
-        try:
-            # Try to convert to dict
-            if hasattr(obj, 'keys') and hasattr(obj, 'values'):
-                return {k: _convert_proto_to_dict(v) for k, v in zip(obj.keys(), obj.values())}
-            # Try dict() constructor
-            return dict(obj)
-        except (TypeError, ValueError):
-            # If conversion fails, try to get string representation
-            return str(obj)
+    if hasattr(obj, '__class__'):
+        obj_type_str = str(type(obj)).lower()
+        if 'proto' in obj_type_str or 'mapcomposite' in obj_type_str:
+            try:
+                # Try to convert to dict
+                if hasattr(obj, 'keys') and hasattr(obj, 'values'):
+                    return {k: _convert_proto_to_dict(v) for k, v in zip(obj.keys(), obj.values())}
+                # Try dict() constructor
+                if hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+                    return {k: _convert_proto_to_dict(v) for k, v in obj}
+                # Try dict() constructor
+                return dict(obj)
+            except (TypeError, ValueError, AttributeError) as e:
+                logger.warning(f"Could not convert proto object to dict: {e}, type: {type(obj)}")
+                # If conversion fails, try to get string representation
+                return str(obj)
     
     # For other types, try to convert to dict if possible
     if hasattr(obj, '__dict__'):
         return _convert_proto_to_dict(obj.__dict__)
     
-    # Return as-is for primitives
+    # Return as-is for primitives (str, int, float, bool, etc.)
     return obj
 
 # Get Ocho (AI assistant) user ID from environment or use fallback
