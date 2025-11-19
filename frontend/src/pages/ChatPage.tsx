@@ -20,7 +20,6 @@ const ChatPage: React.FC = () => {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [generatingAI, setGeneratingAI] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -416,14 +415,11 @@ const ChatPage: React.FC = () => {
   // Note: generateAIResponse function is available but not currently used in the UI
   // It can be called programmatically if needed for future features
   // const generateAIResponse = async () => {
-  //   if (!selectedConversation || generatingAI) return;
+  //   if (!selectedConversation) return;
   //   try {
-  //     setGeneratingAI(true);
   //     await chatAPI.generateAIResponse(selectedConversation.id);
   //   } catch (error: any) {
   //     console.error('Failed to generate AI response:', error);
-  //   } finally {
-  //     setGeneratingAI(false);
   //   }
   // };
 
