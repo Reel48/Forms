@@ -321,16 +321,14 @@ async def send_message(
                 
                 # Only auto-respond if admin hasn't responded recently
                 if not admin_responded_recently:
-                    # Trigger AI response asynchronously
-                    # Use asyncio.create_task() for fire-and-forget async tasks
+                    # Trigger AI response asynchronously using BackgroundTasks
+                    # BackgroundTasks ensures the task runs even after request completes
                     logger.info(f"Triggering AI response for conversation {conversation_id}, customer {user['id']}")
                     try:
-                        task = asyncio.create_task(_generate_ai_response_async(conversation_id, user["id"]))
-                        # Store task reference to prevent garbage collection
-                        # Note: In production, you might want to track these tasks
-                        logger.info(f"AI response task created: {task}")
+                        background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
+                        logger.info(f"AI response task added to BackgroundTasks")
                     except Exception as task_error:
-                        logger.error(f"Failed to create AI response task: {str(task_error)}", exc_info=True)
+                        logger.error(f"Failed to add AI response task: {str(task_error)}", exc_info=True)
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
@@ -744,13 +742,22 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
                 logger.warning(f"Error getting customer context: {str(e)}")
         
         # Generate AI response
-        ai_service = get_ai_service()
-        ai_response = ai_service.generate_response(
-            user_message=user_query,
-            conversation_history=conversation_history,
-            context=context,
-            customer_context=customer_context
-        )
+        try:
+            ai_service = get_ai_service()
+            logger.info(f"AI service obtained, generating response...")
+            ai_response = ai_service.generate_response(
+                user_message=user_query,
+                conversation_history=conversation_history,
+                context=context,
+                customer_context=customer_context
+            )
+            logger.info(f"AI response generated successfully (length: {len(ai_response) if ai_response else 0})")
+        except ValueError as ve:
+            logger.error(f"AI service not configured: {str(ve)}")
+            return  # Don't create an error message, just skip
+        except Exception as ai_error:
+            logger.error(f"Error calling AI service: {str(ai_error)}", exc_info=True)
+            return  # Don't create an error message, just skip
         
         # Create AI message
         ai_message_data = {
