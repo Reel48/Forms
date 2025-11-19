@@ -86,13 +86,151 @@ class AIService:
         logger.warning("Embedding generation not yet implemented - using placeholder")
         return []
     
+    def get_function_definitions(self) -> List[Dict]:
+        """Get function definitions for Gemini function calling"""
+        return [
+            {
+                "name": "create_quote",
+                "description": "Create a quote for a customer order. Use this when a customer wants to place an order or get a quote for products.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "client_id": {
+                            "type": "string",
+                            "description": "The UUID of the client/customer for whom the quote is being created"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Title/name for the quote (e.g., 'Custom Hat Order - 100 units')"
+                        },
+                        "line_items": {
+                            "type": "array",
+                            "description": "List of products/items in the quote",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Product description (e.g., 'Custom Hat - Navy Blue')"
+                                    },
+                                    "quantity": {
+                                        "type": "number",
+                                        "description": "Quantity of this item"
+                                    },
+                                    "unit_price": {
+                                        "type": "string",
+                                        "description": "Price per unit as a decimal string (e.g., '15.50')"
+                                    },
+                                    "discount": {
+                                        "type": "string",
+                                        "description": "Discount percentage as a decimal string (e.g., '0.00' for no discount, '10.00' for 10% off)"
+                                    }
+                                },
+                                "required": ["description", "quantity", "unit_price"]
+                            }
+                        },
+                        "tax_rate": {
+                            "type": "string",
+                            "description": "Tax rate as a decimal string (e.g., '0.00' for no tax, '8.50' for 8.5% tax)"
+                        },
+                        "create_folder": {
+                            "type": "boolean",
+                            "description": "Whether to create a folder for this order (default: true)"
+                        }
+                    },
+                    "required": ["client_id", "title", "line_items"]
+                }
+            },
+            {
+                "name": "create_folder",
+                "description": "Create a folder for a customer order/project. Folders organize quotes, forms, files, and e-signatures.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "client_id": {
+                            "type": "string",
+                            "description": "The UUID of the client/customer who owns this folder"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the folder (e.g., 'Custom Hat Order - 100 units')"
+                        },
+                        "quote_id": {
+                            "type": "string",
+                            "description": "Optional: UUID of the quote to link to this folder"
+                        }
+                    },
+                    "required": ["client_id", "name"]
+                }
+            },
+            {
+                "name": "assign_form_to_folder",
+                "description": "Assign a form to a customer's folder. Use this to add forms that customers need to fill out for their order.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder_id": {
+                            "type": "string",
+                            "description": "The UUID of the folder to assign the form to"
+                        },
+                        "form_id": {
+                            "type": "string",
+                            "description": "The UUID of the form to assign. Alternatively, you can use form_slug with the public_url_slug (e.g., 'form-4f8ml8om' for Custom Hat Design Form)."
+                        },
+                        "form_slug": {
+                            "type": "string",
+                            "description": "Alternative to form_id: The public_url_slug of the form (e.g., 'form-4f8ml8om' for Custom Hat Design Form). Use this if you know the slug but not the UUID."
+                        }
+                    },
+                    "required": ["folder_id"]
+                }
+            },
+            {
+                "name": "assign_file_to_folder",
+                "description": "Assign a file/document to a customer's folder.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder_id": {
+                            "type": "string",
+                            "description": "The UUID of the folder to assign the file to"
+                        },
+                        "file_id": {
+                            "type": "string",
+                            "description": "The UUID of the file to assign"
+                        }
+                    },
+                    "required": ["folder_id", "file_id"]
+                }
+            },
+            {
+                "name": "assign_esignature_to_folder",
+                "description": "Assign an e-signature document to a customer's folder.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder_id": {
+                            "type": "string",
+                            "description": "The UUID of the folder to assign the e-signature to"
+                        },
+                        "document_id": {
+                            "type": "string",
+                            "description": "The UUID of the e-signature document to assign"
+                        }
+                    },
+                    "required": ["folder_id", "document_id"]
+                }
+            }
+        ]
+    
     def generate_response(
         self,
         user_message: str,
         conversation_history: List[Dict[str, str]],
         context: str = "",
-        customer_context: Optional[Dict] = None
-    ) -> str:
+        customer_context: Optional[Dict] = None,
+        enable_function_calling: bool = False
+    ) -> Dict[str, Any]:
         """
         Generate AI response with context using RAG
         
@@ -101,17 +239,23 @@ class AIService:
             conversation_history: List of previous messages in format [{"role": "user", "content": "..."}, ...]
             context: Retrieved context from RAG search
             customer_context: Customer-specific information (quotes, forms, etc.)
+            enable_function_calling: Whether to enable function calling for actions
         
         Returns:
-            AI-generated response string
+            Dict with 'response' (string) and optionally 'function_calls' (list of function calls to execute)
         """
         try:
             # Build system prompt with context
-            system_prompt = self._build_system_prompt(context, customer_context)
+            system_prompt = self._build_system_prompt(context, customer_context, enable_function_calling)
             
+            # If function calling is enabled, use Gemini's function calling feature
+            if enable_function_calling:
+                return self._generate_with_function_calling(
+                    user_message, conversation_history, system_prompt
+                )
+            
+            # Otherwise, use simple text generation
             # Format conversation history for Gemini
-            # Gemini uses a different format - we need to use ChatSession or format properly
-            # For now, we'll combine system prompt with user message and use simple format
             full_prompt = f"{system_prompt}\n\n"
             
             # Add conversation history
@@ -159,7 +303,7 @@ class AIService:
                 
                 print(f"✅ [AI SERVICE] Successfully generated AI response: {len(response_text)} characters")
                 logger.info(f"✅ [AI SERVICE] Successfully generated AI response: {len(response_text)} characters")
-                return response_text
+                return {"response": response_text, "function_calls": []}
                 
             except Exception as api_error:
                 error_msg = str(api_error)
@@ -185,24 +329,110 @@ class AIService:
             
             # Provide more specific error messages based on error type
             error_lower = error_msg.lower()
+            error_response = "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support."
+            
             if "api key" in error_lower or "authentication" in error_lower or "permission" in error_lower:
                 logger.error("Gemini API key issue detected")
-                return "I apologize, but there's an issue with the AI service configuration. Please contact support."
+                error_response = "I apologize, but there's an issue with the AI service configuration. Please contact support."
             elif "quota" in error_lower or "rate limit" in error_lower or "429" in error_msg:
                 logger.error("Gemini API quota/rate limit issue")
-                return "I apologize, but the AI service is currently experiencing high demand. Please try again in a moment."
+                error_response = "I apologize, but the AI service is currently experiencing high demand. Please try again in a moment."
             elif "model" in error_lower or "not found" in error_lower or "404" in error_msg:
                 logger.error(f"Gemini model issue detected: {error_msg}")
-                return f"I apologize, but there's an issue with the AI model: {error_msg[:100]}. Please contact support."
+                error_response = f"I apologize, but there's an issue with the AI model: {error_msg[:100]}. Please contact support."
             elif "timeout" in error_lower or "timed out" in error_lower:
                 logger.error("Gemini API timeout issue")
-                return "I apologize, but the AI service took too long to respond. Please try again in a moment."
+                error_response = "I apologize, but the AI service took too long to respond. Please try again in a moment."
             else:
                 # Generic error - log the actual error for debugging
                 logger.error(f"Unexpected error in AI generation: {error_type}: {error_msg}")
-                return f"I apologize, but I'm having trouble processing your request right now. Error: {error_type}. Please try again later or contact support."
+            
+            return {"response": error_response, "function_calls": []}
     
-    def _build_system_prompt(self, context: str, customer_context: Optional[Dict] = None) -> str:
+    def _generate_with_function_calling(
+        self,
+        user_message: str,
+        conversation_history: List[Dict[str, str]],
+        system_prompt: str
+    ) -> Dict[str, Any]:
+        """Generate response with function calling support"""
+        try:
+            # Convert conversation history to Gemini format
+            messages = []
+            
+            # Add system prompt as first message
+            messages.append({
+                "role": "user",
+                "parts": [system_prompt]
+            })
+            
+            # Add conversation history
+            for msg in conversation_history[-10:]:
+                role = msg.get("role", "user")
+                content = msg.get("content", msg.get("message", ""))
+                if content:
+                    if role == "model":
+                        messages.append({"role": "model", "parts": [content]})
+                    else:
+                        messages.append({"role": "user", "parts": [content]})
+            
+            # Add current user message
+            messages.append({"role": "user", "parts": [user_message]})
+            
+            # Get function definitions
+            functions = self.get_function_definitions()
+            
+            # Create model with tools
+            model_with_tools = genai.GenerativeModel(
+                'gemini-2.5-flash',
+                tools=[{"function_declarations": functions}]
+            )
+            
+            # Generate response
+            response = model_with_tools.generate_content(messages)
+            
+            # Check for function calls
+            function_calls = []
+            response_text = ""
+            
+            if hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                
+                # Check if there are function calls
+                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'function_call'):
+                            # Extract function call
+                            func_call = part.function_call
+                            function_calls.append({
+                                "name": func_call.name,
+                                "arguments": dict(func_call.args) if hasattr(func_call, 'args') else {}
+                            })
+                        elif hasattr(part, 'text'):
+                            response_text += part.text
+            
+            # If no text but we have function calls, generate a response about what we're doing
+            if not response_text and function_calls:
+                response_text = "I'll help you with that. Let me create the quote and set everything up for you."
+            elif not response_text:
+                response_text = response.text if hasattr(response, 'text') else ""
+            
+            # Post-process response
+            response_text = self._format_urls_as_markdown(response_text)
+            
+            return {
+                "response": response_text,
+                "function_calls": function_calls
+            }
+        except Exception as e:
+            logger.error(f"Error in function calling: {str(e)}", exc_info=True)
+            # Fallback to simple response
+            return {
+                "response": "I apologize, but I'm having trouble processing that request right now. Please try again.",
+                "function_calls": []
+            }
+    
+    def _build_system_prompt(self, context: str, customer_context: Optional[Dict] = None, enable_function_calling: bool = False) -> str:
         """Build system prompt with context and customer information"""
         
         prompt = """You are a friendly and professional customer service representative for a custom promotional products company. Your primary role is to help customers with their questions and provide excellent service.
@@ -230,6 +460,35 @@ IMPORTANT GUIDELINES:
 - Always maintain a positive, service-oriented tone
 - **CRITICAL**: When recommending that a customer fill out a form, you MUST include the complete form link/URL in your response. Never recommend a form without providing the link. If the context contains a form link, always include it in your recommendation.
 - **LINK FORMATTING**: Always format links using markdown format: [link text](url). For example, instead of "Fill out the form at https://reel48.app/public/form/form-4f8ml8om", write "Fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om)". This makes links clickable and more user-friendly. Never paste raw URLs - always use markdown link format [text](url).
+"""
+        
+        if enable_function_calling:
+            prompt += """
+ACTION CAPABILITIES:
+You can help customers by creating quotes and organizing their orders. When a customer wants to place an order or get a quote:
+
+1. **Creating Quotes**: Use the create_quote function when a customer wants to order products. You'll need:
+   - The customer's client_id (this will be automatically provided from the conversation context - you don't need to ask for it)
+   - Product details (description, quantity, price)
+   - Always create a folder with the quote (set create_folder=true)
+   - Use pricing information from the context to calculate correct prices
+   - For custom hats: Base price is $15.50 per hat for 100-199 units, with lower prices for larger quantities
+   - For custom coozies: Base price is $2.00 per coozie (without magnet) or $3.00 per coozie (with magnet) for 250-499 units
+
+2. **Adding Forms**: After creating a quote/folder, assign the Custom Hat Design Form for hat orders:
+   - Use assign_form_to_folder with form_slug='form-4f8ml8om' (you can use the slug instead of form_id)
+   - This form is required for all custom hat orders
+
+3. **Workflow**: 
+   - Customer expresses interest in ordering → Ask clarifying questions if needed (quantity, colors, specifications)
+   - Once you have the information → Create quote with folder (create_folder=true)
+   - For hat orders → Automatically assign Custom Hat Design Form to the folder
+   - Confirm completion and provide links to the quote and form
+
+IMPORTANT: 
+- Always confirm with the customer before creating quotes. Ask for any missing information (quantities, colors, specifications) before proceeding.
+- Use the pricing information from the context to ensure accurate pricing.
+- The client_id will be automatically filled in - you don't need to ask the customer for it.
 """
         
         # Add retrieved context

@@ -16,6 +16,7 @@ from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
 from ai_service import get_ai_service
 from rag_service import get_rag_service
+from ai_action_executor import AIActionExecutor
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -651,18 +652,44 @@ async def generate_ai_response(
             except Exception as e:
                 logger.warning(f"Error getting customer context: {str(e)}")
         
+        # Get admin user ID for action execution (if user is admin, use their ID; otherwise find an admin)
+        admin_user_id = None
+        if is_admin:
+            admin_user_id = user["id"]
+        else:
+            # Find an admin user to use for AI actions
+            try:
+                admin_role_response = supabase_storage.table("user_roles").select("user_id").eq("role", "admin").limit(1).execute()
+                if admin_role_response.data:
+                    admin_user_id = admin_role_response.data[0]["user_id"]
+            except Exception as e:
+                logger.warning(f"Could not find admin user for AI actions: {str(e)}")
+        
+        # Enable function calling if we have an admin user ID
+        enable_function_calling = admin_user_id is not None
+        
         # Generate AI response
         try:
             ai_service = get_ai_service()
             if not ai_service:
                 logger.error("AI service is not available")
                 raise HTTPException(status_code=503, detail="AI service is not configured. Please set GEMINI_API_KEY environment variable.")
-            ai_response = ai_service.generate_response(
+            
+            ai_result = ai_service.generate_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
-                customer_context=customer_context
+                customer_context=customer_context,
+                enable_function_calling=enable_function_calling
             )
+            
+            # Handle response format (backward compatibility)
+            if isinstance(ai_result, str):
+                ai_response = ai_result
+                function_calls = []
+            else:
+                ai_response = ai_result.get("response", "")
+                function_calls = ai_result.get("function_calls", [])
         except HTTPException:
             raise
         except ValueError as e:
@@ -672,6 +699,72 @@ async def generate_ai_response(
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
+        
+        # Execute function calls if any
+        execution_results = []
+        if function_calls and admin_user_id:
+            try:
+                action_executor = AIActionExecutor(admin_user_id)
+                
+                # Get client_id from customer context if available
+                client_id = None
+                if customer_id:
+                    try:
+                        client_response = supabase_storage.table("clients").select("id").eq("user_id", customer_id).single().execute()
+                        if client_response.data:
+                            client_id = client_response.data["id"]
+                    except Exception as e:
+                        logger.warning(f"Could not get client_id: {str(e)}")
+                
+                for func_call in function_calls:
+                    func_name = func_call.get("name")
+                    func_params = func_call.get("arguments", {})
+                    
+                    # Auto-fill client_id if not provided and we have it
+                    if not func_params.get("client_id") and client_id:
+                        func_params["client_id"] = client_id
+                    
+                    logger.info(f"Executing function: {func_name} with params: {func_params}")
+                    result = action_executor.execute_function(func_name, func_params)
+                    execution_results.append({
+                        "function": func_name,
+                        "success": result.get("success", False),
+                        "result": result.get("result"),
+                        "error": result.get("error")
+                    })
+                    
+                    # If quote was created, update the response with quote info
+                    if func_name == "create_quote" and result.get("success"):
+                        quote_info = result.get("result", {})
+                        quote_number = quote_info.get("quote_number", "")
+                        quote_id = quote_info.get("quote_id", "")
+                        if quote_number:
+                            ai_response += f"\n\n✅ Quote {quote_number} has been created! "
+                            if quote_id:
+                                # Add link to quote (you'll need to construct the URL based on your frontend)
+                                ai_response += f"You can view it in your account."
+                    
+                    # If folder was created, we might want to assign forms
+                    if func_name == "create_quote" and result.get("success"):
+                        quote_result = result.get("result", {})
+                        folder_id = quote_result.get("folder_id")
+                        
+                        # Auto-assign Custom Hat Design Form for hat orders
+                        if folder_id and "hat" in user_query.lower():
+                            try:
+                                # Use form_slug for easier assignment
+                                assign_result = action_executor.execute_function("assign_form_to_folder", {
+                                    "folder_id": folder_id,
+                                    "form_slug": "form-4f8ml8om"
+                                })
+                                if assign_result.get("success"):
+                                    ai_response += f"\n\n📋 I've also added the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to your folder for you to fill out."
+                            except Exception as e:
+                                logger.warning(f"Could not auto-assign form: {str(e)}")
+            
+            except Exception as e:
+                logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
+                # Don't fail the whole request, just log the error
         
         # Create AI message in the conversation
         ai_message_data = {
@@ -799,6 +892,18 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             except Exception as e:
                 logger.warning(f"Error getting customer context: {str(e)}")
         
+        # Get admin user ID for action execution
+        admin_user_id = None
+        try:
+            admin_role_response = supabase_storage.table("user_roles").select("user_id").eq("role", "admin").limit(1).execute()
+            if admin_role_response.data:
+                admin_user_id = admin_role_response.data[0]["user_id"]
+        except Exception as e:
+            logger.warning(f"Could not find admin user for AI actions: {str(e)}")
+        
+        # Enable function calling if we have an admin user ID
+        enable_function_calling = admin_user_id is not None
+        
         # Generate AI response
         try:
             print(f"🤖 [AI TASK] Getting AI service...")
@@ -812,13 +917,23 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             logger.info(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
             logger.info(f"🤖 [AI TASK] Context retrieved (length: {len(context)} chars)")
             print(f"🤖 [AI TASK] Calling generate_response...")
-            ai_response = ai_service.generate_response(
+            ai_result = ai_service.generate_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
-                customer_context=customer_context
+                customer_context=customer_context,
+                enable_function_calling=enable_function_calling
             )
-            print(f"🤖 [AI TASK] Response received: {len(ai_response) if ai_response else 0} chars")
+            
+            # Handle response format (backward compatibility)
+            if isinstance(ai_result, str):
+                ai_response = ai_result
+                function_calls = []
+            else:
+                ai_response = ai_result.get("response", "")
+                function_calls = ai_result.get("function_calls", [])
+            
+            print(f"🤖 [AI TASK] Response received: {len(ai_response) if ai_response else 0} chars, {len(function_calls)} function calls")
             if not ai_response or len(ai_response.strip()) == 0:
                 print(f"⚠️ [AI TASK] AI service returned empty response")
                 logger.warning(f"⚠️ [AI TASK] AI service returned empty response")
@@ -835,6 +950,56 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             import traceback
             print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
             return  # Don't create an error message, just skip
+        
+        # Execute function calls if any
+        if function_calls and admin_user_id:
+            try:
+                action_executor = AIActionExecutor(admin_user_id)
+                
+                # Get client_id from customer
+                client_id = None
+                try:
+                    client_response = supabase_storage.table("clients").select("id").eq("user_id", customer_id).single().execute()
+                    if client_response.data:
+                        client_id = client_response.data["id"]
+                except Exception as e:
+                    logger.warning(f"Could not get client_id: {str(e)}")
+                
+                for func_call in function_calls:
+                    func_name = func_call.get("name")
+                    func_params = func_call.get("arguments", {})
+                    
+                    # Auto-fill client_id if not provided
+                    if not func_params.get("client_id") and client_id:
+                        func_params["client_id"] = client_id
+                    
+                    logger.info(f"Executing function: {func_name} with params: {func_params}")
+                    result = action_executor.execute_function(func_name, func_params)
+                    
+                    # Update response with results
+                    if func_name == "create_quote" and result.get("success"):
+                        quote_info = result.get("result", {})
+                        quote_number = quote_info.get("quote_number", "")
+                        if quote_number:
+                            ai_response += f"\n\n✅ Quote {quote_number} has been created! You can view it in your account."
+                        
+                        # Auto-assign Custom Hat Design Form for hat orders
+                        folder_id = quote_info.get("folder_id")
+                        if folder_id and "hat" in user_query.lower():
+                            try:
+                                # Use form_slug for easier assignment
+                                assign_result = action_executor.execute_function("assign_form_to_folder", {
+                                    "folder_id": folder_id,
+                                    "form_slug": "form-4f8ml8om"
+                                })
+                                if assign_result.get("success"):
+                                    ai_response += f"\n\n📋 I've also added the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to your folder for you to fill out."
+                            except Exception as e:
+                                logger.warning(f"Could not auto-assign form: {str(e)}")
+            
+            except Exception as e:
+                logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
+                # Don't fail, just log
         
         # Create AI message
         ai_message_data = {
