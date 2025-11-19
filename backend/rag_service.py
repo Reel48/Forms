@@ -312,12 +312,18 @@ class RAGService:
                 relevant_items = []
                 for item in knowledge_items:
                     content = (item.get("content") or "").lower()
+                    # Title and category are direct columns, not in metadata
+                    title = (item.get("title") or "").lower()
+                    category = (item.get("category") or "").lower()
                     metadata = item.get("metadata") or {}
-                    title = (metadata.get("title") or "").lower()
-                    category = (metadata.get("category") or "").lower()
                     
-                    # Check if query keywords match
-                    if any(keyword in content or keyword in title or keyword in category for keyword in query_lower.split()):
+                    # Also check metadata for additional keywords
+                    topic = (metadata.get("topic") or "").lower()
+                    subtopic = (metadata.get("subtopic") or "").lower()
+                    
+                    # Check if query keywords match in content, title, category, topic, or subtopic
+                    query_keywords = query_lower.split()
+                    if any(keyword in content or keyword in title or keyword in category or keyword in topic or keyword in subtopic for keyword in query_keywords):
                         relevant_items.append(item)
                         if len(relevant_items) >= limit:
                             break
@@ -329,8 +335,8 @@ class RAGService:
                 # Format knowledge base items
                 for item in relevant_items[:limit]:
                     content = item.get("content", "")
-                    metadata = item.get("metadata") or {}
-                    title = metadata.get("title", "Information")
+                    # Use the title column directly, not metadata
+                    title = item.get("title", "Information")
                     
                     if content:
                         context_items.append(f"{title}:\n{content}")
