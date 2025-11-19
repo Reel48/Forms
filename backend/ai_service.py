@@ -105,25 +105,26 @@ class AIService:
                         },
                         "line_items": {
                             "type": "array",
-                            "description": "List of products/items in the quote",
+                            "description": "REQUIRED: List of products/items in the quote. MUST contain at least one item with description, quantity, and unit_price. This is MANDATORY - quotes cannot be created without line items.",
+                            "minItems": 1,
                             "items": {
                                 "type": "object",
                                 "properties": {
                                     "description": {
                                         "type": "string",
-                                        "description": "Product description (e.g., 'Custom Hat - Navy Blue')"
+                                        "description": "REQUIRED: Product description (e.g., 'Custom Hat - Navy Blue', 'Custom Coozie - Red')"
                                     },
                                     "quantity": {
                                         "type": "number",
-                                        "description": "Quantity of this item"
+                                        "description": "REQUIRED: Quantity of this item (e.g., 200, 100)"
                                     },
                                     "unit_price": {
                                         "type": "string",
-                                        "description": "Price per unit as a decimal string (e.g., '15.50')"
+                                        "description": "REQUIRED: Price per unit as a decimal string (e.g., '15.50', '2.00', '3.00')"
                                     },
                                     "discount": {
                                         "type": "string",
-                                        "description": "Discount percentage as a decimal string (e.g., '0.00' for no discount, '10.00' for 10% off)"
+                                        "description": "Optional: Discount percentage as a decimal string (e.g., '0.00' for no discount, '10.00' for 10% off). Default is '0.00'."
                                     }
                                 },
                                 "required": ["description", "quantity", "unit_price"]

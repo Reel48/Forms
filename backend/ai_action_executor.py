@@ -118,6 +118,8 @@ class AIActionExecutor:
             
             if not line_items_data:
                 logger.warning("line_items_data is empty - quote will be created with no line items")
+                logger.warning(f"Original params received: {params}")
+                # Don't fail, but log a warning - quote will be created with $0 total
             
             normalized_line_items = []
             for idx, item in enumerate(line_items_data):

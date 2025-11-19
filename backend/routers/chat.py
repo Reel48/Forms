@@ -788,7 +788,15 @@ async def generate_ai_response(
                         func_params["client_id"] = client_id
                         logger.info(f"Using client_id from conversation context: {client_id}")
                     
-                    logger.info(f"Executing function: {func_name} with params: {func_params}")
+                    # Log detailed function parameters for debugging
+                    logger.info(f"Executing function: {func_name}")
+                    logger.info(f"Function params keys: {list(func_params.keys())}")
+                    if "line_items" in func_params:
+                        logger.info(f"line_items type: {type(func_params['line_items'])}, length: {len(func_params['line_items']) if isinstance(func_params['line_items'], list) else 'N/A'}, value: {func_params['line_items']}")
+                    else:
+                        logger.warning(f"⚠️ line_items MISSING from function params! Available keys: {list(func_params.keys())}")
+                    logger.info(f"Full params (sanitized): { {k: v for k, v in func_params.items() if k != 'client_id'} }")
+                    
                     result = action_executor.execute_function(func_name, func_params)
                     execution_results.append({
                         "function": func_name,
@@ -813,8 +821,8 @@ async def generate_ai_response(
                             if quote_id:
                                 ai_response += f"You can view it in your account."
                         
-                        # Auto-assign Custom Hat Design Form for hat orders
-                        if folder_id and "hat" in user_query.lower():
+                        # Auto-assign Custom Hat Design Form to all quotes (default behavior)
+                        if folder_id:
                             try:
                                 # Use form_slug for easier assignment
                                 assign_result = action_executor.execute_function("assign_form_to_folder", {
@@ -1076,7 +1084,13 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                         func_params["client_id"] = client_id
                         logger.info(f"Using client_id from conversation context: {client_id}")
                     
-                    logger.info(f"Executing function: {func_name} with params: {func_params}")
+                    # Log detailed function parameters for debugging
+                    logger.info(f"Executing function: {func_name}")
+                    logger.info(f"Function params keys: {list(func_params.keys())}")
+                    if "line_items" in func_params:
+                        logger.info(f"line_items type: {type(func_params['line_items'])}, value: {func_params['line_items']}")
+                    logger.info(f"Full params: {func_params}")
+                    
                     result = action_executor.execute_function(func_name, func_params)
                     
                     # Update response with results
@@ -1092,8 +1106,8 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                         if quote_number:
                             ai_response += f"\n\n✅ Quote {quote_number} has been created! You can view it in your account."
                         
-                        # Auto-assign Custom Hat Design Form for hat orders
-                        if folder_id and "hat" in user_query.lower():
+                        # Auto-assign Custom Hat Design Form to all quotes (default behavior)
+                        if folder_id:
                             try:
                                 # Use form_slug for easier assignment
                                 assign_result = action_executor.execute_function("assign_form_to_folder", {
