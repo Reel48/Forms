@@ -712,8 +712,13 @@ async def generate_ai_response(
                         logger.warning(f"Could not get client_id: {str(e)}")
                 
                 for func_call in function_calls:
-                    func_name = func_call.get("name")
+                    func_name = func_call.get("name", "").strip()
                     func_params = func_call.get("arguments", {})
+                    
+                    # Skip function calls with empty or missing names
+                    if not func_name:
+                        logger.warning(f"Skipping function call with empty name. Function call data: {func_call}")
+                        continue
                     
                     # Auto-fill client_id if not provided and we have it
                     if not func_params.get("client_id") and client_id:
@@ -961,8 +966,13 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     logger.warning(f"Could not get client_id: {str(e)}")
                 
                 for func_call in function_calls:
-                    func_name = func_call.get("name")
+                    func_name = func_call.get("name", "").strip()
                     func_params = func_call.get("arguments", {})
+                    
+                    # Skip function calls with empty or missing names
+                    if not func_name:
+                        logger.warning(f"Skipping function call with empty name. Function call data: {func_call}")
+                        continue
                     
                     # Auto-fill client_id if not provided
                     if not func_params.get("client_id") and client_id:

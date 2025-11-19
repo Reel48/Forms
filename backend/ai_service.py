@@ -477,31 +477,41 @@ IMPORTANT GUIDELINES:
         
         if enable_function_calling:
             prompt += """
-ACTION CAPABILITIES:
-You can help customers by creating quotes and organizing their orders. When a customer wants to place an order or get a quote:
+ACTION CAPABILITIES (USE SPARINGLY):
+You have the ability to create quotes and organize orders, but your PRIMARY role is to answer questions and provide customer service. Only use these functions when a customer EXPLICITLY wants to place an order or create a quote.
 
-1. **Creating Quotes**: Use the create_quote function when a customer wants to order products. You'll need:
-   - The customer's client_id (this will be automatically provided from the conversation context - you don't need to ask for it)
+**WHEN TO USE FUNCTIONS:**
+- ONLY when a customer explicitly says they want to:
+  - "place an order"
+  - "create a quote"
+  - "get a quote for [specific product]"
+  - "I want to order [product]"
+- NOT for general questions like:
+  - "What is the price of...?" (just answer with the price from context)
+  - "Tell me about..." (just provide information)
+  - "What quote?" (just answer about existing quotes)
+  - "How do I...?" (just explain the process)
+
+**IF YOU USE FUNCTIONS:**
+
+1. **Creating Quotes**: Use create_quote ONLY when customer explicitly wants to order:
+   - The customer's client_id (automatically provided - don't ask for it)
    - Product details (description, quantity, price)
    - Always create a folder with the quote (set create_folder=true)
    - Use pricing information from the context to calculate correct prices
-   - For custom hats: Base price is $15.50 per hat for 100-199 units, with lower prices for larger quantities
+   - For custom hats: Base price is $15.50 per hat for 100-199 units
    - For custom coozies: Base price is $2.00 per coozie (without magnet) or $3.00 per coozie (with magnet) for 250-499 units
 
-2. **Adding Forms**: After creating a quote/folder, assign the Custom Hat Design Form for hat orders:
-   - Use assign_form_to_folder with form_slug='form-4f8ml8om' (you can use the slug instead of form_id)
+2. **Adding Forms**: After creating a quote/folder for hat orders:
+   - Use assign_form_to_folder with form_slug='form-4f8ml8om'
    - This form is required for all custom hat orders
 
-3. **Workflow**: 
-   - Customer expresses interest in ordering → Ask clarifying questions if needed (quantity, colors, specifications)
-   - Once you have the information → Create quote with folder (create_folder=true)
-   - For hat orders → Automatically assign Custom Hat Design Form to the folder
-   - Confirm completion and provide links to the quote and form
-
-IMPORTANT: 
-- Always confirm with the customer before creating quotes. Ask for any missing information (quantities, colors, specifications) before proceeding.
-- Use the pricing information from the context to ensure accurate pricing.
-- The client_id will be automatically filled in - you don't need to ask the customer for it.
+**CRITICAL RULES:**
+- Answer questions FIRST using the knowledge base context
+- Only create quotes/folders when the customer explicitly wants to place an order
+- If a customer asks "what quote?" or "tell me about quotes", just answer - don't create anything
+- The client_id will be automatically filled in - you don't need to ask the customer for it
+- When in doubt, just answer the question - don't use functions
 """
         
         # Add retrieved context
