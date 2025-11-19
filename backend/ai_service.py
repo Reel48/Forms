@@ -44,13 +44,23 @@ class AIService:
             raise ValueError(error_msg)
         print(f"✅ [AI SERVICE] GEMINI_API_KEY found (length: {len(GEMINI_API_KEY)} chars)")
         try:
-            # Use gemini-pro - the stable model that works with v1beta API
-            # The library defaults to v1beta API, which doesn't support newer 1.5 models
-            # gemini-pro is reliable and sufficient for customer service use cases
-            print(f"🔧 [AI SERVICE] Initializing gemini-pro model...")
-            self.model = genai.GenerativeModel('gemini-pro')
-            print(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-pro")
-            logger.info(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-pro")
+            # Use gemini-1.5-flash - fast, cost-effective, and reliable for customer service
+            # gemini-pro has been deprecated, so we use the newer 1.5 models
+            # gemini-1.5-flash was not found, so we use the available 2.5-flash model
+            print(f"🔧 [AI SERVICE] Initializing gemini-2.5-flash model...")
+            
+            # List available models for debugging
+            try:
+                print("🔧 [AI SERVICE] Listing available models...")
+                for m in genai.list_models():
+                    if 'generateContent' in m.supported_generation_methods:
+                        print(f"  - {m.name}")
+            except Exception as e:
+                print(f"⚠️ [AI SERVICE] Failed to list models: {e}")
+
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
+            print(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-2.5-flash")
+            logger.info(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-2.5-flash")
             
             self.embedding_model = None  # Will be set when needed
             print(f"✅ [AI SERVICE] AI service initialization complete")
