@@ -125,8 +125,24 @@ class AIService:
                 raise
             
         except Exception as e:
-            logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
-            return "I apologize, but I'm having trouble processing your request right now. Please try again later."
+            error_msg = str(e)
+            error_type = type(e).__name__
+            logger.error(f"❌ Error generating AI response [{error_type}]: {error_msg}", exc_info=True)
+            
+            # Provide more specific error messages based on error type
+            if "API key" in error_msg or "authentication" in error_msg.lower():
+                logger.error("Gemini API key issue detected")
+                return "I apologize, but there's an issue with the AI service configuration. Please contact support."
+            elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+                logger.error("Gemini API quota/rate limit issue")
+                return "I apologize, but the AI service is currently experiencing high demand. Please try again in a moment."
+            elif "model" in error_msg.lower() or "not found" in error_msg.lower():
+                logger.error("Gemini model issue detected")
+                return "I apologize, but there's an issue with the AI model. Please contact support."
+            else:
+                # Generic error - log the actual error for debugging
+                logger.error(f"Unexpected error in AI generation: {error_type}: {error_msg}")
+                return "I apologize, but I'm having trouble processing your request right now. Please try again later."
     
     def _build_system_prompt(self, context: str, customer_context: Optional[Dict] = None) -> str:
         """Build system prompt with context and customer information"""
