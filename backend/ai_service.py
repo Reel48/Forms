@@ -44,23 +44,22 @@ class AIService:
             raise ValueError(error_msg)
         print(f"✅ [AI SERVICE] GEMINI_API_KEY found (length: {len(GEMINI_API_KEY)} chars)")
         try:
-            # Try gemini-1.5-pro first (newer model), fallback to gemini-pro
-            try:
-                print(f"🔧 [AI SERVICE] Trying gemini-1.5-pro...")
-                self.model = genai.GenerativeModel('gemini-1.5-pro')
-                print(f"✅ [AI SERVICE] Initialized Gemini model: gemini-1.5-pro")
-                logger.info("✅ [AI SERVICE] Initialized Gemini model: gemini-1.5-pro")
-            except Exception as e1:
-                print(f"⚠️ [AI SERVICE] Failed to initialize gemini-1.5-pro: {str(e1)}, trying gemini-pro")
-                logger.warning(f"⚠️ [AI SERVICE] Failed to initialize gemini-1.5-pro: {str(e1)}, trying gemini-pro")
-                self.model = genai.GenerativeModel('gemini-pro')
-                print(f"✅ [AI SERVICE] Initialized Gemini model: gemini-pro")
-                logger.info("✅ [AI SERVICE] Initialized Gemini model: gemini-pro")
+            # Use gemini-pro - the stable model that works with v1beta API
+            # The library defaults to v1beta API, which doesn't support newer 1.5 models
+            # gemini-pro is reliable and sufficient for customer service use cases
+            print(f"🔧 [AI SERVICE] Initializing gemini-pro model...")
+            self.model = genai.GenerativeModel('gemini-pro')
+            print(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-pro")
+            logger.info(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-pro")
+            
             self.embedding_model = None  # Will be set when needed
             print(f"✅ [AI SERVICE] AI service initialization complete")
         except Exception as e:
-            print(f"❌ [AI SERVICE] Failed to initialize Gemini model: {str(e)}")
-            logger.error(f"❌ [AI SERVICE] Failed to initialize Gemini model: {str(e)}", exc_info=True)
+            error_msg = f"Failed to initialize Gemini model: {str(e)}"
+            print(f"❌ [AI SERVICE] {error_msg}")
+            logger.error(f"❌ [AI SERVICE] {error_msg}", exc_info=True)
+            import traceback
+            print(f"❌ [AI SERVICE] Traceback:\n{traceback.format_exc()}")
             raise
     
     def generate_embedding(self, text: str) -> List[float]:
@@ -126,6 +125,7 @@ class AIService:
             # Generate response using simple prompt format
             try:
                 print(f"🔧 [AI SERVICE] Calling Gemini API with prompt length: {len(full_prompt)} chars")
+                print(f"🔧 [AI SERVICE] Using model: {self.model._model_name if hasattr(self.model, '_model_name') else 'unknown'}")
                 logger.debug(f"🔧 [AI SERVICE] Calling Gemini API with prompt length: {len(full_prompt)} chars")
                 response = self.model.generate_content(full_prompt)
                 print(f"🔧 [AI SERVICE] Received response from Gemini API")
@@ -149,33 +149,45 @@ class AIService:
                 return response_text
                 
             except Exception as api_error:
-                error_msg = f"Gemini API error: {str(api_error)}"
-                print(f"❌ [AI SERVICE] {error_msg}")
-                logger.error(f"❌ [AI SERVICE] {error_msg}", exc_info=True)
+                error_msg = str(api_error)
+                error_type = type(api_error).__name__
+                print(f"❌ [AI SERVICE] Gemini API error [{error_type}]: {error_msg}")
+                logger.error(f"❌ [AI SERVICE] Gemini API error [{error_type}]: {error_msg}", exc_info=True)
                 import traceback
-                print(f"❌ [AI SERVICE] Traceback: {traceback.format_exc()}")
+                traceback_str = traceback.format_exc()
+                print(f"❌ [AI SERVICE] Full traceback:\n{traceback_str}")
+                logger.error(f"❌ [AI SERVICE] Full traceback:\n{traceback_str}")
                 # Re-raise to be caught by outer exception handler
                 raise
             
         except Exception as e:
             error_msg = str(e)
             error_type = type(e).__name__
+            print(f"❌ [AI SERVICE] Error generating AI response [{error_type}]: {error_msg}")
             logger.error(f"❌ Error generating AI response [{error_type}]: {error_msg}", exc_info=True)
+            import traceback
+            traceback_str = traceback.format_exc()
+            print(f"❌ [AI SERVICE] Full error traceback:\n{traceback_str}")
+            logger.error(f"❌ [AI SERVICE] Full error traceback:\n{traceback_str}")
             
             # Provide more specific error messages based on error type
-            if "API key" in error_msg or "authentication" in error_msg.lower():
+            error_lower = error_msg.lower()
+            if "api key" in error_lower or "authentication" in error_lower or "permission" in error_lower:
                 logger.error("Gemini API key issue detected")
                 return "I apologize, but there's an issue with the AI service configuration. Please contact support."
-            elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+            elif "quota" in error_lower or "rate limit" in error_lower or "429" in error_msg:
                 logger.error("Gemini API quota/rate limit issue")
                 return "I apologize, but the AI service is currently experiencing high demand. Please try again in a moment."
-            elif "model" in error_msg.lower() or "not found" in error_msg.lower():
-                logger.error("Gemini model issue detected")
-                return "I apologize, but there's an issue with the AI model. Please contact support."
+            elif "model" in error_lower or "not found" in error_lower or "404" in error_msg:
+                logger.error(f"Gemini model issue detected: {error_msg}")
+                return f"I apologize, but there's an issue with the AI model: {error_msg[:100]}. Please contact support."
+            elif "timeout" in error_lower or "timed out" in error_lower:
+                logger.error("Gemini API timeout issue")
+                return "I apologize, but the AI service took too long to respond. Please try again in a moment."
             else:
                 # Generic error - log the actual error for debugging
                 logger.error(f"Unexpected error in AI generation: {error_type}: {error_msg}")
-                return "I apologize, but I'm having trouble processing your request right now. Please try again later."
+                return f"I apologize, but I'm having trouble processing your request right now. Error: {error_type}. Please try again later or contact support."
     
     def _build_system_prompt(self, context: str, customer_context: Optional[Dict] = None) -> str:
         """Build system prompt with context and customer information"""
@@ -235,14 +247,19 @@ Use this context to answer questions accurately. If the user asks about somethin
 # Singleton instance
 _ai_service: Optional[AIService] = None
 
-def get_ai_service() -> AIService:
-    """Get or create AI service instance"""
+def get_ai_service() -> Optional[AIService]:
+    """Get or create AI service instance. Returns None if initialization fails."""
     global _ai_service
     if _ai_service is None:
         try:
             _ai_service = AIService()
-        except ValueError as e:
-            logger.error(f"Failed to initialize AI service: {str(e)}")
-            raise
+            print(f"✅ [AI SERVICE] AI service successfully initialized")
+            logger.info(f"✅ [AI SERVICE] AI service successfully initialized")
+        except Exception as e:
+            error_msg = f"Failed to initialize AI service: {str(e)}"
+            print(f"❌ [AI SERVICE] {error_msg}")
+            logger.error(f"❌ [AI SERVICE] {error_msg}", exc_info=True)
+            # Don't raise - allow app to start without AI
+            _ai_service = None
     return _ai_service
 

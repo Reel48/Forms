@@ -25,6 +25,19 @@ app = FastAPI(title="Quote Builder API", version="1.0.0", json_encoders={Decimal
 # Add rate limiter to app state
 app.state.limiter = limiter
 
+# Get allowed origins from environment or use defaults
+# In production, set ALLOWED_ORIGINS to include your Vercel domain(s)
+# Example: ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main.vercel.app
+allowed_origins_raw = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:3000"
+)
+allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
+
+# Log allowed origins for debugging (don't log in production with sensitive data)
+if os.getenv("ENVIRONMENT") != "production":
+    print(f"DEBUG: Allowed CORS origins: {allowed_origins}")
+
 # Add rate limit exception handler
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -94,19 +107,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         response.headers["Access-Control-Allow-Headers"] = "*"
     
     return response
-
-# Get allowed origins from environment or use defaults
-# In production, set ALLOWED_ORIGINS to include your Vercel domain(s)
-# Example: ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main.vercel.app
-allowed_origins_raw = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:3000"
-)
-allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
-
-# Log allowed origins for debugging (don't log in production with sensitive data)
-if os.getenv("ENVIRONMENT") != "production":
-    print(f"DEBUG: Allowed CORS origins: {allowed_origins}")
 
 # Add request logging middleware
 @app.middleware("http")

@@ -654,12 +654,17 @@ async def generate_ai_response(
         # Generate AI response
         try:
             ai_service = get_ai_service()
+            if not ai_service:
+                logger.error("AI service is not available")
+                raise HTTPException(status_code=503, detail="AI service is not configured. Please set GEMINI_API_KEY environment variable.")
             ai_response = ai_service.generate_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
                 customer_context=customer_context
             )
+        except HTTPException:
+            raise
         except ValueError as e:
             # AI service not configured
             logger.error(f"AI service not available: {str(e)}")
@@ -799,6 +804,10 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             print(f"🤖 [AI TASK] Getting AI service...")
             logger.info(f"🤖 [AI TASK] Getting AI service...")
             ai_service = get_ai_service()
+            if not ai_service:
+                print(f"❌ [AI TASK] AI service is not available")
+                logger.error(f"❌ [AI TASK] AI service is not available")
+                return  # Don't create an error message, just skip
             print(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
             logger.info(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
             logger.info(f"🤖 [AI TASK] Context retrieved (length: {len(context)} chars)")

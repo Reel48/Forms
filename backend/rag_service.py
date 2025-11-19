@@ -249,12 +249,18 @@ class RAGService:
             
             client_id = client_response.data["id"]
             
-            # Get folders assigned to this customer
-            folders_response = supabase_storage.table("folders").select("id, form_id").eq("client_id", client_id).execute()
+            # Get folders assigned to this customer (via client_id or folder_assignments)
+            folders_response = supabase_storage.table("folders").select("id").eq("client_id", client_id).execute()
             folders = folders_response.data if folders_response.data else []
+            folder_ids = [f["id"] for f in folders]
             
-            # Get unique form IDs from folders
-            form_ids = list(set([f.get("form_id") for f in folders if f.get("form_id")]))
+            if not folder_ids:
+                return ""  # Customer has no folders
+            
+            # Get form IDs from form_folder_assignments junction table
+            form_assignments_response = supabase_storage.table("form_folder_assignments").select("form_id").in_("folder_id", folder_ids).execute()
+            form_assignments = form_assignments_response.data if form_assignments_response.data else []
+            form_ids = list(set([fa.get("form_id") for fa in form_assignments if fa.get("form_id")]))
             
             if not form_ids:
                 return ""  # Customer has no assigned forms
