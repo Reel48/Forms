@@ -769,21 +769,21 @@ async def generate_ai_response(
                         "error": result.get("error")
                     })
                     
-                    # If quote was created, update the response with quote info
+                    # If quote was created, replace the fallback message with a proper success message
                     if func_name == "create_quote" and result.get("success"):
                         quote_info = result.get("result", {})
                         quote_number = quote_info.get("quote_number", "")
                         quote_id = quote_info.get("quote_id", "")
+                        folder_id = quote_info.get("folder_id", "")
+                        
+                        # Replace the fallback message with a proper success message
+                        if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
+                            ai_response = f"Perfect! I've created your quote {quote_number} and set up everything for you."
+                        
                         if quote_number:
                             ai_response += f"\n\n✅ Quote {quote_number} has been created! "
                             if quote_id:
-                                # Add link to quote (you'll need to construct the URL based on your frontend)
                                 ai_response += f"You can view it in your account."
-                    
-                    # If folder was created, we might want to assign forms
-                    if func_name == "create_quote" and result.get("success"):
-                        quote_result = result.get("result", {})
-                        folder_id = quote_result.get("folder_id")
                         
                         # Auto-assign Custom Hat Design Form for hat orders
                         if folder_id and "hat" in user_query.lower():
@@ -797,6 +797,14 @@ async def generate_ai_response(
                                     ai_response += f"\n\n📋 I've also added the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to your folder for you to fill out."
                             except Exception as e:
                                 logger.warning(f"Could not auto-assign form: {str(e)}")
+                    
+                    # If function failed, update response with error info
+                    elif not result.get("success"):
+                        error_msg = result.get("error", "Unknown error")
+                        if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
+                            ai_response = f"I encountered an issue while trying to create your quote: {error_msg}. Please try again or contact support."
+                        else:
+                            ai_response += f"\n\n⚠️ Note: There was an issue: {error_msg}"
             
             except Exception as e:
                 logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
@@ -1025,11 +1033,16 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     if func_name == "create_quote" and result.get("success"):
                         quote_info = result.get("result", {})
                         quote_number = quote_info.get("quote_number", "")
+                        folder_id = quote_info.get("folder_id", "")
+                        
+                        # Replace the fallback message with a proper success message
+                        if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
+                            ai_response = f"Perfect! I've created your quote {quote_number} and set up everything for you."
+                        
                         if quote_number:
                             ai_response += f"\n\n✅ Quote {quote_number} has been created! You can view it in your account."
                         
                         # Auto-assign Custom Hat Design Form for hat orders
-                        folder_id = quote_info.get("folder_id")
                         if folder_id and "hat" in user_query.lower():
                             try:
                                 # Use form_slug for easier assignment
@@ -1041,6 +1054,14 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                                     ai_response += f"\n\n📋 I've also added the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to your folder for you to fill out."
                             except Exception as e:
                                 logger.warning(f"Could not auto-assign form: {str(e)}")
+                    
+                    # If function failed, update response with error info
+                    elif not result.get("success"):
+                        error_msg = result.get("error", "Unknown error")
+                        if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
+                            ai_response = f"I encountered an issue while trying to create your quote: {error_msg}. Please try again or contact support."
+                        else:
+                            ai_response += f"\n\n⚠️ Note: There was an issue: {error_msg}"
             
             except Exception as e:
                 logger.error(f"Error executing function calls: {str(e)}", exc_info=True)

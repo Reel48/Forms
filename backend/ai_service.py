@@ -525,6 +525,8 @@ You have the ability to create quotes and organize orders, but your PRIMARY role
 - When in doubt, just answer the question - don't use functions
 - **ALWAYS provide a text response** - even if you're using functions, explain what you're doing in your response
 - **NEVER use functions without also providing a text explanation** - your response should always include text
+- **IMPORTANT**: If you see in the conversation history that a quote was already created, do NOT create another one. Just acknowledge the existing quote.
+- **IMPORTANT**: After creating a quote, provide a clear confirmation message with the quote number
 """
         
         # Add retrieved context
