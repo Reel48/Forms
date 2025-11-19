@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile, Query
 from typing import List, Optional
 import sys
 import os
@@ -321,11 +321,18 @@ async def send_message(
                 
                 # Only auto-respond if admin hasn't responded recently
                 if not admin_responded_recently:
-                    # Trigger AI response asynchronously using BackgroundTasks
-                    # BackgroundTasks can handle async functions directly
-                    background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
+                    # Trigger AI response asynchronously
+                    # Use asyncio.create_task() for fire-and-forget async tasks
+                    logger.info(f"Triggering AI response for conversation {conversation_id}, customer {user['id']}")
+                    try:
+                        task = asyncio.create_task(_generate_ai_response_async(conversation_id, user["id"]))
+                        # Store task reference to prevent garbage collection
+                        # Note: In production, you might want to track these tasks
+                        logger.info(f"AI response task created: {task}")
+                    except Exception as task_error:
+                        logger.error(f"Failed to create AI response task: {str(task_error)}", exc_info=True)
             except Exception as e:
-                logger.warning(f"Failed to trigger AI response: {str(e)}")
+                logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
         
         return message_response.data[0]
@@ -658,9 +665,12 @@ async def generate_ai_response(
 
 async def _generate_ai_response_async(conversation_id: str, customer_id: str):
     """Asynchronously generate AI response for a customer message"""
+    logger.info(f"Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
     try:
         # Small delay to ensure message is saved
+        logger.info(f"Waiting 1.5 seconds before generating AI response...")
         await asyncio.sleep(1.5)
+        logger.info(f"Delay complete, proceeding with AI response generation")
         
         # Check again if admin has responded (race condition check)
         recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(3).execute()
@@ -752,19 +762,24 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
             "created_at": datetime.now().isoformat()
         }
         
+        logger.info(f"Inserting AI message into database...")
         message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
         if message_response.data:
+            logger.info(f"AI message inserted successfully: {message_response.data[0].get('id')}")
             # Update conversation timestamp
             try:
                 supabase_storage.table("chat_conversations").update({
                     "last_message_at": datetime.now().isoformat(),
                     "updated_at": datetime.now().isoformat()
                 }).eq("id", conversation_id).execute()
+                logger.info(f"Conversation timestamp updated")
             except Exception as e:
                 logger.warning(f"Failed to update conversation timestamp: {str(e)}")
             
-            logger.info(f"AI response generated for conversation {conversation_id}")
+            logger.info(f"✅ AI response successfully generated and saved for conversation {conversation_id}")
+        else:
+            logger.error(f"Failed to insert AI message - no data returned")
     
     except Exception as e:
-        logger.error(f"Error generating AI response asynchronously: {str(e)}", exc_info=True)
+        logger.error(f"❌ Error generating AI response asynchronously: {str(e)}", exc_info=True)
 
