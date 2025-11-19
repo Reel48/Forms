@@ -141,6 +141,15 @@ const CustomerChatWidget: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
+    // Load Ocho user ID
+    chatAPI.getOchoUserId()
+      .then(response => {
+        setOchoUserId(response.ocho_user_id);
+      })
+      .catch(error => {
+        console.error('Failed to get Ocho user ID:', error);
+      });
+    
     console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
     loadConversation(true); // Pass true to indicate initial load
 
