@@ -1,161 +1,124 @@
-# 🎉 Deployment Complete!
+# AWS Deployment Complete ✅
 
-Your Quote Builder application is now fully deployed and connected!
+## Deployment Summary
 
-## ✅ What Was Done
+**Date**: $(date)
+**Service**: forms (App Runner)
+**Status**: Deployment triggered successfully
 
-### 1. Vercel Frontend Deployment
-- **Environment Variable Set:** `VITE_API_URL=https://uvpc5mx3se.us-east-1.awsapprunner.com`
-- **Set for all environments:** Production, Preview, Development
-- **Deployment Status:** ✅ Deployed
-- **Production URL:** `https://forms-bk39jkt10-reel48s-projects.vercel.app`
+### What Was Deployed
 
-### 2. AWS Backend
-- **Status:** ✅ RUNNING
-- **URL:** `https://uvpc5mx3se.us-east-1.awsapprunner.com`
-- **CORS Updated:** Includes your Vercel domain
+1. **Docker Image Built & Pushed**
+   - Image: `391313099201.dkr.ecr.us-east-1.amazonaws.com/quote-builder-backend:latest`
+   - Platform: linux/amd64 (AWS App Runner compatible)
+   - Status: ✅ Successfully pushed to ECR
 
-### 3. Database (Supabase)
-- **Status:** ✅ Connected
-- **URL:** `https://boisewltuwcjfrdjnfwd.supabase.co`
+2. **App Runner Deployment**
+   - Service ARN: `arn:aws:apprunner:us-east-1:391313099201:service/forms/7006f11f5c404deebe576b190dc9ea07`
+   - Deployment ID: `bdde60298f594c0bb6aad6693f474fbd`
+   - Status: ✅ Deployment triggered
 
----
+### Code Changes Deployed
 
-## 🌐 Your Application URLs
+- ✅ Automatic AI customer service responses
+- ✅ Admin detection (AI stops when admin joins)
+- ✅ Updated knowledge base with detailed Reel48 information
+- ✅ Enhanced AI prompt for customer service
+- ✅ Pricing table integration with tiered pricing
+- ✅ Fixed numpy version for Python 3.12 compatibility
 
-### Frontend (Vercel)
-**Production:**
-```
-https://forms-bk39jkt10-reel48s-projects.vercel.app
-```
+### Database Updates
 
-**Preview Deployments:**
-- Each PR/branch gets its own preview URL
-- All `*.vercel.app` domains are allowed in CORS
+- ✅ Knowledge base updated with detailed company information
+- ✅ Pricing table populated (3 products, 21 tiers)
+- ✅ All migrations applied
 
-### Backend (AWS App Runner)
-```
-https://uvpc5mx3se.us-east-1.awsapprunner.com
-```
+## Deployment Status
 
-**Endpoints:**
-- Health: `/health`
-- API Docs: `/docs`
-- Clients: `/api/clients`
-- Quotes: `/api/quotes`
-- PDF: `/api/pdf/quote/{id}`
-- Stripe: `/api/stripe/*`
+**Monitor Deployment**:
+- AWS Console: https://console.aws.amazon.com/apprunner/home?region=us-east-1#/services/forms
+- Service URL: https://uvpc5mx3se.us-east-1.awsapprunner.com
 
-### Database (Supabase)
-```
-https://boisewltuwcjfrdjnfwd.supabase.co
-```
+**Expected Timeline**:
+- Deployment usually takes 2-5 minutes
+- Service will be available at the Service URL once complete
 
----
+## Important: Environment Variables
 
-## ✅ Verification Steps
+Make sure `GEMINI_API_KEY` is set in AWS App Runner:
+- Key: `GEMINI_API_KEY`
+- Value: `AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg`
 
-### 1. Test Frontend
-Visit: `https://forms-bk39jkt10-reel48s-projects.vercel.app`
+**To verify/update**:
+1. Go to AWS App Runner Console
+2. Select your service
+3. Configuration → Edit
+4. Check Environment Variables section
+5. Add/update `GEMINI_API_KEY` if needed
 
-**Expected:**
-- App loads without errors
-- Can navigate between pages
-- No console errors about API connection
+## What's New
 
-### 2. Test API Connection
-1. Open browser DevTools (F12)
-2. Go to Network tab
-3. Try to create a client or view quotes
-4. **Expected:** API calls to `uvpc5mx3se.us-east-1.awsapprunner.com`
+### AI Chatbot Features
+- **Automatic Responses**: AI responds automatically to customer messages
+- **Admin Detection**: AI stops responding when admin joins conversation
+- **Knowledge Base**: Detailed company/product information available
+- **Customer Service Focus**: Enhanced prompt for better customer service
 
-### 3. Test Database Operations
-1. Create a client in the frontend
-2. Check Supabase Dashboard → Table Editor → `clients`
-3. **Expected:** New client appears in database
+### Knowledge Base Content
+- Reel48 company information (hand-made hats, in business since 2022)
+- Detailed ordering process (Account/Sales Team, Pantone matching, Digital Proofs, Samples)
+- Product quality details (hand-made, premium materials, customization options)
+- Production timelines (Hats: 6-9 weeks, Coozies: 3-4 weeks)
+- Design services guidelines (logo submission, file preparation assistance)
 
-### 4. Test PDF Generation
-1. Create a quote
-2. Click "Download PDF"
-3. **Expected:** PDF downloads successfully
+## Next Steps
 
----
+1. **Wait for Deployment** (2-5 minutes)
+   - Check AWS Console for deployment status
+   - Service will be available once deployment completes
 
-## 🚀 You're Ready to Build!
+2. **Verify Environment Variable**
+   - Ensure `GEMINI_API_KEY` is set in App Runner
+   - Service won't work without it
 
-Everything is connected and working:
+3. **Test the AI Chatbot**
+   - Send a message as a customer
+   - Verify AI responds automatically
+   - Test with admin joining conversation
 
-✅ **Frontend** → Vercel (deployed with API URL)
-✅ **Backend** → AWS App Runner (running and healthy)
-✅ **Database** → Supabase (connected)
-✅ **Payments** → Stripe (configured, webhooks optional)
+4. **Monitor Performance**
+   - Check backend logs for AI response generation
+   - Review response quality
+   - Monitor error rates
 
-### Next Steps
+## Troubleshooting
 
-1. **Test the application:**
-   - Visit your Vercel URL
-   - Create a client
-   - Create a quote
-   - Generate a PDF
-   - Test Stripe invoice creation
+If deployment fails or service doesn't start:
 
-2. **Optional - Set up Stripe Webhooks:**
-   - See `STRIPE_WEBHOOK_SETUP.md`
-   - Enables automatic payment status updates
+1. **Check AWS Console**
+   - Look for error messages in the Activity tab
+   - Check service logs for application errors
 
-3. **Start building features!**
-   - Everything is connected and ready
-   - Make changes, push to GitHub
-   - Vercel auto-deploys frontend
-   - AWS auto-deploys backend (when you push new images)
+2. **Verify Environment Variables**
+   - All required variables must be set
+   - `GEMINI_API_KEY` is critical for AI features
 
----
+3. **Check Service Logs**
+   - Application logs: `/aws/apprunner/forms/7006f11f5c404deebe576b190dc9ea07/application`
+   - Service logs: `/aws/apprunner/forms/7006f11f5c404deebe576b190dc9ea07/service`
 
-## 📋 Quick Reference
+4. **Health Check**
+   ```bash
+   curl https://uvpc5mx3se.us-east-1.awsapprunner.com/health
+   ```
+   Should return: `{"status": "healthy"}`
 
-### Environment Variables
+## Summary
 
-**Vercel (Frontend):**
-- `VITE_API_URL` = `https://uvpc5mx3se.us-east-1.awsapprunner.com`
+✅ Docker image built and pushed to ECR
+✅ App Runner deployment triggered
+✅ All code changes included
+✅ Database migrations applied
+✅ Knowledge base updated
 
-**AWS App Runner (Backend):**
-- `SUPABASE_URL` = `https://boisewltuwcjfrdjnfwd.supabase.co`
-- `SUPABASE_KEY` = (configured)
-- `STRIPE_SECRET_KEY` = (configured)
-- `ALLOWED_ORIGINS` = `https://forms-bk39jkt10-reel48s-projects.vercel.app,https://*.vercel.app,http://localhost:5173,http://localhost:3000`
-
-### Deployment Commands
-
-**Frontend (Vercel):**
-```bash
-vercel --prod  # Deploy to production
-vercel         # Deploy preview
-```
-
-**Backend (AWS):**
-```bash
-cd backend
-./deploy-to-aws.sh  # Build and push new image (auto-deploys)
-```
-
----
-
-## 🎯 Status Summary
-
-| Component | Status | URL |
-|-----------|--------|-----|
-| Frontend | ✅ Deployed | https://forms-bk39jkt10-reel48s-projects.vercel.app |
-| Backend | ✅ Running | https://uvpc5mx3se.us-east-1.awsapprunner.com |
-| Database | ✅ Connected | https://boisewltuwcjfrdjnfwd.supabase.co |
-| Stripe | ✅ Configured | (Secret key set) |
-| Webhooks | ⚠️ Optional | (Can set up later) |
-
----
-
-## 🎉 Congratulations!
-
-Your Quote Builder application is fully deployed and ready for development. All three services (Vercel, AWS, Supabase) are connected and working together.
-
-**Start building!** 🚀
-
-
+**Deployment is in progress. Monitor the AWS Console for completion.**
