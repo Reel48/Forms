@@ -19,12 +19,32 @@ from rag_service import get_rag_service
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
+@router.get("/ocho-user-id")
+async def get_ocho_user_id():
+    """Get Ocho (AI assistant) user ID for frontend"""
+    return {"ocho_user_id": OCHO_USER_ID}
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Special UUID for AI assistant messages
-# Using all zeros UUID as a special identifier for AI messages
-AI_ASSISTANT_UUID = "00000000-0000-0000-0000-000000000000"
+# Get Ocho (AI assistant) user ID from environment or use fallback
+# Ocho is a special user account for AI messages
+OCHO_USER_ID = os.getenv("OCHO_USER_ID")
+if not OCHO_USER_ID:
+    # Fallback: Try to find Ocho user by email
+    try:
+        ocho_client = supabase_storage.table("clients").select("user_id").eq("email", "ocho@reel48.ai").single().execute()
+        if ocho_client.data and ocho_client.data.get("user_id"):
+            OCHO_USER_ID = ocho_client.data["user_id"]
+            logger.info(f"Found Ocho user ID from database: {OCHO_USER_ID}")
+    except Exception as e:
+        logger.warning(f"Could not find Ocho user ID: {str(e)}")
+        # Use fallback UUID if not found
+        OCHO_USER_ID = "00000000-0000-0000-0000-000000000000"
+        logger.warning(f"Using fallback UUID for AI messages. Please set OCHO_USER_ID environment variable.")
+
+if OCHO_USER_ID and OCHO_USER_ID != "00000000-0000-0000-0000-000000000000":
+    logger.info(f"Using Ocho user ID for AI messages: {OCHO_USER_ID}")
 
 # File upload constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -316,7 +336,7 @@ async def send_message(
                 for msg in recent_messages:
                     sender_id = msg.get("sender_id", "")
                     # If sender is not the customer and not AI, it's likely an admin
-                    if sender_id != user["id"] and sender_id != AI_ASSISTANT_UUID:
+                    if sender_id != user["id"] and sender_id != OCHO_USER_ID:
                         # Verify it's actually an admin by checking if sender_id exists in user_roles as admin
                         # For now, we'll use a simpler check: if it's not the customer and not AI, assume admin
                         admin_responded_recently = True
@@ -573,7 +593,7 @@ async def generate_ai_response(
         # Get the most recent user message (not from AI)
         latest_message = None
         for msg in messages:
-            if msg.get("sender_id") != AI_ASSISTANT_UUID and msg.get("message"):
+            if msg.get("sender_id") != OCHO_USER_ID and msg.get("message"):
                 latest_message = msg
                 break
         
@@ -593,7 +613,7 @@ async def generate_ai_response(
             
             if content and sender_id:
                 # Determine role: "user" for customer/admin, "model" for AI
-                if sender_id == AI_ASSISTANT_UUID:
+                if sender_id == OCHO_USER_ID:
                     role = "model"
                 else:
                     role = "user"
@@ -650,7 +670,7 @@ async def generate_ai_response(
         ai_message_data = {
             "id": str(uuid.uuid4()),
             "conversation_id": conversation_id,
-            "sender_id": AI_ASSISTANT_UUID,  # Special UUID for AI messages
+            "sender_id": OCHO_USER_ID,  # Ocho (AI assistant) user ID
             "message": ai_response,
             "message_type": "text",
             "created_at": datetime.now().isoformat()
@@ -694,7 +714,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
         # If most recent message is from admin (not customer, not AI), skip AI response
         if recent_messages:
             latest = recent_messages[0]
-            if latest.get("sender_id") != customer_id and latest.get("sender_id") != AI_ASSISTANT_UUID:
+            if latest.get("sender_id") != customer_id and latest.get("sender_id") != OCHO_USER_ID:
                 logger.info(f"Admin responded, skipping AI response for conversation {conversation_id}")
                 return
         
@@ -727,7 +747,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
             content = msg.get("message", "")
             
             if content and sender_id:
-                if sender_id == AI_ASSISTANT_UUID:
+                if sender_id == OCHO_USER_ID:
                     role = "model"
                 else:
                     role = "user"

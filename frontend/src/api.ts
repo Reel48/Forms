@@ -770,6 +770,7 @@ export interface ChatConversation {
 }
 
 export const chatAPI = {
+  getOchoUserId: () => api.get<{ocho_user_id: string}>('/api/chat/ocho-user-id'),
   getConversations: () => api.get<ChatConversation[]>('/api/chat/conversations'),
   getMessages: (conversationId: string, limit?: number, beforeId?: string) => {
     const params = new URLSearchParams();

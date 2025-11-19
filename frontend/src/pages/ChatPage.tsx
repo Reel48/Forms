@@ -20,6 +20,7 @@ const ChatPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -642,7 +643,7 @@ const ChatPage: React.FC = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                             <FaRobot style={{ fontSize: '0.875rem', color: 'var(--color-primary)' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
-                              AI Assistant
+                              Ocho
                             </span>
                           </div>
                         )}

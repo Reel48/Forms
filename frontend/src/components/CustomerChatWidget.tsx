@@ -8,6 +8,7 @@ import './CustomerChatWidget.css';
 const CustomerChatWidget: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
