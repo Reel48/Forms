@@ -11,7 +11,7 @@ INSERT INTO knowledge_embeddings (id, category, title, content, metadata, create
     gen_random_uuid(),
     'company_info',
     'About Our Company',
-    'We specialize in custom promotional products, including custom hats and custom coozies. Our products are perfect for businesses, events, and organizations looking for high-quality branded merchandise.',
+    'Reel48 specializes in custom hats, and we also offer custom coozies.',
     jsonb_build_object('product', 'general'),
     NOW(),
     NOW()

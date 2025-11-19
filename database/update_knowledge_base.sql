@@ -4,7 +4,7 @@
 -- Update company information
 UPDATE knowledge_embeddings 
 SET 
-  content = 'Reel48 specializes in completely custom hats, and also offers custom coozies. Other specialty items may be produced upon request, reviewed on a case-by-case basis. We hand-make every hat from scratch and offer an unrivaled level of customization to match your exact vision. Our core commitment is to outstanding customer service, ensuring a smooth and successful experience for every client. We have been in business since 2022.',
+  content = 'Reel48 specializes in custom hats, and we also offer custom coozies.',
   updated_at = NOW()
 WHERE category = 'company_info' AND title = 'About Our Company';
 
@@ -50,7 +50,7 @@ SELECT
   gen_random_uuid(),
   'company_info',
   'About Our Company',
-  'Reel48 specializes in completely custom hats, and also offers custom coozies. Other specialty items may be produced upon request, reviewed on a case-by-case basis. We hand-make every hat from scratch and offer an unrivaled level of customization to match your exact vision. Our core commitment is to outstanding customer service, ensuring a smooth and successful experience for every client. We have been in business since 2022.',
+  'Reel48 specializes in custom hats, and we also offer custom coozies.',
   jsonb_build_object('product', 'general'),
   NOW(),
   NOW()
