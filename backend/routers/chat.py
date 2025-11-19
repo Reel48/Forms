@@ -762,12 +762,26 @@ async def generate_ai_response(
                     func_params = _convert_proto_to_dict(func_params)
                     
                     # Ensure line_items is properly converted (if present)
-                    if "line_items" in func_params and isinstance(func_params["line_items"], list):
-                        # Double-check each item is a dict
-                        func_params["line_items"] = [
-                            item if isinstance(item, dict) else _convert_proto_to_dict(item)
-                            for item in func_params["line_items"]
-                        ]
+                    if "line_items" in func_params:
+                        line_items = func_params["line_items"]
+                        # If it's a string, try to parse it as JSON
+                        if isinstance(line_items, str):
+                            try:
+                                import json
+                                line_items = json.loads(line_items)
+                                func_params["line_items"] = line_items
+                            except (json.JSONDecodeError, ValueError) as e:
+                                logger.error(f"Could not parse line_items as JSON: {e}")
+                                logger.error(f"line_items value: {line_items}")
+                                # Remove invalid line_items to prevent error
+                                del func_params["line_items"]
+                        
+                        # If it's a list, ensure each item is a dict
+                        if isinstance(func_params.get("line_items"), list):
+                            func_params["line_items"] = [
+                                item if isinstance(item, dict) else _convert_proto_to_dict(item)
+                                for item in func_params["line_items"]
+                            ]
                     
                     # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
                     if client_id:
@@ -1036,12 +1050,26 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     func_params = _convert_proto_to_dict(func_params)
                     
                     # Ensure line_items is properly converted (if present)
-                    if "line_items" in func_params and isinstance(func_params["line_items"], list):
-                        # Double-check each item is a dict
-                        func_params["line_items"] = [
-                            item if isinstance(item, dict) else _convert_proto_to_dict(item)
-                            for item in func_params["line_items"]
-                        ]
+                    if "line_items" in func_params:
+                        line_items = func_params["line_items"]
+                        # If it's a string, try to parse it as JSON
+                        if isinstance(line_items, str):
+                            try:
+                                import json
+                                line_items = json.loads(line_items)
+                                func_params["line_items"] = line_items
+                            except (json.JSONDecodeError, ValueError) as e:
+                                logger.error(f"Could not parse line_items as JSON: {e}")
+                                logger.error(f"line_items value: {line_items}")
+                                # Remove invalid line_items to prevent error
+                                del func_params["line_items"]
+                        
+                        # If it's a list, ensure each item is a dict
+                        if isinstance(func_params.get("line_items"), list):
+                            func_params["line_items"] = [
+                                item if isinstance(item, dict) else _convert_proto_to_dict(item)
+                                for item in func_params["line_items"]
+                            ]
                     
                     # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
                     if client_id:
