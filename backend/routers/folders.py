@@ -104,6 +104,84 @@ async def get_folder(folder_id: str, user = Depends(get_current_user)):
         print(f"Error getting folder: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get folder: {str(e)}")
 
+def _auto_assign_purchase_agreement(folder_id: str, assigned_by: str):
+    """Helper function to auto-assign 'Reel48 Purchase Agreement' e-signature template to a folder"""
+    try:
+        import uuid
+        from datetime import datetime
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Find the "Reel48 Purchase Agreement" template by name
+        template_response = supabase_storage.table("esignature_documents").select("*").eq("name", "Reel48 Purchase Agreement").eq("is_template", True).single().execute()
+        
+        if not template_response.data:
+            logger.warning("Reel48 Purchase Agreement e-signature template not found")
+            return
+        
+        template_doc = template_response.data
+        template_id = template_doc["id"]
+        template_name = template_doc.get("name", "Reel48 Purchase Agreement")
+        
+        # Get folder name
+        folder_response = supabase_storage.table("folders").select("name").eq("id", folder_id).single().execute()
+        folder_name = folder_response.data.get("name", "Folder") if folder_response.data else "Folder"
+        
+        # Generate the copy name: "Folder Name - E-Signature Name"
+        copy_name = f"{folder_name} - {template_name}"
+        
+        # Check if a copy already exists for this template in this folder
+        existing_copy = supabase_storage.table("esignature_documents").select("id").eq("folder_id", folder_id).eq("is_template", False).eq("name", copy_name).execute()
+        if existing_copy.data:
+            # Copy already exists, skip
+            return
+        
+        # Create a copy of the template document for this folder
+        copy_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        copy_data = {
+            "id": copy_id,
+            "name": copy_name,
+            "description": template_doc.get("description"),
+            "file_id": template_doc.get("file_id"),
+            "document_type": template_doc.get("document_type", "agreement"),
+            "signature_mode": template_doc.get("signature_mode", "simple"),
+            "require_signature": template_doc.get("require_signature", True),
+            "signature_fields": template_doc.get("signature_fields"),
+            "is_template": False,
+            "folder_id": folder_id,
+            "quote_id": template_doc.get("quote_id"),
+            "expires_at": template_doc.get("expires_at"),
+            "created_by": assigned_by,
+            "status": "pending",
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        # Create the copy
+        copy_response = supabase_storage.table("esignature_documents").insert(copy_data).execute()
+        
+        # Also create an assignment record linking the template to the folder
+        assignment_data = {
+            "document_id": template_id,
+            "folder_id": folder_id,
+            "assigned_by": assigned_by,
+            "status": "pending"
+        }
+        
+        try:
+            supabase_storage.table("esignature_document_folder_assignments").insert(assignment_data).execute()
+        except Exception as e:
+            logger.warning(f"Could not create assignment record: {str(e)}")
+        
+        logger.info(f"Auto-assigned Reel48 Purchase Agreement to folder {folder_id}")
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error auto-assigning Purchase Agreement: {str(e)}", exc_info=True)
+        # Don't raise - this is a non-critical operation
+
 @router.post("", response_model=Folder)
 async def create_folder(
     folder: FolderCreate,
