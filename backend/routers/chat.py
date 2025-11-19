@@ -650,3 +650,116 @@ async def generate_ai_response(
         logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
 
+
+async def _generate_ai_response_async(conversation_id: str, customer_id: str):
+    """Asynchronously generate AI response for a customer message"""
+    try:
+        # Small delay to ensure message is saved
+        await asyncio.sleep(1.5)
+        
+        # Check again if admin has responded (race condition check)
+        recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(3).execute()
+        recent_messages = recent_messages_response.data if recent_messages_response.data else []
+        
+        # If most recent message is from admin (not customer, not AI), skip AI response
+        if recent_messages:
+            latest = recent_messages[0]
+            if latest.get("sender_id") != customer_id and latest.get("sender_id") != "ai-assistant":
+                logger.info(f"Admin responded, skipping AI response for conversation {conversation_id}")
+                return
+        
+        # Get recent messages for context
+        messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(10).execute()
+        messages = messages_response.data if messages_response.data else []
+        
+        if not messages:
+            return
+        
+        # Get the most recent customer message
+        latest_customer_message = None
+        for msg in messages:
+            if msg.get("sender_id") == customer_id and msg.get("message"):
+                latest_customer_message = msg
+                break
+        
+        if not latest_customer_message:
+            return
+        
+        user_query = latest_customer_message.get("message", "")
+        
+        # Format conversation history
+        conversation_history = []
+        for msg in reversed(messages):
+            if msg.get("id") == latest_customer_message.get("id"):
+                continue
+            
+            sender_id = msg.get("sender_id", "")
+            content = msg.get("message", "")
+            
+            if content and sender_id:
+                if sender_id == "ai-assistant":
+                    role = "model"
+                else:
+                    role = "user"
+                
+                conversation_history.append({
+                    "role": role,
+                    "content": content
+                })
+        
+        # Retrieve context using RAG
+        rag_service = get_rag_service()
+        context = rag_service.retrieve_context(
+            user_query,
+            customer_id=customer_id,
+            is_admin=False
+        )
+        
+        # Get customer context
+        customer_context = None
+        if customer_id:
+            try:
+                client_response = supabase_storage.table("clients").select("name, company").eq("user_id", customer_id).single().execute()
+                if client_response.data:
+                    customer_context = {
+                        "company": client_response.data.get("company"),
+                        "name": client_response.data.get("name")
+                    }
+            except Exception as e:
+                logger.warning(f"Error getting customer context: {str(e)}")
+        
+        # Generate AI response
+        ai_service = get_ai_service()
+        ai_response = ai_service.generate_response(
+            user_message=user_query,
+            conversation_history=conversation_history,
+            context=context,
+            customer_context=customer_context
+        )
+        
+        # Create AI message
+        ai_message_data = {
+            "id": str(uuid.uuid4()),
+            "conversation_id": conversation_id,
+            "sender_id": "ai-assistant",
+            "message": ai_response,
+            "message_type": "text",
+            "created_at": datetime.now().isoformat()
+        }
+        
+        message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
+        if message_response.data:
+            # Update conversation timestamp
+            try:
+                supabase_storage.table("chat_conversations").update({
+                    "last_message_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat()
+                }).eq("id", conversation_id).execute()
+            except Exception as e:
+                logger.warning(f"Failed to update conversation timestamp: {str(e)}")
+            
+            logger.info(f"AI response generated for conversation {conversation_id}")
+    
+    except Exception as e:
+        logger.error(f"Error generating AI response asynchronously: {str(e)}", exc_info=True)
+
