@@ -404,9 +404,22 @@ class AIService:
                         if hasattr(part, 'function_call'):
                             # Extract function call
                             func_call = part.function_call
+                            # Handle args - it might be None or a dict-like object
+                            args = {}
+                            if hasattr(func_call, 'args') and func_call.args is not None:
+                                try:
+                                    # Try to convert to dict if it's not already
+                                    if isinstance(func_call.args, dict):
+                                        args = func_call.args
+                                    else:
+                                        args = dict(func_call.args)
+                                except (TypeError, ValueError) as e:
+                                    logger.warning(f"Could not parse function call args: {e}")
+                                    args = {}
+                            
                             function_calls.append({
-                                "name": func_call.name,
-                                "arguments": dict(func_call.args) if hasattr(func_call, 'args') else {}
+                                "name": func_call.name if hasattr(func_call, 'name') else "",
+                                "arguments": args
                             })
                         elif hasattr(part, 'text'):
                             response_text += part.text
