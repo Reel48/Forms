@@ -796,24 +796,35 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         
         # Generate AI response
         try:
+            print(f"🤖 [AI TASK] Getting AI service...")
+            logger.info(f"🤖 [AI TASK] Getting AI service...")
             ai_service = get_ai_service()
-            logger.info(f"AI service obtained, generating response for query: '{user_query[:100]}...'")
-            logger.info(f"Context retrieved (length: {len(context)} chars)")
+            print(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
+            logger.info(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
+            logger.info(f"🤖 [AI TASK] Context retrieved (length: {len(context)} chars)")
+            print(f"🤖 [AI TASK] Calling generate_response...")
             ai_response = ai_service.generate_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
                 customer_context=customer_context
             )
+            print(f"🤖 [AI TASK] Response received: {len(ai_response) if ai_response else 0} chars")
             if not ai_response or len(ai_response.strip()) == 0:
-                logger.warning(f"AI service returned empty response")
+                print(f"⚠️ [AI TASK] AI service returned empty response")
+                logger.warning(f"⚠️ [AI TASK] AI service returned empty response")
                 return
-            logger.info(f"✅ AI response generated successfully (length: {len(ai_response)} chars)")
+            print(f"✅ [AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
+            logger.info(f"✅ [AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
         except ValueError as ve:
-            logger.error(f"❌ AI service not configured: {str(ve)}")
+            print(f"❌ [AI TASK] AI service not configured: {str(ve)}")
+            logger.error(f"❌ [AI TASK] AI service not configured: {str(ve)}", exc_info=True)
             return  # Don't create an error message, just skip
         except Exception as ai_error:
-            logger.error(f"❌ Error calling AI service: {str(ai_error)}", exc_info=True)
+            print(f"❌ [AI TASK] Error calling AI service: {str(ai_error)}")
+            logger.error(f"❌ [AI TASK] Error calling AI service: {str(ai_error)}", exc_info=True)
+            import traceback
+            print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
             return  # Don't create an error message, just skip
         
         # Create AI message
