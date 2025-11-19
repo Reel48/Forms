@@ -7,6 +7,11 @@ from typing import Dict, Any, Optional, List
 from decimal import Decimal
 import uuid
 from datetime import datetime
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import supabase_storage
 
@@ -86,9 +91,19 @@ class AIActionExecutor:
             # Generate quote number
             quote_number = f"QT-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
             
+            # Normalize line items data for calculate_quote_totals (expects discount_percent, not discount)
+            normalized_line_items = []
+            for item in line_items_data:
+                normalized_item = {
+                    "quantity": item.get("quantity", 1),
+                    "unit_price": item.get("unit_price", "0.00"),
+                    "discount_percent": item.get("discount", item.get("discount_percent", "0.00"))
+                }
+                normalized_line_items.append(normalized_item)
+            
             # Calculate totals
             from routers.quotes import calculate_quote_totals
-            totals = calculate_quote_totals(line_items_data, tax_rate, "after_discount")
+            totals = calculate_quote_totals(normalized_line_items, Decimal(str(tax_rate)), "after_discount")
             
             # Create quote data
             quote_data = {

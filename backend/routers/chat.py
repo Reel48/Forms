@@ -20,11 +20,6 @@ from ai_action_executor import AIActionExecutor
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-@router.get("/ocho-user-id")
-async def get_ocho_user_id():
-    """Get Ocho (AI assistant) user ID for frontend"""
-    return {"ocho_user_id": OCHO_USER_ID}
-
 # Configure logging
 logger = logging.getLogger(__name__)
 
