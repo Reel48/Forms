@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaCheck, FaRobot, FaTrash } from 'react-icons/fa';
+import { FaPaperclip, FaCheck, FaTrash } from 'react-icons/fa';
 import { renderTextWithLinks } from '../utils/textUtils';
 import './ChatPage.css';
 
