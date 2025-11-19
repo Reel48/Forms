@@ -175,11 +175,11 @@ class AIService:
                         },
                         "form_id": {
                             "type": "string",
-                            "description": "The UUID of the form to assign. Alternatively, you can use form_slug with the public_url_slug (e.g., 'form-4f8ml8om' for Custom Hat Design Form)."
+                            "description": "The UUID of the form to assign. Alternatively, you can use form_slug with the public_url_slug (e.g., 'form-4f8ml8om' for Custom Hat Design Form, 'form-rwljka86' for Custom Coozie Design Form)."
                         },
                         "form_slug": {
                             "type": "string",
-                            "description": "Alternative to form_id: The public_url_slug of the form (e.g., 'form-4f8ml8om' for Custom Hat Design Form). Use this if you know the slug but not the UUID."
+                            "description": "Alternative to form_id: The public_url_slug of the form (e.g., 'form-4f8ml8om' for Custom Hat Design Form, 'form-rwljka86' for Custom Coozie Design Form). Use this if you know the slug but not the UUID."
                         }
                     },
                     "required": ["folder_id"]
@@ -488,8 +488,6 @@ IMPORTANT GUIDELINES:
 - Be conversational and helpful - you're representing the company
 - If a customer asks about something not in your knowledge, politely let them know you'll need to check with the team
 - Always maintain a positive, service-oriented tone
-- **CRITICAL**: When recommending that a customer fill out a form, you MUST include the complete form link/URL in your response. Never recommend a form without providing the link. If the context contains a form link, always include it in your recommendation.
-- **LINK FORMATTING**: Always format links using markdown format: [link text](url). For example, instead of "Fill out the form at https://reel48.app/public/form/form-4f8ml8om", write "Fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om)". This makes links clickable and more user-friendly. Never paste raw URLs - always use markdown link format [text](url).
 """
         
         if enable_function_calling:
@@ -595,6 +593,8 @@ Use this context to answer questions accurately. If the user asks about somethin
             link_text = url
             if 'form-4f8ml8om' in url:
                 link_text = 'Custom Hat Design Form'
+            elif 'form-rwljka86' in url:
+                link_text = 'Custom Coozie Design Form'
             elif '/form/' in url:
                 link_text = 'form'
             elif '/quote/' in url:

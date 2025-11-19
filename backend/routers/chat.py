@@ -23,6 +23,46 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # Configure logging
 logger = logging.getLogger(__name__)
 
+def _detect_order_type(line_items: list) -> Optional[str]:
+    """
+    Detect if an order is for hats or coozies based on line items descriptions.
+    Returns 'hat', 'coozie', or None if unclear.
+    """
+    if not line_items or not isinstance(line_items, list):
+        return None
+    
+    # Check all line items for keywords
+    has_hat = False
+    has_coozie = False
+    
+    for item in line_items:
+        if not isinstance(item, dict):
+            continue
+        
+        description = str(item.get("description", "")).lower()
+        
+        # Check for hat keywords
+        if any(keyword in description for keyword in ["hat", "cap", "headwear"]):
+            has_hat = True
+        
+        # Check for coozie keywords (including variations)
+        if any(keyword in description for keyword in ["coozie", "coozy", "koozie", "koozy", "can cooler", "beverage holder"]):
+            has_coozie = True
+    
+    # If both are found, prioritize based on what's more common
+    # If only one is found, return that
+    if has_coozie and not has_hat:
+        return "coozie"
+    elif has_hat and not has_coozie:
+        return "hat"
+    elif has_hat and has_coozie:
+        # If both, check which appears more frequently
+        hat_count = sum(1 for item in line_items if isinstance(item, dict) and any(kw in str(item.get("description", "")).lower() for kw in ["hat", "cap", "headwear"]))
+        coozie_count = sum(1 for item in line_items if isinstance(item, dict) and any(kw in str(item.get("description", "")).lower() for kw in ["coozie", "coozy", "koozie", "koozy", "can cooler", "beverage holder"]))
+        return "coozie" if coozie_count >= hat_count else "hat"
+    
+    return None
+
 def _convert_proto_to_dict(obj):
     """Convert proto objects (like MapComposite, RepeatedComposite) to regular Python dicts/lists"""
     if obj is None:
@@ -880,16 +920,27 @@ async def generate_ai_response(
                             if quote_id:
                                 ai_response += f"You can view it in your account."
                         
-                        # Auto-assign Custom Hat Design Form to all quotes (default behavior)
-                        if folder_id:
+                        # Auto-assign appropriate design form based on order type
+                        if folder_id and "line_items" in func_params:
                             try:
-                                # Use form_slug for easier assignment
-                                assign_result = action_executor.execute_function("assign_form_to_folder", {
-                                    "folder_id": folder_id,
-                                    "form_slug": "form-4f8ml8om"
-                                })
-                                if assign_result.get("success"):
-                                    ai_response += f"\n\n📋 I've also added the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to your folder for you to fill out."
+                                line_items = func_params.get("line_items", [])
+                                if isinstance(line_items, list) and len(line_items) > 0:
+                                    # Determine order type from line items
+                                    order_type = _detect_order_type(line_items)
+                                    form_slug = None
+                                    
+                                    if order_type == "hat":
+                                        form_slug = "form-4f8ml8om"  # Custom Hat Design Form
+                                    elif order_type == "coozie":
+                                        form_slug = "form-rwljka86"  # Custom Coozie Design Form
+                                    
+                                    if form_slug:
+                                        assign_result = action_executor.execute_function("assign_form_to_folder", {
+                                            "folder_id": folder_id,
+                                            "form_slug": form_slug
+                                        })
+                                        # Form is automatically added to folder - no need to mention it in response
+                                        logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
                             except Exception as e:
                                 logger.warning(f"Could not auto-assign form: {str(e)}")
                     
@@ -1167,16 +1218,27 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                         if quote_number:
                             ai_response += f"\n\n✅ Quote {quote_number} has been created! You can view it in your account."
                         
-                        # Auto-assign Custom Hat Design Form to all quotes (default behavior)
-                        if folder_id:
+                        # Auto-assign appropriate design form based on order type
+                        if folder_id and "line_items" in func_params:
                             try:
-                                # Use form_slug for easier assignment
-                                assign_result = action_executor.execute_function("assign_form_to_folder", {
-                                    "folder_id": folder_id,
-                                    "form_slug": "form-4f8ml8om"
-                                })
-                                if assign_result.get("success"):
-                                    ai_response += f"\n\n📋 I've also added the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to your folder for you to fill out."
+                                line_items = func_params.get("line_items", [])
+                                if isinstance(line_items, list) and len(line_items) > 0:
+                                    # Determine order type from line items
+                                    order_type = _detect_order_type(line_items)
+                                    form_slug = None
+                                    
+                                    if order_type == "hat":
+                                        form_slug = "form-4f8ml8om"  # Custom Hat Design Form
+                                    elif order_type == "coozie":
+                                        form_slug = "form-rwljka86"  # Custom Coozie Design Form
+                                    
+                                    if form_slug:
+                                        assign_result = action_executor.execute_function("assign_form_to_folder", {
+                                            "folder_id": folder_id,
+                                            "form_slug": form_slug
+                                        })
+                                        # Form is automatically added to folder - no need to mention it in response
+                                        logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
                             except Exception as e:
                                 logger.warning(f"Could not auto-assign form: {str(e)}")
                     
