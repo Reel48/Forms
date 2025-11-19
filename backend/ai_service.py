@@ -105,8 +105,7 @@ class AIService:
                         },
                         "line_items": {
                             "type": "array",
-                            "description": "REQUIRED: List of products/items in the quote. MUST contain at least one item with description, quantity, and unit_price. This is MANDATORY - quotes cannot be created without line items.",
-                            "minItems": 1,
+                            "description": "REQUIRED: List of products/items in the quote. MUST contain at least one item with description, quantity, and unit_price. This is MANDATORY - quotes cannot be created without line items. DO NOT create quotes without line_items.",
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -448,7 +447,15 @@ class AIService:
                 "function_calls": function_calls
             }
         except Exception as e:
-            logger.error(f"Error in function calling: {str(e)}", exc_info=True)
+            error_msg = str(e)
+            error_type = type(e).__name__
+            logger.error(f"❌ Error in function calling [{error_type}]: {error_msg}", exc_info=True)
+            import traceback
+            traceback_str = traceback.format_exc()
+            logger.error(f"❌ [FUNCTION CALLING] Full error traceback:\n{traceback_str}")
+            print(f"❌ [FUNCTION CALLING] Error [{error_type}]: {error_msg}")
+            print(f"❌ [FUNCTION CALLING] Full error traceback:\n{traceback_str}")
+            
             # Fallback to simple response
             return {
                 "response": "I apologize, but I'm having trouble processing that request right now. Please try again.",
