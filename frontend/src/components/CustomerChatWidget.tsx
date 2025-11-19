@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
+import { FaComments, FaPaperclip, FaTimes, FaRobot } from 'react-icons/fa';
 import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
