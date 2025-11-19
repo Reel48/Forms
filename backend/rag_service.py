@@ -114,12 +114,34 @@ class RAGService:
                     unit = product.get("unit", "each")
                     description = product.get("description", "")
                     category = product.get("category", "")
+                    product_id = product.get("id")
                     
-                    product_text = f"{name}: ${price:.2f} per {unit}"
+                    # Get pricing tiers for this product
+                    tiers_response = supabase_storage.table("pricing_tiers").select("*").eq("product_id", product_id).order("min_quantity", desc=False).execute()
+                    tiers = tiers_response.data if tiers_response.data else []
+                    
+                    if tiers:
+                        # Product has tiered pricing
+                        tier_texts = []
+                        for tier in tiers:
+                            min_qty = int(tier.get("min_quantity", 0))
+                            max_qty = tier.get("max_quantity")
+                            tier_price = tier.get("price_per_unit", 0)
+                            
+                            if max_qty:
+                                tier_texts.append(f"  {min_qty}-{int(max_qty)}: ${tier_price:.2f} per {unit}")
+                            else:
+                                tier_texts.append(f"  {min_qty}+: ${tier_price:.2f} per {unit}")
+                        
+                        product_text = f"{name}:\n" + "\n".join(tier_texts)
+                    else:
+                        # Product has simple base pricing
+                        product_text = f"{name}: ${price:.2f} per {unit}"
+                    
                     if category:
-                        product_text += f" (Category: {category})"
+                        product_text += f"\n  Category: {category}"
                     if description:
-                        product_text += f" - {description}"
+                        product_text += f"\n  {description}"
                     product_texts.append(product_text)
                 
                 # Get discounts
