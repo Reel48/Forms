@@ -91,7 +91,7 @@ class AIService:
         return [
             {
                 "name": "create_quote",
-                "description": "Create a quote for a customer order. Use this when a customer wants to place an order or get a quote for products.",
+                "description": "Create a quote for a customer order. Use this when a customer wants to place an order or get a quote for products. YOU MUST ALWAYS PROVIDE line_items - a list of products with description, quantity, and unit_price. Never call this function without line_items.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -512,20 +512,21 @@ You have the ability to create quotes and organize orders, but your PRIMARY role
 **IF YOU USE FUNCTIONS:**
 
 1. **Creating Quotes**: Use create_quote ONLY when customer explicitly wants to order:
+   - **CRITICAL: YOU MUST ALWAYS PROVIDE line_items** - This is MANDATORY. The quote cannot be created without line items.
    - **DO NOT provide client_id** - it will be automatically retrieved from the conversation context
    - **DO NOT provide customer name, email, or address** - these are automatically retrieved from the customer's account
-   - **REQUIRED: line_items** - MUST be an array with at least one item. Each item MUST have:
-     * "description" (string, required) - e.g., "Custom Hat", "Custom Coozie"
-     * "quantity" (number, required) - e.g., 200, 100
-     * "unit_price" (string, required) - price as decimal string, e.g., "15.50", "2.00"
+   - **line_items** - MUST be an array with at least one item. Each item MUST have:
+     * "description" (string, required) - e.g., "Custom Hat", "Custom Coozie", "Custom Hat - Navy Blue"
+     * "quantity" (number, required) - e.g., 200, 100, 250
+     * "unit_price" (string, required) - price as decimal string, e.g., "15.50", "2.00", "3.00"
      * "discount" (string, optional) - discount percentage as decimal string, e.g., "0.00", "5.00"
+   - **Example line_items**: [{"description": "Custom Hat - Navy Blue", "quantity": 200, "unit_price": "15.50", "discount": "0.00"}]
    - Always create a folder with the quote (set create_folder=true)
    - Use pricing information from the context to calculate correct prices
    - For custom hats: Base price is $15.50 per hat for 100-199 units
    - For custom coozies: Base price is $2.00 per coozie (without magnet) or $3.00 per coozie (with magnet) for 250-499 units
    - **Tax rate**: Default is 8.25% (automatically applied, you don't need to specify it)
-   - **CRITICAL**: line_items MUST be an array, not a string. Example: [{"description": "Custom Hat", "quantity": 200, "unit_price": "15.50", "discount": "0.00"}]
-   - **NEVER create a quote without line_items** - if you don't have product details, ask the customer for them first
+   - **NEVER call create_quote without line_items** - if you don't have product details (description, quantity, unit_price), ask the customer for them first before creating the quote
 
 2. **Adding Forms**: After creating a quote/folder:
    - Use assign_form_to_folder with form_slug='form-4f8ml8om'
