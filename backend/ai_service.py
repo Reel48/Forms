@@ -3,15 +3,23 @@ AI Service for Google Gemini Integration
 Handles AI response generation with RAG (Retrieval-Augmented Generation)
 """
 import os
-import google.generativeai as genai
 from typing import List, Dict, Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Try to import google.generativeai - make it optional so app can start without it
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except ImportError:
+    genai = None
+    GENAI_AVAILABLE = False
+    logger.warning("google-generativeai package not installed - AI features will not be available")
+
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY and genai:
+if GEMINI_API_KEY and GENAI_AVAILABLE and genai:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
     except Exception as e:
@@ -25,7 +33,7 @@ class AIService:
     def __init__(self):
         print(f"🔧 [AI SERVICE] Initializing AI service...")
         logger.info(f"🔧 [AI SERVICE] Initializing AI service...")
-        if not genai:
+        if not GENAI_AVAILABLE or not genai:
             error_msg = "google-generativeai package is not installed"
             print(f"❌ [AI SERVICE] {error_msg}")
             raise ValueError(error_msg)
