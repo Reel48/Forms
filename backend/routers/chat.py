@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 import requests
 import logging
+import asyncio
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -321,8 +322,8 @@ async def send_message(
                 # Only auto-respond if admin hasn't responded recently
                 if not admin_responded_recently:
                     # Trigger AI response asynchronously using BackgroundTasks
-                    # This ensures the task runs even after the request completes
-                    background_tasks.add_task(_generate_ai_response_sync, conversation_id, user["id"])
+                    # BackgroundTasks can handle async functions directly
+                    background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
             except Exception as e:
                 logger.warning(f"Failed to trigger AI response: {str(e)}")
                 # Don't fail the message send if AI fails
@@ -653,20 +654,6 @@ async def generate_ai_response(
     except Exception as e:
         logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
-
-
-def _generate_ai_response_sync(conversation_id: str, customer_id: str):
-    """Generate AI response for a customer message (synchronous wrapper for BackgroundTasks)"""
-    import asyncio
-    # Run the async function in a new event loop
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(_generate_ai_response_async(conversation_id, customer_id))
-    except Exception as e:
-        logger.error(f"Error in background task event loop: {str(e)}", exc_info=True)
-    finally:
-        loop.close()
 
 
 async def _generate_ai_response_async(conversation_id: str, customer_id: str):
