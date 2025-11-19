@@ -92,11 +92,23 @@ class AIActionExecutor:
             quote_number = f"QT-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
             
             # Normalize line items data for calculate_quote_totals (expects discount_percent, not discount)
+            # Handle case where line_items might be a JSON string
+            if isinstance(line_items_data, str):
+                try:
+                    import json
+                    line_items_data = json.loads(line_items_data)
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.error(f"Could not parse line_items as JSON: {e}, value: {line_items_data}")
+                    return {
+                        "success": False,
+                        "error": f"line_items must be a list or valid JSON string, got string that couldn't be parsed"
+                    }
+            
             # Ensure line_items_data is a list and each item is a dict
             if not isinstance(line_items_data, list):
                 return {
                     "success": False,
-                    "error": f"line_items must be a list, got {type(line_items_data).__name__}"
+                    "error": f"line_items must be a list, got {type(line_items_data).__name__}. Value: {str(line_items_data)[:100]}"
                 }
             
             normalized_line_items = []
