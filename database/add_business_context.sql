@@ -313,3 +313,18 @@ WHERE NOT EXISTS (
   WHERE category = 'products' AND title = 'Coozie Care Instructions'
 );
 
+-- Richardson Hats
+INSERT INTO knowledge_embeddings (id, category, title, content, metadata, created_at, updated_at)
+SELECT 
+  gen_random_uuid(),
+  'products',
+  'Richardson Hats',
+  'Do you sell Richardson hats? Can I buy Richardson hats? *All Reel48 products are made from scratch in-house, and use the Reel48 brand. This allows us to offer full customization, and a better product compared to companies that buy blank hats and add embroidery on them. We can make hats very similar to Richardson hats (with nicer quality), but they will be made in-house from scratch instead of being bought separately from Richardson. This allows us to create truly custom products and offer better prices to our customers.*',
+  jsonb_build_object('type', 'faq', 'topic', 'products', 'subtopic', 'brands'),
+  NOW(),
+  NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM knowledge_embeddings 
+  WHERE category = 'products' AND title = 'Richardson Hats'
+);
+
