@@ -321,14 +321,27 @@ async def send_message(
                 
                 # Only auto-respond if admin hasn't responded recently
                 if not admin_responded_recently:
-                    # Trigger AI response asynchronously using BackgroundTasks
-                    # BackgroundTasks ensures the task runs even after request completes
-                    logger.info(f"Triggering AI response for conversation {conversation_id}, customer {user['id']}")
+                    # Trigger AI response asynchronously
+                    # Use asyncio.create_task() and store reference to prevent garbage collection
+                    logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
                     try:
-                        background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
-                        logger.info(f"AI response task added to BackgroundTasks")
+                        # Create task and store it in a way that prevents garbage collection
+                        # We'll use a simple approach: create the task and let it run
+                        import asyncio
+                        task = asyncio.create_task(_generate_ai_response_async(conversation_id, user["id"]))
+                        # Add done callback to log completion/errors
+                        def task_done_callback(t):
+                            try:
+                                if t.exception():
+                                    logger.error(f"❌ AI response task failed: {t.exception()}", exc_info=t.exception())
+                                else:
+                                    logger.info(f"✅ AI response task completed successfully")
+                            except Exception as e:
+                                logger.error(f"Error in task callback: {str(e)}")
+                        task.add_done_callback(task_done_callback)
+                        logger.info(f"✅ AI response task created: {task}")
                     except Exception as task_error:
-                        logger.error(f"Failed to add AI response task: {str(task_error)}", exc_info=True)
+                        logger.error(f"❌ Failed to create AI response task: {str(task_error)}", exc_info=True)
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
