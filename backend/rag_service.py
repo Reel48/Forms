@@ -21,15 +21,17 @@ class RAGService:
         self,
         user_query: str,
         customer_id: Optional[str] = None,
-        limit: int = 5
+        limit: int = 5,
+        is_admin: bool = False
     ) -> str:
         """
         Retrieve relevant context for a user query
         
         Args:
             user_query: The user's query/question
-            customer_id: Optional customer ID for customer-specific context
+            customer_id: Customer ID - REQUIRED for data isolation (only this customer's data)
             limit: Maximum number of results to return
+            is_admin: Whether the requester is an admin (admins see all data)
         
         Returns:
             Formatted context string
@@ -37,22 +39,35 @@ class RAGService:
         try:
             context_parts = []
             
-            # 1. Search quotes and line items
-            quote_context = self._search_quotes(user_query, customer_id, limit)
-            if quote_context:
-                context_parts.append(quote_context)
+            # SECURITY: Always require customer_id for customer requests
+            # Admins can see all data, but customers can ONLY see their own
+            if not is_admin and not customer_id:
+                logger.warning("Customer context requested without customer_id - denying access")
+                return ""
             
-            # 2. Search forms
-            form_context = self._search_forms(user_query, customer_id, limit)
-            if form_context:
-                context_parts.append(form_context)
+            # 1. Get pricing information (from pricing table, not quotes)
+            pricing_context = self._get_pricing_info(user_query, limit)
+            if pricing_context:
+                context_parts.append(pricing_context)
             
-            # 3. Search knowledge base (FAQs, company info)
+            # 2. Search customer's own quotes (only if customer_id provided)
+            if customer_id:
+                quote_context = self._search_customer_quotes(user_query, customer_id, limit)
+                if quote_context:
+                    context_parts.append(quote_context)
+            
+            # 3. Search customer's own forms (only if customer_id provided)
+            if customer_id:
+                form_context = self._search_customer_forms(user_query, customer_id, limit)
+                if form_context:
+                    context_parts.append(form_context)
+            
+            # 4. Search knowledge base (FAQs, company info) - public info only
             knowledge_context = self._search_knowledge_base(user_query, limit)
             if knowledge_context:
                 context_parts.append(knowledge_context)
             
-            # 4. Get customer-specific information if available
+            # 5. Get customer-specific information (only their own)
             if customer_id:
                 customer_context = self._get_customer_context(customer_id)
                 if customer_context:
@@ -139,23 +154,38 @@ class RAGService:
             logger.warning(f"Error searching quotes: {str(e)}")
             return ""
     
-    def _search_forms(
+    def _search_customer_forms(
         self,
         query: str,
-        customer_id: Optional[str] = None,
+        customer_id: str,
         limit: int = 5
     ) -> str:
-        """Search forms"""
+        """Search ONLY forms assigned to this customer (strict data isolation)"""
         try:
+            # SECURITY: Only show forms that are assigned to this customer via folders
             query_lower = query.lower()
             
-            # Search forms by name or description
-            forms_query = supabase_storage.table("forms").select("id, name, description, status")
+            # Get forms assigned to this customer through folders
+            # First, get folders assigned to this customer
+            client_response = supabase_storage.table("clients").select("id").eq("user_id", customer_id).single().execute()
+            if not client_response.data:
+                return ""
             
-            # For customers, we might want to filter by folders they have access to
-            # For now, search all published forms
+            client_id = client_response.data["id"]
             
-            forms_response = forms_query.eq("status", "published").limit(limit * 2).execute()
+            # Get folders assigned to this customer
+            folders_response = supabase_storage.table("folders").select("id, form_id").eq("client_id", client_id).execute()
+            folders = folders_response.data if folders_response.data else []
+            
+            # Get unique form IDs from folders
+            form_ids = list(set([f.get("form_id") for f in folders if f.get("form_id")]))
+            
+            if not form_ids:
+                return ""  # Customer has no assigned forms
+            
+            # Get forms that are assigned to this customer
+            forms_query = supabase_storage.table("forms").select("id, name, description, status").in_("id", form_ids).eq("status", "published")
+            forms_response = forms_query.limit(limit * 2).execute()
             forms = forms_response.data if forms_response.data else []
             
             # Filter relevant forms
@@ -172,17 +202,17 @@ class RAGService:
             if relevant_forms:
                 form_texts = []
                 for form in relevant_forms[:limit]:
-                    form_text = f"Form: {form.get('name', 'Untitled')}"
+                    form_text = f"Your Form: {form.get('name', 'Untitled')}"
                     if form.get('description'):
                         form_text += f" - {form.get('description')}"
                     form_texts.append(form_text)
                 
-                return "FORMS:\n" + "\n".join(form_texts)
+                return "YOUR FORMS:\n" + "\n".join(form_texts)
             
             return ""
             
         except Exception as e:
-            logger.warning(f"Error searching forms: {str(e)}")
+            logger.warning(f"Error searching customer forms: {str(e)}")
             return ""
     
     def _search_knowledge_base(self, query: str, limit: int = 3) -> str:

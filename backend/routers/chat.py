@@ -560,9 +560,17 @@ async def generate_ai_response(
                 })
         
         # Retrieve relevant context using RAG
+        # SECURITY: Always pass customer_id and is_admin flag for proper data isolation
         rag_service = get_rag_service()
-        customer_id = conv.get("customer_id") if not is_admin else None
-        context = rag_service.retrieve_context(user_query, customer_id=customer_id)
+        customer_id = conv.get("customer_id")
+        
+        # For customer conversations, use the conversation's customer_id
+        # For admin requests, we still need customer_id to filter data properly
+        context = rag_service.retrieve_context(
+            user_query, 
+            customer_id=customer_id,
+            is_admin=is_admin
+        )
         
         # Get customer-specific context
         customer_context = None
