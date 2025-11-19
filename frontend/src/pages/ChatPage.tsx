@@ -256,6 +256,15 @@ const ChatPage: React.FC = () => {
   }, [selectedConversation?.id, setupRealtimeSubscriptions]);
 
   useEffect(() => {
+    // Get Ocho user ID on component mount
+    chatAPI.getOchoUserId().then((response) => {
+      setOchoUserId(response.data.ocho_user_id);
+    }).catch((error) => {
+      console.error('Failed to get Ocho user ID:', error);
+    });
+  }, []);
+
+  useEffect(() => {
     // Only auto-scroll if user is near bottom (within 100px) or if shouldAutoScroll is true
     if (shouldAutoScroll) {
       scrollToBottom();
