@@ -1088,8 +1088,10 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     logger.info(f"Executing function: {func_name}")
                     logger.info(f"Function params keys: {list(func_params.keys())}")
                     if "line_items" in func_params:
-                        logger.info(f"line_items type: {type(func_params['line_items'])}, value: {func_params['line_items']}")
-                    logger.info(f"Full params: {func_params}")
+                        logger.info(f"line_items type: {type(func_params['line_items'])}, length: {len(func_params['line_items']) if isinstance(func_params['line_items'], list) else 'N/A'}, value: {func_params['line_items']}")
+                    else:
+                        logger.warning(f"⚠️ line_items MISSING from function params! Available keys: {list(func_params.keys())}")
+                    logger.info(f"Full params (sanitized): { {k: v for k, v in func_params.items() if k != 'client_id'} }")
                     
                     result = action_executor.execute_function(func_name, func_params)
                     

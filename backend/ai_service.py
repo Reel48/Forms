@@ -518,8 +518,9 @@ You have the ability to create quotes and organize orders, but your PRIMARY role
    - For custom coozies: Base price is $2.00 per coozie (without magnet) or $3.00 per coozie (with magnet) for 250-499 units
    - **Tax rate**: Default is 8.25% (automatically applied, you don't need to specify it)
    - **CRITICAL**: line_items MUST be an array, not a string. Example: [{"description": "Custom Hat", "quantity": 200, "unit_price": "15.50", "discount": "0.00"}]
+   - **NEVER create a quote without line_items** - if you don't have product details, ask the customer for them first
 
-2. **Adding Forms**: After creating a quote/folder for hat orders:
+2. **Adding Forms**: After creating a quote/folder:
    - Use assign_form_to_folder with form_slug='form-4f8ml8om'
    - This form is required for all custom hat orders
 
