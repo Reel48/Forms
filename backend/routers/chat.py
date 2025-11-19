@@ -755,6 +755,14 @@ async def generate_ai_response(
                     # Convert any MapComposite or proto objects to dicts
                     func_params = _convert_proto_to_dict(func_params)
                     
+                    # Ensure line_items is properly converted (if present)
+                    if "line_items" in func_params and isinstance(func_params["line_items"], list):
+                        # Double-check each item is a dict
+                        func_params["line_items"] = [
+                            item if isinstance(item, dict) else _convert_proto_to_dict(item)
+                            for item in func_params["line_items"]
+                        ]
+                    
                     # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
                     if client_id:
                         func_params["client_id"] = client_id
@@ -1020,6 +1028,14 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     
                     # Convert any MapComposite or proto objects to dicts
                     func_params = _convert_proto_to_dict(func_params)
+                    
+                    # Ensure line_items is properly converted (if present)
+                    if "line_items" in func_params and isinstance(func_params["line_items"], list):
+                        # Double-check each item is a dict
+                        func_params["line_items"] = [
+                            item if isinstance(item, dict) else _convert_proto_to_dict(item)
+                            for item in func_params["line_items"]
+                        ]
                     
                     # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
                     if client_id:

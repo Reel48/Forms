@@ -92,8 +92,23 @@ class AIActionExecutor:
             quote_number = f"QT-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
             
             # Normalize line items data for calculate_quote_totals (expects discount_percent, not discount)
+            # Ensure line_items_data is a list and each item is a dict
+            if not isinstance(line_items_data, list):
+                return {
+                    "success": False,
+                    "error": f"line_items must be a list, got {type(line_items_data).__name__}"
+                }
+            
             normalized_line_items = []
-            for item in line_items_data:
+            for idx, item in enumerate(line_items_data):
+                # Ensure item is a dict
+                if not isinstance(item, dict):
+                    logger.error(f"Line item {idx} is not a dict: {type(item).__name__}, value: {item}")
+                    return {
+                        "success": False,
+                        "error": f"Line item {idx} must be a dictionary with description, quantity, and unit_price"
+                    }
+                
                 normalized_item = {
                     "quantity": item.get("quantity", 1),
                     "unit_price": item.get("unit_price", "0.00"),
@@ -129,7 +144,12 @@ class AIActionExecutor:
             # Create line items
             if line_items_data:
                 line_items_to_insert = []
-                for item in line_items_data:
+                for idx, item in enumerate(line_items_data):
+                    # Ensure item is a dict
+                    if not isinstance(item, dict):
+                        logger.error(f"Line item {idx} is not a dict: {type(item).__name__}, value: {item}")
+                        continue  # Skip invalid items
+                    
                     from routers.quotes import calculate_line_item_total
                     from models import LineItemCreate
                     from decimal import Decimal as D
