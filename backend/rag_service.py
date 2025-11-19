@@ -291,30 +291,61 @@ class RAGService:
             logger.warning(f"Error searching customer forms: {str(e)}")
             return ""
     
-    def _search_knowledge_base(self, query: str, limit: int = 3) -> str:
+    def _search_knowledge_base(self, query: str, limit: int = 5) -> str:
         """Search knowledge base (FAQs, company info)"""
         try:
-            # For now, return empty - knowledge base can be populated later
-            # TODO: Search knowledge_embeddings table once populated
-            
-            # You can add static FAQs here as a starting point
-            faqs = {
-                "pricing": "Pricing is customized based on your specific needs. Please contact us for a quote.",
-                "forms": "Forms can be created and customized through the Forms section. Customers receive forms via folders.",
-                "quotes": "Quotes can be created by admins and shared with customers. Each quote includes line items with pricing.",
-            }
-            
             query_lower = query.lower()
-            relevant_faqs = []
+            context_items = []
             
-            for keyword, answer in faqs.items():
-                if keyword in query_lower:
-                    relevant_faqs.append(f"Q: About {keyword}\nA: {answer}")
-                    if len(relevant_faqs) >= limit:
-                        break
+            # Search knowledge_embeddings table
+            try:
+                knowledge_response = supabase_storage.table("knowledge_embeddings").select("*").limit(limit * 2).execute()
+                knowledge_items = knowledge_response.data if knowledge_response.data else []
+                
+                # Filter relevant items based on query keywords
+                relevant_items = []
+                for item in knowledge_items:
+                    content = (item.get("content") or "").lower()
+                    metadata = item.get("metadata") or {}
+                    title = (metadata.get("title") or "").lower()
+                    category = (metadata.get("category") or "").lower()
+                    
+                    # Check if query keywords match
+                    if any(keyword in content or keyword in title or keyword in category for keyword in query_lower.split()):
+                        relevant_items.append(item)
+                        if len(relevant_items) >= limit:
+                            break
+                
+                # If no specific matches, include all items (up to limit)
+                if not relevant_items:
+                    relevant_items = knowledge_items[:limit]
+                
+                # Format knowledge base items
+                for item in relevant_items[:limit]:
+                    content = item.get("content", "")
+                    metadata = item.get("metadata") or {}
+                    title = metadata.get("title", "Information")
+                    
+                    if content:
+                        context_items.append(f"{title}:\n{content}")
+                
+            except Exception as e:
+                logger.warning(f"Error searching knowledge_embeddings table: {str(e)}")
+                # Fallback to static FAQs if table doesn't exist or has issues
+                faqs = {
+                    "pricing": "Pricing is customized based on your specific needs. Please contact us for a quote.",
+                    "forms": "Forms can be created and customized through the Forms section. Customers receive forms via folders.",
+                    "quotes": "Quotes can be created by admins and shared with customers. Each quote includes line items with pricing.",
+                }
+                
+                for keyword, answer in faqs.items():
+                    if keyword in query_lower:
+                        context_items.append(f"Q: About {keyword}\nA: {answer}")
+                        if len(context_items) >= limit:
+                            break
             
-            if relevant_faqs:
-                return "FREQUENTLY ASKED QUESTIONS:\n" + "\n\n".join(relevant_faqs)
+            if context_items:
+                return "COMPANY AND PRODUCT INFORMATION:\n\n" + "\n\n".join(context_items)
             
             return ""
             

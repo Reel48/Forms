@@ -294,16 +294,33 @@ async def send_message(message: ChatMessageCreate, user = Depends(get_current_us
             logger.warning(f"Failed to update last_message_at for conversation {conversation_id}: {str(e)}")
             # Don't fail the request if this update fails - trigger should handle it
         
-        # Generate AI response if enabled (for customer messages)
-        # Only respond to customer messages, not admin messages
+        # Auto-generate AI response for customer messages
+        # Only respond if: 1) Customer sent the message, 2) No admin has responded recently
         if not is_admin and message.message and len(message.message.strip()) > 0:
             try:
-                # Generate AI response asynchronously (don't block the user's message)
-                # We'll create a background task or handle it separately
-                # For now, we'll add it as a separate endpoint that can be called
-                pass  # AI response generation will be handled by separate endpoint
+                # Check if admin has responded recently (within last 5 messages)
+                recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(5).execute()
+                recent_messages = recent_messages_response.data if recent_messages_response.data else []
+                
+                # Check if any recent message is from an admin (not customer, not AI)
+                admin_responded_recently = False
+                for msg in recent_messages:
+                    sender_id = msg.get("sender_id", "")
+                    # If sender is not the customer and not AI, it's likely an admin
+                    if sender_id != user["id"] and sender_id != "ai-assistant":
+                        # Verify it's actually an admin by checking if sender_id exists in user_roles as admin
+                        # For now, we'll use a simpler check: if it's not the customer and not AI, assume admin
+                        admin_responded_recently = True
+                        logger.info(f"Admin has responded recently, skipping AI auto-response for conversation {conversation_id}")
+                        break
+                
+                # Only auto-respond if admin hasn't responded recently
+                if not admin_responded_recently:
+                    # Trigger AI response asynchronously (don't block the message send)
+                    import asyncio
+                    asyncio.create_task(_generate_ai_response_async(conversation_id, user["id"]))
             except Exception as e:
-                logger.warning(f"Failed to generate AI response: {str(e)}")
+                logger.warning(f"Failed to trigger AI response: {str(e)}")
                 # Don't fail the message send if AI fails
         
         return message_response.data[0]

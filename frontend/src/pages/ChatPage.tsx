@@ -402,14 +402,8 @@ const ChatPage: React.FC = () => {
       // Realtime will handle the new message update automatically
       // No need to reload conversations - Realtime subscription will update the UI
       
-      // Auto-generate AI response for customer messages (if admin is viewing)
-      const isAdmin = user?.role === 'admin';
-      if (isAdmin && selectedConversation.customer_id !== user?.id) {
-        // Customer sent a message, auto-generate AI response
-        setTimeout(() => {
-          generateAIResponse();
-        }, 1000); // Wait 1 second before generating AI response
-      }
+      // Note: AI auto-responds to customer messages automatically via backend
+      // No need to manually trigger here
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -621,30 +615,7 @@ const ChatPage: React.FC = () => {
                     <option value="resolved">Resolved</option>
                     <option value="archived">Archived</option>
                   </select>
-                  {/* AI Response Button - Only show for admins viewing customer conversations */}
-                  {user?.role === 'admin' && selectedConversation.customer_id !== user?.id && (
-                    <button
-                      onClick={generateAIResponse}
-                      disabled={generatingAI}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.75rem',
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '4px',
-                        border: '1px solid var(--color-primary)',
-                        backgroundColor: generatingAI ? 'var(--color-gray-light)' : 'var(--color-primary)',
-                        color: 'white',
-                        cursor: generatingAI ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                      title="Generate AI response"
-                    >
-                      <FaRobot style={{ fontSize: '0.875rem' }} />
-                      {generatingAI ? 'Generating...' : 'AI Reply'}
-                    </button>
-                  )}
+                  {/* AI auto-responds automatically - no manual button needed */}
                 </div>
               </div>
             </div>
