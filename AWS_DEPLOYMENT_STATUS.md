@@ -56,7 +56,7 @@ Make sure these are set in AWS App Runner:
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_KEY` - Your Supabase service role key
 - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations
-- `GEMINI_API_KEY` - **NEW** - Your Gemini API key: `AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg`
+- `GEMINI_API_KEY` - **NEW** - Your Gemini API key: `YOUR_GEMINI_API_KEY`
 - `ALLOWED_ORIGINS` - Your frontend URLs
 - `STRIPE_SECRET_KEY` - Your Stripe secret key (if using)
 - `STRIPE_WEBHOOK_SECRET` - Your Stripe webhook secret (if using)

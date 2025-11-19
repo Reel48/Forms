@@ -47,7 +47,7 @@
 
 Make sure `GEMINI_API_KEY` is set in AWS App Runner:
 - Key: `GEMINI_API_KEY`
-- Value: `AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg`
+- Value: `YOUR_GEMINI_API_KEY`
 
 **To verify/update**:
 1. Go to AWS App Runner Console

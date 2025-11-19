@@ -12,7 +12,7 @@
    - Click **"Add environment variable"**
    - Enter:
      - **Key**: `GEMINI_API_KEY`
-     - **Value**: `AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg`
+     - **Value**: `YOUR_GEMINI_API_KEY`
    - Click **"Save changes"**
 
 3. **Wait for Redeployment**
@@ -35,7 +35,7 @@ aws apprunner update-service \
       "ImageIdentifier": "YOUR_IMAGE_URI",
       "ImageConfiguration": {
         "RuntimeEnvironmentVariables": {
-          "GEMINI_API_KEY": "AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg"
+          "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY"
         }
       }
     }

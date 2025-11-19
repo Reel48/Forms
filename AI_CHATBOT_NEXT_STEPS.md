@@ -22,7 +22,7 @@
 
 ### Step 1: Set API Key in AWS App Runner (REQUIRED)
 
-**Your API Key**: `AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg`
+**Your API Key**: `YOUR_GEMINI_API_KEY`
 
 **Instructions:**
 1. Go to **AWS Console** → **App Runner** → Your Backend Service
@@ -31,7 +31,7 @@
 4. Click **"Add environment variable"**
 5. Enter:
    - **Key**: `GEMINI_API_KEY`
-   - **Value**: `AIzaSyDS0kotT_zFdpEjgOEDpFKDyW4UwkuDnXg`
+   - **Value**: `YOUR_GEMINI_API_KEY`
 6. Click **"Save changes"**
 7. Wait 2-5 minutes for redeployment
 
