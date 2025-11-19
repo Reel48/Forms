@@ -29,10 +29,17 @@ class AIService:
             logger.warning("GEMINI_API_KEY not set - AI service will not be available")
             raise ValueError("GEMINI_API_KEY environment variable is required")
         try:
-            self.model = genai.GenerativeModel('gemini-pro')
+            # Try gemini-1.5-pro first (newer model), fallback to gemini-pro
+            try:
+                self.model = genai.GenerativeModel('gemini-1.5-pro')
+                logger.info("Initialized Gemini model: gemini-1.5-pro")
+            except Exception as e1:
+                logger.warning(f"Failed to initialize gemini-1.5-pro: {str(e1)}, trying gemini-pro")
+                self.model = genai.GenerativeModel('gemini-pro')
+                logger.info("Initialized Gemini model: gemini-pro")
             self.embedding_model = None  # Will be set when needed
         except Exception as e:
-            logger.error(f"Failed to initialize Gemini model: {str(e)}")
+            logger.error(f"Failed to initialize Gemini model: {str(e)}", exc_info=True)
             raise
     
     def generate_embedding(self, text: str) -> List[float]:
@@ -73,35 +80,49 @@ class AIService:
             system_prompt = self._build_system_prompt(context, customer_context)
             
             # Format conversation history for Gemini
-            # Gemini uses a different format than OpenAI
-            messages = []
-            
-            # Add system context as first user message
-            messages.append({
-                "role": "user",
-                "parts": [system_prompt]
-            })
+            # Gemini uses a different format - we need to use ChatSession or format properly
+            # For now, we'll combine system prompt with user message and use simple format
+            full_prompt = f"{system_prompt}\n\n"
             
             # Add conversation history
-            for msg in conversation_history[-10:]:  # Limit to last 10 messages for context
-                role = msg.get("role", "user")
-                content = msg.get("content", msg.get("message", ""))
-                if content:
-                    messages.append({
-                        "role": role if role in ["user", "model"] else "user",
-                        "parts": [content]
-                    })
+            if conversation_history:
+                full_prompt += "Previous conversation:\n"
+                for msg in conversation_history[-10:]:  # Limit to last 10 messages for context
+                    role = msg.get("role", "user")
+                    content = msg.get("content", msg.get("message", ""))
+                    if content:
+                        if role == "model":
+                            full_prompt += f"Assistant: {content}\n"
+                        else:
+                            full_prompt += f"User: {content}\n"
+                full_prompt += "\n"
             
             # Add current user message
-            messages.append({
-                "role": "user",
-                "parts": [user_message]
-            })
+            full_prompt += f"User: {user_message}\n\nAssistant:"
             
-            # Generate response
-            response = self.model.generate_content(messages)
+            logger.debug(f"Generated prompt length: {len(full_prompt)} characters")
             
-            return response.text
+            # Generate response using simple prompt format
+            try:
+                response = self.model.generate_content(full_prompt)
+                
+                # Check if response has text
+                if not response or not hasattr(response, 'text'):
+                    logger.error(f"Invalid response from Gemini API: {response}")
+                    raise ValueError("Invalid response from Gemini API")
+                
+                response_text = response.text
+                if not response_text or len(response_text.strip()) == 0:
+                    logger.warning("Empty response from Gemini API")
+                    raise ValueError("Empty response from Gemini API")
+                
+                logger.info(f"Successfully generated AI response: {len(response_text)} characters")
+                return response_text
+                
+            except Exception as api_error:
+                logger.error(f"Gemini API error: {str(api_error)}", exc_info=True)
+                # Re-raise to be caught by outer exception handler
+                raise
             
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
