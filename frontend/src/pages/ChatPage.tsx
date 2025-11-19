@@ -21,7 +21,6 @@ const ChatPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
-  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -414,25 +413,19 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const generateAIResponse = async () => {
-    if (!selectedConversation || generatingAI) return;
-
-    try {
-      setGeneratingAI(true);
-      await chatAPI.generateAIResponse(selectedConversation.id);
-      // Realtime will handle the AI message update automatically
-      // No need to reload messages - Realtime subscription will update the UI
-    } catch (error: any) {
-      console.error('Failed to generate AI response:', error);
-      if (error.response?.status === 503) {
-        alert('AI service is not configured. Please set GEMINI_API_KEY environment variable.');
-      } else {
-        alert('Failed to generate AI response. Please try again.');
-      }
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
+  // Note: generateAIResponse function is available but not currently used in the UI
+  // It can be called programmatically if needed for future features
+  // const generateAIResponse = async () => {
+  //   if (!selectedConversation || generatingAI) return;
+  //   try {
+  //     setGeneratingAI(true);
+  //     await chatAPI.generateAIResponse(selectedConversation.id);
+  //   } catch (error: any) {
+  //     console.error('Failed to generate AI response:', error);
+  //   } finally {
+  //     setGeneratingAI(false);
+  //   }
+  // };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

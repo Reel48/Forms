@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaComments, FaPaperclip, FaTimes, FaRobot } from 'react-icons/fa';
+import { FaComments, FaPaperclip, FaTimes } from 'react-icons/fa';
 import { renderTextWithLinks } from '../utils/textUtils';
 import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -142,15 +141,6 @@ const CustomerChatWidget: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    // Load Ocho user ID
-    chatAPI.getOchoUserId()
-      .then(response => {
-        setOchoUserId(response.ocho_user_id);
-      })
-      .catch(error => {
-        console.error('Failed to get Ocho user ID:', error);
-      });
-    
     console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
     loadConversation(true); // Pass true to indicate initial load
 
