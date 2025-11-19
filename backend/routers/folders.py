@@ -47,6 +47,8 @@ async def list_folders(
                 accessible_folder_ids = [fa["folder_id"] for fa in folder_assignments.data] if folder_assignments.data else []
                 
                 if accessible_folder_ids:
+                    # Filter by accessible folder IDs AND verify folders still exist
+                    # This ensures deleted folders don't appear even if assignments weren't cascade deleted
                     query = query.in_("id", accessible_folder_ids)
                 else:
                     # User has no assigned folders, return empty list
@@ -57,7 +59,23 @@ async def list_folders(
                 return []
         
         response = query.order("created_at", desc=True).execute()
-        return response.data if response.data else []
+        folders = response.data if response.data else []
+        
+        # Additional safety check: Filter out any folders that don't have active assignments
+        # This catches edge cases where folder exists but assignment was deleted
+        if not is_admin and folders:
+            try:
+                # Get current assignments again to verify
+                current_assignments = supabase_storage.table("folder_assignments").select("folder_id").eq("user_id", user["id"]).execute()
+                valid_folder_ids = {fa["folder_id"] for fa in (current_assignments.data or [])}
+                # Filter to only include folders with valid assignments
+                folders = [f for f in folders if f["id"] in valid_folder_ids]
+            except Exception as e:
+                print(f"Error verifying folder assignments: {str(e)}")
+                # If verification fails, return empty to be safe
+                return []
+        
+        return folders
     except Exception as e:
         print(f"Error listing folders: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to list folders: {str(e)}")
