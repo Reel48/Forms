@@ -359,27 +359,15 @@ async def send_message(
                 
                 # Only auto-respond if admin hasn't responded recently
                 if not admin_responded_recently:
-                    # Trigger AI response asynchronously
-                    # Use asyncio.create_task() and store reference to prevent garbage collection
+                    # Trigger AI response asynchronously using BackgroundTasks
+                    # This ensures the task completes even after the request returns
                     logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
                     try:
-                        # Create task and store it in a way that prevents garbage collection
-                        # We'll use a simple approach: create the task and let it run
-                        import asyncio
-                        task = asyncio.create_task(_generate_ai_response_async(conversation_id, user["id"]))
-                        # Add done callback to log completion/errors
-                        def task_done_callback(t):
-                            try:
-                                if t.exception():
-                                    logger.error(f"❌ AI response task failed: {t.exception()}", exc_info=t.exception())
-                                else:
-                                    logger.info(f"✅ AI response task completed successfully")
-                            except Exception as e:
-                                logger.error(f"Error in task callback: {str(e)}")
-                        task.add_done_callback(task_done_callback)
-                        logger.info(f"✅ AI response task created: {task}")
+                        # Use BackgroundTasks to ensure task completes
+                        background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
+                        logger.info(f"✅ AI response task added to background tasks")
                     except Exception as task_error:
-                        logger.error(f"❌ Failed to create AI response task: {str(task_error)}", exc_info=True)
+                        logger.error(f"❌ Failed to add AI response to background tasks: {str(task_error)}", exc_info=True)
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
@@ -712,7 +700,7 @@ async def generate_ai_response(
         raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
 
 
-async def _generate_ai_response_async(conversation_id: str, customer_id: str):
+async def _generate_ai_response_async(conversation_id: str, customer_id: str) -> None:
     """Asynchronously generate AI response for a customer message"""
     logger.info(f"Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
     try:
