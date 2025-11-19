@@ -11,7 +11,7 @@ WHERE category = 'company_info' AND title = 'About Our Company';
 -- Update ordering process
 UPDATE knowledge_embeddings 
 SET 
-  content = 'To place an order, you will work directly with a dedicated member of our Account/Sales Team who will manage your order from start to finish. We ensure all specifications are met, including exact design, materials, and colors. We offer exact Pantone color-matching for both hats and coozies. Our process includes: 1. Digital Proofs for design confirmation. 2. Physical Sample Production for quality and final approval. 3. Mass Production and Shipping. This streamlined process applies to all custom hat and coozie orders.',
+  content = 'To place an order, you will work directly with a dedicated member of our Account/Sales Team who will manage your order from start to finish. Before placing an order for custom hats, please fill out our [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to help us collect information about your design preferences and requirements. We ensure all specifications are met, including exact design, materials, and colors. We offer exact Pantone color-matching for both hats and coozies. Our process includes: 1. Fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) (for hat orders). 2. Digital Proofs for design confirmation. 3. Physical Sample Production for quality and final approval. 4. Mass Production and Shipping. This streamlined process applies to all custom hat and coozie orders.',
   updated_at = NOW()
 WHERE category = 'process' AND title = 'How to Order';
 
@@ -36,6 +36,14 @@ SET
   updated_at = NOW()
 WHERE category = 'services' AND title = 'Design Services';
 
+-- Update Custom Hat Design Form entry
+UPDATE knowledge_embeddings 
+SET 
+  content = 'Before placing an order for custom hats, customers should fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om). This form helps us collect important information about what the customer wants to order, including design preferences, colors, quantities, and other specifications. This information helps us understand how to best help them and ensures we can provide accurate quotes and meet their exact requirements.',
+  metadata = jsonb_build_object('type', 'form', 'form_url', 'https://reel48.app/public/form/form-4f8ml8om', 'form_name', 'Custom Hat Design Form'),
+  updated_at = NOW()
+WHERE category = 'process' AND title = 'Custom Hat Design Form';
+
 -- If entries don't exist, insert them
 INSERT INTO knowledge_embeddings (id, category, title, content, metadata, created_at, updated_at)
 SELECT 
@@ -56,7 +64,7 @@ SELECT
   gen_random_uuid(),
   'process',
   'How to Order',
-  'To place an order, you will work directly with a dedicated member of our Account/Sales Team who will manage your order from start to finish. We ensure all specifications are met, including exact design, materials, and colors. We offer exact Pantone color-matching for both hats and coozies. Our process includes: 1. Digital Proofs for design confirmation. 2. Physical Sample Production for quality and final approval. 3. Mass Production and Shipping. This streamlined process applies to all custom hat and coozie orders.',
+  'To place an order, you will work directly with a dedicated member of our Account/Sales Team who will manage your order from start to finish. Before placing an order for custom hats, please fill out our [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) to help us collect information about your design preferences and requirements. We ensure all specifications are met, including exact design, materials, and colors. We offer exact Pantone color-matching for both hats and coozies. Our process includes: 1. Fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om) (for hat orders). 2. Digital Proofs for design confirmation. 3. Physical Sample Production for quality and final approval. 4. Mass Production and Shipping. This streamlined process applies to all custom hat and coozie orders.',
   jsonb_build_object('type', 'ordering'),
   NOW(),
   NOW()
@@ -105,5 +113,20 @@ SELECT
 WHERE NOT EXISTS (
   SELECT 1 FROM knowledge_embeddings 
   WHERE category = 'services' AND title = 'Design Services'
+);
+
+-- Add Custom Hat Design Form entry
+INSERT INTO knowledge_embeddings (id, category, title, content, metadata, created_at, updated_at)
+SELECT 
+  gen_random_uuid(),
+  'process',
+  'Custom Hat Design Form',
+  'Before placing an order for custom hats, customers should fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om). This form helps us collect important information about what the customer wants to order, including design preferences, colors, quantities, and other specifications. This information helps us understand how to best help them and ensures we can provide accurate quotes and meet their exact requirements.',
+  jsonb_build_object('type', 'form', 'form_url', 'https://reel48.app/public/form/form-4f8ml8om', 'form_name', 'Custom Hat Design Form'),
+  NOW(),
+  NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM knowledge_embeddings 
+  WHERE category = 'process' AND title = 'Custom Hat Design Form'
 );
 

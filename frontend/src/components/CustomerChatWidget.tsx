@@ -3,6 +3,7 @@ import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
 import { FaComments, FaPaperclip, FaTimes, FaRobot } from 'react-icons/fa';
+import { renderTextWithLinks } from '../utils/textUtils';
 import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
@@ -456,7 +457,7 @@ const CustomerChatWidget: React.FC = () => {
                           {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
                         </a>
                       ) : (
-                        <div className="chat-widget-text">{message.message}</div>
+                        <div className="chat-widget-text">{renderTextWithLinks(message.message)}</div>
                       )}
                       <div className="chat-widget-time">{formatTime(message.created_at)}</div>
                     </div>

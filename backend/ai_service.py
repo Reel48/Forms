@@ -154,6 +154,9 @@ class AIService:
                     logger.warning(f"⚠️ [AI SERVICE] {error_msg}")
                     raise ValueError("Empty response from Gemini API")
                 
+                # Post-process response to convert plain URLs to markdown format
+                response_text = self._format_urls_as_markdown(response_text)
+                
                 print(f"✅ [AI SERVICE] Successfully generated AI response: {len(response_text)} characters")
                 logger.info(f"✅ [AI SERVICE] Successfully generated AI response: {len(response_text)} characters")
                 return response_text
@@ -225,6 +228,8 @@ IMPORTANT GUIDELINES:
 - Be conversational and helpful - you're representing the company
 - If a customer asks about something not in your knowledge, politely let them know you'll need to check with the team
 - Always maintain a positive, service-oriented tone
+- **CRITICAL**: When recommending that a customer fill out a form, you MUST include the complete form link/URL in your response. Never recommend a form without providing the link. If the context contains a form link, always include it in your recommendation.
+- **LINK FORMATTING**: Always format links using markdown format: [link text](url). For example, instead of "Fill out the form at https://reel48.app/public/form/form-4f8ml8om", write "Fill out the [Custom Hat Design Form](https://reel48.app/public/form/form-4f8ml8om)". This makes links clickable and more user-friendly. Never paste raw URLs - always use markdown link format [text](url).
 """
         
         # Add retrieved context
@@ -254,6 +259,44 @@ Use this context to answer questions accurately. If the user asks about somethin
                 prompt += "\n\nCUSTOMER-SPECIFIC INFORMATION:" + "\n".join(customer_info)
         
         return prompt
+    
+    def _format_urls_as_markdown(self, text: str) -> str:
+        """
+        Convert plain URLs in text to markdown format [text](url)
+        This ensures links are always clickable in the chat interface
+        """
+        import re
+        
+        # Skip if text already contains markdown links
+        if re.search(r'\[.*?\]\(https?://', text):
+            return text
+        
+        # Pattern to match URLs (http/https or www.)
+        # Exclude URLs that are already inside markdown links
+        url_pattern = r'(?<!\]\()(https?://[^\s\)]+|www\.[^\s\)]+)'
+        
+        def replace_url(match):
+            url = match.group(0)
+            
+            # Determine link text based on URL
+            link_text = url
+            if 'form-4f8ml8om' in url:
+                link_text = 'Custom Hat Design Form'
+            elif '/form/' in url:
+                link_text = 'form'
+            elif '/quote/' in url:
+                link_text = 'quote'
+            elif '/file/' in url:
+                link_text = 'file'
+            
+            # Ensure URL has protocol
+            full_url = url if url.startswith(('http://', 'https://')) else f'https://{url}'
+            return f'[{link_text}]({full_url})'
+        
+        # Replace URLs with markdown format
+        text = re.sub(url_pattern, replace_url, text)
+        
+        return text
 
 # Singleton instance
 _ai_service: Optional[AIService] = None
