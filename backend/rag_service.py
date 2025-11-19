@@ -79,79 +79,133 @@ class RAGService:
             logger.error(f"Error retrieving context: {str(e)}", exc_info=True)
             return ""
     
-    def _search_quotes(
+    def _get_pricing_info(self, query: str, limit: int = 10) -> str:
+        """Get pricing information from pricing table (not from quotes)"""
+        try:
+            query_lower = query.lower()
+            
+            # Search pricing products
+            products_query = supabase_storage.table("pricing_products").select("*").eq("is_active", True)
+            products_response = products_query.limit(limit * 2).execute()
+            products = products_response.data if products_response.data else []
+            
+            # Filter relevant products based on query
+            relevant_products = []
+            for product in products:
+                name = (product.get("product_name") or "").lower()
+                description = (product.get("description") or "").lower()
+                category = (product.get("category") or "").lower()
+                
+                # Check if query keywords match
+                if any(keyword in name or keyword in description or keyword in category for keyword in query_lower.split()):
+                    relevant_products.append(product)
+                    if len(relevant_products) >= limit:
+                        break
+            
+            # If no specific matches, include all active products (up to limit)
+            if not relevant_products:
+                relevant_products = products[:limit]
+            
+            if relevant_products:
+                product_texts = []
+                for product in relevant_products[:limit]:
+                    name = product.get("product_name", "Product")
+                    price = product.get("base_price", 0)
+                    unit = product.get("unit", "each")
+                    description = product.get("description", "")
+                    category = product.get("category", "")
+                    
+                    product_text = f"{name}: ${price:.2f} per {unit}"
+                    if category:
+                        product_text += f" (Category: {category})"
+                    if description:
+                        product_text += f" - {description}"
+                    product_texts.append(product_text)
+                
+                # Get discounts
+                discounts_response = supabase_storage.table("pricing_discounts").select("*").eq("is_active", True).limit(5).execute()
+                discounts = discounts_response.data if discounts_response.data else []
+                
+                discount_texts = []
+                for discount in discounts:
+                    name = discount.get("discount_name", "")
+                    discount_type = discount.get("discount_type", "")
+                    value = discount.get("discount_value", 0)
+                    
+                    if discount_type == "percentage":
+                        discount_text = f"{name}: {value}% off"
+                    elif discount_type == "fixed_amount":
+                        discount_text = f"{name}: ${value} off"
+                    else:
+                        discount_text = f"{name}: {discount_type} discount"
+                    
+                    min_qty = discount.get("min_quantity")
+                    if min_qty:
+                        discount_text += f" (min quantity: {min_qty})"
+                    
+                    discount_texts.append(discount_text)
+                
+                pricing_text = "PRICING INFORMATION:\n" + "\n".join(product_texts)
+                if discount_texts:
+                    pricing_text += "\n\nAVAILABLE DISCOUNTS:\n" + "\n".join(discount_texts)
+                
+                return pricing_text
+            
+            return ""
+            
+        except Exception as e:
+            logger.warning(f"Error getting pricing info: {str(e)}")
+            return ""
+    
+    def _search_customer_quotes(
         self,
         query: str,
-        customer_id: Optional[str] = None,
+        customer_id: str,
         limit: int = 5
     ) -> str:
-        """Search quotes and line items"""
+        """Search ONLY the customer's own quotes (strict data isolation)"""
         try:
-            # For now, use simple text search on quotes
-            # TODO: Replace with vector similarity search once embeddings are set up
-            
+            # SECURITY: Always filter by customer_id - never show other customers' quotes
             query_lower = query.lower()
-            context_items = []
             
-            # Search quotes by title
-            quote_query = supabase_storage.table("quotes").select("id, title, quote_number, total, status, client_id")
+            # Get client_id from customer_id (user_id)
+            client_response = supabase_storage.table("clients").select("id").eq("user_id", customer_id).single().execute()
+            if not client_response.data:
+                return ""  # Customer not found, return empty
             
-            if customer_id:
-                # Get client_id from customer_id (user_id)
-                client_response = supabase_storage.table("clients").select("id").eq("user_id", customer_id).single().execute()
-                if client_response.data:
-                    quote_query = quote_query.eq("client_id", client_response.data["id"])
+            client_id = client_response.data["id"]
             
-            quotes_response = quote_query.limit(limit * 2).execute()
+            # Search ONLY this customer's quotes
+            quotes_query = supabase_storage.table("quotes").select("id, title, quote_number, total, status").eq("client_id", client_id)
+            quotes_response = quotes_query.limit(limit * 2).execute()
             quotes = quotes_response.data if quotes_response.data else []
             
-            # Filter quotes that might be relevant (simple keyword matching)
+            # Filter quotes that might be relevant
             relevant_quotes = []
             for quote in quotes:
                 title = (quote.get("title") or "").lower()
                 quote_number = (quote.get("quote_number") or "").lower()
                 
-                # Check if query keywords match
                 if any(keyword in title or keyword in quote_number for keyword in query_lower.split()):
                     relevant_quotes.append(quote)
                     if len(relevant_quotes) >= limit:
                         break
             
-            # Format quote context
+            # Format quote context (without pricing details - pricing comes from pricing table)
             if relevant_quotes:
                 quote_texts = []
                 for quote in relevant_quotes[:limit]:
-                    quote_text = f"Quote #{quote.get('quote_number', 'N/A')}: {quote.get('title', 'Untitled')}"
-                    if quote.get('total'):
-                        quote_text += f" - Total: ${quote.get('total'):.2f}"
+                    quote_text = f"Your Quote #{quote.get('quote_number', 'N/A')}: {quote.get('title', 'Untitled')}"
                     if quote.get('status'):
                         quote_text += f" - Status: {quote.get('status')}"
                     quote_texts.append(quote_text)
                 
-                # Get line items for these quotes
-                quote_ids = [q["id"] for q in relevant_quotes[:limit]]
-                line_items_response = supabase_storage.table("line_items").select("quote_id, description, quantity, unit_price, line_total").in_("quote_id", quote_ids).limit(limit * 3).execute()
-                line_items = line_items_response.data if line_items_response.data else []
-                
-                # Add line items to context
-                for quote in relevant_quotes[:limit]:
-                    quote_line_items = [li for li in line_items if li.get("quote_id") == quote["id"]]
-                    if quote_line_items:
-                        items_text = []
-                        for li in quote_line_items[:3]:  # Limit to 3 items per quote
-                            desc = li.get("description", "")
-                            qty = li.get("quantity", 1)
-                            price = li.get("unit_price", 0)
-                            items_text.append(f"  - {desc}: {qty} × ${price:.2f}")
-                        if items_text:
-                            quote_texts[relevant_quotes.index(quote)] += "\n" + "\n".join(items_text)
-                
-                return "QUOTES AND PRICING:\n" + "\n".join(quote_texts)
+                return "YOUR QUOTES:\n" + "\n".join(quote_texts)
             
             return ""
             
         except Exception as e:
-            logger.warning(f"Error searching quotes: {str(e)}")
+            logger.warning(f"Error searching customer quotes: {str(e)}")
             return ""
     
     def _search_customer_forms(
@@ -247,8 +301,9 @@ class RAGService:
             return ""
     
     def _get_customer_context(self, customer_id: str) -> str:
-        """Get customer-specific context"""
+        """Get customer-specific context (only their own information)"""
         try:
+            # SECURITY: Only get information for this specific customer
             context_parts = []
             
             # Get customer info
@@ -256,21 +311,21 @@ class RAGService:
             if client_response.data:
                 client = client_response.data
                 if client.get("company"):
-                    context_parts.append(f"Customer Company: {client.get('company')}")
+                    context_parts.append(f"Company: {client.get('company')}")
                 if client.get("name"):
-                    context_parts.append(f"Customer Name: {client.get('name')}")
+                    context_parts.append(f"Name: {client.get('name')}")
             
-            # Get customer's recent quotes count
+            # Get customer's quote count (for context, not pricing)
             if client_response.data:
                 client_id = client_response.data.get("id")
                 if client_id:
                     quotes_response = supabase_storage.table("quotes").select("id", count="exact").eq("client_id", client_id).execute()
                     quote_count = quotes_response.count if hasattr(quotes_response, 'count') else 0
                     if quote_count > 0:
-                        context_parts.append(f"Customer has {quote_count} quote(s)")
+                        context_parts.append(f"You have {quote_count} quote(s)")
             
             if context_parts:
-                return "CUSTOMER INFORMATION:\n" + "\n".join(context_parts)
+                return "YOUR INFORMATION:\n" + "\n".join(context_parts)
             
             return ""
             
