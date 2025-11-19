@@ -336,17 +336,26 @@ async def send_message(
                 recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(5).execute()
                 recent_messages = recent_messages_response.data if recent_messages_response.data else []
                 
-                # Check if any recent message is from an admin (not customer, not AI)
+                # Check if any recent message is from an admin (verify by checking user_roles)
                 admin_responded_recently = False
                 for msg in recent_messages:
                     sender_id = msg.get("sender_id", "")
-                    # If sender is not the customer and not AI, it's likely an admin
-                    if sender_id != user["id"] and sender_id != OCHO_USER_ID:
-                        # Verify it's actually an admin by checking if sender_id exists in user_roles as admin
-                        # For now, we'll use a simpler check: if it's not the customer and not AI, assume admin
-                        admin_responded_recently = True
-                        logger.info(f"Admin has responded recently, skipping AI auto-response for conversation {conversation_id}")
-                        break
+                    # Skip if sender is the customer or AI
+                    if sender_id == user["id"] or sender_id == OCHO_USER_ID:
+                        continue
+                    
+                    # Verify sender is actually an admin by checking user_roles
+                    try:
+                        role_response = supabase_storage.table("user_roles").select("role").eq("user_id", sender_id).single().execute()
+                        if role_response.data and role_response.data.get("role") == "admin":
+                            admin_responded_recently = True
+                            logger.info(f"Admin {sender_id} has responded recently, skipping AI auto-response for conversation {conversation_id}")
+                            break
+                    except Exception as role_check_error:
+                        # If we can't verify, log but don't assume it's an admin
+                        logger.debug(f"Could not verify role for sender {sender_id}: {str(role_check_error)}")
+                        # Don't treat unknown senders as admins - let AI respond
+                        continue
                 
                 # Only auto-respond if admin hasn't responded recently
                 if not admin_responded_recently:
@@ -716,12 +725,22 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
         recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(3).execute()
         recent_messages = recent_messages_response.data if recent_messages_response.data else []
         
-        # If most recent message is from admin (not customer, not AI), skip AI response
+        # If most recent message is from admin (verify by checking user_roles), skip AI response
         if recent_messages:
             latest = recent_messages[0]
-            if latest.get("sender_id") != customer_id and latest.get("sender_id") != OCHO_USER_ID:
-                logger.info(f"Admin responded, skipping AI response for conversation {conversation_id}")
-                return
+            latest_sender_id = latest.get("sender_id")
+            
+            # Skip if sender is the customer or AI
+            if latest_sender_id != customer_id and latest_sender_id != OCHO_USER_ID:
+                # Verify sender is actually an admin
+                try:
+                    role_response = supabase_storage.table("user_roles").select("role").eq("user_id", latest_sender_id).single().execute()
+                    if role_response.data and role_response.data.get("role") == "admin":
+                        logger.info(f"Admin {latest_sender_id} responded, skipping AI response for conversation {conversation_id}")
+                        return
+                except Exception as role_check_error:
+                    # If we can't verify, log but don't assume it's an admin - proceed with AI response
+                    logger.debug(f"Could not verify role for sender {latest_sender_id}: {str(role_check_error)}")
         
         # Get recent messages for context
         messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(10).execute()
@@ -805,7 +824,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str):
         ai_message_data = {
             "id": str(uuid.uuid4()),
             "conversation_id": conversation_id,
-            "sender_id": "ai-assistant",
+            "sender_id": OCHO_USER_ID,
             "message": ai_response,
             "message_type": "text",
             "created_at": datetime.now().isoformat()
