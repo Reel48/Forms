@@ -236,8 +236,12 @@ async def create_folder(
         
         # Auto-assign "Reel48 Purchase Agreement" e-signature template to the folder
         try:
+            import logging
+            logger = logging.getLogger(__name__)
             _auto_assign_purchase_agreement(folder_id, user["id"])
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
             logger.warning(f"Could not auto-assign Purchase Agreement e-signature: {str(e)}")
         
         return created_folder
