@@ -316,10 +316,29 @@ async def delete_folder(folder_id: str, user = Depends(get_current_user)):
         if not is_admin and existing.data.get("created_by") != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
-        # Delete folder (cascade will handle assignments)
+        # Delete folder and related assignments
+        # Use service role client to ensure deletion works even with RLS
         try:
-            client.table("folders").delete().eq("id", folder_id).execute()
+            # First, explicitly delete folder_assignments to ensure they're removed
+            # (CASCADE should handle this, but being explicit ensures it works)
+            try:
+                supabase_storage.table("folder_assignments").delete().eq("folder_id", folder_id).execute()
+                logger.info(f"Deleted folder_assignments for folder {folder_id}")
+            except Exception as e:
+                logger.warning(f"Could not delete folder_assignments (may already be deleted): {str(e)}")
+            
+            # Delete the folder itself (this will cascade delete other related records)
+            # Always use service role client for deletion to bypass RLS
+            supabase_storage.table("folders").delete().eq("id", folder_id).execute()
             logger.info(f"Folder {folder_id} deleted successfully by user {user['id']}")
+            
+            # Verify deletion
+            verify = supabase_storage.table("folders").select("id").eq("id", folder_id).execute()
+            if verify.data:
+                logger.error(f"Folder {folder_id} still exists after deletion attempt!")
+                raise HTTPException(status_code=500, detail="Folder deletion failed - folder still exists")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error deleting folder: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to delete folder: {str(e)}")
