@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './CustomerChatPage.css';
@@ -358,7 +359,9 @@ const CustomerChatPage: React.FC = () => {
       <div className="chat-main-area">
         <div className="customer-chat-header">
           <div className="header-left">
-            <h1>Chat with Reel48</h1>
+            <Link to="/dashboard" className="back-to-dashboard-btn">
+              <FaArrowLeft /> Back to dashboard
+            </Link>
           </div>
           <div className="header-right">
             <button

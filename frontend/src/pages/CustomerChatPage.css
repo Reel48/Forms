@@ -246,6 +246,31 @@
   background-color: var(--chat-bg-secondary);
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.back-to-dashboard-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  border: 1px solid var(--chat-border);
+  border-radius: 0.5rem;
+  color: var(--chat-text);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.back-to-dashboard-btn:hover {
+  background-color: var(--chat-bg-secondary);
+  border-color: var(--chat-text-secondary);
+}
+
 .header-right {
   display: flex;
   align-items: center;
