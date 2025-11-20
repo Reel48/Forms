@@ -281,31 +281,15 @@ async def get_conversations(user = Depends(get_current_user)):
             
             return conversations
         else:
-            # Customer: Get their own conversation
+            # Customer: Get all their conversations
             try:
-                conversation_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
-                if conversation_response.data and len(conversation_response.data) > 0:
+                conversation_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).order("updated_at", desc=True).execute()
+                if conversation_response.data:
                     return conversation_response.data
-            except Exception as e:
-                logger.warning(f"Error fetching conversation for customer {user['id']}: {str(e)}")
-                # If no conversation exists, create one below
-            
-            # Create conversation if it doesn't exist
-            try:
-                new_conv = {
-                    "id": str(uuid.uuid4()),
-                    "customer_id": user["id"],
-                    "status": "active",
-                    "created_at": datetime.now().isoformat(),
-                    "updated_at": datetime.now().isoformat()
-                }
-                create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
-                if create_response.data:
-                    return [create_response.data[0]]
                 return []
             except Exception as e:
-                logger.error(f"Error creating conversation for customer {user['id']}: {str(e)}")
-                raise HTTPException(status_code=500, detail="Failed to create conversation")
+                logger.warning(f"Error fetching conversations for customer {user['id']}: {str(e)}")
+                return []
     except HTTPException:
         raise
     except Exception as e:
@@ -385,15 +369,8 @@ async def send_message(
             if is_admin:
                 raise HTTPException(status_code=400, detail="Admins must specify conversation_id")
             
-            # Get or create conversation
+            # Create new conversation
             try:
-                conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
-                if conv_response.data and len(conv_response.data) > 0:
-                    conversation_id = conv_response.data[0]["id"]
-                else:
-                    raise Exception("No conversation found")
-            except:
-                # Create new conversation
                 new_conv = {
                     "id": str(uuid.uuid4()),
                     "customer_id": user["id"],
@@ -405,6 +382,9 @@ async def send_message(
                 if not create_response.data:
                     raise HTTPException(status_code=500, detail="Failed to create conversation")
                 conversation_id = create_response.data[0]["id"]
+            except Exception as e:
+                logger.error(f"Error creating conversation: {str(e)}")
+                raise HTTPException(status_code=500, detail="Failed to create conversation")
         
         # Create message
         message_created_at = datetime.now().isoformat()

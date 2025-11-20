@@ -15,6 +15,10 @@
   --chat-ai-text: #1f1f1f;
   --chat-input-bg: #f0f4f9;
   --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --sidebar-bg: #f0f4f9;
+  --sidebar-item-hover: #e3e3e3;
+  --sidebar-item-active: #d3e3fd;
+  --sidebar-text: #1f1f1f;
 }
 
 [data-theme="dark"] {
@@ -32,17 +36,136 @@
   --chat-ai-text: #e3e3e3;
   --chat-input-bg: #1e1f20;
   --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  --sidebar-bg: #1e1f20;
+  --sidebar-item-hover: #28292a;
+  --sidebar-item-active: #004a77;
+  --sidebar-text: #e3e3e3;
 }
 
 .customer-chat-page {
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Side-by-side layout */
   height: 100dvh; /* Use dvh for mobile bars */
   background-color: var(--chat-bg);
   color: var(--chat-text);
   font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
   position: relative;
+  overflow: hidden; /* Prevent page scroll */
+}
+
+/* --- Sidebar --- */
+.chat-sidebar {
+  width: 260px;
+  background-color: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--chat-border);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.sidebar-header {
+  padding: 1rem;
+  flex-shrink: 0;
+}
+
+.new-chat-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--chat-bg); /* Contrast with sidebar bg */
+  border: 1px solid var(--chat-border);
+  border-radius: 2rem; /* Pill shape */
+  color: var(--chat-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.new-chat-btn:hover {
+  background-color: var(--sidebar-item-hover);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.sidebar-conversations {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.conversations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1.5rem;
+  cursor: pointer;
+  color: var(--sidebar-text);
+  transition: background-color 0.2s;
+  font-size: 0.9rem;
+}
+
+.conversation-item:hover {
+  background-color: var(--sidebar-item-hover);
+}
+
+.conversation-item.active {
+  background-color: var(--sidebar-item-active);
+  font-weight: 500;
+}
+
+.conv-icon {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.conv-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.conv-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-date {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.sidebar-close-btn {
+  display: none; /* Hidden on desktop */
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  color: var(--chat-text);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* --- Main Chat Area --- */
+.chat-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0; /* Allow flex item to shrink below content size */
 }
 
 /* --- Header --- */
@@ -54,6 +177,17 @@
   background-color: var(--chat-bg);
   z-index: 10;
   flex-shrink: 0; /* Never shrink the header */
+}
+
+.sidebar-toggle-btn {
+  display: none; /* Hidden on desktop */
+  background: transparent;
+  border: none;
+  color: var(--chat-text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-right: 0.5rem;
 }
 
 .header-left h1 {
@@ -139,7 +273,7 @@
 
 /* --- Empty State Layout (Gemini Style) --- */
 /* When empty, the container becomes a centered column */
-.customer-chat-page.is-empty {
+.customer-chat-page.is-empty .chat-main-area {
   justify-content: center;
 }
 
@@ -168,7 +302,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center; /* Center horizontally */
-  text-align: left; /* Text aligns left relative to itself, but block is centered? Gemini is left-aligned usually or center */
+  text-align: left; 
   width: 100%;
   max-width: 800px;
   padding: 0 1rem;
@@ -428,6 +562,40 @@
 
 /* Mobile Adjustments */
 @media (max-width: 768px) {
+  /* Sidebar becomes a drawer */
+  .chat-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+  }
+  
+  .chat-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-toggle-btn {
+    display: block;
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 15;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Main area adjustments */
   .customer-chat-messages {
     padding: 1rem 0 1rem 0;
   }
