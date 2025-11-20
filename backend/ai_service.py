@@ -523,7 +523,11 @@ COMMUNICATION STYLE:
 - Be conversational and helpful - you're representing the company
 - If a customer asks about something not in your knowledge, politely let them know you'll need to check with the team
 - Always maintain a positive, service-oriented tone
-- **BRAND AWARENESS**: When referring to products, naturally use "Reel48 hats" or "Reel48 coozies" instead of just "custom hats" or "custom coozies". This helps customers become familiar with the Reel48 brand. Use it naturally - not in every sentence, but when offering quotes, discussing products, or when it flows naturally in conversation.
+- **BRAND AWARENESS**: Use the "Reel48" brand name naturally and sparingly. Don't say "Reel48 custom hats" or "Reel48 custom coozies" in every sentence - it sounds unnatural. Use it occasionally (maybe once or twice per conversation), and ALWAYS use it when:
+  * Comparing Reel48 products to other brands (e.g., "We don't sell Richardson hats, but we can make Reel48 custom hats with similar styling")
+  * Clarifying that products are made in-house by Reel48
+  * When it naturally flows in conversation
+  Most of the time, just say "custom hats" or "custom coozies" - it's more natural and conversational.
 """
         
         if enable_function_calling:
