@@ -757,6 +757,7 @@ export interface ChatMessageCreate {
 }
 
 export interface ChatConversation {
+  chat_mode?: 'ai' | 'human';
   id: string;
   customer_id: string;
   status: string; // active, resolved, archived
@@ -772,6 +773,8 @@ export interface ChatConversation {
 export const chatAPI = {
   getOchoUserId: () => api.get<{ocho_user_id: string}>('/api/chat/ocho-user-id'),
   getConversations: () => api.get<ChatConversation[]>('/api/chat/conversations'),
+  updateChatMode: (conversationId: string, mode: 'ai' | 'human') => 
+    api.patch(`/api/chat/conversations/${conversationId}/mode`, { chat_mode: mode }),
   getMessages: (conversationId: string, limit?: number, beforeId?: string) => {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());

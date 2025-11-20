@@ -464,17 +464,23 @@ async def send_message(
                         # Don't treat unknown senders as admins - let AI respond
                         continue
                 
-                # Only auto-respond if admin hasn't responded recently
-                if not admin_responded_recently:
+                # Only auto-respond if admin hasn't responded recently AND chat mode is 'ai'
+                # Check chat mode from conversation
+                conv_response = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
+                chat_mode = conv_response.data.get("chat_mode", "ai") if conv_response.data else "ai"
+                
+                if not admin_responded_recently and chat_mode == "ai":
                     # Trigger AI response asynchronously using BackgroundTasks
                     # This ensures the task completes even after the request returns
-                    logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
+                    logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']} (chat_mode: {chat_mode})")
                     try:
                         # Use BackgroundTasks to ensure task completes
                         background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
                         logger.info(f"✅ AI response task added to background tasks")
                     except Exception as task_error:
                         logger.error(f"❌ Failed to add AI response to background tasks: {str(task_error)}", exc_info=True)
+                elif chat_mode == "human":
+                    logger.info(f"⏸️ Skipping AI response - chat mode is 'human' for conversation {conversation_id}")
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
@@ -665,6 +671,51 @@ async def update_conversation_status(
     except Exception as e:
         logger.error(f"Error updating conversation status: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to update conversation status: {str(e)}")
+
+@router.patch("/conversations/{conversation_id}/mode")
+async def update_chat_mode(
+    conversation_id: str,
+    mode_data: dict,
+    user = Depends(get_current_user)
+):
+    """
+    Update chat mode for a conversation (ai or human).
+    Only customers can update their own conversation mode.
+    """
+    try:
+        chat_mode = mode_data.get("chat_mode")
+        if chat_mode not in ["ai", "human"]:
+            raise HTTPException(status_code=400, detail="chat_mode must be 'ai' or 'human'")
+        
+        # Verify conversation exists and user has access
+        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
+        if not conv_response.data:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        conv = conv_response.data
+        is_admin = user.get("role") == "admin"
+        
+        # Only customers can update their own conversation mode
+        if not is_admin and conv["customer_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Update chat mode
+        update_response = supabase_storage.table("chat_conversations").update({
+            "chat_mode": chat_mode,
+            "updated_at": datetime.now().isoformat()
+        }).eq("id", conversation_id).execute()
+        
+        if not update_response.data:
+            raise HTTPException(status_code=500, detail="Failed to update chat mode")
+        
+        logger.info(f"Updated chat mode to '{chat_mode}' for conversation {conversation_id} by user {user['id']}")
+        
+        return {"message": "Chat mode updated successfully", "chat_mode": chat_mode}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating chat mode: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update chat mode: {str(e)}")
 
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(
@@ -1062,6 +1113,14 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         logger.info(f"Waiting 1.5 seconds before generating AI response...")
         await asyncio.sleep(1.5)
         logger.info(f"Delay complete, proceeding with AI response generation")
+        
+        # Check chat mode - if it's 'human', skip AI response
+        conv_response = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
+        chat_mode = conv_response.data.get("chat_mode", "ai") if conv_response.data else "ai"
+        
+        if chat_mode == "human":
+            logger.info(f"⏸️ [AI TASK] Skipping AI response - chat mode is 'human' for conversation {conversation_id}")
+            return
         
         # Check again if admin has responded (race condition check)
         recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(3).execute()

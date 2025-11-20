@@ -15,6 +15,9 @@ const CustomerChatPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
+  const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
+  const [updatingMode, setUpdatingMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const markingAsReadRef = useRef(false);
@@ -104,6 +107,12 @@ const CustomerChatPage: React.FC = () => {
 
   useEffect(() => {
     loadConversation();
+    // Get Ocho user ID on component mount
+    chatAPI.getOchoUserId().then((response) => {
+      setOchoUserId(response.data.ocho_user_id);
+    }).catch((error) => {
+      console.error('Failed to get Ocho user ID:', error);
+    });
     return () => {
       const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
@@ -136,15 +145,35 @@ const CustomerChatPage: React.FC = () => {
       setLoading(true);
       const response = await chatAPI.getConversations();
       if (response.data.length > 0) {
-        setConversation(response.data[0]);
-        checkUnreadCount(response.data[0]);
+        const conv = response.data[0];
+        setConversation(conv);
+        setChatMode(conv.chat_mode || 'ai');
+        checkUnreadCount(conv);
       } else {
         setConversation(null);
+        setChatMode('ai');
       }
     } catch (error) {
       console.error('Failed to load conversation:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleModeToggle = async (newMode: 'ai' | 'human') => {
+    if (!conversation || updatingMode) return;
+    
+    try {
+      setUpdatingMode(true);
+      await chatAPI.updateChatMode(conversation.id, newMode);
+      setChatMode(newMode);
+      // Update conversation state
+      setConversation(prev => prev ? { ...prev, chat_mode: newMode } : null);
+    } catch (error) {
+      console.error('Failed to update chat mode:', error);
+      alert('Failed to update chat mode. Please try again.');
+    } finally {
+      setUpdatingMode(false);
     }
   };
 
@@ -284,7 +313,27 @@ const CustomerChatPage: React.FC = () => {
         <div className="customer-chat-header">
           <div>
             <h1>Chat with Reel48</h1>
-            <span className="customer-chat-status">We're here to help</span>
+            <span className="customer-chat-status">
+              {chatMode === 'ai' ? 'Chatting with Reel48 AI' : 'Chatting with a human representative'}
+            </span>
+          </div>
+          <div className="customer-chat-mode-toggle">
+            <button
+              className={`mode-toggle-btn ${chatMode === 'ai' ? 'active' : ''}`}
+              onClick={() => handleModeToggle('ai')}
+              disabled={updatingMode}
+              title="Chat with Reel48 AI"
+            >
+              Reel48 AI
+            </button>
+            <button
+              className={`mode-toggle-btn ${chatMode === 'human' ? 'active' : ''}`}
+              onClick={() => handleModeToggle('human')}
+              disabled={updatingMode}
+              title="Chat with a human representative"
+            >
+              Human
+            </button>
           </div>
         </div>
 
@@ -294,12 +343,29 @@ const CustomerChatPage: React.FC = () => {
           ) : (
             messages.map((message) => {
               const isCustomer = message.sender_id === user?.id;
+              const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
+              
+              // Get sender name
+              let senderName = '';
+              if (isAI) {
+                senderName = 'Reel48 AI';
+              } else if (isCustomer) {
+                senderName = 'You';
+              } else {
+                senderName = 'Reel48 Support';
+              }
+              
               return (
                 <div
                   key={message.id}
-                  className={`customer-chat-message ${isCustomer ? 'message-sent' : 'message-received'}`}
+                  className={`customer-chat-message ${isCustomer ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
                 >
                   <div className="customer-chat-message-content">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
+                        {senderName}
+                      </span>
+                    </div>
                     {message.message_type === 'image' && message.file_url ? (
                       <img
                         src={message.file_url}
