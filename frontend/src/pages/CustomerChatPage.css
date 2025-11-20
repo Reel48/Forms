@@ -55,7 +55,7 @@
 .customer-chat-page {
   display: flex;
   flex-direction: row; /* Side-by-side layout */
-  height: calc(100dvh - 130px); /* Subtract Navbar height to prevent scrolling */
+  height: calc(100dvh - 78px); /* Subtract exact Navbar height (77px + 1px buffer) */
   background-color: var(--chat-bg);
   color: var(--chat-text);
   font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -669,7 +669,7 @@
 /* Mobile Adjustments */
 @media (max-width: 768px) {
   .customer-chat-page {
-    height: calc(100dvh - 100px); /* Subtract Mobile Navbar height */
+    height: calc(100dvh - 48px); /* Subtract Mobile Navbar height (47px + 1px buffer) */
   }
 
   /* Sidebar becomes a drawer */
