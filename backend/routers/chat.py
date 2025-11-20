@@ -934,12 +934,7 @@ async def generate_ai_response(
                                 # Build detailed message with elegant formatting
                                 ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard.\n\n"
                                 ai_response += "**Quote Overview:**\n\n"
-                                ai_response += f"**{quote_title}**\n"
-                                
-                                if company_name:
-                                    ai_response += f"{company_name}\n"
-                                
-                                ai_response += "\n"
+                                ai_response += f"**{quote_title}**\n\n"
                                 
                                 # Calculate subtotal from line items
                                 subtotal = Decimal("0")
@@ -1303,12 +1298,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                                 # Build detailed message with elegant formatting
                                 ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard.\n\n"
                                 ai_response += "**Quote Overview:**\n\n"
-                                ai_response += f"**{quote_title}**\n"
-                                
-                                if company_name:
-                                    ai_response += f"{company_name}\n"
-                                
-                                ai_response += "\n"
+                                ai_response += f"**{quote_title}**\n\n"
                                 
                                 # Calculate subtotal from line items
                                 subtotal = Decimal("0")
