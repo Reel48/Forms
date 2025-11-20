@@ -8,7 +8,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary, #292c2f) 0%, #292c2f 100%);
+  background: linear-gradient(135deg, #292c2f 0%, #2a2d30 100%);
   color: white;
   border: none;
   font-size: 1.5rem;
