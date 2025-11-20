@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
+import { chatAPI, clientsAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaRobot, FaUser, FaArrowUp, FaPlus, FaComment, FaBars, FaTimes } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaUser, FaArrowUp, FaPlus, FaComment, FaBars, FaTimes } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './CustomerChatPage.css';
@@ -19,6 +19,7 @@ const CustomerChatPage: React.FC = () => {
   const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
   const [updatingMode, setUpdatingMode] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
     return (saved as 'dark' | 'light') || 'light';
@@ -109,6 +110,7 @@ const CustomerChatPage: React.FC = () => {
 
   useEffect(() => {
     loadConversations();
+    loadProfile();
     // Apply theme
     const container = document.querySelector('.customer-chat-page');
     if (container) {
@@ -188,6 +190,17 @@ const CustomerChatPage: React.FC = () => {
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const loadProfile = async () => {
+    try {
+      const response = await clientsAPI.getMyProfile();
+      if (response.data?.profile_picture_url) {
+        setProfilePictureUrl(response.data.profile_picture_url);
+      }
+    } catch (error) {
+      console.error('Failed to load profile picture:', error);
+    }
   };
 
   const loadConversations = async () => {
@@ -476,7 +489,11 @@ const CustomerChatPage: React.FC = () => {
                     >
                         {!isCustomer && (
                         <div className="avatar ai">
-                            <FaRobot />
+                            <img 
+                                src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'} 
+                                alt="AI" 
+                                className="avatar-image" 
+                            />
                         </div>
                         )}
                         
@@ -512,7 +529,15 @@ const CustomerChatPage: React.FC = () => {
                         
                         {isCustomer && (
                         <div className="avatar user">
-                            <FaUser />
+                            {profilePictureUrl ? (
+                                <img 
+                                    src={profilePictureUrl} 
+                                    alt="User" 
+                                    className="avatar-image" 
+                                />
+                            ) : (
+                                <FaUser />
+                            )}
                         </div>
                         )}
                     </div>
@@ -521,7 +546,11 @@ const CustomerChatPage: React.FC = () => {
                 {sending && messages.length > 0 && messages[messages.length - 1].sender_id === user?.id && (
                     <div className="message ai-message">
                     <div className="avatar ai">
-                        <FaRobot />
+                        <img 
+                            src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'} 
+                            alt="AI" 
+                            className="avatar-image" 
+                        />
                     </div>
                     <div className="message-content">
                         <div className="typing-indicator">
