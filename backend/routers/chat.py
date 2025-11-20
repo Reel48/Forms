@@ -904,21 +904,63 @@ async def generate_ai_response(
                         "error": result.get("error")
                     })
                     
-                    # If quote was created, replace the fallback message with a proper success message
+                    # If quote was created, replace the fallback message with a detailed quote overview
                     if func_name == "create_quote" and result.get("success"):
                         quote_info = result.get("result", {})
-                        quote_number = quote_info.get("quote_number", "")
                         quote_id = quote_info.get("quote_id", "")
                         folder_id = quote_info.get("folder_id", "")
                         
-                        # Replace the fallback message with a proper success message
-                        if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
-                            ai_response = f"Perfect! I've created your quote {quote_number} and set up everything for you."
-                        
-                        if quote_number:
-                            ai_response += f"\n\n✅ Quote {quote_number} has been created! "
-                            if quote_id:
-                                ai_response += f"You can view it in your account."
+                        # Fetch full quote details for detailed message
+                        try:
+                            quote_response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).single().execute()
+                            if quote_response.data:
+                                quote = quote_response.data
+                                quote_title = quote.get("title", "New Quote")
+                                client = quote.get("clients", {})
+                                company_name = client.get("company", client.get("name", ""))
+                                line_items = quote.get("line_items", [])
+                                tax_rate = quote.get("tax_rate", "0")
+                                tax_amount = quote.get("tax_amount", "0")
+                                total = quote.get("total", "0")
+                                
+                                # Format tax rate as percentage
+                                try:
+                                    tax_rate_decimal = Decimal(str(tax_rate))
+                                    tax_rate_display = f"{tax_rate_decimal}%"
+                                except:
+                                    tax_rate_display = f"{tax_rate}%"
+                                
+                                # Build detailed message
+                                ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard. Here's an overview:\n\n"
+                                ai_response += f"**{quote_title}**\n\n"
+                                
+                                if company_name:
+                                    ai_response += f"{company_name}\n\n"
+                                
+                                # Add line items
+                                for item in line_items:
+                                    description = item.get("description", "")
+                                    quantity = item.get("quantity", 0)
+                                    unit_price = item.get("unit_price", "0")
+                                    try:
+                                        qty = Decimal(str(quantity))
+                                        price = Decimal(str(unit_price))
+                                        line_total = qty * price
+                                        ai_response += f"{description} - Qty: {int(qty)}, ${price:.2f} each = ${line_total:.2f}\n"
+                                    except:
+                                        ai_response += f"{description} - Qty: {quantity}, ${unit_price} each\n"
+                                
+                                ai_response += f"\nTax ({tax_rate_display}): ${tax_amount}\n"
+                                ai_response += f"**Total: ${total}**"
+                            else:
+                                # Fallback if quote fetch fails
+                                quote_number = quote_info.get("quote_number", "")
+                                ai_response = f"I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard."
+                        except Exception as e:
+                            logger.warning(f"Could not fetch quote details for message: {str(e)}")
+                            # Fallback if quote fetch fails
+                            quote_number = quote_info.get("quote_number", "")
+                            ai_response = f"I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard."
                         
                         # Auto-assign appropriate design form based on order type
                         if folder_id and "line_items" in func_params:
@@ -1208,15 +1250,60 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     # Update response with results
                     if func_name == "create_quote" and result.get("success"):
                         quote_info = result.get("result", {})
-                        quote_number = quote_info.get("quote_number", "")
+                        quote_id = quote_info.get("quote_id", "")
                         folder_id = quote_info.get("folder_id", "")
                         
-                        # Replace the fallback message with a proper success message
-                        if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
-                            ai_response = f"Perfect! I've created your quote {quote_number} and set up everything for you."
-                        
-                        if quote_number:
-                            ai_response += f"\n\n✅ Quote {quote_number} has been created! You can view it in your account."
+                        # Fetch full quote details for detailed message
+                        try:
+                            quote_response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).single().execute()
+                            if quote_response.data:
+                                quote = quote_response.data
+                                quote_title = quote.get("title", "New Quote")
+                                client = quote.get("clients", {})
+                                company_name = client.get("company", client.get("name", ""))
+                                line_items = quote.get("line_items", [])
+                                tax_rate = quote.get("tax_rate", "0")
+                                tax_amount = quote.get("tax_amount", "0")
+                                total = quote.get("total", "0")
+                                
+                                # Format tax rate as percentage
+                                try:
+                                    tax_rate_decimal = Decimal(str(tax_rate))
+                                    tax_rate_display = f"{tax_rate_decimal}%"
+                                except:
+                                    tax_rate_display = f"{tax_rate}%"
+                                
+                                # Build detailed message
+                                ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard. Here's an overview:\n\n"
+                                ai_response += f"**{quote_title}**\n\n"
+                                
+                                if company_name:
+                                    ai_response += f"{company_name}\n\n"
+                                
+                                # Add line items
+                                for item in line_items:
+                                    description = item.get("description", "")
+                                    quantity = item.get("quantity", 0)
+                                    unit_price = item.get("unit_price", "0")
+                                    try:
+                                        qty = Decimal(str(quantity))
+                                        price = Decimal(str(unit_price))
+                                        line_total = qty * price
+                                        ai_response += f"{description} - Qty: {int(qty)}, ${price:.2f} each = ${line_total:.2f}\n"
+                                    except:
+                                        ai_response += f"{description} - Qty: {quantity}, ${unit_price} each\n"
+                                
+                                ai_response += f"\nTax ({tax_rate_display}): ${tax_amount}\n"
+                                ai_response += f"**Total: ${total}**"
+                            else:
+                                # Fallback if quote fetch fails
+                                quote_number = quote_info.get("quote_number", "")
+                                ai_response = f"I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard."
+                        except Exception as e:
+                            logger.warning(f"Could not fetch quote details for message: {str(e)}")
+                            # Fallback if quote fetch fails
+                            quote_number = quote_info.get("quote_number", "")
+                            ai_response = f"I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard."
                         
                         # Auto-assign appropriate design form based on order type
                         if folder_id and "line_items" in func_params:
