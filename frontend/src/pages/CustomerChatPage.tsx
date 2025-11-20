@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaRobot, FaUser, FaMagic, FaArrowUp, FaQuestionCircle, FaInfoCircle } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaRobot, FaUser, FaArrowUp } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './CustomerChatPage.css';
@@ -28,12 +28,6 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
-
-  const SUGGESTION_CHIPS = [
-    { icon: <FaInfoCircle />, text: "What services do you offer?", query: "What services do you offer?" },
-    { icon: <FaMagic />, text: "Help me choose a package", query: "Can you help me choose the right package?" },
-    { icon: <FaQuestionCircle />, text: "How does pricing work?", query: "How does your pricing work?" },
-  ];
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -339,8 +333,10 @@ const CustomerChatPage: React.FC = () => {
     );
   }
 
+  const isEmpty = messages.length === 0;
+
   return (
-    <div className="customer-chat-page">
+    <div className={`customer-chat-page ${isEmpty ? 'is-empty' : ''}`}>
       <div className="customer-chat-header">
         <div className="header-left">
           <h1>
@@ -368,31 +364,17 @@ const CustomerChatPage: React.FC = () => {
 
       <div className="customer-chat-messages">
         <div className="message-width-limiter">
-          {messages.length === 0 ? (
+          {isEmpty ? (
             <div className="empty-state-container">
               <div className="greeting">
-                <div className="empty-state-icon"><FaRobot /></div>
-                <h2>Hello, how can I help you today?</h2>
-              </div>
-              <div className="suggestion-chips">
-                {SUGGESTION_CHIPS.map((chip, index) => (
-                  <button 
-                    key={index} 
-                    className="chip"
-                    onClick={() => sendMessage(chip.query)}
-                    disabled={sending}
-                  >
-                    <div className="chip-icon">{chip.icon}</div>
-                    <div className="chip-text">{chip.text}</div>
-                  </button>
-                ))}
+                <h2>Hello,</h2>
+                <p>How can I help you today?</p>
               </div>
             </div>
           ) : (
             <>
               {messages.map((message) => {
                 const isCustomer = message.sender_id === user?.id;
-                // const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
                 
                 return (
                   <div
