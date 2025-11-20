@@ -435,7 +435,6 @@ const CustomerChatPage: React.FC = () => {
         <div className="customer-chat-header">
             <div className="header-left">
             <h1>
-                Reel48
                 <button 
                     className="sidebar-toggle-btn desktop-toggle" 
                     onClick={() => setShowSidebar(prev => !prev)}
