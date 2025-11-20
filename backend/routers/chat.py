@@ -444,23 +444,19 @@ async def send_message(
                         # Don't treat unknown senders as admins - let AI respond
                         continue
                 
-                # Only auto-respond if admin hasn't responded recently AND chat mode is 'ai'
-                # Check chat mode from conversation
-                conv_response = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
-                chat_mode = conv_response.data.get("chat_mode", "ai") if conv_response.data else "ai"
+                # Only auto-respond if admin hasn't responded recently
+                # (Chat mode toggle removed - always AI unless admin intervenes)
                 
-                if not admin_responded_recently and chat_mode == "ai":
+                if not admin_responded_recently:
                     # Trigger AI response asynchronously using BackgroundTasks
                     # This ensures the task completes even after the request returns
-                    logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']} (chat_mode: {chat_mode})")
+                    logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
                     try:
                         # Use BackgroundTasks to ensure task completes
                         background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
                         logger.info(f"✅ AI response task added to background tasks")
                     except Exception as task_error:
                         logger.error(f"❌ Failed to add AI response to background tasks: {str(task_error)}", exc_info=True)
-                elif chat_mode == "human":
-                    logger.info(f"⏸️ Skipping AI response - chat mode is 'human' for conversation {conversation_id}")
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
@@ -1094,13 +1090,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         await asyncio.sleep(1.5)
         logger.info(f"Delay complete, proceeding with AI response generation")
         
-        # Check chat mode - if it's 'human', skip AI response
-        conv_response = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
-        chat_mode = conv_response.data.get("chat_mode", "ai") if conv_response.data else "ai"
-        
-        if chat_mode == "human":
-            logger.info(f"⏸️ [AI TASK] Skipping AI response - chat mode is 'human' for conversation {conversation_id}")
-            return
+        # Chat mode check removed - always AI
         
         # Check again if admin has responded (race condition check)
         recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(3).execute()

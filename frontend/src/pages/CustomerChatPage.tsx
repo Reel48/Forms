@@ -16,8 +16,6 @@ const CustomerChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
-  const [updatingMode, setUpdatingMode] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   // Removed profilePictureUrl state as it is no longer needed
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -204,7 +202,6 @@ const CustomerChatPage: React.FC = () => {
         if (response.data.length > 0 && !conversation) {
           const mostRecent = response.data[0];
           setConversation(mostRecent);
-          setChatMode(mostRecent.chat_mode || 'ai');
         }
       }
     } catch (error) {
@@ -217,7 +214,6 @@ const CustomerChatPage: React.FC = () => {
   const handleNewChat = () => {
     setConversation(null);
     setMessages([]);
-    setChatMode('ai');
     setNewMessage('');
     setShowSidebar(false); // Close sidebar on mobile
     
@@ -233,26 +229,9 @@ const CustomerChatPage: React.FC = () => {
         return;
     }
     setConversation(conv);
-    setChatMode(conv.chat_mode || 'ai');
     setMessages([]); // Clear current messages while loading
     setNewMessage('');
     setShowSidebar(false); // Close sidebar on mobile
-  };
-
-  const handleModeToggle = async (newMode: 'ai' | 'human') => {
-    if (!conversation || updatingMode) return;
-    
-    try {
-      setUpdatingMode(true);
-      await chatAPI.updateChatMode(conversation.id, newMode);
-      setChatMode(newMode);
-      setConversation(prev => prev ? { ...prev, chat_mode: newMode } : null);
-    } catch (error) {
-      console.error('Failed to update chat mode:', error);
-      alert('Failed to update chat mode. Please try again.');
-    } finally {
-      setUpdatingMode(false);
-    }
   };
 
   const loadMessages = async (conversationId: string) => {
@@ -437,15 +416,7 @@ const CustomerChatPage: React.FC = () => {
                 <FaBars />
             </button>
             <h1>
-                Reel48 <span style={{ opacity: 0.5, fontWeight: 400 }}>|</span> 
-                <div 
-                className="model-selector"
-                onClick={() => handleModeToggle(chatMode === 'ai' ? 'human' : 'ai')}
-                title={chatMode === 'ai' ? "Switch to Human" : "Switch to AI"}
-                >
-                {chatMode === 'ai' ? 'AI 1.0' : 'Human Support'}
-                <span style={{ fontSize: '0.8em', opacity: 0.6 }}>▼</span>
-                </div>
+                Reel48
             </h1>
             </div>
             <div className="header-right">
