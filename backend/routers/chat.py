@@ -931,14 +931,27 @@ async def generate_ai_response(
                                 except:
                                     tax_rate_display = f"{tax_rate}%"
                                 
-                                # Build detailed message
-                                ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard. Here's an overview:\n\n"
-                                ai_response += f"**{quote_title}**\n\n"
+                                # Build detailed message with elegant formatting
+                                ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard.\n\n"
+                                ai_response += "**Quote Overview:**\n\n"
+                                ai_response += f"**{quote_title}**\n"
                                 
                                 if company_name:
-                                    ai_response += f"{company_name}\n\n"
+                                    ai_response += f"{company_name}\n"
                                 
-                                # Add line items
+                                ai_response += "\n"
+                                
+                                # Calculate subtotal from line items
+                                subtotal = Decimal("0")
+                                for item in line_items:
+                                    try:
+                                        qty = Decimal(str(item.get("quantity", 0)))
+                                        price = Decimal(str(item.get("unit_price", "0")))
+                                        subtotal += qty * price
+                                    except:
+                                        pass
+                                
+                                # Add line items with cleaner formatting
                                 for item in line_items:
                                     description = item.get("description", "")
                                     quantity = item.get("quantity", 0)
@@ -947,12 +960,25 @@ async def generate_ai_response(
                                         qty = Decimal(str(quantity))
                                         price = Decimal(str(unit_price))
                                         line_total = qty * price
-                                        ai_response += f"{description} - Qty: {int(qty)}, ${price:.2f} each = ${line_total:.2f}\n"
+                                        ai_response += f"• {description}\n"
+                                        ai_response += f"  {int(qty)} × ${price:.2f} = ${line_total:.2f}\n\n"
                                     except:
-                                        ai_response += f"{description} - Qty: {quantity}, ${unit_price} each\n"
+                                        ai_response += f"• {description}\n"
+                                        ai_response += f"  {quantity} × ${unit_price}\n\n"
                                 
-                                ai_response += f"\nTax ({tax_rate_display}): ${tax_amount}\n"
-                                ai_response += f"**Total: ${total}**"
+                                # Format totals section
+                                try:
+                                    subtotal_decimal = Decimal(str(subtotal))
+                                    tax_decimal = Decimal(str(tax_amount))
+                                    total_decimal = Decimal(str(total))
+                                    ai_response += "---\n"
+                                    ai_response += f"Subtotal: ${subtotal_decimal:.2f}\n"
+                                    ai_response += f"Tax ({tax_rate_display}): ${tax_decimal:.2f}\n"
+                                    ai_response += f"**Total: ${total_decimal:.2f}**"
+                                except:
+                                    ai_response += "---\n"
+                                    ai_response += f"Tax ({tax_rate_display}): ${tax_amount}\n"
+                                    ai_response += f"**Total: ${total}**"
                             else:
                                 # Fallback if quote fetch fails
                                 quote_number = quote_info.get("quote_number", "")
@@ -1274,14 +1300,27 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                                 except:
                                     tax_rate_display = f"{tax_rate}%"
                                 
-                                # Build detailed message
-                                ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard. Here's an overview:\n\n"
-                                ai_response += f"**{quote_title}**\n\n"
+                                # Build detailed message with elegant formatting
+                                ai_response = "I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard.\n\n"
+                                ai_response += "**Quote Overview:**\n\n"
+                                ai_response += f"**{quote_title}**\n"
                                 
                                 if company_name:
-                                    ai_response += f"{company_name}\n\n"
+                                    ai_response += f"{company_name}\n"
                                 
-                                # Add line items
+                                ai_response += "\n"
+                                
+                                # Calculate subtotal from line items
+                                subtotal = Decimal("0")
+                                for item in line_items:
+                                    try:
+                                        qty = Decimal(str(item.get("quantity", 0)))
+                                        price = Decimal(str(item.get("unit_price", "0")))
+                                        subtotal += qty * price
+                                    except:
+                                        pass
+                                
+                                # Add line items with cleaner formatting
                                 for item in line_items:
                                     description = item.get("description", "")
                                     quantity = item.get("quantity", 0)
@@ -1290,12 +1329,25 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                                         qty = Decimal(str(quantity))
                                         price = Decimal(str(unit_price))
                                         line_total = qty * price
-                                        ai_response += f"{description} - Qty: {int(qty)}, ${price:.2f} each = ${line_total:.2f}\n"
+                                        ai_response += f"• {description}\n"
+                                        ai_response += f"  {int(qty)} × ${price:.2f} = ${line_total:.2f}\n\n"
                                     except:
-                                        ai_response += f"{description} - Qty: {quantity}, ${unit_price} each\n"
+                                        ai_response += f"• {description}\n"
+                                        ai_response += f"  {quantity} × ${unit_price}\n\n"
                                 
-                                ai_response += f"\nTax ({tax_rate_display}): ${tax_amount}\n"
-                                ai_response += f"**Total: ${total}**"
+                                # Format totals section
+                                try:
+                                    subtotal_decimal = Decimal(str(subtotal))
+                                    tax_decimal = Decimal(str(tax_amount))
+                                    total_decimal = Decimal(str(total))
+                                    ai_response += "---\n"
+                                    ai_response += f"Subtotal: ${subtotal_decimal:.2f}\n"
+                                    ai_response += f"Tax ({tax_rate_display}): ${tax_decimal:.2f}\n"
+                                    ai_response += f"**Total: ${total_decimal:.2f}**"
+                                except:
+                                    ai_response += "---\n"
+                                    ai_response += f"Tax ({tax_rate_display}): ${tax_amount}\n"
+                                    ai_response += f"**Total: ${total}**"
                             else:
                                 # Fallback if quote fetch fails
                                 quote_number = quote_info.get("quote_number", "")
