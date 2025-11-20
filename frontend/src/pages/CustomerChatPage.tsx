@@ -19,7 +19,7 @@ const CustomerChatPage: React.FC = () => {
   const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
   const [updatingMode, setUpdatingMode] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  // Removed profilePictureUrl state as it is no longer needed
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
     return (saved as 'dark' | 'light') || 'light';
@@ -110,7 +110,7 @@ const CustomerChatPage: React.FC = () => {
 
   useEffect(() => {
     loadConversations();
-    loadProfile();
+    // Removed loadProfile call
     // Apply theme
     const container = document.querySelector('.customer-chat-page');
     if (container) {
@@ -192,16 +192,7 @@ const CustomerChatPage: React.FC = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const loadProfile = async () => {
-    try {
-      const response = await clientsAPI.getMyProfile();
-      if (response.data?.profile_picture_url) {
-        setProfilePictureUrl(response.data.profile_picture_url);
-      }
-    } catch (error) {
-      console.error('Failed to load profile picture:', error);
-    }
-  };
+  // Removed loadProfile function
 
   const loadConversations = async () => {
     try {
@@ -487,76 +478,53 @@ const CustomerChatPage: React.FC = () => {
                         key={message.id}
                         className={`message ${isCustomer ? 'user-message' : 'ai-message'}`}
                     >
-                        {!isCustomer && (
-                        <div className="avatar ai">
-                            <img 
-                                src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'} 
-                                alt="AI" 
-                                className="avatar-image" 
-                            />
-                        </div>
-                        )}
-                        
-                        <div className="message-content">
-                        {message.message_type === 'image' && message.file_url ? (
-                            <img
-                            src={message.file_url}
-                            alt={message.file_name || 'Image'}
-                            style={{ maxWidth: '100%', borderRadius: '8px' }}
-                            />
-                        ) : message.message_type === 'file' && message.file_url ? (
-                            <a
-                            href={message.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit', textDecoration: 'underline' }}
-                            >
-                            <FaPaperclip />
-                            {message.file_name || 'File'}
-                            </a>
-                        ) : (
-                            isCustomer ? (
-                            message.message
-                            ) : (
-                            <div className="markdown-content">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {message.message}
-                                </ReactMarkdown>
+                        <div className="message-wrapper">
+                            <div className="message-sender-name">
+                                {isCustomer ? 'You' : 'Reel48'}
                             </div>
-                            )
-                        )}
-                        </div>
-                        
-                        {isCustomer && (
-                        <div className="avatar user">
-                            {profilePictureUrl ? (
-                                <img 
-                                    src={profilePictureUrl} 
-                                    alt="User" 
-                                    className="avatar-image" 
+                            <div className="message-content">
+                            {message.message_type === 'image' && message.file_url ? (
+                                <img
+                                src={message.file_url}
+                                alt={message.file_name || 'Image'}
+                                style={{ maxWidth: '100%', borderRadius: '8px' }}
                                 />
+                            ) : message.message_type === 'file' && message.file_url ? (
+                                <a
+                                href={message.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit', textDecoration: 'underline' }}
+                                >
+                                <FaPaperclip />
+                                {message.file_name || 'File'}
+                                </a>
                             ) : (
-                                <FaUser />
+                                isCustomer ? (
+                                message.message
+                                ) : (
+                                <div className="markdown-content">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {message.message}
+                                    </ReactMarkdown>
+                                </div>
+                                )
                             )}
+                            </div>
                         </div>
-                        )}
                     </div>
                     );
                 })}
                 {sending && messages.length > 0 && messages[messages.length - 1].sender_id === user?.id && (
                     <div className="message ai-message">
-                    <div className="avatar ai">
-                        <img 
-                            src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'} 
-                            alt="AI" 
-                            className="avatar-image" 
-                        />
-                    </div>
-                    <div className="message-content">
-                        <div className="typing-indicator">
-                            <div className="typing-dot"></div>
-                            <div className="typing-dot"></div>
-                            <div className="typing-dot"></div>
+                    <div className="message-wrapper">
+                        <div className="message-sender-name">Reel48</div>
+                        <div className="message-content">
+                            <div className="typing-indicator">
+                                <div className="typing-dot"></div>
+                                <div className="typing-dot"></div>
+                                <div className="typing-dot"></div>
+                            </div>
                         </div>
                     </div>
                     </div>

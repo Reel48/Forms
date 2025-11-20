@@ -350,8 +350,22 @@
 /* --- Message Styling (Free-Floating) --- */
 .message {
   display: flex;
-  margin-bottom: 20px;
+  margin-bottom: 24px; /* Increased margin for better separation with names */
   max-width: 80%; /* Key: Prevents messages from spanning full width */
+  flex-direction: column; /* Stack name and content */
+}
+
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-sender-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--chat-text-secondary);
+  margin-bottom: 4px;
+  opacity: 0.8;
 }
 
 .message-content {
@@ -363,34 +377,18 @@
   overflow-wrap: break-word;
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
-}
-
-.avatar.ai {
-  background: linear-gradient(135deg, #4285F4, #D96570);
-  color: white;
-  margin-right: 12px;
-}
-
-.avatar.user {
-  background-color: var(--chat-text);
-  color: var(--chat-bg);
-  margin-left: 12px;
-}
+/* Remove Avatar Styles */
+/* .avatar styles removed */
 
 /* User Message Specifics (Right Aligned) */
 .user-message {
   margin-left: auto; /* Aligns container to right */
-  justify-content: flex-end;
+  align-items: flex-end; /* Aligns content to right */
+}
+
+.user-message .message-sender-name {
+  text-align: right;
+  margin-right: 8px;
 }
 
 .user-message .message-content {
@@ -403,7 +401,12 @@
 /* AI Message Specifics (Left Aligned) */
 .ai-message {
   margin-right: auto; /* Aligns container to left */
-  justify-content: flex-start;
+  align-items: flex-start; /* Aligns content to left */
+}
+
+.ai-message .message-sender-name {
+  text-align: left;
+  margin-left: 8px;
 }
 
 .ai-message .message-content {
