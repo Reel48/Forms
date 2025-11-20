@@ -15,7 +15,6 @@ const CustomerChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
   const [updatingMode, setUpdatingMode] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -114,12 +113,6 @@ const CustomerChatPage: React.FC = () => {
 
   useEffect(() => {
     loadConversation();
-    // Get Ocho user ID on component mount
-    chatAPI.getOchoUserId().then((response) => {
-      setOchoUserId(response.data.ocho_user_id);
-    }).catch((error) => {
-      console.error('Failed to get Ocho user ID:', error);
-    });
     // Apply theme
     const container = document.querySelector('.customer-chat-page');
     if (container) {
