@@ -364,7 +364,7 @@ const CustomerChatPage: React.FC = () => {
 
   return (
     <div className="customer-chat-page">
-      <div className="customer-chat-container">
+      <div className={`customer-chat-container ${messages.length === 0 ? 'empty-state' : ''}`}>
         <div className="customer-chat-header">
           <div>
             <h1>Chat with Reel48</h1>

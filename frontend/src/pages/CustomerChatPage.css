@@ -57,19 +57,20 @@
   position: relative;
 }
 
-/* When no messages, center everything vertically */
-.customer-chat-container:has(.customer-chat-empty) {
+/* When no messages (empty state), center everything vertically */
+.customer-chat-container.empty-state {
   justify-content: center;
   gap: 2rem;
 }
 
-.customer-chat-container:has(.customer-chat-empty) .customer-chat-messages {
+.customer-chat-container.empty-state .customer-chat-messages {
   flex: 0 0 auto;
   padding: 0 1rem;
   overflow: visible;
+  min-height: auto;
 }
 
-.customer-chat-container:has(.customer-chat-empty) .customer-chat-input-container {
+.customer-chat-container.empty-state .customer-chat-input-container {
   border-top: none;
   box-shadow: none;
   padding-top: 0;
