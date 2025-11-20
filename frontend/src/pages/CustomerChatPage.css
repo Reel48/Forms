@@ -57,6 +57,22 @@
   position: relative;
 }
 
+/* When no messages, center the input vertically */
+.customer-chat-container:has(.customer-chat-empty) {
+  justify-content: center;
+}
+
+.customer-chat-container:has(.customer-chat-empty) .customer-chat-messages {
+  flex: 0;
+  padding: 0 1rem;
+}
+
+.customer-chat-container:has(.customer-chat-empty) .customer-chat-input-container {
+  border-top: none;
+  box-shadow: none;
+  padding-top: 2rem;
+}
+
 /* Minimal header - fixed at top */
 .customer-chat-header {
   padding: 0.75rem 1rem;
@@ -174,13 +190,13 @@
   max-width: 100%;
   transition: background-color 0.3s ease;
   position: relative;
+  min-height: 0;
 }
 
-/* Center content when empty or few messages */
+/* Center content when empty */
 .customer-chat-messages:has(.customer-chat-empty) {
   justify-content: center;
   align-items: center;
-  min-height: 0;
 }
 
 .customer-chat-empty {
@@ -394,17 +410,15 @@
   color: var(--color-text-secondary);
 }
 
-/* Input container - fixed at bottom, centered with shadow */
+/* Input container - starts centered, moves to bottom as content fills */
 .customer-chat-input-container {
   padding: 1rem;
   background-color: var(--color-bg-primary);
   border-top: 1px solid var(--color-border);
   transition: background-color 0.3s ease, border-color 0.3s ease;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
   flex-shrink: 0;
   box-shadow: 0 -2px 10px var(--color-shadow);
+  z-index: 10;
 }
 
 /* Flex wrapper to align textarea and button */
