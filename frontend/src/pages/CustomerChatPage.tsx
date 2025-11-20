@@ -216,7 +216,9 @@ const CustomerChatPage: React.FC = () => {
     setConversation(null);
     setMessages([]);
     setNewMessage('');
-    setShowSidebar(false); // Close sidebar on mobile
+    if (window.innerWidth <= 768) {
+      setShowSidebar(false); // Close sidebar only on mobile
+    }
     
     // Reset textarea height
     if (textareaRef.current) {
@@ -226,13 +228,17 @@ const CustomerChatPage: React.FC = () => {
 
   const handleSelectConversation = (conv: ChatConversation) => {
     if (conversation?.id === conv.id) {
-        setShowSidebar(false);
+        if (window.innerWidth <= 768) {
+            setShowSidebar(false);
+        }
         return;
     }
     setConversation(conv);
     setMessages([]); // Clear current messages while loading
     setNewMessage('');
-    setShowSidebar(false); // Close sidebar on mobile
+    if (window.innerWidth <= 768) {
+        setShowSidebar(false); // Close sidebar only on mobile
+    }
   };
 
   const loadMessages = async (conversationId: string) => {
@@ -413,7 +419,7 @@ const CustomerChatPage: React.FC = () => {
       <div className="chat-main-area">
         <div className="customer-chat-header">
             <div className="header-left">
-            <button className="sidebar-toggle-btn" onClick={() => setShowSidebar(true)}>
+            <button className="sidebar-toggle-btn" onClick={() => setShowSidebar(prev => !prev)}>
                 <FaBars />
             </button>
             <h1>

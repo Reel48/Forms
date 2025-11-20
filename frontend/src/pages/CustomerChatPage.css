@@ -66,19 +66,36 @@
 
 /* --- Sidebar --- */
 .chat-sidebar {
-  width: 260px;
+  width: 0; /* Collapsed by default on desktop */
+  opacity: 0;
+  visibility: hidden;
   background-color: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--chat-border);
-  transition: transform 0.3s ease;
+  border-right: none;
+  transition: all 0.3s ease;
   flex-shrink: 0;
   z-index: 20;
+  overflow: hidden;
+  white-space: nowrap; /* Prevent text wrapping during transition */
+}
+
+.chat-sidebar.open {
+  width: 260px;
+  opacity: 1;
+  visibility: visible;
+  border-right: 1px solid var(--chat-border);
 }
 
 .sidebar-header {
   padding: 1rem;
   flex-shrink: 0;
+  opacity: 0; /* Hide content during transition */
+  transition: opacity 0.2s ease;
+}
+
+.chat-sidebar.open .sidebar-header {
+  opacity: 1;
 }
 
 .new-chat-btn {
@@ -190,7 +207,7 @@
 }
 
 .sidebar-toggle-btn {
-  display: none; /* Hidden on desktop */
+  display: block; /* Visible on desktop to toggle sidebar */
   background: transparent;
   border: none;
   color: var(--chat-text-secondary);
@@ -706,6 +723,10 @@
 
   /* Sidebar becomes a drawer */
   .chat-sidebar {
+    width: 260px; /* Fixed width on mobile */
+    opacity: 1;
+    visibility: visible;
+    border-right: 1px solid var(--chat-border);
     position: fixed;
     top: 0;
     left: 0;
@@ -715,7 +736,12 @@
   }
   
   .chat-sidebar.open {
+    width: 260px; /* Ensure width stays fixed */
     transform: translateX(0);
+  }
+
+  .chat-sidebar .sidebar-header {
+    opacity: 1; /* Always visible on mobile when open */
   }
 
   .sidebar-toggle-btn {
