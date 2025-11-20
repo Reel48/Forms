@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon } from 'react-icons/fa';
-import { renderTextWithLinks } from '../utils/textUtils';
+import { FaPaperclip, FaSun, FaMoon, FaRobot, FaUser, FaMagic, FaArrowUp, FaQuestionCircle, FaInfoCircle } from 'react-icons/fa';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './CustomerChatPage.css';
 
 const CustomerChatPage: React.FC = () => {
@@ -28,6 +29,12 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+
+  const SUGGESTION_CHIPS = [
+    { icon: <FaInfoCircle />, text: "What services do you offer?", query: "What services do you offer?" },
+    { icon: <FaMagic />, text: "Help me choose a package", query: "Can you help me choose the right package?" },
+    { icon: <FaQuestionCircle />, text: "How does pricing work?", query: "How does your pricing work?" },
+  ];
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -63,8 +70,6 @@ const CustomerChatPage: React.FC = () => {
               }
               return [...prev, newMessage];
             });
-            
-            // Unread count not needed in full-page view
           } else if (payload.eventType === 'UPDATE') {
             const updatedMessage = payload.new as ChatMessage;
             setMessages((prev) =>
@@ -115,7 +120,7 @@ const CustomerChatPage: React.FC = () => {
     }).catch((error) => {
       console.error('Failed to get Ocho user ID:', error);
     });
-    // Apply theme to container (only set attribute for dark mode, light is default)
+    // Apply theme
     const container = document.querySelector('.customer-chat-page');
     if (container) {
       if (theme === 'dark') {
@@ -153,26 +158,16 @@ const CustomerChatPage: React.FC = () => {
 
   // Auto-expand textarea function
   const autoExpand = useCallback((element: HTMLTextAreaElement) => {
-    // Reset height to auto to get accurate scrollHeight
     element.style.height = 'auto';
-    
-    // Calculate the total height required by the content
     const contentHeight = element.scrollHeight;
+    const maxHeight = 150; 
     
-    // Get the calculated maximum height from CSS (120px = ~5 lines)
-    const maxHeight = 120; // 5 lines * 24px line-height
-    
-    // Check if the content height exceeds the max height
     if (contentHeight > maxHeight) {
-      // If it exceeds the max, set height to max height
       element.style.height = `${maxHeight}px`;
-      // Add a class to make the scrollbar visible
-      element.classList.add('scrollable');
+      element.style.overflowY = 'auto';
     } else {
-      // If it doesn't exceed the max, set height to the content height
-      element.style.height = `${contentHeight}px`;
-      // Remove the scrollable class
-      element.classList.remove('scrollable');
+      element.style.height = `${Math.max(24, contentHeight)}px`;
+      element.style.overflowY = 'hidden';
     }
   }, []);
 
@@ -186,12 +181,11 @@ const CustomerChatPage: React.FC = () => {
   // Set initial height on mount
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = '24px'; // Initial line height
+      textareaRef.current.style.height = '24px';
     }
   }, []);
 
   useEffect(() => {
-    // Apply theme to container (only set attribute for dark mode, light is default)
     const container = document.querySelector('.customer-chat-page');
     if (container) {
       if (theme === 'dark') {
@@ -233,7 +227,6 @@ const CustomerChatPage: React.FC = () => {
       setUpdatingMode(true);
       await chatAPI.updateChatMode(conversation.id, newMode);
       setChatMode(newMode);
-      // Update conversation state
       setConversation(prev => prev ? { ...prev, chat_mode: newMode } : null);
     } catch (error) {
       console.error('Failed to update chat mode:', error);
@@ -270,8 +263,9 @@ const CustomerChatPage: React.FC = () => {
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || sending) return;
+  const sendMessage = async (messageText?: string) => {
+    const textToSend = messageText || newMessage;
+    if (!textToSend.trim() || sending) return;
 
     try {
       setSending(true);
@@ -287,13 +281,14 @@ const CustomerChatPage: React.FC = () => {
 
       await chatAPI.sendMessage({
         conversation_id: convId,
-        message: newMessage.trim(),
+        message: textToSend.trim(),
       });
-      setNewMessage('');
-      // Reset textarea height to initial single line
-      if (textareaRef.current) {
-        textareaRef.current.style.height = '24px';
-        textareaRef.current.classList.remove('scrollable');
+      
+      if (!messageText) {
+        setNewMessage('');
+        if (textareaRef.current) {
+          textareaRef.current.style.height = '24px';
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -343,17 +338,6 @@ const CustomerChatPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  };
-
   if (loading) {
     return (
       <div className="customer-chat-page">
@@ -364,102 +348,130 @@ const CustomerChatPage: React.FC = () => {
 
   return (
     <div className="customer-chat-page">
-      <div className={`customer-chat-container ${messages.length === 0 ? 'empty-state' : ''}`}>
-        <div className="customer-chat-header">
-          <div>
-            <h1>Chat with Reel48</h1>
-            <span className="customer-chat-status">
-              {chatMode === 'ai' ? 'Chatting with Reel48 AI' : 'Chatting with a human representative'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <button
-              onClick={toggleTheme}
-              className="theme-toggle-btn"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              aria-label="Toggle theme"
+      <div className="customer-chat-header">
+        <div className="header-left">
+          <h1>
+            Reel48 <span style={{ opacity: 0.5, fontWeight: 400 }}>|</span> 
+            <div 
+              className="model-selector"
+              onClick={() => handleModeToggle(chatMode === 'ai' ? 'human' : 'ai')}
+              title={chatMode === 'ai' ? "Switch to Human" : "Switch to AI"}
             >
-              {theme === 'dark' ? <FaSun /> : <FaMoon />}
-            </button>
-            <div className="customer-chat-mode-toggle">
-            <button
-              className={`mode-toggle-btn ${chatMode === 'ai' ? 'active' : ''}`}
-              onClick={() => handleModeToggle('ai')}
-              disabled={updatingMode}
-              title="Chat with Reel48 AI"
-            >
-              Reel48 AI
-            </button>
-            <button
-              className={`mode-toggle-btn ${chatMode === 'human' ? 'active' : ''}`}
-              onClick={() => handleModeToggle('human')}
-              disabled={updatingMode}
-              title="Chat with a human representative"
-            >
-              Human
-            </button>
-          </div>
-          </div>
+              {chatMode === 'ai' ? 'AI 1.0' : 'Human Support'}
+              <span style={{ fontSize: '0.8em', opacity: 0.6 }}>▼</span>
+            </div>
+          </h1>
         </div>
+        <div className="header-right">
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle-btn"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <FaSun /> : <FaMoon />}
+          </button>
+        </div>
+      </div>
 
-        <div className="customer-chat-messages">
+      <div className="customer-chat-messages">
+        <div className="message-width-limiter">
           {messages.length === 0 ? (
-            <div className="customer-chat-empty">
-              <p>No messages yet. Start the conversation!</p>
+            <div className="empty-state-container">
+              <div className="greeting">
+                <div className="empty-state-icon"><FaRobot /></div>
+                <h2>Hello, how can I help you today?</h2>
+              </div>
+              <div className="suggestion-chips">
+                {SUGGESTION_CHIPS.map((chip, index) => (
+                  <button 
+                    key={index} 
+                    className="chip"
+                    onClick={() => sendMessage(chip.query)}
+                    disabled={sending}
+                  >
+                    <div className="chip-icon">{chip.icon}</div>
+                    <div className="chip-text">{chip.text}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
-            messages.map((message) => {
-              const isCustomer = message.sender_id === user?.id;
-              const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
-              
-              // Get sender name
-              let senderName = '';
-              if (isAI) {
-                senderName = 'Reel48 AI';
-              } else if (isCustomer) {
-                senderName = 'You';
-              } else {
-                senderName = 'Reel48 Support';
-              }
-              
-              return (
-                <div
-                  key={message.id}
-                  className={`customer-chat-message ${isCustomer ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
-                >
-                  <div className="customer-chat-message-content">
-                    <div className="customer-chat-message-sender">
-                      {senderName}
-                    </div>
-                    {message.message_type === 'image' && message.file_url ? (
-                      <img
-                        src={message.file_url}
-                        alt={message.file_name || 'Image'}
-                        className="customer-chat-image"
-                      />
-                    ) : message.message_type === 'file' && message.file_url ? (
-                      <a
-                        href={message.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="customer-chat-file"
-                      >
-                        <FaPaperclip style={{ marginRight: '0.5rem' }} />
-                        {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
-                      </a>
-                    ) : (
-                      <div className="customer-chat-text">{renderTextWithLinks(message.message)}</div>
+            <>
+              {messages.map((message) => {
+                const isCustomer = message.sender_id === user?.id;
+                const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
+                
+                return (
+                  <div
+                    key={message.id}
+                    className={`message-row ${isCustomer ? 'user' : 'ai'}`}
+                  >
+                    {!isCustomer && (
+                      <div className="avatar ai">
+                        <FaRobot />
+                      </div>
                     )}
-                    <div className="customer-chat-time">{formatTime(message.created_at)}</div>
+                    
+                    <div className="message-content">
+                      {message.message_type === 'image' && message.file_url ? (
+                        <img
+                          src={message.file_url}
+                          alt={message.file_name || 'Image'}
+                          style={{ maxWidth: '100%', borderRadius: '8px' }}
+                        />
+                      ) : message.message_type === 'file' && message.file_url ? (
+                        <a
+                          href={message.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit', textDecoration: 'underline' }}
+                        >
+                          <FaPaperclip />
+                          {message.file_name || 'File'}
+                        </a>
+                      ) : (
+                        isCustomer ? (
+                          message.message
+                        ) : (
+                          <div className="markdown-content">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {message.message}
+                            </ReactMarkdown>
+                          </div>
+                        )
+                      )}
+                    </div>
+                    
+                    {isCustomer && (
+                      <div className="avatar user">
+                        <FaUser />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {sending && messages.length > 0 && messages[messages.length - 1].sender_id === user?.id && (
+                <div className="message-row ai">
+                  <div className="avatar ai">
+                    <FaRobot />
+                  </div>
+                  <div className="message-content">
+                     <div className="typing-indicator">
+                        <div className="typing-dot"></div>
+                        <div className="typing-dot"></div>
+                        <div className="typing-dot"></div>
+                     </div>
                   </div>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        <div className="customer-chat-input-container">
+      <div className="input-area-wrapper">
+        <div className="input-island">
           <input
             ref={fileInputRef}
             type="file"
@@ -467,42 +479,41 @@ const CustomerChatPage: React.FC = () => {
             style={{ display: 'none' }}
             disabled={uploading}
           />
-          <div className="input-wrapper">
-            <button
-              className="customer-chat-attach"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              title="Attach file"
-            >
-              <FaPaperclip />
-            </button>
-            <textarea
-              ref={textareaRef}
-              id="chat-input"
-              className="customer-chat-input"
-              placeholder="Message Reel48 AI..."
-              value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value);
-                autoExpand(e.target);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              disabled={sending}
-              rows={1}
-            />
-            <button
-              className="customer-chat-send"
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || sending}
-            >
-              {sending ? '...' : 'Send'}
-            </button>
-          </div>
+          <button
+            className="attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            title="Attach file"
+          >
+            <FaPaperclip />
+          </button>
+          
+          <textarea
+            ref={textareaRef}
+            className="chat-textarea"
+            placeholder="Message Reel48..."
+            value={newMessage}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              autoExpand(e.target);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            disabled={sending}
+            rows={1}
+          />
+          
+          <button
+            className={`send-btn ${newMessage.trim() ? 'active' : ''}`}
+            onClick={() => sendMessage()}
+            disabled={!newMessage.trim() || sending}
+          >
+            <FaArrowUp />
+          </button>
         </div>
       </div>
     </div>
@@ -510,4 +521,3 @@ const CustomerChatPage: React.FC = () => {
 };
 
 export default CustomerChatPage;
-
