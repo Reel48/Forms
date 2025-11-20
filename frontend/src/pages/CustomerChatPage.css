@@ -319,7 +319,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center; /* Center horizontally */
-  text-align: left; 
+  text-align: center; /* Ensure text centering */
   width: 100%;
   max-width: 800px;
   padding: 0 1rem;
@@ -327,31 +327,13 @@
 
 .greeting {
   width: 100%;
-}
-
-.greeting h2 {
-  font-size: 3.5rem; /* Large Hello */
-  background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
-  font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: -1px;
-}
-
-.greeting p {
-  font-size: 1.5rem;
-  color: var(--chat-text-secondary);
-  margin: 0;
-  opacity: 0.6;
+  margin-bottom: 2rem;
 }
 
 .suggested-prompts {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Three equal columns */
   gap: 0.75rem;
-  margin-top: 2.5rem;
   width: 100%;
 }
 
@@ -361,18 +343,28 @@
   border-radius: 12px;
   padding: 0.85rem 1.25rem;
   color: var(--chat-text-secondary);
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
   font-family: inherit;
   line-height: 1.4;
+  height: 100%; /* Match height */
+  display: flex;
+  align-items: flex-start;
 }
 
 .prompt-chip:hover {
   background-color: var(--sidebar-item-hover);
   border-color: var(--chat-border);
   color: var(--chat-text);
+}
+
+/* Mobile adjustments for prompts */
+@media (max-width: 768px) {
+  .suggested-prompts {
+    grid-template-columns: 1fr; /* Stack on mobile */
+  }
 }
 
 /* --- Message Styling (Free-Floating) --- */
@@ -593,10 +585,11 @@
   border-radius: 2rem; /* Pill shape */
   padding: 0.75rem 1rem;
   display: flex;
-  align-items: center; /* Changed from flex-end to center to better align single line text */
+  align-items: center; /* Center vertically to prevent text cutoff */
   gap: 0.75rem;
   transition: background-color 0.2s, box-shadow 0.2s;
   border: 1px solid transparent;
+  min-height: 56px; /* Ensure container has enough height */
 }
 
 .input-island:focus-within {
@@ -638,7 +631,7 @@
   resize: none;
   max-height: 150px;
   outline: none;
-  min-height: 24px;
+  min-height: 40px; /* Increased min-height to prevent cutoff */
   /* Fix for "Message Reel48" being cut off */
   display: block; 
   overflow-y: hidden;
