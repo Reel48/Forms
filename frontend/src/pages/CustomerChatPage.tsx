@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { chatAPI, clientsAPI, type ChatMessage, type ChatConversation } from '../api';
+import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaUser, FaArrowUp, FaPlus, FaComment, FaBars, FaTimes } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaComment, FaBars, FaTimes } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './CustomerChatPage.css';
