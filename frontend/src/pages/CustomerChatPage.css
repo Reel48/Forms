@@ -575,6 +575,7 @@
   background-color: var(--chat-input-bg);
   box-shadow: var(--chat-shadow);
   border-color: rgba(0,0,0,0.05);
+  outline: none !important;
 }
 
 .attach-btn {
@@ -610,6 +611,12 @@
   max-height: 150px;
   outline: none;
   min-height: 24px;
+}
+
+.chat-textarea:focus,
+.chat-textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .chat-textarea::placeholder {
