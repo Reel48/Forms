@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
@@ -8,6 +9,7 @@ import './CustomerChatWidget.css';
 
 const CustomerChatWidget: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -394,7 +396,7 @@ const CustomerChatWidget: React.FC = () => {
       {!isOpen && (
         <button
           className="chat-widget-button"
-          onClick={() => setIsOpen(true)}
+          onClick={() => navigate('/chat')}
           title="Chat with Reel48"
         >
           <FaComments />

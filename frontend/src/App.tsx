@@ -31,6 +31,7 @@ const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 const QuoteAnalytics = lazy(() => import('./pages/QuoteAnalytics'));
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
+const CustomerChatPage = lazy(() => import('./pages/CustomerChatPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -85,6 +86,7 @@ function Navigation() {
   const isDashboardActive = location.pathname === '/dashboard';
   const isEmailTemplatesActive = location.pathname === '/email-templates';
   const isAnalyticsActive = location.pathname === '/analytics';
+  const isChatActive = location.pathname === '/chat';
   const isAdmin = role === 'admin';
 
   // Check if any settings-related page is active
@@ -457,6 +459,14 @@ function Navigation() {
             </li>
             <li>
               <Link 
+                to="/chat" 
+                className={`nav-tab ${isChatActive ? 'active' : ''}`}
+              >
+                Chat
+              </Link>
+            </li>
+            <li>
+              <Link 
                 to="/profile" 
                 className={`nav-tab ${isProfileActive ? 'active' : ''}`}
               >
@@ -502,6 +512,7 @@ function AppContent() {
           {/* Protected routes - require authentication */}
           <Route path="/" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><HomePage /></Suspense></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerDashboard /></Suspense></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerChatPage /></Suspense></ProtectedRoute>} />
           <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteView /></Suspense></ProtectedRoute>} />
           <Route path="/forms" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormsList /></Suspense></ProtectedRoute>} />
           <Route path="/forms/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormView /></Suspense></ProtectedRoute>} />
