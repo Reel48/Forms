@@ -151,13 +151,44 @@ const CustomerChatPage: React.FC = () => {
     }
   }, [messages]);
 
-  // Auto-resize textarea
+  // Auto-expand textarea function
+  const autoExpand = useCallback((element: HTMLTextAreaElement) => {
+    // Reset height to auto to get accurate scrollHeight
+    element.style.height = 'auto';
+    
+    // Calculate the total height required by the content
+    const contentHeight = element.scrollHeight;
+    
+    // Get the calculated maximum height from CSS (120px = ~5 lines)
+    const maxHeight = 120; // 5 lines * 24px line-height
+    
+    // Check if the content height exceeds the max height
+    if (contentHeight > maxHeight) {
+      // If it exceeds the max, set height to max height
+      element.style.height = `${maxHeight}px`;
+      // Add a class to make the scrollbar visible
+      element.classList.add('scrollable');
+    } else {
+      // If it doesn't exceed the max, set height to the content height
+      element.style.height = `${contentHeight}px`;
+      // Remove the scrollable class
+      element.classList.remove('scrollable');
+    }
+  }, []);
+
+  // Auto-resize textarea when message changes
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+      autoExpand(textareaRef.current);
     }
-  }, [newMessage]);
+  }, [newMessage, autoExpand]);
+
+  // Set initial height on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '24px'; // Initial line height
+    }
+  }, []);
 
   useEffect(() => {
     // Apply theme to container (only set attribute for dark mode, light is default)
@@ -259,9 +290,10 @@ const CustomerChatPage: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
-      // Reset textarea height
+      // Reset textarea height to initial single line
       if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = '24px';
+        textareaRef.current.classList.remove('scrollable');
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -435,40 +467,42 @@ const CustomerChatPage: React.FC = () => {
             style={{ display: 'none' }}
             disabled={uploading}
           />
-          <button
-            className="customer-chat-attach"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            title="Attach file"
-          >
-            <FaPaperclip />
-          </button>
-          <textarea
-            ref={textareaRef}
-            className="customer-chat-input"
-            placeholder="Message Reel48 AI..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            disabled={sending}
-            rows={1}
-            style={{
-              overflow: 'hidden',
-              resize: 'none',
-            }}
-          />
-          <button
-            className="customer-chat-send"
-            onClick={sendMessage}
-            disabled={!newMessage.trim() || sending}
-          >
-            {sending ? '...' : 'Send'}
-          </button>
+          <div className="input-wrapper">
+            <button
+              className="customer-chat-attach"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              title="Attach file"
+            >
+              <FaPaperclip />
+            </button>
+            <textarea
+              ref={textareaRef}
+              id="chat-input"
+              className="customer-chat-input"
+              placeholder="Message Reel48 AI..."
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                autoExpand(e.target);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              disabled={sending}
+              rows={1}
+            />
+            <button
+              className="customer-chat-send"
+              onClick={sendMessage}
+              disabled={!newMessage.trim() || sending}
+            >
+              {sending ? '...' : 'Send'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
