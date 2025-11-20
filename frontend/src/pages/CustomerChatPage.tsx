@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon } from 'react-icons/fa';
 import { renderTextWithLinks } from '../utils/textUtils';
 import './CustomerChatPage.css';
 
@@ -17,6 +17,10 @@ const CustomerChatPage: React.FC = () => {
   const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
   const [updatingMode, setUpdatingMode] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('chat-theme');
+    return (saved as 'dark' | 'light') || 'dark';
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const markingAsReadRef = useRef(false);
@@ -110,6 +114,11 @@ const CustomerChatPage: React.FC = () => {
     }).catch((error) => {
       console.error('Failed to get Ocho user ID:', error);
     });
+    // Apply theme to container
+    const container = document.querySelector('.customer-chat-page');
+    if (container) {
+      container.setAttribute('data-theme', theme);
+    }
     return () => {
       const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
@@ -136,6 +145,19 @@ const CustomerChatPage: React.FC = () => {
       scrollToBottom();
     }
   }, [messages]);
+
+  useEffect(() => {
+    // Apply theme to container
+    const container = document.querySelector('.customer-chat-page');
+    if (container) {
+      container.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('chat-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const loadConversation = async () => {
     try {
@@ -297,7 +319,16 @@ const CustomerChatPage: React.FC = () => {
               {chatMode === 'ai' ? 'Chatting with Reel48 AI' : 'Chatting with a human representative'}
             </span>
           </div>
-          <div className="customer-chat-mode-toggle">
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle-btn"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <FaSun /> : <FaMoon />}
+            </button>
+            <div className="customer-chat-mode-toggle">
             <button
               className={`mode-toggle-btn ${chatMode === 'ai' ? 'active' : ''}`}
               onClick={() => handleModeToggle('ai')}
@@ -314,6 +345,7 @@ const CustomerChatPage: React.FC = () => {
             >
               Human
             </button>
+          </div>
           </div>
         </div>
 
