@@ -430,19 +430,28 @@ const CustomerChatPage: React.FC = () => {
           >
             <FaPaperclip />
           </button>
-          <input
-            type="text"
+          <textarea
             className="customer-chat-input"
-            placeholder="Type a message..."
+            placeholder="Message Reel48 AI..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
               }
             }}
             disabled={sending}
+            rows={1}
+            style={{
+              overflow: 'hidden',
+              resize: 'none',
+            }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = `${Math.min(target.scrollHeight, 200)}px`;
+            }}
           />
           <button
             className="customer-chat-send"
