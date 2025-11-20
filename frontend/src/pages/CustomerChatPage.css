@@ -207,24 +207,29 @@
 }
 
 .sidebar-toggle-btn {
-  display: block; /* Visible on desktop to toggle sidebar */
   background: transparent;
   border: none;
   color: var(--chat-text-secondary);
-  font-size: 1.2rem;
+  font-size: 1rem; /* Slightly smaller for chevron */
   cursor: pointer;
   padding: 0.5rem;
-  margin-right: 0.5rem;
-}
-
-.header-left h1 {
-  font-size: 1.125rem;
-  font-weight: 500;
-  margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--chat-text-secondary);
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: var(--chat-bg-secondary);
+}
+
+.desktop-toggle {
+  display: flex;
+}
+
+.mobile-toggle {
+  display: none;
 }
 
 .model-selector {
@@ -617,6 +622,50 @@
   outline: none !important;
 }
 
+/* Attach Menu */
+.attach-menu-wrapper {
+  position: relative;
+}
+
+.attach-menu-popup {
+  position: absolute;
+  bottom: 120%; /* Position above the button */
+  left: 0;
+  background-color: var(--chat-bg);
+  border: 1px solid var(--chat-border);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+  min-width: 150px;
+  animation: fadeIn 0.1s ease-out;
+}
+
+.attach-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--chat-text);
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.attach-menu-item:hover {
+  background-color: var(--sidebar-item-hover);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .attach-btn {
   background: transparent;
   border: none;
@@ -745,7 +794,16 @@
   }
 
   .sidebar-toggle-btn {
+     display: none; /* Reset general */
+  }
+
+  .desktop-toggle {
+    display: none;
+  }
+
+  .mobile-toggle {
     display: block;
+    font-size: 1.2rem;
   }
 
   .sidebar-close-btn {

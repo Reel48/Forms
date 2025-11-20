@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaComment, FaBars, FaTimes } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaComment, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './CustomerChatPage.css';
@@ -17,6 +17,7 @@ const CustomerChatPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   // Removed profilePictureUrl state as it is no longer needed
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
@@ -25,6 +26,7 @@ const CustomerChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
   const markingAsReadRef = useRef(false);
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
@@ -138,6 +140,19 @@ const CustomerChatPage: React.FC = () => {
       markAllAsRead();
     }
   }, [conversation?.id, setupRealtimeSubscriptions]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -419,11 +434,19 @@ const CustomerChatPage: React.FC = () => {
       <div className="chat-main-area">
         <div className="customer-chat-header">
             <div className="header-left">
-            <button className="sidebar-toggle-btn" onClick={() => setShowSidebar(prev => !prev)}>
-                <FaBars />
-            </button>
             <h1>
                 Reel48
+                <button 
+                    className="sidebar-toggle-btn desktop-toggle" 
+                    onClick={() => setShowSidebar(prev => !prev)}
+                    title={showSidebar ? "Close Sidebar" : "Open Sidebar"}
+                >
+                    {showSidebar ? <FaChevronLeft /> : <FaChevronRight />}
+                </button>
+                {/* Mobile Toggle */}
+                <button className="sidebar-toggle-btn mobile-toggle" onClick={() => setShowSidebar(true)}>
+                    <FaChevronRight />
+                </button>
             </h1>
             </div>
             <div className="header-right">
@@ -533,14 +556,31 @@ const CustomerChatPage: React.FC = () => {
                 style={{ display: 'none' }}
                 disabled={uploading}
             />
-            <button
-                className="attach-btn"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || sending}
-                title="Attach file"
-            >
-                <FaPaperclip />
-            </button>
+            
+            <div className="attach-menu-wrapper" ref={attachMenuRef}>
+                <button
+                    className="attach-btn"
+                    onClick={() => setShowAttachMenu(!showAttachMenu)}
+                    disabled={uploading || sending}
+                    title="Add content"
+                >
+                    <FaPlus />
+                </button>
+                
+                {showAttachMenu && (
+                    <div className="attach-menu-popup">
+                        <button 
+                            className="attach-menu-item"
+                            onClick={() => {
+                                fileInputRef.current?.click();
+                                setShowAttachMenu(false);
+                            }}
+                        >
+                            <FaPaperclip /> Add a file
+                        </button>
+                    </div>
+                )}
+            </div>
             
             <textarea
                 ref={textareaRef}
