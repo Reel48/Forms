@@ -386,8 +386,6 @@ const CustomerChatPage: React.FC = () => {
     );
   }
 
-  const isEmpty = messages.length === 0;
-
   return (
     <div className={`customer-chat-page ${!conversation ? 'is-empty' : ''}`}>
       {/* Sidebar */}
@@ -399,7 +397,7 @@ const CustomerChatPage: React.FC = () => {
         </div>
         <div className="sidebar-conversations">
             <div className="conversations-list">
-                {conversations.map((conv, index) => (
+                {conversations.map((conv) => (
                     <div 
                         key={conv.id} 
                         className={`conversation-item ${conversation?.id === conv.id ? 'active' : ''}`}
