@@ -208,16 +208,31 @@ const CustomerChatPage: React.FC = () => {
 
   // Removed loadProfile function
 
-  const loadConversations = async () => {
+  const loadConversations = async (selectConversationId?: string) => {
     try {
       setLoading(true);
       const response = await chatAPI.getConversations();
       if (response.data) {
         setConversations(response.data);
         // If we have conversations, select the most recent one (first one)
+        // But only if we're not in the middle of creating a new conversation
+        // (i.e., if selectConversationId is provided, use that instead)
         if (response.data.length > 0 && !conversation) {
-          const mostRecent = response.data[0];
-          setConversation(mostRecent);
+          if (selectConversationId) {
+            // Find and select the specific conversation
+            const targetConv = response.data.find(c => c.id === selectConversationId);
+            if (targetConv) {
+              setConversation(targetConv);
+            } else {
+              // Fallback to most recent if target not found
+              const mostRecent = response.data[0];
+              setConversation(mostRecent);
+            }
+          } else {
+            // Only auto-select if we're not explicitly creating a new chat
+            const mostRecent = response.data[0];
+            setConversation(mostRecent);
+          }
         }
       }
     } catch (error) {
@@ -228,6 +243,17 @@ const CustomerChatPage: React.FC = () => {
   };
 
   const handleNewChat = () => {
+    // Clean up realtime subscriptions before clearing conversation
+    const realtimeClient = getRealtimeClient();
+    if (messagesSubscriptionRef.current) {
+      realtimeClient.removeChannel(messagesSubscriptionRef.current);
+      messagesSubscriptionRef.current = null;
+    }
+    if (conversationsSubscriptionRef.current) {
+      realtimeClient.removeChannel(conversationsSubscriptionRef.current);
+      conversationsSubscriptionRef.current = null;
+    }
+    
     setConversation(null);
     setMessages([]);
     setNewMessage('');
@@ -305,21 +331,22 @@ const CustomerChatPage: React.FC = () => {
       if (!currentConvId) {
         // The message response contains the conversation_id
         const newConvId = messageResponse.data.conversation_id;
-        // Refresh conversations to get the new one in the list
-        await loadConversations();
         
-        // We need to find the new conversation in the list we just fetched
-        // But since state updates are async, we might not have the new list immediately available in 'conversations'
-        // So we'll optimistically set it or just rely on the re-render from loadConversations if we selected it there?
-        // Actually loadConversations only selects if !conversation.
-        // Let's fetch specifically to be sure
+        // Fetch conversations and explicitly select the new one
         const convsResponse = await chatAPI.getConversations();
         if (convsResponse.data) {
-             setConversations(convsResponse.data);
-             const newConv = convsResponse.data.find(c => c.id === newConvId);
-             if (newConv) {
-                 setConversation(newConv);
-             }
+          setConversations(convsResponse.data);
+          const newConv = convsResponse.data.find(c => c.id === newConvId);
+          if (newConv) {
+            setConversation(newConv);
+            // Load messages for the new conversation
+            await loadMessages(newConvId);
+            // Set up realtime subscriptions for the new conversation
+            setupRealtimeSubscriptions(newConvId);
+          } else {
+            // If new conversation not found, refresh and try again
+            await loadConversations(newConvId);
+          }
         }
       }
       
@@ -360,11 +387,18 @@ const CustomerChatPage: React.FC = () => {
         const newConvId = messageResponse.data.conversation_id;
         const convsResponse = await chatAPI.getConversations();
         if (convsResponse.data) {
-             setConversations(convsResponse.data);
-             const newConv = convsResponse.data.find(c => c.id === newConvId);
-             if (newConv) {
-                 setConversation(newConv);
-             }
+          setConversations(convsResponse.data);
+          const newConv = convsResponse.data.find(c => c.id === newConvId);
+          if (newConv) {
+            setConversation(newConv);
+            // Load messages for the new conversation
+            await loadMessages(newConvId);
+            // Set up realtime subscriptions for the new conversation
+            setupRealtimeSubscriptions(newConvId);
+          } else {
+            // If new conversation not found, refresh and try again
+            await loadConversations(newConvId);
+          }
         }
       }
 
