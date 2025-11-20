@@ -31,6 +31,7 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+  const creatingNewChatRef = useRef(false);
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -254,6 +255,8 @@ const CustomerChatPage: React.FC = () => {
       conversationsSubscriptionRef.current = null;
     }
     
+    // Set flag to indicate we want a new conversation
+    creatingNewChatRef.current = true;
     setConversation(null);
     setMessages([]);
     setNewMessage('');
@@ -274,6 +277,8 @@ const CustomerChatPage: React.FC = () => {
         }
         return;
     }
+    // Clear the new chat flag when selecting an existing conversation
+    creatingNewChatRef.current = false;
     setConversation(conv);
     setMessages([]); // Clear current messages while loading
     setNewMessage('');
@@ -316,19 +321,30 @@ const CustomerChatPage: React.FC = () => {
     try {
       setSending(true);
       
-      // Store conversation ID before sending (could be null)
-      const currentConvId = conversation?.id;
+      // Check if we're creating a new chat (using ref to avoid closure issues)
+      const isNewChat = creatingNewChatRef.current || !conversation?.id;
+      
+      // Store conversation ID before sending (null if creating new conversation)
+      const currentConvId = isNewChat ? null : conversation?.id;
 
       // If we're creating a new conversation, we won't have an ID yet
       // The backend will create one and return the message with the new conversation_id
 
-      const messageResponse = await chatAPI.sendMessage({
-        conversation_id: currentConvId, // Pass null/undefined for new conversation
+      // Build message payload - only include conversation_id if we have one
+      const messagePayload: any = {
         message: textToSend.trim(),
-      });
+      };
+      if (currentConvId) {
+        messagePayload.conversation_id = currentConvId;
+      }
+
+      const messageResponse = await chatAPI.sendMessage(messagePayload);
       
       // If this was a new conversation, we need to refresh the list and set the active conversation
-      if (!currentConvId) {
+      if (isNewChat) {
+        // Clear the flag
+        creatingNewChatRef.current = false;
+        
         // The message response contains the conversation_id
         const newConvId = messageResponse.data.conversation_id;
         
@@ -372,18 +388,28 @@ const CustomerChatPage: React.FC = () => {
       setUploading(true);
       const uploadResponse = await chatAPI.uploadFile(file);
       
-      const currentConvId = conversation?.id;
+      // Check if we're creating a new chat (using ref to avoid closure issues)
+      const isNewChat = creatingNewChatRef.current || !conversation?.id;
+      const currentConvId = isNewChat ? null : conversation?.id;
 
-      const messageResponse = await chatAPI.sendMessage({
-        conversation_id: currentConvId,
+      // Build message payload - only include conversation_id if we have one
+      const messagePayload: any = {
         message: `File: ${uploadResponse.data.file_name}`,
         message_type: uploadResponse.data.message_type,
         file_url: uploadResponse.data.file_url,
         file_name: uploadResponse.data.file_name,
         file_size: uploadResponse.data.file_size,
-      });
+      };
+      if (currentConvId) {
+        messagePayload.conversation_id = currentConvId;
+      }
 
-       if (!currentConvId) {
+      const messageResponse = await chatAPI.sendMessage(messagePayload);
+
+       if (isNewChat) {
+        // Clear the flag
+        creatingNewChatRef.current = false;
+        
         const newConvId = messageResponse.data.conversation_id;
         const convsResponse = await chatAPI.getConversations();
         if (convsResponse.data) {
