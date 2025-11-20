@@ -323,6 +323,7 @@
   width: 100%;
   max-width: 800px;
   padding: 0 1rem;
+  margin: 0 auto; /* Center container within message-width-limiter */
 }
 
 .greeting {
