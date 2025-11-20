@@ -23,6 +23,7 @@ const CustomerChatPage: React.FC = () => {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const markingAsReadRef = useRef(false);
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
@@ -150,6 +151,14 @@ const CustomerChatPage: React.FC = () => {
     }
   }, [messages]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [newMessage]);
+
   useEffect(() => {
     // Apply theme to container (only set attribute for dark mode, light is default)
     const container = document.querySelector('.customer-chat-page');
@@ -250,6 +259,10 @@ const CustomerChatPage: React.FC = () => {
         message: newMessage.trim(),
       });
       setNewMessage('');
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
@@ -431,6 +444,7 @@ const CustomerChatPage: React.FC = () => {
             <FaPaperclip />
           </button>
           <textarea
+            ref={textareaRef}
             className="customer-chat-input"
             placeholder="Message Reel48 AI..."
             value={newMessage}
@@ -446,11 +460,6 @@ const CustomerChatPage: React.FC = () => {
             style={{
               overflow: 'hidden',
               resize: 'none',
-            }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = `${Math.min(target.scrollHeight, 200)}px`;
             }}
           />
           <button
