@@ -14,7 +14,6 @@ const CustomerChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'ai' | 'human'>('ai');
   const [updatingMode, setUpdatingMode] = useState(false);
@@ -60,9 +59,7 @@ const CustomerChatPage: React.FC = () => {
               return [...prev, newMessage];
             });
             
-            if (newMessage.sender_id !== user?.id) {
-              setUnreadCount((prev) => prev + 1);
-            }
+            // Unread count not needed in full-page view
           } else if (payload.eventType === 'UPDATE') {
             const updatedMessage = payload.new as ChatMessage;
             setMessages((prev) =>
@@ -148,7 +145,6 @@ const CustomerChatPage: React.FC = () => {
         const conv = response.data[0];
         setConversation(conv);
         setChatMode(conv.chat_mode || 'ai');
-        checkUnreadCount(conv);
       } else {
         setConversation(null);
         setChatMode('ai');
@@ -186,21 +182,6 @@ const CustomerChatPage: React.FC = () => {
     }
   };
 
-  const checkUnreadCount = async (conv?: ChatConversation) => {
-    const convToCheck = conv || conversation;
-    if (!convToCheck) return;
-
-    try {
-      const response = await chatAPI.getMessages(convToCheck.id);
-      const unread = response.data.filter(
-        (msg) => !msg.read_at && msg.sender_id !== user?.id
-      ).length;
-      setUnreadCount(unread);
-    } catch (error) {
-      console.error('Failed to check unread count:', error);
-    }
-  };
-
   const markAllAsRead = async () => {
     if (!conversation || markingAsReadRef.current) return;
     
@@ -209,7 +190,6 @@ const CustomerChatPage: React.FC = () => {
     
     try {
       await chatAPI.markAllRead(conversation.id);
-      setUnreadCount(0);
       setMessages(prevMessages => 
         prevMessages.map(msg => ({ ...msg, read_at: msg.read_at || new Date().toISOString() }))
       );
