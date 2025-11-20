@@ -57,20 +57,23 @@
   position: relative;
 }
 
-/* When no messages, center the input vertically */
+/* When no messages, center everything vertically */
 .customer-chat-container:has(.customer-chat-empty) {
   justify-content: center;
+  gap: 2rem;
 }
 
 .customer-chat-container:has(.customer-chat-empty) .customer-chat-messages {
-  flex: 0;
+  flex: 0 0 auto;
   padding: 0 1rem;
+  overflow: visible;
 }
 
 .customer-chat-container:has(.customer-chat-empty) .customer-chat-input-container {
   border-top: none;
   box-shadow: none;
-  padding-top: 2rem;
+  padding-top: 0;
+  flex: 0 0 auto;
 }
 
 /* Minimal header - fixed at top */
