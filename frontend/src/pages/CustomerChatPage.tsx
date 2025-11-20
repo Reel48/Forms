@@ -170,9 +170,10 @@ const CustomerChatPage: React.FC = () => {
   // Set initial height on mount
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = '24px';
+      // Initialize with autoExpand to ensure correct height and avoid cutoff
+      autoExpand(textareaRef.current);
     }
-  }, []);
+  }, [autoExpand]);
 
   useEffect(() => {
     const container = document.querySelector('.customer-chat-page');
@@ -437,6 +438,17 @@ const CustomerChatPage: React.FC = () => {
                 <div className="greeting">
                     <h2>Hello,</h2>
                     <p>How can I help you today?</p>
+                </div>
+                <div className="suggested-prompts">
+                    <button className="prompt-chip" onClick={() => sendMessage("What does Reel48 do?")}>
+                        What does Reel48 do?
+                    </button>
+                    <button className="prompt-chip" onClick={() => sendMessage("How long will my hats take to be delivered?")}>
+                        How long will my hats take to be delivered?
+                    </button>
+                    <button className="prompt-chip" onClick={() => sendMessage("Give me a quote for 500 custom hats.")}>
+                        Give me a quote for 500 custom hats.
+                    </button>
                 </div>
                 </div>
             ) : (
