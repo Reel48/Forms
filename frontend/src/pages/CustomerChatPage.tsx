@@ -399,7 +399,7 @@ const CustomerChatPage: React.FC = () => {
             <>
               {messages.map((message) => {
                 const isCustomer = message.sender_id === user?.id;
-                const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
+                // const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
                 
                 return (
                   <div
