@@ -19,7 +19,7 @@ const CustomerChatPage: React.FC = () => {
   const [updatingMode, setUpdatingMode] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
-    return (saved as 'dark' | 'light') || 'dark';
+    return (saved as 'dark' | 'light') || 'light';
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,10 +114,14 @@ const CustomerChatPage: React.FC = () => {
     }).catch((error) => {
       console.error('Failed to get Ocho user ID:', error);
     });
-    // Apply theme to container
+    // Apply theme to container (only set attribute for dark mode, light is default)
     const container = document.querySelector('.customer-chat-page');
     if (container) {
-      container.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        container.setAttribute('data-theme', 'dark');
+      } else {
+        container.removeAttribute('data-theme');
+      }
     }
     return () => {
       const realtimeClient = getRealtimeClient();
@@ -147,10 +151,14 @@ const CustomerChatPage: React.FC = () => {
   }, [messages]);
 
   useEffect(() => {
-    // Apply theme to container
+    // Apply theme to container (only set attribute for dark mode, light is default)
     const container = document.querySelector('.customer-chat-page');
     if (container) {
-      container.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        container.setAttribute('data-theme', 'dark');
+      } else {
+        container.removeAttribute('data-theme');
+      }
     }
     localStorage.setItem('chat-theme', theme);
   }, [theme]);
