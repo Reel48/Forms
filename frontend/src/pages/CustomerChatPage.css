@@ -19,6 +19,11 @@
   --sidebar-item-hover: #e3e3e3;
   --sidebar-item-active: #d3e3fd;
   --sidebar-text: #1f1f1f;
+  
+  /* Markdown Specifics */
+  --code-bg: #f4f7fc;
+  --code-block-bg: #f5f5f5;
+  --table-border: #e0e0e0;
 }
 
 [data-theme="dark"] {
@@ -40,6 +45,11 @@
   --sidebar-item-hover: #28292a;
   --sidebar-item-active: #004a77;
   --sidebar-text: #e3e3e3;
+  
+  /* Markdown Specifics */
+  --code-bg: #2a2b2d;
+  --code-block-bg: #1e1f20;
+  --table-border: #444746;
 }
 
 .customer-chat-page {
@@ -48,7 +58,7 @@
   height: 100dvh; /* Use dvh for mobile bars */
   background-color: var(--chat-bg);
   color: var(--chat-text);
-  font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
   position: relative;
   overflow: hidden; /* Prevent page scroll */
@@ -243,10 +253,10 @@
 .customer-chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0 1rem 0; 
+  padding: 1rem 0 2rem 0; 
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem; /* Increased gap between message groups */
   scroll-behavior: smooth;
   min-height: 0; /* Important for flex scrolling */
 }
@@ -333,7 +343,7 @@
 /* --- Message Styling --- */
 .message-row {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem; /* More space between avatar and text */
   width: 100%;
 }
 
@@ -342,19 +352,21 @@
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px; /* Slightly larger avatar */
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  margin-top: 0.25rem; /* visually align with text top */
 }
 
 .avatar.ai {
   background: linear-gradient(135deg, #4285F4, #D96570);
   color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .avatar.user {
@@ -364,65 +376,159 @@
 
 .message-content {
   max-width: 85%;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 1.05rem; /* Slightly larger text for readability */
+  line-height: 1.75; /* Relaxed line height */
   overflow-wrap: break-word;
+  letter-spacing: 0.01em;
 }
 
 /* AI Message Specifics */
 .message-row.ai .message-content {
   background-color: var(--chat-ai-bubble);
   color: var(--chat-ai-text);
-  padding-top: 0.25rem; /* Align with avatar */
+  /* Remove padding for AI text to align cleanly with avatar */
+  padding: 0; 
+  margin-top: 0.25rem; /* Visual alignment */
 }
 
 /* User Message Specifics */
 .message-row.user .message-content {
   background-color: var(--chat-user-bubble);
   color: var(--chat-user-text);
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 1.5rem;
   border-top-right-radius: 0.25rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-/* Markdown Styles inside AI messages */
-.markdown-content p {
-  margin: 0 0 1rem 0;
+/* --- Comprehensive Markdown Styling --- */
+.markdown-content {
+  /* Base styles inherited from message-content */
 }
-.markdown-content p:last-child {
+
+.markdown-content > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-content > *:last-child {
   margin-bottom: 0;
 }
-.markdown-content ul, .markdown-content ol {
-  margin: 0 0 1rem 1.5rem;
-  padding: 0;
+
+/* Paragraphs */
+.markdown-content p {
+  margin-bottom: 1.25rem;
 }
+
+/* Headers */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-weight: 600;
+  color: var(--chat-text);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.markdown-content h1 { font-size: 1.5rem; }
+.markdown-content h2 { font-size: 1.3rem; }
+.markdown-content h3 { font-size: 1.15rem; }
+.markdown-content h4 { font-size: 1.05rem; }
+
+/* Lists */
+.markdown-content ul, 
+.markdown-content ol {
+  margin: 0 0 1.25rem 0;
+  padding-left: 1.5rem;
+}
+
 .markdown-content li {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  position: relative;
 }
+
+.markdown-content li > p {
+  margin-bottom: 0.5rem;
+}
+
+/* Code Blocks */
 .markdown-content pre {
-  background-color: var(--chat-bg-secondary);
+  background-color: var(--code-block-bg);
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
-  margin: 0.5rem 0;
+  margin: 1rem 0;
+  border: 1px solid var(--chat-border);
 }
+
 .markdown-content code {
-  font-family: 'Menlo', 'Consolas', monospace;
-  font-size: 0.875em;
+  font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+  background-color: var(--code-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  color: var(--chat-text);
 }
+
 .markdown-content pre code {
   background: none;
   padding: 0;
+  color: inherit;
+  font-size: 0.9em;
 }
-.markdown-content strong {
+
+/* Blockquotes */
+.markdown-content blockquote {
+  border-left: 4px solid var(--chat-accent);
+  margin: 1rem 0;
+  padding-left: 1rem;
+  color: var(--chat-text-secondary);
+  font-style: italic;
+}
+
+/* Tables */
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.25rem 0;
+  font-size: 0.95rem;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--table-border);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: var(--chat-bg-secondary);
   font-weight: 600;
 }
+
+/* Links */
 .markdown-content a {
   color: var(--chat-accent);
   text-decoration: none;
+  font-weight: 500;
 }
+
 .markdown-content a:hover {
   text-decoration: underline;
+}
+
+/* Strong/Emphasis */
+.markdown-content strong {
+  font-weight: 600;
+  color: var(--chat-text);
+}
+
+/* Horizontal Rule */
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--chat-border);
+  margin: 2rem 0;
 }
 
 /* --- Input Area (The Island) --- */
