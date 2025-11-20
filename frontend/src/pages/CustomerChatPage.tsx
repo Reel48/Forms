@@ -465,14 +465,14 @@ const CustomerChatPage: React.FC = () => {
                 </div>
                 </div>
             ) : (
-                <>
+                <div id="chat-container">
                 {messages.map((message) => {
                     const isCustomer = message.sender_id === user?.id;
                     
                     return (
                     <div
                         key={message.id}
-                        className={`message-row ${isCustomer ? 'user' : 'ai'}`}
+                        className={`message ${isCustomer ? 'user-message' : 'ai-message'}`}
                     >
                         {!isCustomer && (
                         <div className="avatar ai">
@@ -519,7 +519,7 @@ const CustomerChatPage: React.FC = () => {
                     );
                 })}
                 {sending && messages.length > 0 && messages[messages.length - 1].sender_id === user?.id && (
-                    <div className="message-row ai">
+                    <div className="message ai-message">
                     <div className="avatar ai">
                         <FaRobot />
                     </div>
@@ -532,7 +532,7 @@ const CustomerChatPage: React.FC = () => {
                     </div>
                     </div>
                 )}
-                </>
+                </div>
             )}
             <div ref={messagesEndRef} />
             </div>

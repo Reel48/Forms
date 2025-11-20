@@ -11,7 +11,7 @@
   --chat-accent-hover: #0842a0;
   --chat-user-bubble: #f0f4f9;
   --chat-user-text: #1f1f1f;
-  --chat-ai-bubble: transparent;
+  --chat-ai-bubble: #ffffff;
   --chat-ai-text: #1f1f1f;
   --chat-input-bg: #f0f4f9;
   --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -37,7 +37,7 @@
   --chat-accent-hover: #8ab4f8;
   --chat-user-bubble: #28292a; /* Darker grey for user */
   --chat-user-text: #e3e3e3;
-  --chat-ai-bubble: transparent;
+  --chat-ai-bubble: #1e1f20;
   --chat-ai-text: #e3e3e3;
   --chat-input-bg: #1e1f20;
   --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -275,10 +275,17 @@
 
 /* Width limiter for messages */
 .message-width-limiter {
-  max-width: 800px;
+  max-width: 1000px; /* Increased from 800px for free-floating look */
   width: 100%;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 1.5rem;
+}
+
+/* Chat Container */
+#chat-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 /* --- Empty State Layout (Gemini Style) --- */
@@ -340,65 +347,70 @@
   opacity: 0.6;
 }
 
-/* --- Message Styling --- */
-.message-row {
+/* --- Message Styling (Free-Floating) --- */
+.message {
   display: flex;
-  gap: 1.5rem; /* More space between avatar and text */
-  width: 100%;
+  margin-bottom: 20px;
+  max-width: 80%; /* Key: Prevents messages from spanning full width */
 }
 
-.message-row.user {
-  justify-content: flex-end;
+.message-content {
+  padding: 12px 18px;
+  border-radius: 20px;
+  line-height: 1.6;
+  font-size: 1.05rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .avatar {
-  width: 36px; /* Slightly larger avatar */
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1rem;
-  margin-top: 0.25rem; /* visually align with text top */
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
 }
 
 .avatar.ai {
   background: linear-gradient(135deg, #4285F4, #D96570);
   color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-right: 12px;
 }
 
 .avatar.user {
-  background-color: var(--chat-text); /* Contrast avatar */
+  background-color: var(--chat-text);
   color: var(--chat-bg);
+  margin-left: 12px;
 }
 
-.message-content {
-  max-width: 85%;
-  font-size: 1.05rem; /* Slightly larger text for readability */
-  line-height: 1.75; /* Relaxed line height */
-  overflow-wrap: break-word;
-  letter-spacing: 0.01em;
+/* User Message Specifics (Right Aligned) */
+.user-message {
+  margin-left: auto; /* Aligns container to right */
+  justify-content: flex-end;
 }
 
-/* AI Message Specifics */
-.message-row.ai .message-content {
-  background-color: var(--chat-ai-bubble);
-  color: var(--chat-ai-text);
-  /* Remove padding for AI text to align cleanly with avatar */
-  padding: 0; 
-  margin-top: 0.25rem; /* Visual alignment */
-}
-
-/* User Message Specifics */
-.message-row.user .message-content {
+.user-message .message-content {
   background-color: var(--chat-user-bubble);
   color: var(--chat-user-text);
-  padding: 0.75rem 1.5rem;
-  border-radius: 1.5rem;
-  border-top-right-radius: 0.25rem;
+  border-bottom-right-radius: 5px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* AI Message Specifics (Left Aligned) */
+.ai-message {
+  margin-right: auto; /* Aligns container to left */
+  justify-content: flex-start;
+}
+
+.ai-message .message-content {
+  background-color: var(--chat-ai-bubble);
+  color: var(--chat-ai-text);
+  border-bottom-left-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Subtle depth */
 }
 
 /* --- Comprehensive Markdown Styling --- */
@@ -416,7 +428,7 @@
 
 /* Paragraphs */
 .markdown-content p {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 /* Headers */
@@ -426,30 +438,25 @@
 .markdown-content h4 {
   font-weight: 600;
   color: var(--chat-text);
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   margin-bottom: 0.75rem;
   line-height: 1.3;
 }
 
-.markdown-content h1 { font-size: 1.5rem; }
-.markdown-content h2 { font-size: 1.3rem; }
-.markdown-content h3 { font-size: 1.15rem; }
-.markdown-content h4 { font-size: 1.05rem; }
+.markdown-content h1 { font-size: 1.4rem; }
+.markdown-content h2 { font-size: 1.25rem; }
+.markdown-content h3 { font-size: 1.1rem; }
+.markdown-content h4 { font-size: 1rem; }
 
 /* Lists */
 .markdown-content ul, 
 .markdown-content ol {
-  margin: 0 0 1.25rem 0;
+  margin: 0 0 1rem 0;
   padding-left: 1.5rem;
 }
 
 .markdown-content li {
-  margin-bottom: 0.5rem;
-  position: relative;
-}
-
-.markdown-content li > p {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 /* Code Blocks */
@@ -485,6 +492,9 @@
   padding-left: 1rem;
   color: var(--chat-text-secondary);
   font-style: italic;
+  background-color: var(--chat-bg-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
 }
 
 /* Tables */
@@ -516,19 +526,6 @@
 
 .markdown-content a:hover {
   text-decoration: underline;
-}
-
-/* Strong/Emphasis */
-.markdown-content strong {
-  font-weight: 600;
-  color: var(--chat-text);
-}
-
-/* Horizontal Rule */
-.markdown-content hr {
-  border: none;
-  border-top: 1px solid var(--chat-border);
-  margin: 2rem 0;
 }
 
 /* --- Input Area (The Island) --- */
