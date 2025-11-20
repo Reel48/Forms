@@ -674,7 +674,9 @@ const ChatPage: React.FC = () => {
                 </div>
               )}
               {messages.length === 0 ? (
-                <div className="empty-messages">No messages yet. Start the conversation!</div>
+                <div className="empty-messages">
+                  <p>No messages yet. Start the conversation!</p>
+                </div>
               ) : (
                 messages.map((message) => {
                   const isAdmin = message.sender_id === user?.id;
@@ -696,10 +698,8 @@ const ChatPage: React.FC = () => {
                       className={`message ${isAdmin ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
                     >
                       <div className="message-content">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
-                            {senderName}
-                          </span>
+                        <div className="message-sender-name">
+                          {senderName}
                         </div>
                         {message.message_type === 'image' && message.file_url ? (
                           <img src={message.file_url} alt={message.file_name || 'Image'} className="message-image" />

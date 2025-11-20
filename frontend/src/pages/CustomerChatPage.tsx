@@ -319,7 +319,9 @@ const CustomerChatPage: React.FC = () => {
 
         <div className="customer-chat-messages">
           {messages.length === 0 ? (
-            <div className="customer-chat-empty">No messages yet. Start the conversation!</div>
+            <div className="customer-chat-empty">
+              <p>No messages yet. Start the conversation!</p>
+            </div>
           ) : (
             messages.map((message) => {
               const isCustomer = message.sender_id === user?.id;
@@ -341,10 +343,8 @@ const CustomerChatPage: React.FC = () => {
                   className={`customer-chat-message ${isCustomer ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
                 >
                   <div className="customer-chat-message-content">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>
-                        {senderName}
-                      </span>
+                    <div className="customer-chat-message-sender">
+                      {senderName}
                     </div>
                     {message.message_type === 'image' && message.file_url ? (
                       <img

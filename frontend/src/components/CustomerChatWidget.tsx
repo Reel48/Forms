@@ -18,6 +18,7 @@ const CustomerChatWidget: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const markingAsReadRef = useRef(false);
@@ -145,6 +146,12 @@ const CustomerChatWidget: React.FC = () => {
   useEffect(() => {
     console.log('CustomerChatWidget: Loading conversation and setting up Realtime subscriptions');
     loadConversation(true); // Pass true to indicate initial load
+    // Get Ocho user ID on component mount
+    chatAPI.getOchoUserId().then((response) => {
+      setOchoUserId(response.data.ocho_user_id);
+    }).catch((error) => {
+      console.error('Failed to get Ocho user ID:', error);
+    });
 
     // Cleanup subscriptions on unmount
     return () => {
@@ -422,16 +429,31 @@ const CustomerChatWidget: React.FC = () => {
 
           <div className="chat-widget-messages">
             {messages.length === 0 ? (
-              <div className="chat-widget-empty">No messages yet. Start the conversation!</div>
+              <div className="chat-widget-empty">
+                <p>No messages yet. Start the conversation!</p>
+              </div>
             ) : (
               messages.map((message) => {
                 const isCustomer = message.sender_id === user?.id;
+                const isAI = message.sender_id === 'ai-assistant' || message.sender_id === ochoUserId;
+                let senderName = '';
+                if (isAI) {
+                  senderName = 'Reel48 AI';
+                } else if (isCustomer) {
+                  senderName = 'You';
+                } else {
+                  senderName = 'Reel48 Support';
+                }
+                
                 return (
                   <div
                     key={message.id}
-                    className={`chat-widget-message ${isCustomer ? 'message-sent' : 'message-received'}`}
+                    className={`chat-widget-message ${isCustomer ? 'message-sent' : 'message-received'} ${isAI ? 'message-ai' : ''}`}
                   >
                     <div className="chat-widget-message-content">
+                      <div className="chat-widget-message-sender">
+                        {senderName}
+                      </div>
                       {message.message_type === 'image' && message.file_url ? (
                         <img
                           src={message.file_url}
