@@ -91,7 +91,7 @@ class AIService:
         return [
             {
                 "name": "create_quote",
-                "description": "Create a quote for a customer order. Use this when a customer wants to place an order or get a quote for products. YOU MUST ALWAYS PROVIDE line_items - a list of products with description, quantity, and unit_price. Never call this function without line_items.",
+                "description": "Create a quote for a customer order. Use this when a customer wants to place an order or get a quote for products. YOU MUST ALWAYS PROVIDE line_items - a list of products with description, quantity, and unit_price. Never call this function without line_items. 🚨 CRITICAL: For hat quotes, you MUST ask about side embroideries BEFORE calling this function. Do NOT call create_quote for hats until you have asked: 'Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost.'",
                 "parameters": {
                     "type": "object",
                     "properties": {
