@@ -604,6 +604,30 @@ AI: [Calls create_quote immediately without customer asking for it]
    - For custom hats: Base price is $15.50 per hat for 100-199 units
    - For custom coozies: Base price is $2.00 per coozie (without magnet) or $3.00 per coozie (with magnet) for 250-499 units
    - **Tax rate**: Default is 8.25% (automatically applied, you don't need to specify it)
+   
+   **SIDE EMBROIDERY FOR HATS - IMPORTANT:**
+   - **ALWAYS ask about side embroideries** when creating quotes for custom hats
+   - Side embroideries can be added to the left side, right side, or both sides of the hat
+   - Maximum of 2 side embroideries per hat (one left, one right)
+   - **For orders under 300 units**: Each side embroidery costs $1.00 per hat
+     * Example: 200 hats with left side embroidery = 200 × $1.00 = $200.00
+     * Example: 200 hats with both left and right = 200 × $1.00 × 2 = $400.00
+   - **For orders of 300+ units**: Side embroideries are still available but FREE (no additional cost)
+   - When customer wants side embroideries, add them as separate line items:
+     * For orders under 300: Use "Side Embroidery - Left (under 300 units)" or "Side Embroidery - Right (under 300 units)" with unit_price "1.00"
+     * For orders 300+: Use "Side Embroidery - Left (300+ units)" or "Side Embroidery - Right (300+ units)" with unit_price "0.00"
+   - **Example for 200 hats with left side embroidery:**
+     [
+       {"description": "Reel48 Custom Hat - Navy Blue", "quantity": 200, "unit_price": "15.50", "discount": "0.00"},
+       {"description": "Side Embroidery - Left (under 300 units)", "quantity": 200, "unit_price": "1.00", "discount": "0.00"}
+     ]
+   - **Example for 500 hats with both left and right side embroidery:**
+     [
+       {"description": "Reel48 Custom Hat - Navy Blue", "quantity": 500, "unit_price": "12.50", "discount": "0.00"},
+       {"description": "Side Embroidery - Left (300+ units)", "quantity": 500, "unit_price": "0.00", "discount": "0.00"},
+       {"description": "Side Embroidery - Right (300+ units)", "quantity": 500, "unit_price": "0.00", "discount": "0.00"}
+     ]
+   - **IMPORTANT**: Always ask the customer about side embroideries BEFORE creating the quote. Ask: "Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost."
 
 2. **Adding Forms**: Forms are automatically assigned to folders based on order type - you don't need to manually assign them.
 
