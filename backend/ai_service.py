@@ -142,6 +142,58 @@ class AIService:
                 }
             },
             {
+                "name": "update_quote",
+                "description": "Update an existing quote. Use this when you need to correct a mistake in a quote you just created, add missing items (like side embroideries), or modify the quote. This replaces all line items in the quote with the new ones you provide.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "quote_id": {
+                            "type": "string",
+                            "description": "REQUIRED: The UUID of the quote to update"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Optional: New title/name for the quote"
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Optional: Notes to add or update on the quote"
+                        },
+                        "line_items": {
+                            "type": "array",
+                            "description": "REQUIRED: Complete list of all line items for the quote. This REPLACES all existing line items. Include ALL items you want in the quote (original items plus any additions like side embroideries).",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "description": "REQUIRED: Product description (e.g., 'Custom Hat - Navy Blue', 'Side Embroidery - Left (under 300 units)')"
+                                    },
+                                    "quantity": {
+                                        "type": "number",
+                                        "description": "REQUIRED: Quantity of this item"
+                                    },
+                                    "unit_price": {
+                                        "type": "string",
+                                        "description": "REQUIRED: Price per unit as a decimal string (e.g., '15.50', '1.00', '0.00')"
+                                    },
+                                    "discount": {
+                                        "type": "string",
+                                        "description": "Optional: Discount percentage as a decimal string (default: '0.00')"
+                                    }
+                                },
+                                "required": ["description", "quantity", "unit_price"]
+                            }
+                        },
+                        "tax_rate": {
+                            "type": "string",
+                            "description": "Optional: Tax rate as a decimal string (e.g., '8.25' for 8.25%). If not provided, uses existing tax rate."
+                        }
+                    },
+                    "required": ["quote_id", "line_items"]
+                }
+            },
+            {
                 "name": "create_folder",
                 "description": "Create a folder for a customer order/project. Folders organize quotes, forms, files, and e-signatures.",
                 "parameters": {
@@ -656,8 +708,26 @@ AI: [Calls create_quote immediately without asking about side embroideries]
      ]
    
    **VIOLATION OF THIS RULE IS A CRITICAL ERROR** - You must ask about side embroideries BEFORE creating any hat quote, no exceptions.
+   
+   **IF YOU FORGOT TO ASK**: If you already created a quote without asking about side embroideries, you MUST:
+   1. Apologize to the customer
+   2. Ask them about side embroideries now
+   3. Use update_quote to add the side embroidery line items to the existing quote
+   4. Explain that you've updated the quote to include their side embroidery preferences
 
-2. **Adding Forms**: Forms are automatically assigned to folders based on order type - you don't need to manually assign them.
+2. **Updating Quotes** - Use update_quote if you made a mistake or need to add items:
+   - **WHEN TO USE**: If you just created a quote and realize you forgot something (like side embroideries), or if the customer asks to modify a quote you just created
+   - **IMPORTANT**: When updating line_items, you must provide the COMPLETE list of all line items you want in the quote
+   - **Example**: If original quote had 200 hats, and you need to add left side embroidery:
+     * Original: [{"description": "Reel48 Custom Hat - Navy Blue", "quantity": 200, "unit_price": "15.50"}]
+     * Updated: [
+         {"description": "Reel48 Custom Hat - Navy Blue", "quantity": 200, "unit_price": "15.50"},
+         {"description": "Side Embroidery - Left (under 300 units)", "quantity": 200, "unit_price": "1.00"}
+       ]
+   - **DO NOT** just provide the new items - provide ALL items (original + new)
+   - Always explain to the customer that you're updating the quote to fix the mistake
+
+3. **Adding Forms**: Forms are automatically assigned to folders based on order type - you don't need to manually assign them.
 
 **ADDITIONAL RULES:**
 - Answer questions FIRST using the knowledge base context

@@ -44,6 +44,8 @@ class AIActionExecutor:
         try:
             if function_name == "create_quote":
                 return self._create_quote(parameters)
+            elif function_name == "update_quote":
+                return self._update_quote(parameters)
             elif function_name == "create_folder":
                 return self._create_folder(parameters)
             elif function_name == "assign_form_to_folder":
@@ -244,6 +246,123 @@ class AIActionExecutor:
             return {
                 "success": False,
                 "error": f"Failed to create quote: {str(e)}"
+            }
+    
+    def _update_quote(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing quote - can update line items, title, notes, etc."""
+        try:
+            quote_id = params.get("quote_id")
+            if not quote_id:
+                return {
+                    "success": False,
+                    "error": "quote_id is required"
+                }
+            
+            # Verify quote exists
+            quote_response = supabase_storage.table("quotes").select("*, line_items(*)").eq("id", quote_id).execute()
+            if not quote_response.data:
+                return {
+                    "success": False,
+                    "error": f"Quote with ID {quote_id} not found"
+                }
+            
+            current_quote = quote_response.data[0]
+            
+            # Prepare update data
+            update_data = {
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            # Update quote fields if provided
+            if "title" in params:
+                update_data["title"] = params["title"]
+            if "notes" in params:
+                update_data["notes"] = params.get("notes")
+            if "terms" in params:
+                update_data["terms"] = params.get("terms")
+            if "tax_rate" in params:
+                update_data["tax_rate"] = str(params["tax_rate"])
+            
+            # Handle line items update
+            line_items_data = params.get("line_items")
+            if line_items_data:
+                # Delete existing line items
+                supabase_storage.table("line_items").delete().eq("quote_id", quote_id).execute()
+                
+                # Insert new line items
+                from routers.quotes import calculate_line_item_total, calculate_quote_totals
+                from models import LineItemCreate
+                
+                # Normalize line items data
+                if isinstance(line_items_data, str):
+                    import json
+                    line_items_data = json.loads(line_items_data)
+                
+                line_items_to_insert = []
+                for idx, item in enumerate(line_items_data):
+                    if not isinstance(item, dict):
+                        logger.error(f"Line item {idx} is not a dict: {type(item).__name__}, value: {item}")
+                        continue
+                    
+                    line_item = LineItemCreate(
+                        description=item.get("description", ""),
+                        quantity=Decimal(str(item.get("quantity", 1))),
+                        unit_price=Decimal(str(item.get("unit_price", "0.00"))),
+                        discount_percent=Decimal(str(item.get("discount", item.get("discount_percent", "0.00"))))
+                    )
+                    
+                    tax_rate = Decimal(str(update_data.get("tax_rate", current_quote.get("tax_rate", "8.25"))))
+                    line_total = calculate_line_item_total(line_item, use_line_tax=True, quote_tax_rate=tax_rate)
+                    
+                    line_items_to_insert.append({
+                        "id": str(uuid.uuid4()),
+                        "quote_id": quote_id,
+                        "description": item.get("description", ""),
+                        "quantity": str(item.get("quantity", 1)),
+                        "unit_price": str(item.get("unit_price", "0.00")),
+                        "discount_percent": str(item.get("discount", item.get("discount_percent", "0.00"))),
+                        "line_total": str(line_total),
+                        "created_at": datetime.now().isoformat()
+                    })
+                
+                if line_items_to_insert:
+                    supabase_storage.table("line_items").insert(line_items_to_insert).execute()
+                    
+                    # Recalculate totals - convert line_items_to_insert to format expected by calculate_quote_totals
+                    tax_rate = Decimal(str(update_data.get("tax_rate", current_quote.get("tax_rate", "8.25"))))
+                    line_items_for_totals = [
+                        {
+                            "quantity": item["quantity"],
+                            "unit_price": item["unit_price"],
+                            "discount_percent": item.get("discount_percent", "0.00")
+                        }
+                        for item in line_items_to_insert
+                    ]
+                    totals = calculate_quote_totals(line_items_for_totals, tax_rate, "after_discount")
+                    update_data.update(totals)
+            
+            # Update quote
+            if update_data:
+                supabase_storage.table("quotes").update(update_data).eq("id", quote_id).execute()
+            
+            # Fetch updated quote
+            updated_response = supabase_storage.table("quotes").select("*, clients(*), line_items(*)").eq("id", quote_id).execute()
+            updated_quote = updated_response.data[0] if updated_response.data else current_quote
+            
+            return {
+                "success": True,
+                "result": {
+                    "quote_id": quote_id,
+                    "quote_number": updated_quote.get("quote_number"),
+                    "total": str(updated_quote.get("total", "0.00")),
+                    "message": "Quote updated successfully"
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error updating quote: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"Failed to update quote: {str(e)}"
             }
     
     def _create_folder(self, params: Dict[str, Any]) -> Dict[str, Any]:
