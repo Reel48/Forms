@@ -4,6 +4,8 @@ import { FaCheck } from 'react-icons/fa';
 import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
+import ShipmentTracker from '../components/ShipmentTracker';
+import AddShipmentModal from '../components/AddShipmentModal';
 import './FolderView.css';
 
 const FolderView: React.FC = () => {
@@ -26,6 +28,7 @@ const FolderView: React.FC = () => {
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renamingFileName, setRenamingFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAddShipment, setShowAddShipment] = useState(false);
 
   const isNewFolder = id === 'new';
 
@@ -773,6 +776,22 @@ const FolderView: React.FC = () => {
           )}
         </section>
 
+        {/* Shipment Tracking Section */}
+        <section className="content-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2>Shipment Tracking</h2>
+            {role === 'admin' && (
+              <button
+                onClick={() => setShowAddShipment(true)}
+                className="btn-primary"
+              >
+                Add Shipment
+              </button>
+            )}
+          </div>
+          <ShipmentTracker folderId={folder.id} isAdmin={role === 'admin'} />
+        </section>
+
         {/* Content Manager (Admin Only) */}
         {role === 'admin' && (
           <section className="content-section">
@@ -784,6 +803,17 @@ const FolderView: React.FC = () => {
           </section>
         )}
       </div>
+
+      {showAddShipment && (
+        <AddShipmentModal
+          folderId={folder.id}
+          onClose={() => setShowAddShipment(false)}
+          onSuccess={() => {
+            // Reload folder content if needed
+            loadFolderContent();
+          }}
+        />
+      )}
     </div>
   );
 };

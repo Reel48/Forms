@@ -1,0 +1,176 @@
+.shipment-tracker {
+  margin-top: 20px;
+}
+
+.shipment-tracker-loading,
+.shipment-tracker-empty {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.shipment-tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.shipment-tracker-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+}
+
+.btn-refresh {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.shipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.shipment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shipment-item:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+}
+
+.shipment-item.active {
+  background-color: #e7f3ff;
+  border-color: #007bff;
+}
+
+.shipment-info {
+  flex: 1;
+}
+
+.shipment-carrier {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.shipment-tracking {
+  font-size: 14px;
+  color: #666;
+  font-family: monospace;
+}
+
+.shipment-status {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background-color: #f0f0f0;
+}
+
+.tracking-details {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.tracking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.tracking-header h4 {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.tracking-status-badge {
+  padding: 6px 12px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.delivery-info {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.delivery-info strong {
+  margin-right: 8px;
+}
+
+.tracking-events {
+  margin-top: 20px;
+}
+
+.tracking-events h5 {
+  margin-bottom: 15px;
+  font-size: 1em;
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tracking-event {
+  padding: 12px;
+  background-color: white;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.event-time {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.event-status {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.event-location {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.event-description {
+  font-size: 14px;
+  color: #333;
+}
+

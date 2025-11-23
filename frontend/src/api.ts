@@ -732,6 +732,47 @@ export const foldersAPI = {
   getContent: (id: string) => api.get<FolderContent>(`/api/folders/${id}/content`),
 };
 
+// Shipments API
+export interface Shipment {
+  id: string;
+  folder_id: string;
+  tracking_number: string;
+  carrier: string;
+  carrier_name: string | null;
+  shippo_tracking_id: string | null;
+  status: string;
+  status_details: string | null;
+  estimated_delivery_date: string | null;
+  actual_delivery_date: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShipmentCreate {
+  folder_id: string;
+  tracking_number: string;
+  carrier: string;
+}
+
+export interface TrackingEvent {
+  id: string;
+  shipment_id: string;
+  status: string;
+  location: string | null;
+  description: string | null;
+  timestamp: string;
+  created_at: string;
+}
+
+export const shipmentsAPI = {
+  create: (data: ShipmentCreate) => api.post<Shipment>('/api/shipments', data),
+  getByFolder: (folderId: string) => api.get<Shipment[]>(`/api/shipments/folder/${folderId}`),
+  get: (shipmentId: string) => api.get<Shipment>(`/api/shipments/${shipmentId}`),
+  refresh: (shipmentId: string) => api.post<Shipment>(`/api/shipments/${shipmentId}/refresh`, {}),
+  getEvents: (shipmentId: string) => api.get<TrackingEvent[]>(`/api/shipments/${shipmentId}/events`),
+};
+
 // Auth API
 // Chat Types
 export interface ChatMessage {

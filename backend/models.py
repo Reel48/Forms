@@ -820,3 +820,86 @@ class FormFolderAssignment(FormFolderAssignmentBase):
     class Config:
         from_attributes = True
 
+class ShipmentBase(BaseModel):
+    folder_id: str
+    tracking_number: str
+    carrier: str
+    carrier_name: Optional[str] = None
+
+class ShipmentCreate(ShipmentBase):
+    pass
+
+class ShipmentUpdate(BaseModel):
+    status: Optional[str] = None
+    status_details: Optional[str] = None
+    estimated_delivery_date: Optional[datetime] = None
+    actual_delivery_date: Optional[datetime] = None
+
+class Shipment(ShipmentBase):
+    id: str
+    shippo_tracking_id: Optional[str] = None
+    status: str = "pending"
+    status_details: Optional[str] = None
+    estimated_delivery_date: Optional[datetime] = None
+    actual_delivery_date: Optional[datetime] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    @field_validator('created_at', 'updated_at', 'estimated_delivery_date', 'actual_delivery_date', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
+class TrackingEvent(BaseModel):
+    id: str
+    shipment_id: str
+    status: str
+    location: Optional[str] = None
+    description: Optional[str] = None
+    timestamp: datetime
+    created_at: datetime
+    
+    @field_validator('timestamp', 'created_at', mode='before')
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime"""
+        if isinstance(v, str):
+            try:
+                if 'T' in v or ' ' in v:
+                    v_iso = v.replace(' ', 'T')
+                    if v_iso.endswith('+00') or v_iso.endswith('-00'):
+                        v_iso = v_iso.replace('+00', '+00:00').replace('-00', '-00:00')
+                    return datetime.fromisoformat(v_iso)
+                return datetime.fromisoformat(v)
+            except (ValueError, AttributeError):
+                try:
+                    from dateutil import parser
+                    return parser.parse(v)
+                except ImportError:
+                    raise ValueError(f"Unable to parse datetime: {v}")
+        return v
+    
+    class Config:
+        from_attributes = True
+
