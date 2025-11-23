@@ -789,7 +789,7 @@ const FolderView: React.FC = () => {
               </button>
             )}
           </div>
-          <ShipmentTracker folderId={folder.id} isAdmin={role === 'admin'} />
+          <ShipmentTracker folderId={folder.id} />
         </section>
 
         {/* Content Manager (Admin Only) */}

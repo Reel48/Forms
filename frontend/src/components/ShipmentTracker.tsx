@@ -4,10 +4,9 @@ import './ShipmentTracker.css';
 
 interface ShipmentTrackerProps {
   folderId: string;
-  isAdmin?: boolean;
 }
 
-const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ folderId, isAdmin = false }) => {
+const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ folderId }) => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
