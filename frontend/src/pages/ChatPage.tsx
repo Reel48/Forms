@@ -509,7 +509,10 @@ const ChatPage: React.FC = () => {
     <div className="chat-page-container">
       <div className="chat-sidebar">
         <div className="chat-sidebar-header">
-          <h2>Conversations</h2>
+          <h2>Customer Conversations</h2>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0.5rem 0 0 0' }}>
+            View and respond to customer messages
+          </p>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -752,7 +755,7 @@ const ChatPage: React.FC = () => {
               <input
                 type="text"
                 className="chat-input"
-                placeholder="Type a message..."
+                placeholder="Type a message to the customer..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={(e) => {
@@ -774,7 +777,7 @@ const ChatPage: React.FC = () => {
           </>
         ) : (
           <div className="no-conversation-selected">
-            <p>Select a conversation to start chatting</p>
+            <p>Select a customer conversation to view chat history and respond</p>
           </div>
         )}
       </div>
