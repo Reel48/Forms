@@ -17,7 +17,6 @@ const CustomerChatPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
-  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
@@ -31,7 +30,7 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
-  const thinkingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ochoUserIdRef = useRef<string | null>(null);
 
   // Setup Realtime subscriptions for messages and conversations
@@ -128,7 +127,6 @@ const CustomerChatPage: React.FC = () => {
     // Fetch OCHO user ID for identifying AI messages
     chatAPI.getOchoUserId().then((response) => {
       const ochoId = response.data.ocho_user_id;
-      setOchoUserId(ochoId);
       ochoUserIdRef.current = ochoId; // Store in ref for use in callbacks
     }).catch((error) => {
       console.error('Failed to get Ocho user ID:', error);
