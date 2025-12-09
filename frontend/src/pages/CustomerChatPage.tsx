@@ -16,6 +16,8 @@ const CustomerChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [aiThinking, setAiThinking] = useState(false);
+  const [ochoUserId, setOchoUserId] = useState<string | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
@@ -29,6 +31,8 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+  const thinkingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const ochoUserIdRef = useRef<string | null>(null);
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -58,6 +62,18 @@ const CustomerChatPage: React.FC = () => {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
+            
+            // Check if this is an AI message - hide thinking indicator
+            // Use ref to get current value without closure issues
+            if (ochoUserIdRef.current && newMessage.sender_id === ochoUserIdRef.current) {
+              setAiThinking(false);
+              // Clear any existing timeout
+              if (thinkingTimeoutRef.current) {
+                clearTimeout(thinkingTimeoutRef.current);
+                thinkingTimeoutRef.current = null;
+              }
+            }
+            
             setMessages((prev) => {
               if (prev.some((msg) => msg.id === newMessage.id)) {
                 return prev;
@@ -108,6 +124,16 @@ const CustomerChatPage: React.FC = () => {
 
   useEffect(() => {
     loadConversation();
+    
+    // Fetch OCHO user ID for identifying AI messages
+    chatAPI.getOchoUserId().then((response) => {
+      const ochoId = response.data.ocho_user_id;
+      setOchoUserId(ochoId);
+      ochoUserIdRef.current = ochoId; // Store in ref for use in callbacks
+    }).catch((error) => {
+      console.error('Failed to get Ocho user ID:', error);
+    });
+    
     // Apply theme
     const container = document.querySelector('.customer-chat-page');
     if (container) {
@@ -127,6 +153,10 @@ const CustomerChatPage: React.FC = () => {
         realtimeClient.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
       }
+      // Clear thinking timeout on unmount
+      if (thinkingTimeoutRef.current) {
+        clearTimeout(thinkingTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -135,6 +165,12 @@ const CustomerChatPage: React.FC = () => {
       loadMessages(conversation.id);
       setupRealtimeSubscriptions(conversation.id);
       markAllAsRead();
+      // Reset thinking indicator when conversation changes
+      setAiThinking(false);
+      if (thinkingTimeoutRef.current) {
+        clearTimeout(thinkingTimeoutRef.current);
+        thinkingTimeoutRef.current = null;
+      }
     }
   }, [conversation?.id, setupRealtimeSubscriptions]);
 
@@ -280,6 +316,18 @@ const CustomerChatPage: React.FC = () => {
         }
       }
       
+      // Show thinking indicator - AI will respond automatically
+      setAiThinking(true);
+      
+      // Set timeout to hide indicator if no response arrives (30 seconds)
+      if (thinkingTimeoutRef.current) {
+        clearTimeout(thinkingTimeoutRef.current);
+      }
+      thinkingTimeoutRef.current = setTimeout(() => {
+        setAiThinking(false);
+        thinkingTimeoutRef.current = null;
+      }, 30000); // 30 second timeout
+      
       if (!messageText) {
         setNewMessage('');
         if (textareaRef.current) {
@@ -289,6 +337,7 @@ const CustomerChatPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message. Please try again.');
+      setAiThinking(false); // Hide thinking indicator on error
     } finally {
       setSending(false);
     }
@@ -330,9 +379,22 @@ const CustomerChatPage: React.FC = () => {
         }
       }
 
+      // Show thinking indicator - AI will respond automatically
+      setAiThinking(true);
+      
+      // Set timeout to hide indicator if no response arrives (30 seconds)
+      if (thinkingTimeoutRef.current) {
+        clearTimeout(thinkingTimeoutRef.current);
+      }
+      thinkingTimeoutRef.current = setTimeout(() => {
+        setAiThinking(false);
+        thinkingTimeoutRef.current = null;
+      }, 30000); // 30 second timeout
+
     } catch (error) {
       console.error('Failed to upload file:', error);
       alert('Failed to upload file. Please try again.');
+      setAiThinking(false); // Hide thinking indicator on error
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -441,7 +503,7 @@ const CustomerChatPage: React.FC = () => {
                     </div>
                   );
                 })}
-                {sending && messages.length > 0 && messages[messages.length - 1].sender_id === user?.id && (
+                {aiThinking && (
                   <div className="message ai-message">
                     <div className="message-wrapper">
                       <div className="message-sender-name">Reel48</div>
