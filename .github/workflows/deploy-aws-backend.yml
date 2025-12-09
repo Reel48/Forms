@@ -27,6 +27,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Verify AWS Account ID
+        run: |
+          EXPECTED_ACCOUNT_ID="391313099201"
+          ACTUAL_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          if [ "$ACTUAL_ACCOUNT_ID" != "$EXPECTED_ACCOUNT_ID" ]; then
+            echo "❌ ERROR: AWS Account ID mismatch!"
+            echo "Expected: $EXPECTED_ACCOUNT_ID"
+            echo "Actual: $ACTUAL_ACCOUNT_ID"
+            echo "Deployment aborted to prevent deploying to wrong account."
+            exit 1
+          fi
+          echo "✅ Verified AWS Account ID: $ACTUAL_ACCOUNT_ID"
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2

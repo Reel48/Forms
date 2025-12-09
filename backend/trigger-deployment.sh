@@ -7,7 +7,28 @@ set -e
 
 SERVICE_ARN="arn:aws:apprunner:us-east-1:391313099201:service/forms/7006f11f5c404deebe576b190dc9ea07"
 AWS_REGION="us-east-1"
+EXPECTED_ACCOUNT_ID="391313099201"
 
+# Verify we're using the correct AWS account
+echo "Verifying AWS account..."
+ACTUAL_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
+
+if [ -z "$ACTUAL_ACCOUNT_ID" ]; then
+    echo "❌ Error: AWS credentials not configured."
+    echo "Run: aws configure"
+    exit 1
+fi
+
+if [ "$ACTUAL_ACCOUNT_ID" != "$EXPECTED_ACCOUNT_ID" ]; then
+    echo "❌ ERROR: AWS Account ID mismatch!"
+    echo "Expected Account ID: $EXPECTED_ACCOUNT_ID"
+    echo "Actual Account ID: $ACTUAL_ACCOUNT_ID"
+    echo "Deployment aborted to prevent deploying to wrong account."
+    exit 1
+fi
+
+echo "✅ Verified AWS Account ID: $ACTUAL_ACCOUNT_ID"
+echo ""
 echo "Waiting for App Runner service to be ready..."
 echo "Service ARN: $SERVICE_ARN"
 echo ""

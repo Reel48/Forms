@@ -29,6 +29,7 @@ fi
 
 # Get AWS account ID and region
 AWS_REGION=${AWS_REGION:-us-east-1}
+EXPECTED_ACCOUNT_ID="391313099201"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
 
 if [ -z "$AWS_ACCOUNT_ID" ]; then
@@ -37,7 +38,17 @@ if [ -z "$AWS_ACCOUNT_ID" ]; then
     exit 1
 fi
 
-echo -e "${GREEN}✓ AWS Account ID: ${AWS_ACCOUNT_ID}${NC}"
+# Verify we're using the correct AWS account
+if [ "$AWS_ACCOUNT_ID" != "$EXPECTED_ACCOUNT_ID" ]; then
+    echo -e "${RED}❌ ERROR: AWS Account ID mismatch!${NC}"
+    echo -e "${RED}Expected Account ID: ${EXPECTED_ACCOUNT_ID}${NC}"
+    echo -e "${RED}Actual Account ID: ${AWS_ACCOUNT_ID}${NC}"
+    echo -e "${RED}Deployment aborted to prevent deploying to wrong account.${NC}"
+    echo -e "${YELLOW}Please configure AWS credentials for account ${EXPECTED_ACCOUNT_ID}${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ AWS Account ID: ${AWS_ACCOUNT_ID} (verified)${NC}"
 echo -e "${GREEN}✓ AWS Region: ${AWS_REGION}${NC}\n"
 
 # ECR Repository name

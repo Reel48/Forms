@@ -33,6 +33,7 @@ if ! command -v aws &> /dev/null; then
 fi
 
 # Get AWS account ID
+EXPECTED_ACCOUNT_ID="391313099201"
 echo -e "${YELLOW}Getting AWS account information...${NC}"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
 
@@ -42,9 +43,19 @@ if [ -z "$AWS_ACCOUNT_ID" ]; then
     exit 1
 fi
 
+# Verify we're using the correct AWS account
+if [ "$AWS_ACCOUNT_ID" != "$EXPECTED_ACCOUNT_ID" ]; then
+    echo -e "${RED}❌ ERROR: AWS Account ID mismatch!${NC}"
+    echo -e "${RED}Expected Account ID: ${EXPECTED_ACCOUNT_ID}${NC}"
+    echo -e "${RED}Actual Account ID: ${AWS_ACCOUNT_ID}${NC}"
+    echo -e "${RED}Deployment aborted to prevent deploying to wrong account.${NC}"
+    echo -e "${YELLOW}Please configure AWS credentials for account ${EXPECTED_ACCOUNT_ID}${NC}"
+    exit 1
+fi
+
 ECR_REPOSITORY_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}"
 
-echo -e "${GREEN}✓ AWS Account ID: ${AWS_ACCOUNT_ID}${NC}"
+echo -e "${GREEN}✓ AWS Account ID: ${AWS_ACCOUNT_ID} (verified)${NC}"
 echo -e "${GREEN}✓ AWS Region: ${AWS_REGION}${NC}"
 echo -e "${GREEN}✓ Repository: ${REPO_NAME}${NC}"
 echo -e "${GREEN}✓ ECR URI: ${ECR_REPOSITORY_URI}${NC}\n"

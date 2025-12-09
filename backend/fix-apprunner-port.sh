@@ -7,9 +7,30 @@ set -e
 
 SERVICE_NAME="quote-builder-backend"
 AWS_REGION="us-east-1"
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+EXPECTED_ACCOUNT_ID="391313099201"
+
+# Verify we're using the correct AWS account
+echo "Verifying AWS account..."
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
+
+if [ -z "$AWS_ACCOUNT_ID" ]; then
+    echo "❌ Error: AWS credentials not configured."
+    echo "Run: aws configure"
+    exit 1
+fi
+
+if [ "$AWS_ACCOUNT_ID" != "$EXPECTED_ACCOUNT_ID" ]; then
+    echo "❌ ERROR: AWS Account ID mismatch!"
+    echo "Expected Account ID: $EXPECTED_ACCOUNT_ID"
+    echo "Actual Account ID: $AWS_ACCOUNT_ID"
+    echo "Operation aborted to prevent modifying wrong account."
+    exit 1
+fi
+
+echo "✅ Verified AWS Account ID: $AWS_ACCOUNT_ID"
 ECR_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/quote-builder-backend:latest"
 
+echo ""
 echo "Getting App Runner service ARN..."
 SERVICE_ARN=$(aws apprunner list-services --region $AWS_REGION --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn" --output text)
 
