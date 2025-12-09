@@ -64,7 +64,16 @@ const CustomerChatPage: React.FC = () => {
             
             // Check if this is an AI message - hide thinking indicator
             // Use ref to get current value without closure issues
-            if (ochoUserIdRef.current && newMessage.sender_id === ochoUserIdRef.current) {
+            const isAIMessage = ochoUserIdRef.current && newMessage.sender_id === ochoUserIdRef.current;
+            console.log('📨 New message received:', {
+              sender_id: newMessage.sender_id,
+              ochoUserId: ochoUserIdRef.current,
+              isAI: isAIMessage,
+              message_preview: newMessage.message?.substring(0, 50)
+            });
+            
+            if (isAIMessage) {
+              console.log('✅ AI message detected, hiding thinking indicator');
               setAiThinking(false);
               // Clear any existing timeout
               if (thinkingTimeoutRef.current) {
@@ -128,8 +137,9 @@ const CustomerChatPage: React.FC = () => {
     chatAPI.getOchoUserId().then((response) => {
       const ochoId = response.data.ocho_user_id;
       ochoUserIdRef.current = ochoId; // Store in ref for use in callbacks
+      console.log('✅ Ocho user ID loaded:', ochoId);
     }).catch((error) => {
-      console.error('Failed to get Ocho user ID:', error);
+      console.error('❌ Failed to get Ocho user ID:', error);
     });
     
     // Apply theme
@@ -315,6 +325,7 @@ const CustomerChatPage: React.FC = () => {
       }
       
       // Show thinking indicator - AI will respond automatically
+      console.log('💭 Setting thinking indicator to true, ochoUserId:', ochoUserIdRef.current);
       setAiThinking(true);
       
       // Set timeout to hide indicator if no response arrives (30 seconds)
@@ -322,6 +333,7 @@ const CustomerChatPage: React.FC = () => {
         clearTimeout(thinkingTimeoutRef.current);
       }
       thinkingTimeoutRef.current = setTimeout(() => {
+        console.log('⏱️ Thinking indicator timeout (30s) - hiding indicator');
         setAiThinking(false);
         thinkingTimeoutRef.current = null;
       }, 30000); // 30 second timeout
@@ -378,6 +390,7 @@ const CustomerChatPage: React.FC = () => {
       }
 
       // Show thinking indicator - AI will respond automatically
+      console.log('💭 Setting thinking indicator to true (file upload), ochoUserId:', ochoUserIdRef.current);
       setAiThinking(true);
       
       // Set timeout to hide indicator if no response arrives (30 seconds)
@@ -385,6 +398,7 @@ const CustomerChatPage: React.FC = () => {
         clearTimeout(thinkingTimeoutRef.current);
       }
       thinkingTimeoutRef.current = setTimeout(() => {
+        console.log('⏱️ Thinking indicator timeout (30s) - hiding indicator');
         setAiThinking(false);
         thinkingTimeoutRef.current = null;
       }, 30000); // 30 second timeout
