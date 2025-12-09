@@ -7,7 +7,7 @@ import { renderTextWithLinks } from '../utils/textUtils';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -26,7 +26,9 @@ const ChatPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+  const globalConversationsSubscriptionRef = useRef<any>(null); // For admins to see all conversations
   const notificationPermissionRequested = useRef(false);
+  const isAdmin = role === 'admin';
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -190,6 +192,69 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  // Setup global subscription for admins to see all conversations updating in real-time
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const realtimeClient = getRealtimeClient();
+
+    // Subscribe to all conversations for admins (to see new conversations and updates)
+    const globalConversationsChannel = realtimeClient
+      .channel('admin_all_conversations')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_conversations',
+        },
+        (payload) => {
+          console.log('Admin: Global conversation event:', payload.eventType);
+          // Reload conversations list to get updated data
+          loadConversations(false); // Silent refresh
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          console.log('Admin: New message in any conversation:', payload);
+          // Reload conversations to update unread counts and last_message_at
+          loadConversations(false); // Silent refresh
+          
+          // Show notification if message is not in currently selected conversation
+          const newMessage = payload.new as ChatMessage;
+          // Use a callback to access current state
+          setConversations((currentConversations) => {
+            const conversation = currentConversations.find(c => c.id === newMessage.conversation_id);
+            if (selectedConversation?.id !== newMessage.conversation_id) {
+              showNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
+            }
+            return currentConversations;
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Admin: Global conversations subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Admin successfully subscribed to all conversations via Realtime');
+        }
+      });
+
+    globalConversationsSubscriptionRef.current = globalConversationsChannel;
+
+    return () => {
+      if (globalConversationsSubscriptionRef.current) {
+        realtimeClient.removeChannel(globalConversationsSubscriptionRef.current);
+        globalConversationsSubscriptionRef.current = null;
+      }
+    };
+  }, [isAdmin, selectedConversation?.id]);
+
   useEffect(() => {
     console.log('ChatPage: Loading conversations and setting up Realtime subscriptions');
     loadConversations(true); // Show loading on initial load only
@@ -205,6 +270,10 @@ const ChatPage: React.FC = () => {
       if (conversationsSubscriptionRef.current) {
         realtimeClient.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
+      }
+      if (globalConversationsSubscriptionRef.current) {
+        realtimeClient.removeChannel(globalConversationsSubscriptionRef.current);
+        globalConversationsSubscriptionRef.current = null;
       }
     };
   }, []);

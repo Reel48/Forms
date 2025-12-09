@@ -1,5 +1,5 @@
-from fastapi import FastAPI
-# Trigger deployment test - GitHub Secrets configured, Request
+from fastapi import FastAPI, Request
+# Trigger deployment test - GitHub Secrets configured
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -11,6 +11,9 @@ from decimal import Decimal
 import os
 import logging
 import traceback
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from chat_cleanup import cleanup_old_chat_history
 
 load_dotenv()
 
@@ -190,4 +193,31 @@ async def debug_jwt_config():
         "jwt_secret_preview": jwt_secret[:20] + "..." if jwt_secret and len(jwt_secret) > 20 else jwt_secret if jwt_secret else None,
         "supabase_url": os.getenv("SUPABASE_URL"),
     }
+
+# Setup scheduled task for chat history cleanup
+def setup_chat_cleanup_scheduler():
+    """Setup daily cleanup of old chat history"""
+    scheduler = BackgroundScheduler()
+    
+    # Run cleanup daily at 2 AM UTC (adjust timezone as needed)
+    # This runs once per day to clean up messages/conversations older than retention period
+    scheduler.add_job(
+        cleanup_old_chat_history,
+        trigger=CronTrigger(hour=2, minute=0),  # 2 AM UTC daily
+        id='chat_cleanup',
+        name='Cleanup old chat history',
+        replace_existing=True
+    )
+    
+    scheduler.start()
+    logger.info("Chat cleanup scheduler started - will run daily at 2 AM UTC")
+    return scheduler
+
+# Start scheduler when app starts
+scheduler = None
+try:
+    scheduler = setup_chat_cleanup_scheduler()
+except Exception as e:
+    logger.error(f"Failed to start chat cleanup scheduler: {str(e)}", exc_info=True)
+    # Don't fail app startup if scheduler fails - cleanup can be done manually
 

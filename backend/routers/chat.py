@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile, Query, BackgroundTasks
 from typing import List, Optional
 from decimal import Decimal
+
 import sys
 import os
 import uuid
@@ -18,6 +19,7 @@ from auth import get_current_user, get_current_admin
 from ai_service import get_ai_service
 from rag_service import get_rag_service
 from ai_action_executor import AIActionExecutor
+from chat_cleanup import cleanup_old_chat_history
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -720,6 +722,28 @@ async def delete_conversation(
         logger.error(f"Error deleting conversation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to delete conversation: {str(e)}")
 
+@router.post("/cleanup", response_model=dict)
+async def cleanup_chat_history(
+    retention_hours: Optional[int] = Query(None, description="Number of hours to retain (default: from env or 48)"),
+    user = Depends(get_current_admin)
+):
+    """
+    Manually trigger cleanup of old chat history (Admin only)
+    
+    Deletes chat messages and conversations older than the retention period.
+    Default retention is 48 hours, configurable via CHAT_RETENTION_HOURS env var.
+    """
+    try:
+        stats = cleanup_old_chat_history(retention_hours=retention_hours)
+        return {
+            "success": True,
+            "message": "Chat cleanup completed",
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Error in chat cleanup endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup chat history: {str(e)}")
+
 @router.post("/conversations/{conversation_id}/ai-response", response_model=ChatMessage)
 async def generate_ai_response(
     conversation_id: str,
@@ -728,6 +752,7 @@ async def generate_ai_response(
     """
     Generate AI response for a conversation.
     This endpoint can be called after a customer sends a message to get an AI response.
+    NOTE: Admins cannot trigger AI responses - they can only view conversations.
     """
     try:
         # Verify conversation exists and user has access
@@ -738,13 +763,16 @@ async def generate_ai_response(
         conv = conv_response.data
         is_admin = user.get("role") == "admin"
         
-        # Check access
-        if not is_admin and conv["customer_id"] != user["id"]:
-            raise HTTPException(status_code=403, detail="Access denied")
+        # Block admins from triggering AI responses
+        if is_admin:
+            raise HTTPException(
+                status_code=403, 
+                detail="Admins cannot trigger AI responses. AI responses are automatically generated for customer messages."
+            )
         
-        # Only generate AI responses for customer conversations (not admin-to-admin)
-        if is_admin and conv["customer_id"] == user["id"]:
-            raise HTTPException(status_code=400, detail="AI responses are only available for customer conversations")
+        # Check access - only customers can trigger AI responses for their own conversations
+        if conv["customer_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
         
         # Get recent messages for context
         messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(10).execute()
