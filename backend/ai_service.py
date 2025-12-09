@@ -44,22 +44,43 @@ class AIService:
             raise ValueError(error_msg)
         print(f"✅ [AI SERVICE] GEMINI_API_KEY found (length: {len(GEMINI_API_KEY)} chars)")
         try:
-            # Use gemini-3-pro-preview - latest preview model with enhanced capabilities
-            # This model provides improved performance and function calling support
-            print(f"🔧 [AI SERVICE] Initializing gemini-3-pro-preview model...")
+            # Get model name from environment variable, default to gemini-3-pro-preview
+            model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-3-pro-preview")
+            print(f"🔧 [AI SERVICE] Using model: {model_name}")
             
             # List available models for debugging
             try:
                 print("🔧 [AI SERVICE] Listing available models...")
+                available_models = []
                 for m in genai.list_models():
                     if 'generateContent' in m.supported_generation_methods:
-                        print(f"  - {m.name}")
+                        model_display_name = m.name.split('/')[-1] if '/' in m.name else m.name
+                        available_models.append(model_display_name)
+                        print(f"  - {model_display_name}")
+                
+                # Check if requested model is available
+                if model_name not in available_models:
+                    print(f"⚠️ [AI SERVICE] Warning: Model '{model_name}' not found in available models")
+                    print(f"⚠️ [AI SERVICE] Available models: {', '.join(available_models)}")
             except Exception as e:
                 print(f"⚠️ [AI SERVICE] Failed to list models: {e}")
 
-            self.model = genai.GenerativeModel('gemini-3-pro-preview')
-            print(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-3-pro-preview")
-            logger.info(f"✅ [AI SERVICE] Successfully initialized Gemini model: gemini-3-pro-preview")
+            # Try to initialize the requested model, fallback to gemini-2.5-flash if it fails
+            try:
+                self.model = genai.GenerativeModel(model_name)
+                print(f"✅ [AI SERVICE] Successfully initialized Gemini model: {model_name}")
+                logger.info(f"✅ [AI SERVICE] Successfully initialized Gemini model: {model_name}")
+            except Exception as model_error:
+                print(f"⚠️ [AI SERVICE] Failed to initialize {model_name}: {model_error}")
+                print(f"⚠️ [AI SERVICE] Falling back to gemini-2.5-flash...")
+                logger.warning(f"Failed to initialize {model_name}, falling back to gemini-2.5-flash: {model_error}")
+                try:
+                    self.model = genai.GenerativeModel('gemini-2.5-flash')
+                    print(f"✅ [AI SERVICE] Successfully initialized fallback model: gemini-2.5-flash")
+                    logger.info(f"✅ [AI SERVICE] Successfully initialized fallback model: gemini-2.5-flash")
+                except Exception as fallback_error:
+                    print(f"❌ [AI SERVICE] Fallback model also failed: {fallback_error}")
+                    raise
             
             self.embedding_model = None  # Will be set when needed
             print(f"✅ [AI SERVICE] AI service initialization complete")
@@ -433,11 +454,20 @@ class AIService:
             # Get function definitions
             functions = self.get_function_definitions()
             
-            # Create model with tools
-            model_with_tools = genai.GenerativeModel(
-                'gemini-3-pro-preview',
-                tools=[{"function_declarations": functions}]
-            )
+            # Create model with tools (use same model as main model, with fallback)
+            model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-3-pro-preview")
+            try:
+                model_with_tools = genai.GenerativeModel(
+                    model_name,
+                    tools=[{"function_declarations": functions}]
+                )
+            except Exception:
+                # Fallback to gemini-2.5-flash if the requested model fails
+                logger.warning(f"Failed to initialize {model_name} with tools, falling back to gemini-2.5-flash")
+                model_with_tools = genai.GenerativeModel(
+                    'gemini-2.5-flash',
+                    tools=[{"function_declarations": functions}]
+                )
             
             # Generate response
             response = model_with_tools.generate_content(messages)
