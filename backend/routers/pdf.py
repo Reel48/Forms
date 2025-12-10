@@ -392,44 +392,79 @@ async def generate_quote_pdf(
             elements.append(header_table)
             elements.append(Spacer(1, 0.25*inch))  # Reduced spacing
         
-        # Customer Information (Bill To) - Company info already in header, so only show customer
+        # Company/Client Two-Column Table - FROM and BILL TO side-by-side
+        # Define the data for the Seller (Company) column
+        seller_info = []
+        if show_company_info and company_settings and company_settings.get('company_name'):
+            seller_info.append(Paragraph("<b>FROM</b>", heading_style))  # New Section Header
+            seller_info.append(Paragraph(company_settings['company_name'], normal_style))
+            # Consolidate address/contact using list comprehension for compactness
+            contact_lines = []
+            if company_settings.get('address'):
+                contact_lines.append(company_settings['address'])
+            if company_settings.get('email'):
+                contact_lines.append(f"Email: {company_settings['email']}")
+            if company_settings.get('phone'):
+                contact_lines.append(f"Phone: {company_settings['phone']}")
+            if company_settings.get('website'):
+                website_with_links = convert_links_to_pdf_format(company_settings['website'])
+                contact_lines.append(website_with_links)
+            
+            for line in contact_lines:
+                seller_info.append(Paragraph(line, normal_style))
+        
+        # Define the data for the Client (Bill To) column
+        client_info_data = []
         if show_client_info and quote.get('clients'):
             client = quote['clients']
-            customer_info = []
-            customer_info.append([Paragraph("<b>Customer Information</b>", heading_style), ""])
+            client_info_data.append(Paragraph("<b>BILL TO</b>", heading_style))  # New Section Header
             
-            # Name
+            # Name (CRITICAL: Ensure client name is added here)
             if client.get('name'):
-                customer_info.append([Paragraph(client.get('name', ''), normal_style), ""])
+                client_info_data.append(Paragraph(client.get('name', ''), normal_style))
             
             # Company (if provided)
             if client.get('company'):
-                customer_info.append([Paragraph(client['company'], normal_style), ""])
+                client_info_data.append(Paragraph(client['company'], normal_style))
             
-            # Address
+            # Address & Contact
+            address_contact_lines = []
             if client.get('address'):
-                customer_info.append([Paragraph(client['address'], normal_style), ""])
-            
-            # Email and Phone grouped together
-            contact_info = []
+                address_contact_lines.append(client['address'])
             if client.get('email'):
-                contact_info.append(f"Email: {client['email']}")
+                address_contact_lines.append(f"Email: {client['email']}")
             if client.get('phone'):
-                contact_info.append(f"Phone: {client['phone']}")
-            if contact_info:
-                customer_info.append([Paragraph(", ".join(contact_info), normal_style), ""])
+                address_contact_lines.append(f"Phone: {client['phone']}")
             
-            # Ensure customer table aligns to same left margin as header and items
-            customer_table = Table(customer_info, colWidths=[5.5*inch])
-            customer_table.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            for line in address_contact_lines:
+                client_info_data.append(Paragraph(line, normal_style))
+        
+        # Calculate available content width (Page Width - 2*Margin)
+        page_width = pagesize[0] if pagesize == letter else A4[0]
+        content_width = page_width - (doc.leftMargin + doc.rightMargin)
+        
+        # Create the two-column table
+        if seller_info or client_info_data:
+            # Use equal column widths (50% each)
+            col_width = content_width / 2
+            
+            # Place seller and client info side-by-side
+            info_table_data = [[
+                Table([[p] for p in seller_info], colWidths=[col_width]),
+                Table([[p] for p in client_info_data], colWidths=[col_width])
+            ]]
+            
+            info_table = Table(info_table_data, colWidths=[col_width, col_width])
+            info_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                # Note: ReportLab respects the DocTemplate margin by default unless overridden
-                ('TOPPADDING', (0, 1), (-1, -1), 3),  # Compact spacing between lines
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Seller info aligned left
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),  # Client info aligned left (relative to its column)
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ]))
-            elements.append(customer_table)
-            elements.append(Spacer(1, 0.25*inch))  # Reduced spacing
+            
+            elements.append(info_table)
+            elements.append(Spacer(1, 0.3*inch))  # Space before items
         
         # Line items table - Compact design with thin lines and minimal padding
         elements.append(Paragraph("Items", heading_style))
@@ -453,63 +488,10 @@ async def generate_quote_pdf(
                 Paragraph(f"${total:.2f}", normal_style)
             ])
         
-        # Financial Summary - Merge into items table
-        subtotal = Decimal(quote['subtotal'])
-        tax_amount = Decimal(quote['tax_amount'])
-        tax_rate = Decimal(quote.get('tax_rate', 0))
-        total = Decimal(quote['total'])
-        
-        # Total label and value styles
-        total_label_style = ParagraphStyle(
-            'TotalLabel',
-            parent=normal_style,
-            fontSize=10,
-            fontName='Helvetica-Bold',
-        )
-        total_value_style = ParagraphStyle(
-            'TotalValue',
-            parent=normal_style,
-            fontSize=11,
-            fontName='Helvetica-Bold',
-        )
-        
-        # Add summary rows to line_items_data - span first 3 columns (Description, Qty, Unit Price)
-        num_data_rows = len(quote.get('line_items', []))
-        
-        # Subtotal row: Span columns 0-2, right-align label, show value in Total column
-        line_items_data.append([
-            Paragraph("Subtotal:", normal_style),
-            "",  # Empty Qty
-            "",  # Empty Unit Price
-            Paragraph(f"${subtotal:.2f}", normal_style)
-        ])
-        
-        # Tax row (if applicable)
-        if tax_amount > 0:
-            line_items_data.append([
-                Paragraph(f"Tax ({tax_rate}%):", normal_style),
-                "",  # Empty Qty
-                "",  # Empty Unit Price
-                Paragraph(f"${tax_amount:.2f}", normal_style)
-            ])
-        
-        # Total row: Span columns 0-2, right-align label, show bold value in Total column
-        line_items_data.append([
-            Paragraph("Total:", total_label_style),
-            "",  # Empty Qty
-            "",  # Empty Unit Price
-            Paragraph(f"${total:.2f}", total_value_style)
-        ])
-        
+        # Ensure line_items_data only contains item rows (no summary rows)
         # Compact table styling - thin lines, minimal padding, small fonts
-        # Calculate summary row indices
-        subtotal_row_idx = num_data_rows + 1
-        total_row_idx = -1  # Last row
-        
         items_table = Table(line_items_data, colWidths=[3.5*inch, 0.6*inch, 1*inch, 1*inch])
-        
-        # Build table style
-        table_style = [
+        items_table.setStyle(TableStyle([
             # Header row styling - minimal
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1a1a1a')),
@@ -518,42 +500,66 @@ async def generate_quote_pdf(
             ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
             ('TOPPADDING', (0, 0), (-1, 0), 6),
             # Column alignment: Description left, quantitative columns right
-            ('ALIGN', (0, 0), (0, num_data_rows), 'LEFT'),  # Description (data rows only)
-            ('ALIGN', (1, 0), (1, num_data_rows), 'RIGHT'),  # Qty (data rows only)
-            ('ALIGN', (2, 0), (2, num_data_rows), 'RIGHT'),  # Unit Price (data rows only)
-            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Total (all rows including summary)
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Description
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Qty
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),  # Unit Price
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Total
             # Data rows styling - compact
-            ('FONTNAME', (0, 1), (-1, num_data_rows), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, num_data_rows), 9),
-            ('TOPPADDING', (0, 1), (-1, num_data_rows), 3),  # Reduced from 4 for denser table
-            ('BOTTOMPADDING', (0, 1), (-1, num_data_rows), 3),  # Reduced from 4 for denser table
-            # Summary rows styling
-            ('FONTNAME', (0, subtotal_row_idx), (0, -1), 'Helvetica-Bold'),  # Summary labels bold
-            ('TOPPADDING', (0, subtotal_row_idx), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, subtotal_row_idx), (-1, -1), 3),
-            # Merge (SPAN) cells for Subtotal/Tax/Total labels - span first 3 columns
-            ('SPAN', (0, subtotal_row_idx), (2, subtotal_row_idx)),  # Subtotal row
-            ('SPAN', (0, total_row_idx), (2, total_row_idx)),  # Total row (last row)
-            # Align summary labels to the RIGHT
-            ('ALIGN', (0, subtotal_row_idx), (2, -1), 'RIGHT'),  # Summary labels right-aligned
-            # Clean separator line before the Subtotal
-            ('LINEBELOW', (0, num_data_rows), (-1, num_data_rows), 0.5, colors.HexColor('#d0d0d0')),
-            # Highlight the Total row with thick line above
-            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#000000')),
-            ('BOTTOMPADDING', (0, -1), (-1, -1), 6),  # Extra padding for total
-            # Thin grid lines for data rows only
-            ('GRID', (0, 0), (-1, num_data_rows), 0.5, colors.HexColor('#d0d0d0')),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('TOPPADDING', (0, 1), (-1, -1), 3),  # Reduced from 4 for denser table
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),  # Reduced from 4 for denser table
+            # Thin grid lines
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             # Note: ReportLab respects the DocTemplate margin by default unless overridden
-        ]
-        
-        # Add tax row SPAN if tax exists
-        if tax_amount > 0:
-            tax_row_idx = num_data_rows + 2
-            table_style.append(('SPAN', (0, tax_row_idx), (2, tax_row_idx)))  # Tax row
-        
-        items_table.setStyle(TableStyle(table_style))
+        ]))
         elements.append(items_table)
+        
+        # Financial Summary - Separate section, right-aligned below items table
+        subtotal = Decimal(quote['subtotal'])
+        tax_amount = Decimal(quote['tax_amount'])
+        tax_rate = Decimal(quote.get('tax_rate', 0))
+        total = Decimal(quote['total'])
+        
+        # Updated style for Total Value (non-bold, slightly larger)
+        total_value_style = ParagraphStyle(
+            'TotalValue',
+            parent=styles['Normal'],
+            fontSize=11,  # Keeping the size slightly larger than 9pt normal
+            fontName='Helvetica',  # Changed from 'Helvetica-Bold' to non-bold
+        )
+        
+        summary_data = []
+        # Subtotal
+        summary_data.append([Paragraph("Subtotal:", normal_style), Paragraph(f"${subtotal:.2f}", normal_style)])
+        # Tax
+        if tax_amount > 0:
+            summary_data.append([Paragraph(f"Tax ({tax_rate}%):", normal_style), Paragraph(f"${tax_amount:.2f}", normal_style)])
+        # Total (using non-bold style)
+        summary_data.append([Paragraph("Total:", normal_style), Paragraph(f"${total:.2f}", total_value_style)])  # Use normal_style for label, total_value_style for value
+        
+        # Column widths for the summary table itself (Labels, Values)
+        summary_col_widths = [1.5*inch, 1*inch]
+        summary_table = Table(summary_data, colWidths=summary_col_widths)
+        
+        summary_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),  # Labels right-aligned
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Values right-aligned
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            # Line separation before Total (3rd from last row is the Total row itself)
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 6),  # Extra space after total
+        ]))
+        
+        # CRITICAL: Wrap the small summary table in a full-width table to push it to the right
+        summary_wrapper = Table([[Spacer(1, 1), summary_table]], colWidths=[content_width - sum(summary_col_widths), sum(summary_col_widths)])
+        summary_wrapper.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(summary_wrapper)
         
         # Notes section (after financial summary) - optimized spacing
         if show_notes and quote.get('notes'):
