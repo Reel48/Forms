@@ -145,6 +145,7 @@ async def generate_quote_pdf(
             textColor=colors.HexColor('#1a1a1a'),
             spaceAfter=4,
             leading=18,
+            leftIndent=0,
         )
         
         # Company info style (address, contact details) - compact 9pt
@@ -156,6 +157,7 @@ async def generate_quote_pdf(
             textColor=colors.HexColor('#333333'),
             spaceAfter=2,
             leading=10,
+            leftIndent=0,
         )
         
         # Section headers (Items, Customer Information)
@@ -167,6 +169,7 @@ async def generate_quote_pdf(
             textColor=colors.HexColor('#333333'),
             spaceAfter=6,
             leading=14,
+            leftIndent=0,
         )
         
         # Quote title style (for "Quote" header)
@@ -221,6 +224,7 @@ async def generate_quote_pdf(
             fontName='Helvetica',
             textColor=colors.HexColor('#333333'),
             leading=11,
+            leftIndent=0,
         )
         
         # Bold style for emphasis
@@ -322,8 +326,8 @@ async def generate_quote_pdf(
         quote_date = datetime.fromisoformat(quote['created_at']).strftime('%B %d, %Y')
         quote_info_box = []
         
-        # Title "Quote"
-        quote_info_box.append([Paragraph("Quote", quote_title_style), ""])
+        # Title "QUOTE" (small caps style)
+        quote_info_box.append([Paragraph("<b>QUOTE</b>", quote_info_style), ""])
         quote_info_box.append(["", ""])  # Small spacing
         
         # Quote Number
@@ -339,20 +343,20 @@ async def generate_quote_pdf(
             quote_info_box.append(["", ""])  # Small spacing
             quote_info_box.append([Paragraph("Draft Quote - Approval Required", status_note_style), ""])
         
+        # Clean, unshaded quote info - simple text layout
         quote_info_table = Table(quote_info_box, colWidths=[2.3*inch, 0.1*inch])
         quote_info_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8f9fa')),
-            ('LEFTPADDING', (0, 0), (0, -1), 10),
-            ('RIGHTPADDING', (0, 0), (0, -1), 10),
-            ('TOPPADDING', (0, 0), (0, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (0, -1), 6),
+            # No background, no border - clean text only
+            ('LEFTPADDING', (0, 0), (0, -1), 0),
+            ('RIGHTPADDING', (0, 0), (0, -1), 0),
+            ('TOPPADDING', (0, 0), (0, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (0, -1), 3),
             ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (0, -1), 'TOP'),
-            ('GRID', (0, 0), (0, -1), 1, colors.HexColor('#e0e0e0')),
             # Minimal spacing for empty rows
-            ('TOPPADDING', (0, 1), (0, 1), 3),
-            ('TOPPADDING', (0, 3), (0, 3), 3),
-            ('TOPPADDING', (0, 5), (0, 5), 3),
+            ('TOPPADDING', (0, 1), (0, 1), 2),
+            ('TOPPADDING', (0, 3), (0, 3), 2),
+            ('TOPPADDING', (0, 5), (0, 5), 2),
         ]))
         header_right.append(quote_info_table)
         
@@ -390,9 +394,11 @@ async def generate_quote_pdf(
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                 ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (0, -1), 0),  # No left padding for consistent margin
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ]))
             elements.append(header_table)
-            elements.append(Spacer(1, 0.3*inch))  # Reduced spacing
+            elements.append(Spacer(1, 0.25*inch))  # Reduced spacing
         
         # Customer Information (Bill To) - Company info already in header, so only show customer
         if show_client_info and quote.get('clients'):
@@ -421,17 +427,18 @@ async def generate_quote_pdf(
             if contact_info:
                 customer_info.append([Paragraph(", ".join(contact_info), normal_style), ""])
             
-            customer_table = Table(customer_info, colWidths=[4.5*inch])
+            # Ensure customer table aligns to same left margin as header and items
+            customer_table = Table(customer_info, colWidths=[5.5*inch])
             customer_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),  # No left padding - aligns with document margin
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ('TOPPADDING', (0, 1), (-1, -1), 3),  # Compact spacing between lines
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ]))
             elements.append(customer_table)
-            elements.append(Spacer(1, 0.3*inch))  # Reduced spacing
+            elements.append(Spacer(1, 0.25*inch))  # Reduced spacing
         
         # Line items table - Compact design with thin lines and minimal padding
         elements.append(Paragraph("Items", heading_style))
@@ -478,9 +485,11 @@ async def generate_quote_pdf(
             # Thin grid lines
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),  # No left padding - aligns with document margin
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ]))
         elements.append(items_table)
-        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Spacer(1, 0.15*inch))  # Minimal spacing before financial summary
         
         # Financial Summary - Separate section, right-aligned below table
         subtotal = Decimal(quote['subtotal'])
@@ -523,10 +532,24 @@ async def generate_quote_pdf(
         summary_wrapper.setStyle(TableStyle([
             ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ]))
+        # Financial summary directly below items table
         elements.append(summary_wrapper)
-        elements.append(Spacer(1, 0.2*inch))
         
-        # Footer Validity Note - Small note at bottom
+        # Notes section (after financial summary)
+        if show_notes and quote.get('notes'):
+            elements.append(Spacer(1, 0.2*inch))
+            elements.append(Paragraph("Notes:", heading_style))
+            notes_with_links = convert_links_to_pdf_format(quote['notes'])
+            elements.append(Paragraph(notes_with_links, normal_style))
+        
+        # Terms section (after notes)
+        if show_terms and quote.get('terms'):
+            elements.append(Spacer(1, 0.15*inch))
+            elements.append(Paragraph("Terms & Conditions:", heading_style))
+            terms_with_links = convert_links_to_pdf_format(quote['terms'])
+            elements.append(Paragraph(terms_with_links, normal_style))
+        
+        # Footer Validity Note - Small note at very bottom
         if quote.get('expiration_date'):
             expiration_date = datetime.fromisoformat(quote['expiration_date']).strftime('%B %d, %Y')
             validity_text = f"This quote is valid until {expiration_date}."
@@ -534,21 +557,9 @@ async def generate_quote_pdf(
             # Default validity period
             validity_text = "This quote is valid for 30 days from the date of issue."
         
+        elements.append(Spacer(1, 0.2*inch))
         validity_paragraph = Paragraph(validity_text, footer_note_style)
         elements.append(validity_paragraph)
-        
-        # Notes and terms (if space allows, compact spacing)
-        if show_notes and quote.get('notes'):
-            elements.append(Spacer(1, 0.2*inch))
-            elements.append(Paragraph("Notes:", heading_style))
-            notes_with_links = convert_links_to_pdf_format(quote['notes'])
-            elements.append(Paragraph(notes_with_links, normal_style))
-        
-        if show_terms and quote.get('terms'):
-            elements.append(Spacer(1, 0.15*inch))
-            elements.append(Paragraph("Terms & Conditions:", heading_style))
-            terms_with_links = convert_links_to_pdf_format(quote['terms'])
-            elements.append(Paragraph(terms_with_links, normal_style))
         
         # Build PDF
         doc.build(elements)
