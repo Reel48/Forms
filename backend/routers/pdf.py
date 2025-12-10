@@ -156,7 +156,7 @@ async def generate_quote_pdf(
             fontName='Helvetica',
             textColor=colors.HexColor('#333333'),
             spaceAfter=2,
-            leading=10,
+            leading=9,  # Reduced from 10 for tighter spacing
             leftIndent=0,
         )
         
@@ -168,7 +168,7 @@ async def generate_quote_pdf(
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#333333'),
             spaceAfter=6,
-            leading=14,
+            leading=12,  # Reduced from 14 for tighter spacing
             leftIndent=0,
         )
         
@@ -202,7 +202,7 @@ async def generate_quote_pdf(
             fontName='Helvetica',
             textColor=colors.HexColor('#666666'),
             spaceAfter=3,
-            leading=11,
+            leading=10,  # Reduced from 11 for tighter spacing
         )
         
         # Status note style
@@ -223,7 +223,7 @@ async def generate_quote_pdf(
             fontSize=9,
             fontName='Helvetica',
             textColor=colors.HexColor('#333333'),
-            leading=11,
+            leading=10,  # Reduced from 11 for tighter spacing - most important change
             leftIndent=0,
         )
         
@@ -278,9 +278,9 @@ async def generate_quote_pdf(
                     img_width, img_height = pil_img.size
                     aspect_ratio = img_width / img_height
                     
-                    # Smaller max dimensions for compact header
+                    # Smaller max dimensions for compact header - reduced height to save vertical space
                     max_width = 1.2 * inch
-                    max_height = 0.5 * inch
+                    max_height = 0.4 * inch  # Reduced from 0.5 to save space
                     
                     if aspect_ratio > 1:
                         width = max_width
@@ -326,13 +326,11 @@ async def generate_quote_pdf(
         quote_date = datetime.fromisoformat(quote['created_at']).strftime('%B %d, %Y')
         quote_info_box = []
         
-        # Title "QUOTE" (small caps style)
+        # Title "QUOTE"
         quote_info_box.append([Paragraph("<b>QUOTE</b>", quote_info_style), ""])
-        quote_info_box.append(["", ""])  # Small spacing
         
         # Quote Number
         quote_info_box.append([Paragraph(f"<b>{quote['quote_number']}</b>", quote_number_style), ""])
-        quote_info_box.append(["", ""])  # Small spacing
         
         # Date
         quote_info_box.append([Paragraph(quote_date, quote_info_style), ""])
@@ -340,23 +338,19 @@ async def generate_quote_pdf(
         # Status Note (Draft Quote - Approval Required)
         quote_status = quote.get('status', '').lower()
         if quote_status == 'draft':
-            quote_info_box.append(["", ""])  # Small spacing
             quote_info_box.append([Paragraph("Draft Quote - Approval Required", status_note_style), ""])
         
-        # Clean, unshaded quote info - simple text layout
+        # Clean, unshaded quote info - simple text layout with minimal padding
         quote_info_table = Table(quote_info_box, colWidths=[2.3*inch, 0.1*inch])
         quote_info_table.setStyle(TableStyle([
             # No background, no border - clean text only
             ('LEFTPADDING', (0, 0), (0, -1), 0),
             ('RIGHTPADDING', (0, 0), (0, -1), 0),
-            ('TOPPADDING', (0, 0), (0, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (0, -1), 3),
+            # Significantly reduced vertical padding for all rows
+            ('TOPPADDING', (0, 0), (0, -1), 1),    # Reduced from 3
+            ('BOTTOMPADDING', (0, 0), (0, -1), 1), # Reduced from 3
             ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (0, -1), 'TOP'),
-            # Minimal spacing for empty rows
-            ('TOPPADDING', (0, 1), (0, 1), 2),
-            ('TOPPADDING', (0, 3), (0, 3), 2),
-            ('TOPPADDING', (0, 5), (0, 5), 2),
         ]))
         header_right.append(quote_info_table)
         
@@ -372,8 +366,7 @@ async def generate_quote_pdf(
                 left_table.setStyle(TableStyle([
                     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                    # Note: ReportLab respects the DocTemplate margin by default unless overridden
                 ]))
             else:
                 left_table = Table([[""]], colWidths=[3.5*inch])
@@ -394,8 +387,7 @@ async def generate_quote_pdf(
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                 ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (0, -1), 0),  # No left padding for consistent margin
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                # Note: ReportLab respects the DocTemplate margin by default unless overridden
             ]))
             elements.append(header_table)
             elements.append(Spacer(1, 0.25*inch))  # Reduced spacing
@@ -432,8 +424,7 @@ async def generate_quote_pdf(
             customer_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),  # No left padding - aligns with document margin
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                # Note: ReportLab respects the DocTemplate margin by default unless overridden
                 ('TOPPADDING', (0, 1), (-1, -1), 3),  # Compact spacing between lines
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ]))
@@ -480,13 +471,12 @@ async def generate_quote_pdf(
             # Data rows styling - compact
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ('TOPPADDING', (0, 1), (-1, -1), 4),  # Minimal padding
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+            ('TOPPADDING', (0, 1), (-1, -1), 3),  # Reduced from 4 for denser table
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),  # Reduced from 4 for denser table
             # Thin grid lines
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),  # No left padding - aligns with document margin
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            # Note: ReportLab respects the DocTemplate margin by default unless overridden
         ]))
         elements.append(items_table)
         elements.append(Spacer(1, 0.15*inch))  # Minimal spacing before financial summary
@@ -535,16 +525,16 @@ async def generate_quote_pdf(
         # Financial summary directly below items table
         elements.append(summary_wrapper)
         
-        # Notes section (after financial summary)
+        # Notes section (after financial summary) - optimized spacing
         if show_notes and quote.get('notes'):
-            elements.append(Spacer(1, 0.2*inch))
+            elements.append(Spacer(1, 0.15*inch))  # Reduced from 0.2
             elements.append(Paragraph("Notes:", heading_style))
             notes_with_links = convert_links_to_pdf_format(quote['notes'])
             elements.append(Paragraph(notes_with_links, normal_style))
         
-        # Terms section (after notes)
+        # Terms section (after notes) - optimized spacing
         if show_terms and quote.get('terms'):
-            elements.append(Spacer(1, 0.15*inch))
+            elements.append(Spacer(1, 0.12*inch))  # Reduced from 0.15
             elements.append(Paragraph("Terms & Conditions:", heading_style))
             terms_with_links = convert_links_to_pdf_format(quote['terms'])
             elements.append(Paragraph(terms_with_links, normal_style))
@@ -557,7 +547,7 @@ async def generate_quote_pdf(
             # Default validity period
             validity_text = "This quote is valid for 30 days from the date of issue."
         
-        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Spacer(1, 0.15*inch))  # Reduced from 0.2
         validity_paragraph = Paragraph(validity_text, footer_note_style)
         elements.append(validity_paragraph)
         
