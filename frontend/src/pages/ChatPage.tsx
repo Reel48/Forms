@@ -390,6 +390,8 @@ const ChatPage: React.FC = () => {
         setLoading(true);
       }
       const response = await chatAPI.getConversations();
+      console.log('Loaded conversations:', response.data.length);
+      console.log('Conversations:', response.data);
       setConversations(response.data);
       if (response.data.length > 0 && !selectedConversation) {
         setSelectedConversation(response.data[0]);

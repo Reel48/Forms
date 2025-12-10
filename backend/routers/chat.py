@@ -181,8 +181,31 @@ async def get_conversations(user = Depends(get_current_user)):
         
         if is_admin:
             # Admin: Get all conversations with customer info and unread counts
-            conversations_response = supabase_storage.table("chat_conversations").select("*").order("last_message_at", desc=True).execute()
+            logger.info(f"Admin {user['id']} ({user.get('email')}) fetching all conversations")
+            
+            # Fetch all conversations (Supabase client may not support nulls_last, so we'll sort in Python)
+            conversations_response = supabase_storage.table("chat_conversations").select("*").execute()
             conversations = conversations_response.data if conversations_response.data else []
+            
+            # Sort conversations: those with last_message_at first (descending), then by created_at (descending)
+            # This ensures conversations with messages appear first, but all conversations are included
+            def sort_key(conv):
+                last_msg_at = conv.get("last_message_at")
+                created_at = conv.get("created_at", "")
+                
+                # Return tuple for sorting:
+                # First element: False if has last_message_at (sorts first), True if not (sorts last)
+                # Second element: last_message_at or created_at (for sorting by date descending)
+                # When reverse=True, False comes before True, and dates are sorted descending
+                has_last_msg = last_msg_at is not None
+                sort_date = last_msg_at if last_msg_at else created_at
+                return (has_last_msg, sort_date or "")
+            
+            # Sort with reverse=True: False (has messages) comes before True (no messages)
+            # and dates are sorted descending
+            conversations.sort(key=sort_key, reverse=True)
+            
+            logger.info(f"Fetched {len(conversations)} conversations for admin")
             
             # Enrich with customer info and unread counts
             # Use Supabase Admin REST API to get user emails
