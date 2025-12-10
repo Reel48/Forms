@@ -120,14 +120,14 @@ async def generate_quote_pdf(
         # Create PDF buffer
         buffer = BytesIO()
         # Set document title to quote title (shows in PDF tab)
-        # Increased margins for better whitespace (1 inch instead of 0.75)
+        # Compact margins for single-page fit
         doc = SimpleDocTemplate(
             buffer, 
             pagesize=pagesize, 
-            topMargin=1*inch, 
-            bottomMargin=1*inch,
-            leftMargin=0.75*inch,
-            rightMargin=0.75*inch,
+            topMargin=0.6*inch, 
+            bottomMargin=0.5*inch,
+            leftMargin=0.6*inch,
+            rightMargin=0.6*inch,
             title=quote.get('title', quote['quote_number'])  # Set PDF document title
         )
         
@@ -135,37 +135,48 @@ async def generate_quote_pdf(
         elements = []
         styles = getSampleStyleSheet()
         
-        # Typography hierarchy - Professional font styles
-        # Company name style (largest, most prominent)
+        # Typography hierarchy - Compact professional font styles for single-page design
+        # Company name style (slightly smaller for compact design)
         company_name_style = ParagraphStyle(
             'CompanyName',
             parent=styles['Heading1'],
-            fontSize=17,
+            fontSize=15,
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#1a1a1a'),
-            spaceAfter=8,
-            leading=20,
+            spaceAfter=4,
+            leading=18,
         )
         
-        # Company info style (address, contact details)
+        # Company info style (address, contact details) - compact 9pt
         company_info_style = ParagraphStyle(
             'CompanyInfo',
             parent=styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica',
             textColor=colors.HexColor('#333333'),
-            spaceAfter=4,
-            leading=12,
+            spaceAfter=2,
+            leading=10,
         )
         
-        # Section headers (Items, Notes, Terms)
+        # Section headers (Items, Customer Information)
         heading_style = ParagraphStyle(
             'CustomHeading',
             parent=styles['Heading2'],
-            fontSize=13,
+            fontSize=11,
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#333333'),
-            spaceAfter=10,
+            spaceAfter=6,
+            leading=14,
+        )
+        
+        # Quote title style (for "Quote" header)
+        quote_title_style = ParagraphStyle(
+            'QuoteTitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#1a1a1a'),
+            spaceAfter=8,
             leading=16,
         )
         
@@ -173,32 +184,43 @@ async def generate_quote_pdf(
         quote_number_style = ParagraphStyle(
             'QuoteNumber',
             parent=styles['Normal'],
-            fontSize=13,
+            fontSize=11,
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#1a1a1a'),
-            spaceAfter=6,
-            leading=16,
+            spaceAfter=4,
+            leading=13,
         )
         
         # Quote date/info style
         quote_info_style = ParagraphStyle(
             'QuoteInfo',
             parent=styles['Normal'],
-            fontSize=10,
+            fontSize=9,
             fontName='Helvetica',
             textColor=colors.HexColor('#666666'),
-            spaceAfter=4,
-            leading=12,
+            spaceAfter=3,
+            leading=11,
         )
         
-        # Normal body text
+        # Status note style
+        status_note_style = ParagraphStyle(
+            'StatusNote',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica',
+            textColor=colors.HexColor('#d32f2f'),
+            spaceAfter=0,
+            leading=11,
+        )
+        
+        # Normal body text (compact)
         normal_style = ParagraphStyle(
             'Normal',
             parent=styles['Normal'],
-            fontSize=max(10, min(11, font_size)),  # Clamp between 10 and 11 for professional look
+            fontSize=9,
             fontName='Helvetica',
             textColor=colors.HexColor('#333333'),
-            leading=13,
+            leading=11,
         )
         
         # Bold style for emphasis
@@ -206,6 +228,17 @@ async def generate_quote_pdf(
             'Bold',
             parent=normal_style,
             fontName='Helvetica-Bold',
+        )
+        
+        # Footer note style
+        footer_note_style = ParagraphStyle(
+            'FooterNote',
+            parent=styles['Normal'],
+            fontSize=8,
+            fontName='Helvetica',
+            textColor=colors.HexColor('#666666'),
+            spaceAfter=0,
+            leading=10,
         )
         
         # Fetch company settings
@@ -224,38 +257,34 @@ async def generate_quote_pdf(
         except Exception:
             pass  # Continue without company settings if fetch fails
         
-        # Header Section: Company info on left, Quote details on right
+        # Header Section: Compact design - Logo + Company Info (Left), Document Details (Right)
         header_left = []
         header_right = []
         
-        # Left side: Logo and Company Information
+        # Left side: Small Logo + Company Name + Compact Contact Block
         if show_logo and company_settings and company_settings.get('logo_url'):
             try:
                 import requests
-                # Fetch and add logo image
+                # Fetch and add logo image - smaller size for compact design
                 logo_response = requests.get(company_settings['logo_url'], timeout=10)
                 if logo_response.status_code == 200:
-                    # Calculate aspect ratio to maintain proportions
                     from PIL import Image as PILImage
                     img_data = BytesIO(logo_response.content)
                     pil_img = PILImage.open(img_data)
                     img_width, img_height = pil_img.size
                     aspect_ratio = img_width / img_height
                     
-                    # Set max dimensions and calculate to maintain aspect ratio
-                    max_width = 2 * inch
-                    max_height = 0.8 * inch
+                    # Smaller max dimensions for compact header
+                    max_width = 1.2 * inch
+                    max_height = 0.5 * inch
                     
-                    # Calculate dimensions maintaining aspect ratio
                     if aspect_ratio > 1:
-                        # Landscape: use max width
                         width = max_width
                         height = width / aspect_ratio
                         if height > max_height:
                             height = max_height
                             width = height * aspect_ratio
                     else:
-                        # Portrait: use max height
                         height = max_height
                         width = height * aspect_ratio
                         if width > max_width:
@@ -264,194 +293,152 @@ async def generate_quote_pdf(
                     
                     logo_img = Image(BytesIO(logo_response.content), width=width, height=height)
                     header_left.append(logo_img)
-                    header_left.append(Spacer(1, 0.15*inch))
+                    header_left.append(Spacer(1, 0.08*inch))  # Minimal spacing
             except Exception as e:
-                # If logo fails to load, continue without it
                 print(f"Warning: Could not load logo: {e}")
                 pass
         
-        # Company information header (consolidated)
+        # Company Name and Compact Contact Block
         if show_company_info and company_settings:
             if company_settings.get('company_name'):
                 header_left.append(Paragraph(company_settings['company_name'], company_name_style))
             
-            company_details = []
+            # Compact contact block - vertical list with minimal spacing
+            contact_items = []
             if company_settings.get('address'):
-                company_details.append(Paragraph(company_settings['address'], company_info_style))
+                contact_items.append(Paragraph(company_settings['address'], company_info_style))
             if company_settings.get('email'):
-                company_details.append(Paragraph(f"Email: {company_settings['email']}", company_info_style))
+                contact_items.append(Paragraph(company_settings['email'], company_info_style))
             if company_settings.get('phone'):
-                company_details.append(Paragraph(f"Phone: {company_settings['phone']}", company_info_style))
+                contact_items.append(Paragraph(company_settings['phone'], company_info_style))
             if company_settings.get('website'):
                 website_with_links = convert_links_to_pdf_format(company_settings['website'])
-                company_details.append(Paragraph(f"Website: {website_with_links}", company_info_style))
-            if company_settings.get('tax_id'):
-                company_details.append(Paragraph(f"Tax ID: {company_settings['tax_id']}", company_info_style))
+                contact_items.append(Paragraph(website_with_links, company_info_style))
             
-            for detail in company_details:
-                header_left.append(detail)
+            for item in contact_items:
+                header_left.append(item)
         
-        # Right side: Quote Number and Date in boxed section
+        # Right side: Document Details Box - "Quote" title, Quote Number, Date, Status Note
         quote_date = datetime.fromisoformat(quote['created_at']).strftime('%B %d, %Y')
         quote_info_box = []
-        quote_info_box.append([Paragraph(f"<b>Quote Number:</b>", quote_info_style), ""])
-        quote_info_box.append([Paragraph(quote['quote_number'], quote_number_style), ""])
-        quote_info_box.append(["", ""])  # Empty row for spacing
-        quote_info_box.append([Paragraph(f"Date:", quote_info_style), ""])
+        
+        # Title "Quote"
+        quote_info_box.append([Paragraph("Quote", quote_title_style), ""])
+        quote_info_box.append(["", ""])  # Small spacing
+        
+        # Quote Number
+        quote_info_box.append([Paragraph(f"<b>{quote['quote_number']}</b>", quote_number_style), ""])
+        quote_info_box.append(["", ""])  # Small spacing
+        
+        # Date
         quote_info_box.append([Paragraph(quote_date, quote_info_style), ""])
         
-        if quote.get('expiration_date'):
-            quote_info_box.append(["", ""])  # Empty row for spacing
-            quote_info_box.append([Paragraph(f"Valid Until:", quote_info_style), ""])
-            expiration_date = datetime.fromisoformat(quote['expiration_date']).strftime('%B %d, %Y')
-            quote_info_box.append([Paragraph(expiration_date, quote_info_style), ""])
+        # Status Note (Draft Quote - Approval Required)
+        quote_status = quote.get('status', '').lower()
+        if quote_status == 'draft':
+            quote_info_box.append(["", ""])  # Small spacing
+            quote_info_box.append([Paragraph("Draft Quote - Approval Required", status_note_style), ""])
         
-        quote_info_table = Table(quote_info_box, colWidths=[2.5*inch, 0.2*inch])
+        quote_info_table = Table(quote_info_box, colWidths=[2.3*inch, 0.1*inch])
         quote_info_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8f9fa')),
-            ('LEFTPADDING', (0, 0), (0, -1), 12),
-            ('RIGHTPADDING', (0, 0), (0, -1), 12),
-            ('TOPPADDING', (0, 0), (0, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (0, -1), 8),
+            ('LEFTPADDING', (0, 0), (0, -1), 10),
+            ('RIGHTPADDING', (0, 0), (0, -1), 10),
+            ('TOPPADDING', (0, 0), (0, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (0, -1), 6),
             ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (0, -1), 'TOP'),
             ('GRID', (0, 0), (0, -1), 1, colors.HexColor('#e0e0e0')),
-            # Add extra spacing for empty rows
-            ('TOPPADDING', (0, 2), (0, 2), 6),  # Spacing after quote number
-            ('TOPPADDING', (0, 5), (0, 5), 6),  # Spacing after date (if expiration exists)
+            # Minimal spacing for empty rows
+            ('TOPPADDING', (0, 1), (0, 1), 3),
+            ('TOPPADDING', (0, 3), (0, 3), 3),
+            ('TOPPADDING', (0, 5), (0, 5), 3),
         ]))
         header_right.append(quote_info_table)
         
         # Create header table with left and right sections
         if header_left or header_right:
-            header_table_data = []
             left_col = []
             right_col = []
             
             if header_left:
                 for item in header_left:
                     left_col.append([item])
-                left_table = Table(left_col, colWidths=[4*inch])
+                left_table = Table(left_col, colWidths=[3.5*inch])
                 left_table.setStyle(TableStyle([
                     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ]))
             else:
-                left_table = Table([[""]], colWidths=[4*inch])
+                left_table = Table([[""]], colWidths=[3.5*inch])
             
             if header_right:
                 for item in header_right:
                     right_col.append([item])
-                right_table = Table(right_col, colWidths=[2.7*inch])
+                right_table = Table(right_col, colWidths=[2.4*inch])
                 right_table.setStyle(TableStyle([
                     ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ]))
             else:
-                right_table = Table([[""]], colWidths=[2.7*inch])
+                right_table = Table([[""]], colWidths=[2.4*inch])
             
-            header_table = Table([[left_table, right_table]], colWidths=[4*inch, 2.7*inch])
+            header_table = Table([[left_table, right_table]], colWidths=[3.5*inch, 2.4*inch])
             header_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                 ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ]))
             elements.append(header_table)
-            
-            # Add accent line below header (using brand color if available)
-            accent_color = brand_color if brand_color else colors.HexColor('#667eea')
-            elements.append(Spacer(1, 0.15*inch))
-            # Create a thin line using a table
-            accent_line = Table([[""]], colWidths=[6.7*inch], rowHeights=[2])
-            accent_line.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), accent_color),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ]))
-            elements.append(accent_line)
-            elements.append(Spacer(1, 0.4*inch))
+            elements.append(Spacer(1, 0.3*inch))  # Reduced spacing
         
-        # Billing Information: Two-column layout for "From" and "Bill To"
-        billing_data = []
-        
-        # Left column: From (Company/Seller)
-        from_column = []
-        if show_company_info and company_settings:
-            from_column.append([Paragraph("<b>From:</b>", heading_style), ""])
-            if company_settings.get('company_name'):
-                from_column.append([Paragraph(company_settings['company_name'], normal_style), ""])
-            if company_settings.get('address'):
-                from_column.append([Paragraph(company_settings['address'], normal_style), ""])
-            if company_settings.get('email'):
-                from_column.append([Paragraph(f"Email: {company_settings['email']}", normal_style), ""])
-            if company_settings.get('phone'):
-                from_column.append([Paragraph(f"Phone: {company_settings['phone']}", normal_style), ""])
-        
-        # Right column: Bill To (Client)
-        bill_to_column = []
+        # Customer Information (Bill To) - Company info already in header, so only show customer
         if show_client_info and quote.get('clients'):
             client = quote['clients']
-            bill_to_column.append([Paragraph("<b>Bill To:</b>", heading_style), ""])
+            customer_info = []
+            customer_info.append([Paragraph("<b>Customer Information</b>", heading_style), ""])
+            
+            # Name
             if client.get('name'):
-                bill_to_column.append([Paragraph(client.get('name', ''), normal_style), ""])
+                customer_info.append([Paragraph(client.get('name', ''), normal_style), ""])
+            
+            # Company (if provided)
             if client.get('company'):
-                bill_to_column.append([Paragraph(client['company'], normal_style), ""])
-            if client.get('email'):
-                bill_to_column.append([Paragraph(f"Email: {client['email']}", normal_style), ""])
-            if client.get('phone'):
-                bill_to_column.append([Paragraph(f"Phone: {client['phone']}", normal_style), ""])
+                customer_info.append([Paragraph(client['company'], normal_style), ""])
+            
+            # Address
             if client.get('address'):
-                bill_to_column.append([Paragraph(client['address'], normal_style), ""])
+                customer_info.append([Paragraph(client['address'], normal_style), ""])
+            
+            # Email and Phone grouped together
+            contact_info = []
+            if client.get('email'):
+                contact_info.append(f"Email: {client['email']}")
+            if client.get('phone'):
+                contact_info.append(f"Phone: {client['phone']}")
+            if contact_info:
+                customer_info.append([Paragraph(", ".join(contact_info), normal_style), ""])
+            
+            customer_table = Table(customer_info, colWidths=[4.5*inch])
+            customer_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 1), (-1, -1), 3),  # Compact spacing between lines
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ]))
+            elements.append(customer_table)
+            elements.append(Spacer(1, 0.3*inch))  # Reduced spacing
         
-        # Create two-column layout with balanced widths and proper spacing
-        if from_column or bill_to_column:
-            # Create tables for each column
-            from_table = None
-            bill_to_table = None
-            
-            if from_column:
-                from_table = Table(from_column, colWidths=[3*inch])
-                from_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                    ('TOPPADDING', (0, 1), (-1, -1), 4),  # Add spacing between lines
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ]))
-            
-            if bill_to_column:
-                bill_to_table = Table(bill_to_column, colWidths=[3*inch])
-                bill_to_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                    ('TOPPADDING', (0, 1), (-1, -1), 4),  # Add spacing between lines
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ]))
-            
-            # Combine into side-by-side layout
-            if from_table and bill_to_table:
-                combined_table = Table([[from_table, bill_to_table]], colWidths=[3.2*inch, 3.2*inch])
-                combined_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                    ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ]))
-                elements.append(combined_table)
-            elif from_table:
-                elements.append(from_table)
-            elif bill_to_table:
-                elements.append(bill_to_table)
-            
-            elements.append(Spacer(1, 0.5*inch))  # Increased spacing
-        
-        # Line items table
+        # Line items table - Compact design with thin lines and minimal padding
         elements.append(Paragraph("Items", heading_style))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.1*inch))
         
-        line_items_data = [["Description", "Qty", "Unit Price", "Discount", "Total"]]
+        # Table with Description, Qty, Unit Price, Total (removed Discount column for simplicity)
+        line_items_data = [["Description", "Qty", "Unit Price", "Total"]]
         
         for item in quote.get('line_items', []):
             qty = Decimal(item['quantity'])
@@ -465,105 +452,103 @@ async def generate_quote_pdf(
                 Paragraph(item['description'], normal_style),
                 Paragraph(str(qty), normal_style),
                 Paragraph(f"${unit_price:.2f}", normal_style),
-                Paragraph(f"{discount}%" if discount > 0 else "-", normal_style),
                 Paragraph(f"${total:.2f}", normal_style)
             ])
         
-        # Financial Summary Section - positioned in distinct bottom-right area
+        # Compact table styling - thin lines, minimal padding, small fonts
+        items_table = Table(line_items_data, colWidths=[3.5*inch, 0.6*inch, 1*inch, 1*inch])
+        items_table.setStyle(TableStyle([
+            # Header row styling - minimal
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1a1a1a')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('TOPPADDING', (0, 0), (-1, 0), 6),
+            # Column alignment: Description left, quantitative columns right
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Description
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Qty
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),  # Unit Price
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Total
+            # Data rows styling - compact
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('TOPPADDING', (0, 1), (-1, -1), 4),  # Minimal padding
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+            # Thin grid lines
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(items_table)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Financial Summary - Separate section, right-aligned below table
         subtotal = Decimal(quote['subtotal'])
         tax_amount = Decimal(quote['tax_amount'])
         tax_rate = Decimal(quote.get('tax_rate', 0))
         total = Decimal(quote['total'])
         
-        # Calculate number of data rows (excluding header and summary rows)
-        num_data_rows = len(quote.get('line_items', []))
-        # Add summary rows
-        line_items_data.append(["", "", "", "", ""])  # Empty row for spacing
-        line_items_data.append(["", "", "", Paragraph("Subtotal:", normal_style), Paragraph(f"${subtotal:.2f}", normal_style)])
+        summary_data = []
+        summary_data.append([Paragraph("Subtotal:", normal_style), Paragraph(f"${subtotal:.2f}", normal_style)])
         if tax_amount > 0:
-            line_items_data.append(["", "", "", Paragraph(f"Tax ({tax_rate}%):", normal_style), Paragraph(f"${tax_amount:.2f}", normal_style)])
-        # Final total with bold and background highlight
-        line_items_data.append(["", "", "", Paragraph("<b>Total:</b>", bold_style), Paragraph(f"<b>${total:.2f}</b>", bold_style)])
+            summary_data.append([Paragraph(f"Tax ({tax_rate}%):", normal_style), Paragraph(f"${tax_amount:.2f}", normal_style)])
+        # Total - bold and slightly larger
+        total_label_style = ParagraphStyle(
+            'TotalLabel',
+            parent=normal_style,
+            fontSize=10,
+            fontName='Helvetica-Bold',
+        )
+        total_value_style = ParagraphStyle(
+            'TotalValue',
+            parent=normal_style,
+            fontSize=11,
+            fontName='Helvetica-Bold',
+        )
+        summary_data.append([Paragraph("Total:", total_label_style), Paragraph(f"${total:.2f}", total_value_style)])
         
-        items_table = Table(line_items_data, colWidths=[3*inch, 0.8*inch, 1*inch, 1*inch, 1*inch])
-        items_table.setStyle(TableStyle([
-            # Header row styling
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f0f0f0')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1a1a1a')),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 11),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('TOPPADDING', (0, 0), (-1, 0), 12),
-            # Column alignment: Description left, quantitative columns right
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Description
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Qty - right-aligned
-            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),  # Unit Price - right-aligned
-            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Discount - right-aligned
-            ('ALIGN', (4, 0), (4, -1), 'RIGHT'),  # Total - right-aligned
-            # Data rows styling
-            ('FONTNAME', (0, 1), (-1, num_data_rows), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 10),
-            ('TOPPADDING', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-            # Summary rows styling (subtotal, tax, total)
-            ('FONTNAME', (3, num_data_rows + 2), (4, -1), 'Helvetica-Bold'),
-            # Final total row - highlighted background
-            ('BACKGROUND', (3, -1), (4, -1), colors.HexColor('#f8f9fa')),
-            ('TOPPADDING', (3, -1), (4, -1), 10),
-            ('BOTTOMPADDING', (3, -1), (4, -1), 10),
-            # Grid and borders
-            ('GRID', (0, 0), (-1, num_data_rows), 1, colors.HexColor('#e0e0e0')),
-            ('LINEBELOW', (0, num_data_rows + 1), (-1, num_data_rows + 1), 1, colors.HexColor('#666666')),
-            ('LINEBELOW', (3, -1), (4, -1), 2, colors.HexColor('#333333')),  # Thicker line under total
+        summary_table = Table(summary_data, colWidths=[1.5*inch, 1*inch])
+        summary_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),  # Labels right-aligned
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Values right-aligned
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ]))
-        elements.append(items_table)
-        elements.append(Spacer(1, 0.5*inch))  # Increased spacing
         
-        # Quote Validity and Status Information
-        validity_info = []
+        # Right-align the summary table
+        summary_wrapper = Table([[summary_table]], colWidths=[6*inch])
+        summary_wrapper.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+        ]))
+        elements.append(summary_wrapper)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Footer Validity Note - Small note at bottom
         if quote.get('expiration_date'):
             expiration_date = datetime.fromisoformat(quote['expiration_date']).strftime('%B %d, %Y')
-            validity_info.append(f"This quote is valid until {expiration_date}.")
+            validity_text = f"This quote is valid until {expiration_date}."
         else:
-            # Default validity period if not specified
-            validity_info.append("This quote is valid for 30 days from the date of issue.")
+            # Default validity period
+            validity_text = "This quote is valid for 30 days from the date of issue."
         
-        if quote.get('status'):
-            status_text = quote['status'].title()
-            if status_text == 'Draft':
-                validity_info.append("This is a draft quote and requires approval before acceptance.")
-            elif status_text == 'Sent':
-                validity_info.append("Please review this quote and contact us with any questions.")
-            elif status_text == 'Accepted':
-                validity_info.append("This quote has been accepted. An invoice will be generated for payment.")
+        validity_paragraph = Paragraph(validity_text, footer_note_style)
+        elements.append(validity_paragraph)
         
-        if validity_info:
-            validity_paragraph = Paragraph(
-                "<i>" + " ".join(validity_info) + "</i>",
-                ParagraphStyle(
-                    'ValidityInfo',
-                    parent=normal_style,
-                    fontSize=9,
-                    textColor=colors.HexColor('#666666'),
-                    spaceAfter=12,
-                )
-            )
-            elements.append(validity_paragraph)
-            elements.append(Spacer(1, 0.3*inch))
-        
-        # Notes and terms
+        # Notes and terms (if space allows, compact spacing)
         if show_notes and quote.get('notes'):
+            elements.append(Spacer(1, 0.2*inch))
             elements.append(Paragraph("Notes:", heading_style))
             notes_with_links = convert_links_to_pdf_format(quote['notes'])
             elements.append(Paragraph(notes_with_links, normal_style))
-            elements.append(Spacer(1, 0.3*inch))  # Increased spacing
         
         if show_terms and quote.get('terms'):
+            elements.append(Spacer(1, 0.15*inch))
             elements.append(Paragraph("Terms & Conditions:", heading_style))
             terms_with_links = convert_links_to_pdf_format(quote['terms'])
             elements.append(Paragraph(terms_with_links, normal_style))
-            elements.append(Spacer(1, 0.2*inch))
         
         # Build PDF
         doc.build(elements)
