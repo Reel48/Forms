@@ -317,6 +317,7 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedConversation) {
+      console.log('Selected conversation:', selectedConversation.id, 'for customer:', selectedConversation.customer_name || selectedConversation.customer_email);
       loadMessages(selectedConversation.id, true);
       markAllAsRead(selectedConversation.id);
       setupRealtimeSubscriptions(selectedConversation.id);
@@ -414,6 +415,8 @@ const ChatPage: React.FC = () => {
       }
       const response = await chatAPI.getMessages(conversationId, 50);
       const loadedMessages = response.data;
+      console.log(`Loaded ${loadedMessages.length} messages for conversation ${conversationId}`);
+      console.log('Messages are for conversation:', conversationId);
       
       if (reset) {
         setMessages(loadedMessages);
