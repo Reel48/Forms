@@ -453,45 +453,13 @@ async def generate_quote_pdf(
                 Paragraph(f"${total:.2f}", normal_style)
             ])
         
-        # Compact table styling - thin lines, minimal padding, small fonts
-        items_table = Table(line_items_data, colWidths=[3.5*inch, 0.6*inch, 1*inch, 1*inch])
-        items_table.setStyle(TableStyle([
-            # Header row styling - minimal
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1a1a1a')),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-            ('TOPPADDING', (0, 0), (-1, 0), 6),
-            # Column alignment: Description left, quantitative columns right
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Description
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Qty
-            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),  # Unit Price
-            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Total
-            # Data rows styling - compact
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ('TOPPADDING', (0, 1), (-1, -1), 3),  # Reduced from 4 for denser table
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),  # Reduced from 4 for denser table
-            # Thin grid lines
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            # Note: ReportLab respects the DocTemplate margin by default unless overridden
-        ]))
-        elements.append(items_table)
-        elements.append(Spacer(1, 0.15*inch))  # Minimal spacing before financial summary
-        
-        # Financial Summary - Separate section, right-aligned below table
+        # Financial Summary - Merge into items table
         subtotal = Decimal(quote['subtotal'])
         tax_amount = Decimal(quote['tax_amount'])
         tax_rate = Decimal(quote.get('tax_rate', 0))
         total = Decimal(quote['total'])
         
-        summary_data = []
-        summary_data.append([Paragraph("Subtotal:", normal_style), Paragraph(f"${subtotal:.2f}", normal_style)])
-        if tax_amount > 0:
-            summary_data.append([Paragraph(f"Tax ({tax_rate}%):", normal_style), Paragraph(f"${tax_amount:.2f}", normal_style)])
-        # Total - bold and slightly larger
+        # Total label and value styles
         total_label_style = ParagraphStyle(
             'TotalLabel',
             parent=normal_style,
@@ -504,26 +472,88 @@ async def generate_quote_pdf(
             fontSize=11,
             fontName='Helvetica-Bold',
         )
-        summary_data.append([Paragraph("Total:", total_label_style), Paragraph(f"${total:.2f}", total_value_style)])
         
-        summary_table = Table(summary_data, colWidths=[1.5*inch, 1*inch])
-        summary_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),  # Labels right-aligned
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Values right-aligned
+        # Add summary rows to line_items_data - span first 3 columns (Description, Qty, Unit Price)
+        num_data_rows = len(quote.get('line_items', []))
+        
+        # Subtotal row: Span columns 0-2, right-align label, show value in Total column
+        line_items_data.append([
+            Paragraph("Subtotal:", normal_style),
+            "",  # Empty Qty
+            "",  # Empty Unit Price
+            Paragraph(f"${subtotal:.2f}", normal_style)
+        ])
+        
+        # Tax row (if applicable)
+        if tax_amount > 0:
+            line_items_data.append([
+                Paragraph(f"Tax ({tax_rate}%):", normal_style),
+                "",  # Empty Qty
+                "",  # Empty Unit Price
+                Paragraph(f"${tax_amount:.2f}", normal_style)
+            ])
+        
+        # Total row: Span columns 0-2, right-align label, show bold value in Total column
+        line_items_data.append([
+            Paragraph("Total:", total_label_style),
+            "",  # Empty Qty
+            "",  # Empty Unit Price
+            Paragraph(f"${total:.2f}", total_value_style)
+        ])
+        
+        # Compact table styling - thin lines, minimal padding, small fonts
+        # Calculate summary row indices
+        subtotal_row_idx = num_data_rows + 1
+        total_row_idx = -1  # Last row
+        
+        items_table = Table(line_items_data, colWidths=[3.5*inch, 0.6*inch, 1*inch, 1*inch])
+        
+        # Build table style
+        table_style = [
+            # Header row styling - minimal
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1a1a1a')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('TOPPADDING', (0, 0), (-1, 0), 6),
+            # Column alignment: Description left, quantitative columns right
+            ('ALIGN', (0, 0), (0, num_data_rows), 'LEFT'),  # Description (data rows only)
+            ('ALIGN', (1, 0), (1, num_data_rows), 'RIGHT'),  # Qty (data rows only)
+            ('ALIGN', (2, 0), (2, num_data_rows), 'RIGHT'),  # Unit Price (data rows only)
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Total (all rows including summary)
+            # Data rows styling - compact
+            ('FONTNAME', (0, 1), (-1, num_data_rows), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, num_data_rows), 9),
+            ('TOPPADDING', (0, 1), (-1, num_data_rows), 3),  # Reduced from 4 for denser table
+            ('BOTTOMPADDING', (0, 1), (-1, num_data_rows), 3),  # Reduced from 4 for denser table
+            # Summary rows styling
+            ('FONTNAME', (0, subtotal_row_idx), (0, -1), 'Helvetica-Bold'),  # Summary labels bold
+            ('TOPPADDING', (0, subtotal_row_idx), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, subtotal_row_idx), (-1, -1), 3),
+            # Merge (SPAN) cells for Subtotal/Tax/Total labels - span first 3 columns
+            ('SPAN', (0, subtotal_row_idx), (2, subtotal_row_idx)),  # Subtotal row
+            ('SPAN', (0, total_row_idx), (2, total_row_idx)),  # Total row (last row)
+            # Align summary labels to the RIGHT
+            ('ALIGN', (0, subtotal_row_idx), (2, -1), 'RIGHT'),  # Summary labels right-aligned
+            # Clean separator line before the Subtotal
+            ('LINEBELOW', (0, num_data_rows), (-1, num_data_rows), 0.5, colors.HexColor('#d0d0d0')),
+            # Highlight the Total row with thick line above
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#000000')),
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 6),  # Extra padding for total
+            # Thin grid lines for data rows only
+            ('GRID', (0, 0), (-1, num_data_rows), 0.5, colors.HexColor('#d0d0d0')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ]))
+            # Note: ReportLab respects the DocTemplate margin by default unless overridden
+        ]
         
-        # Right-align the summary table
-        summary_wrapper = Table([[summary_table]], colWidths=[6*inch])
-        summary_wrapper.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-        ]))
-        # Financial summary directly below items table
-        elements.append(summary_wrapper)
+        # Add tax row SPAN if tax exists
+        if tax_amount > 0:
+            tax_row_idx = num_data_rows + 2
+            table_style.append(('SPAN', (0, tax_row_idx), (2, tax_row_idx)))  # Tax row
+        
+        items_table.setStyle(TableStyle(table_style))
+        elements.append(items_table)
         
         # Notes section (after financial summary) - optimized spacing
         if show_notes and quote.get('notes'):
