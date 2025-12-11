@@ -397,13 +397,15 @@ async def send_message(
             # Get existing conversation or create new one
             # Each customer has only one conversation (UNIQUE constraint on customer_id)
             try:
-                existing_conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).single().execute()
-                if existing_conv_response.data:
+                # Try to get existing conversation (use execute() instead of single() to avoid exception)
+                existing_conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
+                
+                if existing_conv_response.data and len(existing_conv_response.data) > 0:
                     # Use existing conversation
-                    conversation_id = existing_conv_response.data["id"]
+                    conversation_id = existing_conv_response.data[0]["id"]
                     logger.info(f"Using existing conversation {conversation_id} for customer {user['id']}")
                 else:
-                    # Create new conversation
+                    # No conversation exists, create new one
                     new_conv = {
                         "id": str(uuid.uuid4()),
                         "customer_id": user["id"],
@@ -411,30 +413,33 @@ async def send_message(
                         "created_at": datetime.now().isoformat(),
                         "updated_at": datetime.now().isoformat()
                     }
-                    create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
-                    if not create_response.data:
-                        raise HTTPException(status_code=500, detail="Failed to create conversation")
-                    conversation_id = create_response.data[0]["id"]
-                    logger.info(f"Created new conversation {conversation_id} for customer {user['id']}")
-            except Exception as e:
-                # If single() fails (no conversation found), try to create one
-                # But also handle the case where insert fails due to UNIQUE constraint
-                error_str = str(e).lower()
-                if "unique" in error_str or "duplicate" in error_str:
-                    # Conversation was created by another request, fetch it
                     try:
-                        existing_conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).single().execute()
-                        if existing_conv_response.data:
-                            conversation_id = existing_conv_response.data["id"]
-                            logger.info(f"Conversation already exists, using {conversation_id} for customer {user['id']}")
+                        create_response = supabase_storage.table("chat_conversations").insert(new_conv).execute()
+                        if not create_response.data:
+                            raise HTTPException(status_code=500, detail="Failed to create conversation")
+                        conversation_id = create_response.data[0]["id"]
+                        logger.info(f"Created new conversation {conversation_id} for customer {user['id']}")
+                    except Exception as insert_error:
+                        # Handle UNIQUE constraint violation (conversation created by another request)
+                        error_str = str(insert_error).lower()
+                        if "unique" in error_str or "duplicate" in error_str or "violates unique constraint" in error_str:
+                            # Conversation was created by another request, fetch it
+                            logger.info(f"Conversation already exists (race condition), fetching for customer {user['id']}")
+                            existing_conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
+                            if existing_conv_response.data and len(existing_conv_response.data) > 0:
+                                conversation_id = existing_conv_response.data[0]["id"]
+                                logger.info(f"Fetched existing conversation {conversation_id} for customer {user['id']}")
+                            else:
+                                logger.error(f"Failed to fetch conversation after UNIQUE constraint violation for customer {user['id']}")
+                                raise HTTPException(status_code=500, detail="Failed to get or create conversation")
                         else:
-                            raise HTTPException(status_code=500, detail="Failed to get or create conversation")
-                    except Exception as e2:
-                        logger.error(f"Error getting existing conversation after conflict: {str(e2)}")
-                        raise HTTPException(status_code=500, detail=f"Failed to create conversation: {str(e)}")
-                else:
-                    logger.error(f"Error creating conversation: {str(e)}")
-                    raise HTTPException(status_code=500, detail=f"Failed to create conversation: {str(e)}")
+                            logger.error(f"Error creating conversation: {str(insert_error)}")
+                            raise HTTPException(status_code=500, detail=f"Failed to create conversation: {str(insert_error)}")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error in conversation creation: {str(e)}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to get or create conversation: {str(e)}")
         
         # Create message
         message_created_at = datetime.now().isoformat()
