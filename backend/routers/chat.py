@@ -516,7 +516,14 @@ async def send_message(
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
         
-        return message_response.data[0]
+        # Ensure conversation_id is in the response
+        message_data = message_response.data[0]
+        if not message_data.get("conversation_id"):
+            message_data["conversation_id"] = conversation_id
+            logger.warning(f"conversation_id missing from message response, adding it: {conversation_id}")
+        
+        logger.info(f"Message sent successfully: {message_data.get('id')} in conversation {conversation_id}")
+        return message_data
     except HTTPException:
         raise
     except Exception as e:

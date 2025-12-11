@@ -312,14 +312,45 @@ const CustomerChatPage: React.FC = () => {
       
       // If this was a new conversation, set it up
       if (!conversation?.id) {
-        const newConvId = messageResponse.data.conversation_id;
-        const convsResponse = await chatAPI.getConversations();
-        if (convsResponse.data) {
-          const newConv = convsResponse.data.find(c => c.id === newConvId);
-          if (newConv) {
-            setConversation(newConv);
-            await loadMessages(newConvId);
-            setupRealtimeSubscriptions(newConvId);
+        const newConvId = messageResponse.data?.conversation_id;
+        if (newConvId) {
+          try {
+            const convsResponse = await chatAPI.getConversations();
+            if (convsResponse.data) {
+              const newConv = convsResponse.data.find(c => c.id === newConvId);
+              if (newConv) {
+                setConversation(newConv);
+                await loadMessages(newConvId);
+                setupRealtimeSubscriptions(newConvId);
+              } else {
+                console.warn('Conversation not found after creation:', newConvId);
+                // Reload conversations to get the new one
+                const updatedConvsResponse = await chatAPI.getConversations();
+                if (updatedConvsResponse.data && updatedConvsResponse.data.length > 0) {
+                  const latestConv = updatedConvsResponse.data[0];
+                  setConversation(latestConv);
+                  await loadMessages(latestConv.id);
+                  setupRealtimeSubscriptions(latestConv.id);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error setting up new conversation:', error);
+            // Don't fail the message send - just log the error
+          }
+        } else {
+          console.warn('No conversation_id in message response, fetching conversations');
+          // Fallback: fetch conversations to get the newly created one
+          try {
+            const convsResponse = await chatAPI.getConversations();
+            if (convsResponse.data && convsResponse.data.length > 0) {
+              const latestConv = convsResponse.data[0];
+              setConversation(latestConv);
+              await loadMessages(latestConv.id);
+              setupRealtimeSubscriptions(latestConv.id);
+            }
+          } catch (error) {
+            console.error('Error fetching conversations after message send:', error);
           }
         }
       }
