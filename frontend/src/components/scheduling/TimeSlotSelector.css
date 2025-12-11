@@ -27,22 +27,29 @@
   margin: 0 0 0.5rem 0;
 }
 
-/* Container to organize the buttons neatly */
+/* --- UPDATED CONTAINER: Uses Grid to fill space --- */
 .quick-book-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem; /* Make buttons stretch slightly to fill the wider space */
-  margin-top: 0.5rem;
-  margin-bottom: 1.5rem;
-  /* justify-content: flex-start; */
+  display: grid;
+  /* This magic line makes columns automatically fit. 
+     They will be at least 180px wide, but stretch to fill the rest of the row. */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem; /* Consistent spacing */
+  margin-top: 1rem;
+  margin-bottom: 2rem;
 }
 
-/* The Button Style - Matches .calendar-day */
+/* --- UPDATED BUTTONS: Bigger & Centered --- */
 .quick-book-btn {
+  /* Make the button fill its grid cell */
+  width: 100%;
+  
+  /* Match the styling of the new wider calendar cells */
   background: white;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
-  padding: 0.6rem 1rem; /* Rectangular padding for text */
+  
+  /* Slightly taller padding to match the 'heft' of the calendar days */
+  padding: 0.75rem 1rem;
   
   color: var(--color-text, #1f2937);
   font-size: 0.875rem;
@@ -51,27 +58,32 @@
   cursor: pointer;
   transition: all 0.2s ease;
   
-  /* text centering */
-  display: inline-flex;
+  /* Ensure text is always perfectly centered */
+  display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 }
 
-/* Hover Effect - Matches .calendar-day:hover */
+/* --- HOVER EFFECTS (Kept the same) --- */
 .quick-book-btn:hover {
   background: var(--color-bg-secondary, #f9fafb);
   border-color: var(--color-primary, #2563eb);
-  color: var(--color-primary, #2563eb); /* Turns text blue on hover */
-  transform: scale(1.05); /* The "pop" effect */
+  color: var(--color-primary, #2563eb);
+  transform: translateY(-2px); /* Slight lift up */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* Subtle shadow on lift */
 }
 
-/* Optional: Active/Selected State */
-.quick-book-btn:active,
+.quick-book-btn:active {
+  transform: scale(0.98);
+}
+
+/* Optional: Selected State */
 .quick-book-btn.selected {
   background: var(--color-primary, #2563eb);
   border-color: var(--color-primary, #2563eb);
   color: white;
-  transform: scale(0.98); /* Slight press down feel */
+  transform: scale(0.98);
 }
 
 .time-slot-grid {
