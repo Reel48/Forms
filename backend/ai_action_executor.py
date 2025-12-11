@@ -54,6 +54,10 @@ class AIActionExecutor:
                 return self._assign_file_to_folder(parameters)
             elif function_name == "assign_esignature_to_folder":
                 return self._assign_esignature_to_folder(parameters)
+            elif function_name == "get_availability":
+                return self._get_availability(parameters)
+            elif function_name == "schedule_meeting":
+                return self._schedule_meeting(parameters)
             else:
                 return {
                     "success": False,
@@ -676,5 +680,128 @@ class AIActionExecutor:
             return {
                 "success": False,
                 "error": f"Failed to assign e-signature: {str(e)}"
+            }
+    
+    def _get_availability(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get available time slots for scheduling"""
+        try:
+            from calcom_service import CalComService
+            calcom_service = CalComService()
+            
+            date_from = params.get("date_from")
+            date_to = params.get("date_to")
+            event_type_id = params.get("event_type_id")
+            
+            availability = calcom_service.get_availability(
+                date_from=date_from,
+                date_to=date_to,
+                event_type_id=event_type_id
+            )
+            
+            return {
+                "success": True,
+                "result": availability
+            }
+        except Exception as e:
+            logger.error(f"Error getting availability: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"Failed to get availability: {str(e)}"
+            }
+    
+    def _schedule_meeting(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Schedule a meeting with the Reel48 team"""
+        try:
+            from calcom_service import CalComService
+            calcom_service = CalComService()
+            
+            event_type_id = params.get("event_type_id")
+            start_time = params.get("start_time")
+            customer_email = params.get("customer_email")
+            customer_name = params.get("customer_name")
+            notes = params.get("notes")
+            
+            if not event_type_id or not start_time or not customer_email or not customer_name:
+                return {
+                    "success": False,
+                    "error": "event_type_id, start_time, customer_email, and customer_name are required"
+                }
+            
+            # Create booking
+            booking = calcom_service.create_booking(
+                event_type_id=event_type_id,
+                start_time=start_time,
+                attendee_info={
+                    "name": customer_name,
+                    "email": customer_email
+                },
+                notes=notes
+            )
+            
+            # Store in database (get customer_id from email)
+            try:
+                client_response = supabase_storage.table("clients").select("user_id").eq("email", customer_email).single().execute()
+                customer_id = None
+                if client_response.data and client_response.data.get("user_id"):
+                    customer_id = client_response.data["user_id"]
+                
+                if customer_id:
+                    # Get event type name
+                    event_types = calcom_service.get_event_types()
+                    event_type_name = None
+                    for et in event_types:
+                        if et.get("id") == event_type_id:
+                            event_type_name = et.get("title", et.get("slug", ""))
+                            break
+                    
+                    # Parse start and end times
+                    from datetime import datetime, timedelta
+                    start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                    # Estimate end time (default 30 minutes, or use event type duration)
+                    duration = 30  # minutes
+                    for et in event_types:
+                        if et.get("id") == event_type_id:
+                            duration = et.get("length", 30)
+                            break
+                    end_dt = start_dt + timedelta(minutes=duration)
+                    
+                    # Store in database
+                    booking_record = {
+                        "id": str(uuid.uuid4()),
+                        "booking_id": str(booking.get("id", "")),
+                        "customer_id": customer_id,
+                        "customer_email": customer_email,
+                        "customer_name": customer_name,
+                        "event_type": event_type_name,
+                        "event_type_id": str(event_type_id),
+                        "start_time": start_dt.isoformat(),
+                        "end_time": end_dt.isoformat(),
+                        "timezone": "America/New_York",
+                        "meeting_url": booking.get("location", {}).get("url") if isinstance(booking.get("location"), dict) else booking.get("location"),
+                        "status": "confirmed",
+                        "notes": notes,
+                        "created_at": datetime.now().isoformat(),
+                        "updated_at": datetime.now().isoformat()
+                    }
+                    
+                    supabase_storage.table("calcom_bookings").insert(booking_record).execute()
+            except Exception as db_error:
+                logger.warning(f"Could not store booking in database: {str(db_error)}")
+                # Continue anyway - booking was created in Cal.com
+            
+            return {
+                "success": True,
+                "result": {
+                    "booking_id": booking.get("id"),
+                    "start_time": start_time,
+                    "meeting_url": booking.get("location", {}).get("url") if isinstance(booking.get("location"), dict) else booking.get("location"),
+                    "message": "Meeting scheduled successfully"
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error scheduling meeting: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"Failed to schedule meeting: {str(e)}"
             }
 

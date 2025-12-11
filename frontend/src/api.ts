@@ -811,6 +811,89 @@ export interface ChatConversation {
   customer_name?: string;
 }
 
+// Cal.com Types
+export interface CalComBooking {
+  id: string;
+  booking_id: string;
+  customer_id: string;
+  customer_email: string;
+  customer_name: string;
+  event_type: string | null;
+  event_type_id: string | null;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  meeting_url: string | null;
+  status: string;
+  notes: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  calcom_data?: any;
+}
+
+export interface CalComEventType {
+  id: number;
+  title: string;
+  slug: string;
+  length: number;
+  description?: string;
+}
+
+export interface CalComAvailability {
+  date: string;
+  slots: string[];
+}
+
+export interface CalComBookingCreate {
+  event_type_id: number;
+  start_time: string;
+  timezone?: string;
+  notes?: string;
+}
+
+export interface CalComBookingReschedule {
+  start_time: string;
+  timezone?: string;
+}
+
+export const calcomAPI = {
+  getAvailability: (params?: { date_from?: string; date_to?: string; event_type_id?: number }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.date_from) queryParams.append('date_from', params.date_from);
+    if (params?.date_to) queryParams.append('date_to', params.date_to);
+    if (params?.event_type_id) queryParams.append('event_type_id', params.event_type_id.toString());
+    const queryString = queryParams.toString();
+    return api.get<any>(`/api/calcom/availability${queryString ? `?${queryString}` : ''}`);
+  },
+  getEventTypes: () => api.get<{ event_types: CalComEventType[] }>('/api/calcom/event-types'),
+  createBooking: (booking: CalComBookingCreate) => api.post<CalComBooking>('/api/calcom/bookings', booking),
+  getBookings: () => api.get<{ bookings: CalComBooking[] }>('/api/calcom/bookings'),
+  getBooking: (bookingId: string) => api.get<CalComBooking>(`/api/calcom/bookings/${bookingId}`),
+  cancelBooking: (bookingId: string, reason?: string) => {
+    const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return api.delete<{ message: string }>(`/api/calcom/bookings/${bookingId}${params}`);
+  },
+  rescheduleBooking: (bookingId: string, data: CalComBookingReschedule) => 
+    api.patch<{ message: string; booking: any }>(`/api/calcom/bookings/${bookingId}/reschedule`, data),
+  getAdminBookings: (filters?: { status?: string; date_from?: string; date_to?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.date_from) params.append('date_from', filters.date_from);
+    if (filters?.date_to) params.append('date_to', filters.date_to);
+    const queryString = params.toString();
+    return api.get<{ bookings: CalComBooking[] }>(`/api/calcom/admin/bookings${queryString ? `?${queryString}` : ''}`);
+  },
+  getAdminCalendar: (params?: { date_from?: string; date_to?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.date_from) queryParams.append('date_from', params.date_from);
+    if (params?.date_to) queryParams.append('date_to', params.date_to);
+    const queryString = queryParams.toString();
+    return api.get<{ bookings: CalComBooking[]; calcom_bookings: any[]; google_calendar_events: any[]; date_from: string; date_to: string }>(`/api/calcom/admin/calendar${queryString ? `?${queryString}` : ''}`);
+  },
+};
+
 export const chatAPI = {
   getOchoUserId: () => api.get<{ocho_user_id: string}>('/api/chat/ocho-user-id'),
   getConversations: () => api.get<ChatConversation[]>('/api/chat/conversations'),

@@ -32,6 +32,8 @@ const QuoteAnalytics = lazy(() => import('./pages/QuoteAnalytics'));
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const CustomerChatPage = lazy(() => import('./pages/CustomerChatPage'));
+const CustomerSchedulingPage = lazy(() => import('./pages/CustomerSchedulingPage'));
+const AdminCalendarView = lazy(() => import('./pages/AdminCalendarView'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -77,6 +79,8 @@ function Navigation() {
   // Determine active tab based on path
   const isFormsActive = location.pathname.startsWith('/forms');
   const isQuotesActive = !isFormsActive && (location.pathname === '/' || location.pathname.startsWith('/quotes'));
+  const isSchedulingActive = location.pathname.startsWith('/scheduling');
+  const isCalendarActive = location.pathname.startsWith('/admin/calendar');
   const isFilesActive = location.pathname.startsWith('/files');
   const isESignatureActive = location.pathname.startsWith('/esignature');
   const isFoldersActive = location.pathname.startsWith('/folders');
@@ -391,6 +395,14 @@ function Navigation() {
                 Chat
               </Link>
             </li>
+            <li>
+              <Link
+                to="/admin/calendar"
+                className={`nav-tab ${isCalendarActive ? 'active' : ''}`}
+              >
+                Calendar
+              </Link>
+            </li>
             <li 
               ref={dropdownRef}
               className={`nav-dropdown ${isSettingsDropdownOpen ? 'open' : ''}`}
@@ -467,6 +479,14 @@ function Navigation() {
             </li>
             <li>
               <Link 
+                to="/scheduling" 
+                className={`nav-tab ${isSchedulingActive ? 'active' : ''}`}
+              >
+                Schedule Meeting
+              </Link>
+            </li>
+            <li>
+              <Link 
                 to="/profile" 
                 className={`nav-tab ${isProfileActive ? 'active' : ''}`}
               >
@@ -513,6 +533,7 @@ function AppContent() {
           <Route path="/" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><HomePage /></Suspense></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerDashboard /></Suspense></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerChatPage /></Suspense></ProtectedRoute>} />
+          <Route path="/scheduling" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerSchedulingPage /></Suspense></ProtectedRoute>} />
           <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteView /></Suspense></ProtectedRoute>} />
           <Route path="/forms" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormsList /></Suspense></ProtectedRoute>} />
           <Route path="/forms/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormView /></Suspense></ProtectedRoute>} />
@@ -533,6 +554,7 @@ function AppContent() {
           <Route path="/clients" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><ClientsList /></Suspense></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><CompanySettingsPage /></Suspense></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteAnalytics /></Suspense></ProtectedRoute>} />
+          <Route path="/admin/calendar" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><AdminCalendarView /></Suspense></ProtectedRoute>} />
           <Route path="/email-templates" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><EmailTemplates /></Suspense></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Profile /></Suspense></ProtectedRoute>} />
         </Routes>

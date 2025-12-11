@@ -292,6 +292,57 @@ class AIService:
                     },
                     "required": ["folder_id", "document_id"]
                 }
+            },
+            {
+                "name": "get_availability",
+                "description": "Get available time slots for scheduling a meeting with the Reel48 team. Use this when a customer wants to schedule a meeting or asks about available times.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "date_from": {
+                            "type": "string",
+                            "description": "Optional: Start date in YYYY-MM-DD format (defaults to today)"
+                        },
+                        "date_to": {
+                            "type": "string",
+                            "description": "Optional: End date in YYYY-MM-DD format (defaults to 30 days from now)"
+                        },
+                        "event_type_id": {
+                            "type": "number",
+                            "description": "Optional: Event type ID to filter by specific meeting type"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "schedule_meeting",
+                "description": "Schedule a meeting with the Reel48 team. Use this when a customer wants to book a meeting and has selected a specific time. Always use get_availability first to show available times, then use this function to book their preferred time.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "event_type_id": {
+                            "type": "number",
+                            "description": "REQUIRED: The event type ID from Cal.com (usually 1 for standard meetings)"
+                        },
+                        "start_time": {
+                            "type": "string",
+                            "description": "REQUIRED: Start time in ISO format (YYYY-MM-DDTHH:MM:SS) or (YYYY-MM-DDTHH:MM:SSZ)"
+                        },
+                        "customer_email": {
+                            "type": "string",
+                            "description": "REQUIRED: Customer's email address"
+                        },
+                        "customer_name": {
+                            "type": "string",
+                            "description": "REQUIRED: Customer's name"
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Optional: Additional notes or questions for the meeting"
+                        }
+                    },
+                    "required": ["event_type_id", "start_time", "customer_email", "customer_name"]
+                }
             }
         ]
     
@@ -608,8 +659,16 @@ YOUR RESPONSIBILITIES:
 - Help customers understand our ordering process
 - Answer questions about quotes, forms, and orders
 - Provide general information about our services
+- **Help customers schedule meetings with the Reel48 team** - Use get_availability to show available times, then schedule_meeting to book
 - Be helpful, friendly, and professional at all times
 - **IMPORTANT: You CAN modify/update quotes after they are created** - If you make a mistake or need to add items to an existing quote, use the update_quote function
+
+SCHEDULING MEETINGS:
+- When a customer wants to schedule a meeting, first use get_availability to show them available time slots
+- Present the available times in a clear, user-friendly format
+- Once the customer selects a time, use schedule_meeting to book it
+- Always confirm the booking details after scheduling
+- You can also direct customers to the scheduling page at /scheduling for more options
 
 COMMUNICATION STYLE:
 - **BE CONCISE**: Keep your answers short (1-3 sentences) unless the customer explicitly asks for more detail
