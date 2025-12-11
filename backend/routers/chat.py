@@ -1387,7 +1387,8 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                         logger.warning(f"⚠️ line_items MISSING from function params! Available keys: {list(func_params.keys())}")
                     logger.info(f"Full params (sanitized): { {k: v for k, v in func_params.items() if k != 'client_id'} }")
                     
-                    result = action_executor.execute_function(func_name, func_params)
+                    # Get user message for validation
+                    result = action_executor.execute_function(func_name, func_params, user_message=user_query)
                     
                     # Update response with results
                     if func_name == "create_quote" and result.get("success"):
