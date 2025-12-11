@@ -340,14 +340,12 @@ function CustomerSchedulingPage() {
               )}
 
               <div className="scheduler-wrapper">
-                <div className="calendar-picker-container">
-                  <CalendarPicker
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    eventTypeId={selectedEventType?.id}
-                    timezone={timezone}
-                  />
-                </div>
+                <CalendarPicker
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                  eventTypeId={selectedEventType?.id}
+                  timezone={timezone}
+                />
                 {selectedDate && (
                   <TimeSlotSelector
                     selectedDate={selectedDate}

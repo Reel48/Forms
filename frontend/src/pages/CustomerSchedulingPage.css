@@ -194,25 +194,30 @@
   /* CHANGED: 'stretch' forces both children to be the exact same height */
   align-items: stretch;
   gap: 2rem;
-  max-width: 1200px;
+  /* Make the main container wider */
+  width: 100%;
+  max-width: 1400px; /* Increased from 1200px to fill more screen */
   margin: 0 auto;
   padding: 1rem;
 }
 
 .calendar-picker-container {
-  flex-shrink: 0;
+  flex: 1;
+  width: 100%;
+  max-width: none;
 }
 
 .time-slots-layout {
+  /* This creates the equal 50/50 split */
   flex: 1;
-  min-width: 300px;
-  /* CHANGED: Matches the calendar's new max-width */
-  max-width: 32rem;
+  width: 100%; /* Forces them to fill their half */
+  /* Remove the small max-width we set earlier */
+  max-width: none;
   background: white;
   /* ADDED: Border to match the calendar visually */
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 1.5rem; /* Match calendar padding */
+  padding: 2rem; /* More breathing room inside */
   /* OPTIONAL: This helps center the "No times" message vertically if you want */
   display: flex;
   flex-direction: column;
