@@ -1130,7 +1130,7 @@ async def generate_ai_response(
                                         assign_result = action_executor.execute_function("assign_form_to_folder", {
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
-                                        })
+                                        }, user_message=None)
                                         # Form is automatically added to folder - no need to mention it in response
                                         logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
                             except Exception as e:
@@ -1497,7 +1497,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                                         assign_result = action_executor.execute_function("assign_form_to_folder", {
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
-                                        })
+                                        }, user_message=None)
                                         # Form is automatically added to folder - no need to mention it in response
                                         logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
                             except Exception as e:
