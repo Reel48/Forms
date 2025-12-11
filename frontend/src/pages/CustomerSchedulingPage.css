@@ -204,8 +204,8 @@
 
 .time-slots-layout {
   flex: 1;
-  min-width: 300px;
-  max-width: 28rem;
+  min-width: 300px; /* Prevents it from getting too squished */
+  max-width: 28rem; /* Matches calendar size approx */
 }
 
 .booking-notes-section {
