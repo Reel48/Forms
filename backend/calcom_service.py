@@ -115,7 +115,8 @@ class CalComService:
         if event_type_id:
             params["eventTypeId"] = event_type_id
         
-        return self._make_request("GET", f"/availability/{username}", params=params)
+        # Cal.com API v1 availability endpoint doesn't include username in path
+        return self._make_request("GET", "/availability", params=params)
     
     def get_event_types(self, username: Optional[str] = None) -> List[Dict[str, Any]]:
         """

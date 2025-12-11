@@ -704,6 +704,13 @@ class AIActionExecutor:
             }
         except Exception as e:
             logger.error(f"Error getting availability: {str(e)}", exc_info=True)
+            # Return a more user-friendly error message
+            error_msg = str(e)
+            if "404" in error_msg:
+                return {
+                    "success": False,
+                    "error": "The scheduling service is temporarily unavailable. Please try using the scheduling page directly or contact support."
+                }
             return {
                 "success": False,
                 "error": f"Failed to get availability: {str(e)}"
