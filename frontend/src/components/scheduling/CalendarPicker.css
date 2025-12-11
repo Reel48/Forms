@@ -1,9 +1,43 @@
+/* --- NEW LAYOUT CLASSES --- */
+/* The wrapper that holds both calendar and times side-by-side */
+.scheduler-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* The right-hand column for the times */
+.time-slots-layout {
+  flex: 1;
+  min-width: 300px; /* Prevents it from getting too squished */
+  max-width: 28rem; /* Matches calendar size approx */
+  /* Optional styling to match calendar card */
+  background: white;
+  border-radius: 8px;
+  /* Uncomment below if you want the border around times too */
+  /* border: 1px solid var(--color-border, #e5e7eb); */ 
+  /* padding: 1rem; */
+}
+
+/* Container for calendar picker */
+.calendar-picker-container {
+  flex-shrink: 0;
+}
+
+/* --- UPDATED CALENDAR STYLES --- */
 .calendar-picker {
   background: white;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   padding: 1rem;
-  max-width: 100%;
+  /* FIX 1: Restrict width so cells stay square and compact */
+  width: 100%;
+  max-width: 26rem; /* approx 416px */
+  flex-shrink: 0;   /* Prevents calendar from shrinking in flex container */
 }
 
 .calendar-header {
@@ -46,6 +80,8 @@
   grid-template-columns: repeat(7, 1fr);
   gap: 0.25rem;
   margin-bottom: 0.5rem;
+  /* FIX 2: Ensure alignment matches grid */
+  justify-items: center;
 }
 
 .calendar-weekday {
@@ -60,12 +96,16 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0.25rem;
+  /* FIX 3: Center the days in their columns */
+  justify-items: center;
 }
 
 .calendar-day {
   aspect-ratio: 1;
+  /* Make button responsive to column width */
+  width: 100%; 
+  max-width: 40px; /* Cap the size */
   min-height: 36px;
-  max-height: 40px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: white;
@@ -89,6 +129,7 @@
   background: var(--color-bg-secondary, #f9fafb);
   border-color: var(--color-primary, #2563eb);
   transform: scale(1.05);
+  z-index: 1;
 }
 
 .calendar-day.today {
@@ -190,6 +231,14 @@
 
 /* Mobile responsive */
 @media (max-width: 768px) {
+  /* Wraps the side-by-side layout into a stack */
+  .scheduler-wrapper {
+    flex-direction: column; 
+    align-items: stretch;
+    gap: 1.5rem;
+    padding: 0.5rem;
+  }
+
   .calendar-picker {
     padding: 0.75rem;
     width: 100%;
@@ -197,8 +246,15 @@
     box-sizing: border-box;
   }
 
+  /* Reset the times container for mobile */
+  .time-slots-layout {
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .calendar-day {
     min-height: 44px; /* Touch-friendly */
+    max-width: none;
     font-size: 0.75rem;
   }
 
@@ -225,4 +281,3 @@
     gap: 0.25rem;
   }
 }
-

@@ -339,26 +339,27 @@ function CustomerSchedulingPage() {
                 </div>
               )}
 
-              <div className="booking-calendar-section">
-                <CalendarPicker
-                  selectedDate={selectedDate}
-                  onDateSelect={setSelectedDate}
-                  eventTypeId={selectedEventType?.id}
-                  timezone={timezone}
-                />
-              </div>
-
-              {selectedDate && (
-                <div className="time-slot-section">
-                  <TimeSlotSelector
+              <div className="scheduler-wrapper">
+                <div className="calendar-picker-container">
+                  <CalendarPicker
                     selectedDate={selectedDate}
-                    onTimeSlotSelect={handleTimeSlotSelect}
+                    onDateSelect={setSelectedDate}
                     eventTypeId={selectedEventType?.id}
                     timezone={timezone}
-                    onQuickBook={handleQuickBook}
                   />
                 </div>
-              )}
+                {selectedDate && (
+                  <div className="time-slots-layout">
+                    <TimeSlotSelector
+                      selectedDate={selectedDate}
+                      onTimeSlotSelect={handleTimeSlotSelect}
+                      eventTypeId={selectedEventType?.id}
+                      timezone={timezone}
+                      onQuickBook={handleQuickBook}
+                    />
+                  </div>
+                )}
+              </div>
 
               {selectedDate && (
                 <div className="booking-notes-section">

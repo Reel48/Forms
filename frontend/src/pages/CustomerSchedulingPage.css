@@ -187,12 +187,25 @@
   cursor: pointer;
 }
 
-.booking-calendar-section {
-  margin-bottom: 2rem;
+/* Scheduler wrapper for side-by-side layout */
+.scheduler-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
-.time-slot-section {
-  margin-bottom: 2rem;
+.calendar-picker-container {
+  flex-shrink: 0;
+}
+
+.time-slots-layout {
+  flex: 1;
+  min-width: 300px;
+  max-width: 28rem;
 }
 
 .booking-notes-section {
@@ -419,6 +432,19 @@ button:disabled {
 
   .page-header h1 {
     font-size: 1.5rem;
+  }
+
+  /* Stack scheduler layout on mobile */
+  .scheduler-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+    padding: 0.5rem;
+  }
+
+  .time-slots-layout {
+    max-width: 100%;
+    min-width: 0;
   }
 
   .tabs {
