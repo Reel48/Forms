@@ -18,10 +18,13 @@ interface GoogleCalendarEvent {
   source: string;
 }
 
+type CalendarEvent = 
+  | (CalComBooking & { type: 'calcom' })
+  | (GoogleCalendarEvent & { type: 'google' });
+
 function AdminCalendarView() {
   const { role } = useAuth();
   const [bookings, setBookings] = useState<CalComBooking[]>([]);
-  const [calcomBookings, setCalcomBookings] = useState<any[]>([]);
   const [googleCalendarEvents, setGoogleCalendarEvents] = useState<GoogleCalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -44,7 +47,6 @@ function AdminCalendarView() {
       
       const response = await calcomAPI.getAdminCalendar({ date_from: dateFrom, date_to: dateTo });
       setBookings(response.data.bookings || []);
-      setCalcomBookings(response.data.calcom_bookings || []);
       setGoogleCalendarEvents(response.data.google_calendar_events || []);
     } catch (error: any) {
       console.error('Failed to load calendar data:', error);
@@ -221,7 +223,7 @@ function AdminCalendarView() {
 
   const renderListView = () => {
     // Combine Cal.com bookings and Google Calendar events
-    const allEvents: Array<CalComBooking | GoogleCalendarEvent & { type: 'calcom' | 'google' }> = [
+    const allEvents: CalendarEvent[] = [
       ...bookings.map(b => ({ ...b, type: 'calcom' as const })),
       ...googleCalendarEvents.map(e => ({ ...e, type: 'google' as const }))
     ];
@@ -241,7 +243,7 @@ function AdminCalendarView() {
         ) : (
           sortedEvents.map((item) => {
             if (item.type === 'calcom') {
-              const booking = item as CalComBooking;
+              const booking = item;
               return (
                 <div key={booking.id} className="calendar-list-item">
                   <div className="list-item-time">
@@ -282,7 +284,7 @@ function AdminCalendarView() {
                 </div>
               );
             } else {
-              const event = item as GoogleCalendarEvent;
+              const event = item;
               return (
                 <div key={event.id} className="calendar-list-item">
                   <div className="list-item-time">

@@ -55,22 +55,6 @@ function CustomerSchedulingPage() {
     });
   };
 
-  const formatDate = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
 
   const isUpcoming = (booking: CalComBooking) => {
     return new Date(booking.start_time) > new Date() && booking.status === 'confirmed';
