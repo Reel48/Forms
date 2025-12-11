@@ -3,7 +3,7 @@ AI Action Executor Service
 Handles execution of function calls from the AI chatbot
 """
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, Optional, List
 from decimal import Decimal
 import uuid
 from datetime import datetime
@@ -30,18 +30,31 @@ class AIActionExecutor:
         """
         self.admin_user_id = admin_user_id
     
-    def execute_function(self, function_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_function(self, function_name: str, parameters: Dict[str, Any], user_message: Optional[str] = None) -> Dict[str, Any]:
         """
         Execute a function call from the AI
         
         Args:
             function_name: Name of the function to execute
             parameters: Parameters for the function
+            user_message: Optional user message for validation checks
             
         Returns:
             Dict with 'success', 'result', and optionally 'error' keys
         """
         try:
+            # 🚨 CRITICAL VALIDATION: Prevent create_quote when user asks to schedule
+            if function_name == "create_quote" and user_message:
+                user_msg_lower = user_message.lower()
+                scheduling_keywords = ["schedule", "meeting", "meet", "call", "talk", "speak", "book time", "schedule time", "set up a call"]
+                if any(keyword in user_msg_lower for keyword in scheduling_keywords):
+                    logger.warning(f"🚨 BLOCKED: AI tried to call create_quote when user asked to schedule. User message: {user_message}")
+                    return {
+                        "success": False,
+                        "error": "I understand you want to schedule a meeting, not create a quote. Let me help you find available times instead. Please use get_availability to show scheduling options.",
+                        "suggestion": "Use get_availability instead"
+                    }
+            
             if function_name == "create_quote":
                 return self._create_quote(parameters)
             elif function_name == "update_quote":

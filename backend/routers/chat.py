@@ -948,11 +948,14 @@ async def generate_ai_response(
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
         
-        # Execute function calls if any
-        execution_results = []
-        if function_calls and admin_user_id:
-            try:
-                action_executor = AIActionExecutor(admin_user_id)
+            # Execute function calls if any
+            execution_results = []
+            if function_calls and admin_user_id:
+                try:
+                    action_executor = AIActionExecutor(admin_user_id)
+                    
+                    # Get the user's message for validation
+                    user_message = user_query  # Use the user_query directly
                 
                 # Get client_id from customer context if available
                 client_id = None
