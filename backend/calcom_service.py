@@ -123,8 +123,28 @@ class CalComService:
             List of event types with details
         """
         username = username or self.username
-        response = self._make_request("GET", f"/event-types", params={"username": username})
-        return response.get("event_types", [])
+        try:
+            # Try the event-types endpoint with username parameter
+            response = self._make_request("GET", f"/event-types", params={"username": username})
+            # Cal.com API might return event_types as a list directly or nested
+            if isinstance(response, list):
+                return response
+            return response.get("event_types", response.get("data", []))
+        except requests.exceptions.HTTPError as e:
+            # If 404 or other error, try alternative endpoint format
+            if e.response.status_code == 404:
+                logger.warning(f"Event types endpoint not found, trying alternative format")
+                try:
+                    # Try without username param or different endpoint
+                    response = self._make_request("GET", f"/event-types")
+                    if isinstance(response, list):
+                        return response
+                    return response.get("event_types", response.get("data", []))
+                except Exception:
+                    # Return empty list if both attempts fail
+                    logger.warning("Could not fetch event types, returning empty list")
+                    return []
+            raise
     
     def create_booking(
         self,

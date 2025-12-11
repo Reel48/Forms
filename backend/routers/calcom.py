@@ -76,10 +76,14 @@ async def get_event_types(user = Depends(get_current_user)):
         event_types = calcom_service.get_event_types()
         return {"event_types": event_types}
     except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        # API key not configured - return empty list instead of error
+        logger.warning(f"Cal.com API key not configured: {str(e)}")
+        return {"event_types": []}
     except Exception as e:
+        # Log the error but return empty list to prevent page breakage
         logger.error(f"Error fetching event types: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to fetch event types: {str(e)}")
+        # Return empty list instead of failing - allows page to load
+        return {"event_types": []}
 
 @router.post("/bookings")
 async def create_booking(
