@@ -225,7 +225,8 @@ function CustomerSchedulingPage() {
   }
 
   return (
-    <div className="scheduling-page">
+    <div className="container">
+      <div className="scheduling-page">
       <div className="page-header">
         <h1>Schedule a Meeting</h1>
         <p>Book a time to meet with the Reel48 team</p>
@@ -322,6 +323,7 @@ function CustomerSchedulingPage() {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

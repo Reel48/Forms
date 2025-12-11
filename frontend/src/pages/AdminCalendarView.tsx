@@ -337,7 +337,8 @@ function AdminCalendarView() {
   }
 
   return (
-    <div className="admin-calendar-page">
+    <div className="container">
+      <div className="admin-calendar-page">
       <div className="calendar-header">
         <h1>Calendar</h1>
         <div className="calendar-controls">
@@ -477,6 +478,7 @@ function AdminCalendarView() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
