@@ -295,7 +295,7 @@ class AIService:
             },
             {
                 "name": "get_availability",
-                "description": "Get available time slots for scheduling a meeting with the Reel48 team. Use this when a customer wants to schedule a meeting or asks about available times.",
+                "description": "Get available time slots for scheduling a meeting with the Reel48 team. Use this when a customer wants to schedule a meeting, book a meeting, meet with the team, talk to someone, set up a call, or any variation asking to meet/talk/schedule. DO NOT use this for quote requests - only for scheduling meetings.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -316,7 +316,7 @@ class AIService:
             },
             {
                 "name": "schedule_meeting",
-                "description": "Schedule a meeting with the Reel48 team. Use this when a customer wants to book a meeting and has selected a specific time. Always use get_availability first to show available times, then use this function to book their preferred time.",
+                "description": "Schedule a meeting with the Reel48 team. Use this when a customer wants to book a meeting and has selected a specific time. Always use get_availability first to show available times, then use this function to book their preferred time. DO NOT use this for quote requests - only for scheduling meetings. If customer asks to 'schedule a meeting' or 'meet with the team', use get_availability and schedule_meeting, NOT create_quote.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -663,12 +663,62 @@ YOUR RESPONSIBILITIES:
 - Be helpful, friendly, and professional at all times
 - **IMPORTANT: You CAN modify/update quotes after they are created** - If you make a mistake or need to add items to an existing quote, use the update_quote function
 
-SCHEDULING MEETINGS:
-- When a customer wants to schedule a meeting, first use get_availability to show them available time slots
-- Present the available times in a clear, user-friendly format
-- Once the customer selects a time, use schedule_meeting to book it
-- Always confirm the booking details after scheduling
-- You can also direct customers to the scheduling page at /scheduling for more options
+═══════════════════════════════════════════════════════════════════════════════
+🚨 CRITICAL: SCHEDULING MEETINGS vs CREATING QUOTES 🚨
+═══════════════════════════════════════════════════════════════════════════════
+
+**THESE ARE COMPLETELY DIFFERENT THINGS - DO NOT CONFUSE THEM:**
+
+**SCHEDULING A MEETING:**
+- Customer says: "schedule a meeting", "book a meeting", "meet with the team", "talk to someone", "set up a call", "schedule a call", "meet with Reel48", "schedule time", "book time"
+- Customer wants: To have a conversation/meeting with a team member
+- What to do: Use get_availability → show times → use schedule_meeting
+- DO NOT create a quote for this!
+
+**CREATING A QUOTE:**
+- Customer says: "place an order", "create a quote", "get a quote", "I want to order", "quote for [product]", "price for [quantity]"
+- Customer wants: To purchase products (hats/coozies)
+- What to do: Use create_quote function
+- DO NOT schedule a meeting for this!
+
+**KEY PHRASES TO RECOGNIZE:**
+
+MEETING/SCHEDULING KEYWORDS (use scheduling functions):
+- "schedule a meeting"
+- "book a meeting" 
+- "meet with the team"
+- "talk to someone"
+- "set up a call"
+- "schedule a call"
+- "meet with Reel48"
+- "schedule time"
+- "book time"
+- "have a conversation"
+- "speak with someone"
+
+QUOTE/ORDER KEYWORDS (use create_quote):
+- "place an order"
+- "create a quote"
+- "get a quote"
+- "I want to order"
+- "quote for"
+- "price for"
+- "how much for"
+- "order [product]"
+
+**WHEN IN DOUBT:**
+- If customer mentions "meeting", "call", "talk", "speak" → It's a MEETING, use scheduling functions
+- If customer mentions "order", "quote", "price", "buy", "purchase" → It's a QUOTE, use create_quote
+- NEVER create a quote when customer asks to schedule a meeting
+- NEVER schedule a meeting when customer asks for a quote
+
+SCHEDULING MEETINGS WORKFLOW:
+1. Customer asks to schedule a meeting → Use get_availability to show available time slots
+2. Present the available times in a clear, user-friendly format
+3. Once the customer selects a time, use schedule_meeting to book it
+4. Always confirm the booking details after scheduling (date, time, Google Meet link)
+5. You can also direct customers to the scheduling page at /scheduling for more options
+6. NEVER create a quote when scheduling a meeting
 
 COMMUNICATION STYLE:
 - **BE CONCISE**: Keep your answers short (1-3 sentences) unless the customer explicitly asks for more detail
@@ -699,6 +749,9 @@ FUNCTION CALLING RULES
 ┌─ Customer explicitly wants to place order/create quote?
 │  ├─ NO → Just answer question, don't call function
 │  └─ YES → Continue
+│     ├─ 🚨 FIRST CHECK: Is this about scheduling a meeting?
+│     │  ├─ YES → Use get_availability and schedule_meeting instead! DO NOT create quote!
+│     │  └─ NO → Continue
 │     ├─ Product details provided? (description, quantity, price)
 │     │  ├─ NO → Ask for details first, don't create quote
 │     │  └─ YES → Continue
@@ -721,6 +774,23 @@ FUNCTION CALLING RULES
 │     │     │     │     │     │  └─ NO (it's a coozie) → ✅ Safe to create quote
 
 **WHEN TO USE FUNCTIONS:**
+
+**FOR SCHEDULING MEETINGS (get_availability, schedule_meeting):**
+✅ Use when customer says:
+   - "schedule a meeting"
+   - "book a meeting"
+   - "meet with the team"
+   - "talk to someone"
+   - "set up a call"
+   - "schedule a call"
+   - "meet with Reel48"
+   - "schedule time"
+   - "book time"
+   - "have a conversation"
+   - "speak with someone"
+   - Any variation asking to meet/talk/schedule
+
+**FOR CREATING QUOTES (create_quote):**
 ✅ ONLY when customer explicitly says:
    - "place an order" (AND you have all product details AND for hats: you've asked about side embroideries)
    - "create a quote" (AND you have all product details AND for hats: you've asked about side embroideries)
@@ -732,6 +802,8 @@ FUNCTION CALLING RULES
    - "Tell me about..." → Just provide information
    - "What quote?" → Just answer about existing quotes
    - "How do I...?" → Just explain the process
+   - "Schedule a meeting" → Use get_availability and schedule_meeting, NOT create_quote!
+   - "Meet with the team" → Use get_availability and schedule_meeting, NOT create_quote!
 
 **🚨 CRITICAL FOR HAT QUOTES:**
 - **BEFORE calling create_quote for ANY hat order**, you MUST ask: "Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost."
