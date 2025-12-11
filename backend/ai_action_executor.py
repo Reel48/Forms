@@ -700,7 +700,8 @@ class AIActionExecutor:
             
             return {
                 "success": True,
-                "result": availability
+                "result": availability,
+                "message": "Here are the available times for scheduling a meeting with the Reel48 team."
             }
         except Exception as e:
             logger.error(f"Error getting availability: {str(e)}", exc_info=True)
