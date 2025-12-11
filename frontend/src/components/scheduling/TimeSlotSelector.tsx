@@ -94,7 +94,7 @@ export default function TimeSlotSelector({
 
   if (!selectedDate) {
     return (
-      <div className="time-slot-selector">
+      <div className="time-slots-layout is-empty">
         <div className="time-slot-empty">
           <p>Select a date to see available time slots</p>
         </div>
@@ -103,12 +103,12 @@ export default function TimeSlotSelector({
   }
 
   return (
-    <div className="time-slot-selector">
+    <div className={`time-slots-layout ${timeSlots.length === 0 ? 'is-empty' : ''}`}>
       <div className="time-slot-header">
         <h4>Available Times for {format(selectedDate, 'EEEE, MMMM d')}</h4>
       </div>
 
-      {quickBookSuggestions.length > 0 && (
+      {quickBookSuggestions.length > 0 && timeSlots.length > 0 && (
         <div className="quick-book-section">
           <p className="quick-book-label">Quick Book:</p>
           <div className="quick-book-buttons">

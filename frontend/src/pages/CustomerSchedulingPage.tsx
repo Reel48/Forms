@@ -349,15 +349,13 @@ function CustomerSchedulingPage() {
                   />
                 </div>
                 {selectedDate && (
-                  <div className="time-slots-layout">
-                    <TimeSlotSelector
-                      selectedDate={selectedDate}
-                      onTimeSlotSelect={handleTimeSlotSelect}
-                      eventTypeId={selectedEventType?.id}
-                      timezone={timezone}
-                      onQuickBook={handleQuickBook}
-                    />
-                  </div>
+                  <TimeSlotSelector
+                    selectedDate={selectedDate}
+                    onTimeSlotSelect={handleTimeSlotSelect}
+                    eventTypeId={selectedEventType?.id}
+                    timezone={timezone}
+                    onQuickBook={handleQuickBook}
+                  />
                 )}
               </div>
 

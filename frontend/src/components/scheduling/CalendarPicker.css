@@ -3,11 +3,13 @@
   background: white;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 1rem;
-  /* FIX 1: Restrict width so cells stay square and compact */
+  padding: 1.5rem; /* Increased padding slightly for a bigger feel */
   width: 100%;
-  max-width: 26rem; /* approx 416px */
-  flex-shrink: 0;   /* Prevents calendar from shrinking in flex container */
+  /* CHANGED: Increased from 26rem to 32rem (approx 512px) */
+  max-width: 32rem;
+  flex-shrink: 0;
+  display: flex;       /* Added this to ensure internal spacing distributes well */
+  flex-direction: column;
 }
 
 .calendar-header {
@@ -72,10 +74,10 @@
 
 .calendar-day {
   aspect-ratio: 1;
-  /* Make button responsive to column width */
-  width: 100%; 
-  max-width: 40px; /* Cap the size */
-  min-height: 36px;
+  width: 100%;
+  /* CHANGED: Increased max-width so buttons grow with the wider container */
+  max-width: 50px;
+  min-height: 40px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: white;

@@ -191,7 +191,8 @@
 .scheduler-wrapper {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  /* CHANGED: 'stretch' forces both children to be the exact same height */
+  align-items: stretch;
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
@@ -204,8 +205,23 @@
 
 .time-slots-layout {
   flex: 1;
-  min-width: 300px; /* Prevents it from getting too squished */
-  max-width: 28rem; /* Matches calendar size approx */
+  min-width: 300px;
+  /* CHANGED: Matches the calendar's new max-width */
+  max-width: 32rem;
+  background: white;
+  /* ADDED: Border to match the calendar visually */
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 1.5rem; /* Match calendar padding */
+  /* OPTIONAL: This helps center the "No times" message vertically if you want */
+  display: flex;
+  flex-direction: column;
+}
+
+.time-slots-layout.is-empty {
+  justify-content: center; /* Centers content vertically */
+  align-items: center;     /* Centers content horizontally */
+  text-align: center;
 }
 
 .booking-notes-section {
