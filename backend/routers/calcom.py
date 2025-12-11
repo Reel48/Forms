@@ -79,6 +79,7 @@ async def get_availability(
         # Cal.com returns: {dateRanges: [{start, end}], workingHours: [...], busy: [...]}
         availability_by_date = {}
         
+        # Process dateRanges (specific available time windows)
         if raw_availability.get("dateRanges"):
             for date_range in raw_availability.get("dateRanges", []):
                 start_str = date_range.get("start")
@@ -118,6 +119,18 @@ async def get_availability(
                 except Exception as e:
                     logger.warning(f"Error parsing date range {date_range}: {str(e)}")
                     continue
+        
+        # If no dateRanges, try to use workingHours as fallback
+        if not availability_by_date and raw_availability.get("workingHours"):
+            logger.info("No dateRanges found, attempting to use workingHours")
+            # This is more complex - would need to generate slots based on working hours
+            # For now, we'll just log and return empty
+        
+        # Log for debugging
+        logger.info(f"Parsed availability: {len(availability_by_date)} days with slots")
+        if availability_by_date:
+            sample_date = list(availability_by_date.keys())[0]
+            logger.info(f"Sample date {sample_date} has {len(availability_by_date[sample_date])} slots")
         
         # Convert to array format expected by frontend
         availability_array = [
