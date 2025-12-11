@@ -54,7 +54,7 @@ export default function VerifyEmail() {
       // If we have an access_token in the hash, Supabase has already verified
       // We just need to set the session
       if (accessToken) {
-        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+        const { error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || ''
         });
@@ -63,15 +63,10 @@ export default function VerifyEmail() {
           throw sessionError;
         }
       } else {
-        // Otherwise, verify using the token
-        const { data, error: verifyError } = await supabase.auth.verifyOtp({
-          token: token,
-          type: 'email'
-        });
-
-        if (verifyError) {
-          throw verifyError;
-        }
+        // For Supabase email verification, we need the email address
+        // If we only have a token without access_token, we can't verify without email
+        // This case should be rare - Supabase typically provides access_token in hash
+        throw new Error('Invalid verification link format. Please use the link from your email.');
       }
 
       // Refresh user data to get updated email confirmation status
