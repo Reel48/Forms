@@ -123,8 +123,59 @@ async def get_availability(
         # If no dateRanges, try to use workingHours as fallback
         if not availability_by_date and raw_availability.get("workingHours"):
             logger.info("No dateRanges found, attempting to use workingHours")
-            # This is more complex - would need to generate slots based on working hours
-            # For now, we'll just log and return empty
+            # Parse workingHours to generate slots
+            from datetime import date as date_obj
+            
+            working_hours = raw_availability.get("workingHours", [])
+            timezone_str = raw_availability.get("timeZone", "America/New_York")
+            
+            # Get the date range we're querying
+            if date_from and date_to:
+                try:
+                    start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
+                    end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+                    
+                    # Generate slots for each day in range based on working hours
+                    current_date = start_date
+                    while current_date <= end_date:
+                        # Check if this day of week (0=Monday, 6=Sunday) is in working hours
+                        day_of_week = current_date.weekday()  # 0=Monday, 6=Sunday
+                        
+                        for wh in working_hours:
+                            if day_of_week in wh.get("days", []):
+                                start_time_minutes = wh.get("startTime", 0)  # e.g., 900 = 9:00 AM
+                                end_time_minutes = wh.get("endTime", 1380)  # e.g., 1380 = 11:00 PM
+                                
+                                # Convert minutes to hours and minutes
+                                start_hour = start_time_minutes // 60
+                                start_min = start_time_minutes % 60
+                                end_hour = end_time_minutes // 60
+                                end_min = end_time_minutes % 60
+                                
+                                # Generate time slots every event_duration minutes
+                                current_time = datetime.combine(current_date, datetime.min.time().replace(hour=start_hour, minute=start_min))
+                                end_time = datetime.combine(current_date, datetime.min.time().replace(hour=end_hour, minute=end_min))
+                                
+                                slot_duration = timedelta(minutes=event_duration)
+                                
+                                while current_time + slot_duration <= end_time:
+                                    # Check if this time is in the past
+                                    if current_time > datetime.now():
+                                        date_key = current_date.strftime("%Y-%m-%d")
+                                        time_slot = current_time.strftime("%H:%M")
+                                        
+                                        if date_key not in availability_by_date:
+                                            availability_by_date[date_key] = []
+                                        
+                                        if time_slot not in availability_by_date[date_key]:
+                                            availability_by_date[date_key].append(time_slot)
+                                    
+                                    current_time += slot_duration
+                                break  # Found working hours for this day
+                        
+                        current_date += timedelta(days=1)
+                except Exception as e:
+                    logger.warning(f"Error generating slots from workingHours: {str(e)}")
         
         # Log for debugging
         logger.info(f"Parsed availability: {len(availability_by_date)} days with slots")
