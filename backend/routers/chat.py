@@ -948,14 +948,14 @@ async def generate_ai_response(
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
         
-            # Execute function calls if any
-            execution_results = []
-            if function_calls and admin_user_id:
-                try:
-                    action_executor = AIActionExecutor(admin_user_id)
-                    
-                    # Get the user's message for validation
-                    user_message = user_query  # Use the user_query directly
+        # Execute function calls if any
+        execution_results = []
+        if function_calls and admin_user_id:
+            try:
+                action_executor = AIActionExecutor(admin_user_id)
+                
+                # Get the user's message for validation
+                user_message = user_query  # Use the user_query directly
                 
                 # Get client_id from customer context if available
                 client_id = None
@@ -1015,7 +1015,17 @@ async def generate_ai_response(
                         logger.warning(f"⚠️ line_items MISSING from function params! Available keys: {list(func_params.keys())}")
                     logger.info(f"Full params (sanitized): { {k: v for k, v in func_params.items() if k != 'client_id'} }")
                     
-                    result = action_executor.execute_function(func_name, func_params)
+                    # Get user message for validation (get from most recent customer message)
+                    user_message_for_validation = user_message
+                    try:
+                        if customer_id:
+                            recent_msg_response = supabase_storage.table("chat_messages").select("message").eq("conversation_id", conversation_id).eq("sender_id", customer_id).order("created_at", desc=True).limit(1).execute()
+                            if recent_msg_response.data:
+                                user_message_for_validation = recent_msg_response.data[0].get("message")
+                    except Exception:
+                        pass
+                    
+                    result = action_executor.execute_function(func_name, func_params, user_message=user_message_for_validation)
                     execution_results.append({
                         "function": func_name,
                         "success": result.get("success", False),
