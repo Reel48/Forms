@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { calcomAPI } from '../api';
 import type { CalComBooking, CalComEventType } from '../api';
+import CalendarPicker from '../components/scheduling/CalendarPicker';
+import TimeSlotSelector from '../components/scheduling/TimeSlotSelector';
+import SwipeableBookingCard from '../components/scheduling/SwipeableBookingCard';
+import BottomSheet from '../components/scheduling/BottomSheet';
+import { getUserTimezone } from '../utils/dateUtils';
 import './CustomerSchedulingPage.css';
 
 function CustomerSchedulingPage() {
@@ -12,10 +17,16 @@ function CustomerSchedulingPage() {
   const [eventTypes, setEventTypes] = useState<CalComEventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'book'>('upcoming');
-  const [cancellingBooking, setCancellingBooking] = useState<string | null>(null);
   const [reschedulingBooking, setReschedulingBooking] = useState<string | null>(null);
-  const [newBookingDate, setNewBookingDate] = useState('');
-  const [newBookingTime, setNewBookingTime] = useState('');
+  
+  // Booking state
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedEventType, setSelectedEventType] = useState<CalComEventType | null>(null);
+  const [timezone, setTimezone] = useState<string>(getUserTimezone());
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [creatingBooking, setCreatingBooking] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showRescheduleSheet, setShowRescheduleSheet] = useState(false);
 
   useEffect(() => {
     if (role === 'customer') {
@@ -24,6 +35,14 @@ function CustomerSchedulingPage() {
       navigate('/');
     }
   }, [role, navigate]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -34,6 +53,9 @@ function CustomerSchedulingPage() {
       ]);
       setBookings(bookingsResponse.data.bookings || []);
       setEventTypes(eventTypesResponse.data.event_types || []);
+      if (eventTypesResponse.data.event_types?.length > 0) {
+        setSelectedEventType(eventTypesResponse.data.event_types[0]);
+      }
     } catch (error: any) {
       console.error('Failed to load scheduling data:', error);
       alert('Failed to load scheduling data. Please try again.');
@@ -41,20 +63,6 @@ function CustomerSchedulingPage() {
       setLoading(false);
     }
   };
-
-  const formatDateTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
-  };
-
 
   const isUpcoming = (booking: CalComBooking) => {
     return new Date(booking.start_time) > new Date() && booking.status === 'confirmed';
@@ -68,7 +76,6 @@ function CustomerSchedulingPage() {
       return;
     }
 
-    setCancellingBooking(bookingId);
     try {
       await calcomAPI.cancelBooking(bookingId);
       await loadData();
@@ -76,26 +83,16 @@ function CustomerSchedulingPage() {
     } catch (error: any) {
       console.error('Failed to cancel booking:', error);
       alert('Failed to cancel meeting. Please try again.');
-    } finally {
-      setCancellingBooking(null);
     }
   };
 
-  const handleRescheduleBooking = async (bookingId: string) => {
-    if (!newBookingDate || !newBookingTime) {
-      alert('Please select both date and time for rescheduling.');
-      return;
-    }
-
-    const newStartTime = `${newBookingDate}T${newBookingTime}:00`;
-    
+  const handleRescheduleBooking = async (bookingId: string, newStartTime: string) => {
     setReschedulingBooking(bookingId);
     try {
-      await calcomAPI.rescheduleBooking(bookingId, { start_time: newStartTime });
+      await calcomAPI.rescheduleBooking(bookingId, { start_time: newStartTime, timezone });
       await loadData();
       setReschedulingBooking(null);
-      setNewBookingDate('');
-      setNewBookingTime('');
+      setSelectedDate(null);
       alert('Meeting rescheduled successfully.');
     } catch (error: any) {
       console.error('Failed to reschedule booking:', error);
@@ -105,120 +102,69 @@ function CustomerSchedulingPage() {
     }
   };
 
-  const openMeetingLink = (meetingUrl: string | null) => {
-    if (meetingUrl) {
-      window.open(meetingUrl, '_blank');
-    } else {
-      alert('Meeting link not available.');
+  const handleTimeSlotSelect = async (dateTime: string) => {
+    if (!selectedEventType) {
+      alert('Please select a meeting type first.');
+      return;
+    }
+
+    setCreatingBooking(true);
+    try {
+      await calcomAPI.createBooking({
+        event_type_id: selectedEventType.id,
+        start_time: dateTime,
+        timezone,
+        notes: bookingNotes || undefined
+      });
+      await loadData();
+      setSelectedDate(null);
+      setBookingNotes('');
+      setActiveTab('upcoming');
+      alert('Meeting scheduled successfully!');
+    } catch (error: any) {
+      console.error('Failed to create booking:', error);
+      alert('Failed to schedule meeting. Please try again.');
+    } finally {
+      setCreatingBooking(false);
     }
   };
 
-  const renderBookingCard = (booking: CalComBooking, showActions: boolean = true) => {
-    const statusColors: Record<string, string> = {
-      confirmed: '#10b981',
-      cancelled: '#ef4444',
-      rescheduled: '#f59e0b'
-    };
+  const handleQuickBook = async (date: Date, time: string) => {
+    if (!selectedEventType) {
+      alert('Please select a meeting type first.');
+      return;
+    }
 
-    return (
-      <div key={booking.id} className="booking-card">
-        <div className="booking-header">
-          <div>
-            <h3>{booking.event_type || 'Meeting'}</h3>
-            <p className="booking-date">{formatDateTime(booking.start_time)}</p>
-          </div>
-          <span 
-            className="booking-status"
-            style={{ backgroundColor: statusColors[booking.status] || '#6b7280' }}
-          >
-            {booking.status}
-          </span>
-        </div>
-        
-        {booking.notes && (
-          <p className="booking-notes">{booking.notes}</p>
-        )}
-
-        {booking.meeting_url && (
-          <button
-            className="btn-primary btn-sm"
-            onClick={() => openMeetingLink(booking.meeting_url)}
-            style={{ marginTop: '0.5rem' }}
-          >
-            Join Google Meet
-          </button>
-        )}
-
-        {showActions && isUpcoming(booking) && (
-          <div className="booking-actions">
-            <button
-              className="btn-outline btn-sm"
-              onClick={() => {
-                setReschedulingBooking(booking.booking_id);
-                const date = new Date(booking.start_time);
-                setNewBookingDate(date.toISOString().split('T')[0]);
-                setNewBookingTime(date.toTimeString().slice(0, 5));
-              }}
-              disabled={cancellingBooking === booking.booking_id}
-            >
-              Reschedule
-            </button>
-            <button
-              className="btn-danger btn-sm"
-              onClick={() => handleCancelBooking(booking.booking_id)}
-              disabled={cancellingBooking === booking.booking_id}
-            >
-              {cancellingBooking === booking.booking_id ? 'Cancelling...' : 'Cancel'}
-            </button>
-          </div>
-        )}
-
-        {reschedulingBooking === booking.booking_id && (
-          <div className="reschedule-form">
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-              <input
-                type="date"
-                value={newBookingDate}
-                onChange={(e) => setNewBookingDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-              <input
-                type="time"
-                value={newBookingTime}
-                onChange={(e) => setNewBookingTime(e.target.value)}
-              />
-              <button
-                className="btn-primary btn-sm"
-                onClick={() => handleRescheduleBooking(booking.booking_id)}
-                disabled={reschedulingBooking === booking.booking_id}
-              >
-                Confirm
-              </button>
-              <button
-                className="btn-outline btn-sm"
-                onClick={() => {
-                  setReschedulingBooking(null);
-                  setNewBookingDate('');
-                  setNewBookingTime('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    const [hours, minutes] = time.split(':');
+    const dateTime = new Date(date);
+    dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    await handleTimeSlotSelect(dateTime.toISOString());
   };
+
+  const handleJoinMeeting = (meetingUrl: string) => {
+    window.open(meetingUrl, '_blank');
+  };
+
+  // Calculate analytics
+  const totalMeetings = bookings.length;
+  const confirmedMeetings = bookings.filter(b => b.status === 'confirmed').length;
+  const eventTypeCounts = bookings.reduce((acc, booking) => {
+    const type = booking.event_type || 'Unknown';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const mostCommonType = Object.entries(eventTypeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
   if (loading) {
     return (
-      <div className="scheduling-page">
-        <div className="page-header">
-          <h1>Schedule a Meeting</h1>
-        </div>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <p>Loading...</p>
+      <div className="container">
+        <div className="scheduling-page">
+          <div className="page-header">
+            <h1>Schedule a Meeting</h1>
+          </div>
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>Loading...</p>
+          </div>
         </div>
       </div>
     );
@@ -227,107 +173,293 @@ function CustomerSchedulingPage() {
   return (
     <div className="container">
       <div className="scheduling-page">
-      <div className="page-header">
-        <h1>Schedule a Meeting</h1>
-        <p>Book a time to meet with the Reel48 team</p>
-      </div>
-
-      <div className="tabs">
-        <button
-          className={activeTab === 'upcoming' ? 'tab-active' : 'tab'}
-          onClick={() => setActiveTab('upcoming')}
-        >
-          Upcoming ({upcomingBookings.length})
-        </button>
-        <button
-          className={activeTab === 'history' ? 'tab-active' : 'tab'}
-          onClick={() => setActiveTab('history')}
-        >
-          History ({pastBookings.length})
-        </button>
-        <button
-          className={activeTab === 'book' ? 'tab-active' : 'tab'}
-          onClick={() => setActiveTab('book')}
-        >
-          Book New Meeting
-        </button>
-      </div>
-
-      <div className="tab-content">
-        {activeTab === 'upcoming' && (
-          <div>
-            {upcomingBookings.length === 0 ? (
-              <div className="empty-state">
-                <p>No upcoming meetings scheduled.</p>
-                <button
-                  className="btn-primary"
-                  onClick={() => setActiveTab('book')}
-                >
-                  Schedule a Meeting
-                </button>
-              </div>
-            ) : (
-              <div className="bookings-grid">
-                {upcomingBookings.map(booking => renderBookingCard(booking))}
-              </div>
-            )}
+        <div className="page-header">
+          <h1>Schedule a Meeting</h1>
+          <p>Book a time to meet with the Reel48 team</p>
+          <div className="timezone-selector">
+            <label htmlFor="timezone-select">Timezone:</label>
+            <select
+              id="timezone-select"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="timezone-select"
+            >
+              <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value={timezone}>{timezone}</option>
+            </select>
           </div>
-        )}
+        </div>
 
-        {activeTab === 'history' && (
-          <div>
-            {pastBookings.length === 0 ? (
-              <div className="empty-state">
-                <p>No past meetings.</p>
-              </div>
-            ) : (
-              <div className="bookings-grid">
-                {pastBookings.map(booking => renderBookingCard(booking, false))}
-              </div>
-            )}
-          </div>
-        )}
+        <div className="tabs">
+          <button
+            className={activeTab === 'upcoming' ? 'tab-active' : 'tab'}
+            onClick={() => setActiveTab('upcoming')}
+          >
+            Upcoming ({upcomingBookings.length})
+          </button>
+          <button
+            className={activeTab === 'history' ? 'tab-active' : 'tab'}
+            onClick={() => setActiveTab('history')}
+          >
+            History ({pastBookings.length})
+          </button>
+          <button
+            className={activeTab === 'book' ? 'tab-active' : 'tab'}
+            onClick={() => setActiveTab('book')}
+          >
+            Book New Meeting
+          </button>
+        </div>
 
-        {activeTab === 'book' && (
-          <div className="booking-widget-container">
-            <h2>Book a Meeting</h2>
-            <p>Select an available time slot below or use the calendar widget to schedule your meeting.</p>
-            
-            {/* Cal.com Embed Widget */}
-            <div className="calcom-widget">
-              <iframe
-                src={`https://cal.com/reel48`}
-                style={{
-                  width: '100%',
-                  height: '700px',
-                  border: 'none',
-                  borderRadius: '8px'
-                }}
-                title="Cal.com Booking Widget"
-              />
-            </div>
-
-            {eventTypes.length > 0 && (
-              <div className="event-types">
-                <h3>Available Meeting Types</h3>
-                <ul>
-                  {eventTypes.map(eventType => (
-                    <li key={eventType.id}>
-                      <strong>{eventType.title}</strong>
-                      {eventType.description && <p>{eventType.description}</p>}
-                      <span className="event-duration">{eventType.length} minutes</span>
-                    </li>
+        <div className="tab-content">
+          {activeTab === 'upcoming' && (
+            <div>
+              {upcomingBookings.length === 0 ? (
+                <div className="empty-state-enhanced">
+                  <div className="empty-state-icon">📅</div>
+                  <h3>No upcoming meetings</h3>
+                  <p>Schedule your first meeting with the Reel48 team to discuss your project needs.</p>
+                  <div className="empty-state-benefits">
+                    <div className="benefit-item">
+                      <span className="benefit-icon">✓</span>
+                      <span>Get personalized recommendations</span>
+                    </div>
+                    <div className="benefit-item">
+                      <span className="benefit-icon">✓</span>
+                      <span>Discuss custom solutions</span>
+                    </div>
+                    <div className="benefit-item">
+                      <span className="benefit-icon">✓</span>
+                      <span>Get answers to your questions</span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn-primary"
+                    onClick={() => setActiveTab('book')}
+                  >
+                    Schedule a Meeting
+                  </button>
+                </div>
+              ) : (
+                <div className="bookings-grid">
+                  {upcomingBookings.map(booking => (
+                    <SwipeableBookingCard
+                      key={booking.id}
+                      booking={booking}
+                      showActions={true}
+                      onCancel={handleCancelBooking}
+                      onReschedule={(bookingId) => {
+                        setReschedulingBooking(bookingId);
+                        setShowRescheduleSheet(true);
+                        const booking = upcomingBookings.find(b => b.booking_id === bookingId);
+                        if (booking) {
+                          setSelectedDate(new Date(booking.start_time));
+                        }
+                      }}
+                      onJoinMeeting={handleJoinMeeting}
+                      timezone={timezone}
+                      isMobile={isMobile}
+                    />
                   ))}
-                </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div>
+              {pastBookings.length === 0 ? (
+                <div className="empty-state-enhanced">
+                  <div className="empty-state-icon">📋</div>
+                  <h3>No past meetings</h3>
+                  <p>Your meeting history will appear here once you've had meetings with the Reel48 team.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="analytics-section">
+                    <h3>Meeting Statistics</h3>
+                    <div className="analytics-grid">
+                      <div className="analytics-card">
+                        <div className="analytics-value">{totalMeetings}</div>
+                        <div className="analytics-label">Total Meetings</div>
+                      </div>
+                      <div className="analytics-card">
+                        <div className="analytics-value">{confirmedMeetings}</div>
+                        <div className="analytics-label">Completed</div>
+                      </div>
+                      <div className="analytics-card">
+                        <div className="analytics-value">{mostCommonType}</div>
+                        <div className="analytics-label">Most Common Type</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bookings-grid">
+                    {pastBookings.map(booking => (
+                      <SwipeableBookingCard
+                        key={booking.id}
+                        booking={booking}
+                        showActions={false}
+                        onJoinMeeting={handleJoinMeeting}
+                        timezone={timezone}
+                        isMobile={isMobile}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'book' && (
+            <div className="booking-widget-container">
+              <h2>Book a Meeting</h2>
+              <p>Select an available time slot below to schedule your meeting.</p>
+
+              {eventTypes.length > 0 && (
+                <div className="event-type-selector">
+                  <label htmlFor="event-type-select">Meeting Type:</label>
+                  <select
+                    id="event-type-select"
+                    value={selectedEventType?.id || ''}
+                    onChange={(e) => {
+                      const type = eventTypes.find(et => et.id === parseInt(e.target.value));
+                      setSelectedEventType(type || null);
+                    }}
+                    className="event-type-select"
+                  >
+                    {eventTypes.map(eventType => (
+                      <option key={eventType.id} value={eventType.id}>
+                        {eventType.title} ({eventType.length} min)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="booking-calendar-section">
+                <CalendarPicker
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                  eventTypeId={selectedEventType?.id}
+                  timezone={timezone}
+                />
               </div>
-            )}
-          </div>
-        )}
-      </div>
+
+              {selectedDate && (
+                <div className="time-slot-section">
+                  <TimeSlotSelector
+                    selectedDate={selectedDate}
+                    onTimeSlotSelect={handleTimeSlotSelect}
+                    eventTypeId={selectedEventType?.id}
+                    timezone={timezone}
+                    onQuickBook={handleQuickBook}
+                  />
+                </div>
+              )}
+
+              {selectedDate && (
+                <div className="booking-notes-section">
+                  <label htmlFor="booking-notes">Additional Notes (Optional):</label>
+                  <textarea
+                    id="booking-notes"
+                    value={bookingNotes}
+                    onChange={(e) => setBookingNotes(e.target.value)}
+                    placeholder="Any questions or topics you'd like to discuss..."
+                    rows={3}
+                    className="booking-notes-input"
+                  />
+                </div>
+              )}
+
+              {reschedulingBooking && (
+                <>
+                  {isMobile ? (
+                    <BottomSheet
+                      isOpen={showRescheduleSheet}
+                      onClose={() => {
+                        setShowRescheduleSheet(false);
+                        setReschedulingBooking(null);
+                        setSelectedDate(null);
+                      }}
+                      title="Reschedule Meeting"
+                    >
+                      <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-muted, #6b7280)' }}>
+                        Select a new date and time for your meeting.
+                      </p>
+                      <CalendarPicker
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        eventTypeId={selectedEventType?.id}
+                        timezone={timezone}
+                      />
+                      {selectedDate && (
+                        <div style={{ marginTop: '1.5rem' }}>
+                          <TimeSlotSelector
+                            selectedDate={selectedDate}
+                            onTimeSlotSelect={(dateTime) => {
+                              handleRescheduleBooking(reschedulingBooking, dateTime);
+                              setShowRescheduleSheet(false);
+                            }}
+                            eventTypeId={selectedEventType?.id}
+                            timezone={timezone}
+                          />
+                        </div>
+                      )}
+                    </BottomSheet>
+                  ) : (
+                    <div className="reschedule-modal">
+                      <div className="reschedule-modal-content">
+                        <h3>Reschedule Meeting</h3>
+                        <p>Select a new date and time for your meeting.</p>
+                        <CalendarPicker
+                          selectedDate={selectedDate}
+                          onDateSelect={setSelectedDate}
+                          eventTypeId={selectedEventType?.id}
+                          timezone={timezone}
+                        />
+                        {selectedDate && (
+                          <TimeSlotSelector
+                            selectedDate={selectedDate}
+                            onTimeSlotSelect={(dateTime) => {
+                              handleRescheduleBooking(reschedulingBooking, dateTime);
+                            }}
+                            eventTypeId={selectedEventType?.id}
+                            timezone={timezone}
+                          />
+                        )}
+                        <div className="reschedule-modal-actions">
+                          <button
+                            className="btn-outline"
+                            onClick={() => {
+                              setReschedulingBooking(null);
+                              setSelectedDate(null);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {creatingBooking && (
+                <div className="booking-loading-overlay">
+                  <div className="booking-loading-content">
+                    <p>Creating your booking...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 export default CustomerSchedulingPage;
-

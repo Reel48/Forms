@@ -1,0 +1,67 @@
+.swipeable-card-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.swipeable-card {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease-out;
+  touch-action: pan-x;
+  will-change: transform;
+}
+
+.swipeable-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 1rem;
+  z-index: 0;
+}
+
+.swipe-action-btn {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 100px;
+  min-height: 44px; /* Touch-friendly */
+  transition: all 0.2s;
+}
+
+.swipe-action-reschedule {
+  background: var(--color-primary, #2563eb);
+  color: white;
+}
+
+.swipe-action-reschedule:active {
+  background: var(--color-primary-dark, #1d4ed8);
+  transform: scale(0.95);
+}
+
+.swipe-action-cancel {
+  background: #ef4444;
+  color: white;
+}
+
+.swipe-action-cancel:active {
+  background: #dc2626;
+  transform: scale(0.95);
+}
+
+/* Desktop: hide swipe actions, show regular actions */
+@media (min-width: 768px) {
+  .swipeable-actions {
+    display: none;
+  }
+}
+

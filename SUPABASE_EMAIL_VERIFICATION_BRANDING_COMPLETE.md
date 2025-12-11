@@ -43,7 +43,7 @@
 - ✅ Improved HTML structure and styling
 - ✅ Enhanced text version for email clients that don't support HTML
 
-**Email Subject:** "Verify Your Reel48 Email Address"
+**Email Subject:** "Verify Your Email Address"
 
 ## 🔧 Manual Configuration Required
 

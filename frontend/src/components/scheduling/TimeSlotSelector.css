@@ -1,0 +1,134 @@
+.time-slot-selector {
+  background: white;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.time-slot-header {
+  margin-bottom: 1rem;
+}
+
+.time-slot-header h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+  margin: 0;
+}
+
+.quick-book-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.quick-book-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0 0 0.75rem 0;
+}
+
+.quick-book-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.quick-book-btn {
+  padding: 0.5rem 1rem;
+  background: var(--color-bg-secondary, #f9fafb);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text, #1f2937);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-book-btn:hover {
+  background: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
+  color: white;
+}
+
+.time-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+}
+
+.time-slot-btn {
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 2px solid var(--color-primary, #2563eb);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary, #2563eb);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px; /* Touch-friendly */
+}
+
+.time-slot-btn:hover {
+  background: var(--color-primary, #2563eb);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.time-slot-btn:active {
+  transform: translateY(0);
+}
+
+.time-slot-loading,
+.time-slot-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.time-slot-empty-hint {
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .time-slot-selector {
+    padding: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .time-slot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .time-slot-btn {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8125rem;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  .quick-book-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .quick-book-btn {
+    width: 100%;
+    min-height: 44px; /* Touch-friendly */
+    padding: 0.75rem 1rem;
+  }
+
+  .time-slot-header h4 {
+    font-size: 1rem;
+  }
+}
+

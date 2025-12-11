@@ -1,0 +1,133 @@
+.bottom-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 20px 20px 0 0;
+  max-height: 90vh;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+  touch-action: pan-y;
+}
+
+.bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  margin: 12px auto 0;
+  cursor: grab;
+}
+
+.bottom-sheet-handle:active {
+  cursor: grabbing;
+}
+
+.bottom-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.bottom-sheet-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text, #1f2937);
+}
+
+.bottom-sheet-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--color-text-muted, #6b7280);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.bottom-sheet-close:hover {
+  background: var(--color-bg-secondary, #f9fafb);
+  color: var(--color-text, #1f2937);
+}
+
+.bottom-sheet-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Desktop: show as regular modal */
+@media (min-width: 769px) {
+  .bottom-sheet {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    border-radius: 8px;
+    animation: modalFadeIn 0.2s ease-out;
+  }
+
+  .bottom-sheet-handle {
+    display: none;
+  }
+
+  @keyframes modalFadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -48%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
