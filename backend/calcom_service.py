@@ -29,9 +29,8 @@ class CalComService:
         self.api_key = CALCOM_API_KEY
         self.username = CALCOM_USERNAME
         self.base_url = CALCOM_API_BASE_URL
-        # Cal.com API uses Authorization header with API key (not Bearer token)
+        # Cal.com API v1 uses apiKey as a query parameter, not a header
         self.headers = {
-            "Authorization": f"ApiKey {self.api_key}" if self.api_key else "",
             "Content-Type": "application/json"
         }
     
@@ -56,6 +55,11 @@ class CalComService:
             raise ValueError("Cal.com API key is not configured. Please set CALCOM_API_KEY environment variable.")
         
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        
+        # Cal.com API v1 requires apiKey as a query parameter
+        if params is None:
+            params = {}
+        params["apiKey"] = self.api_key
         
         try:
             response = requests.request(
