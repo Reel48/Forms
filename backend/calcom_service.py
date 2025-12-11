@@ -29,8 +29,9 @@ class CalComService:
         self.api_key = CALCOM_API_KEY
         self.username = CALCOM_USERNAME
         self.base_url = CALCOM_API_BASE_URL
+        # Cal.com API uses x-cal-api-key header instead of Authorization Bearer
         self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "x-cal-api-key": self.api_key if self.api_key else "",
             "Content-Type": "application/json"
         }
     
