@@ -511,7 +511,7 @@ const CustomerChatPage: React.FC = () => {
                     >
                       <div className="message-wrapper">
                         <div className="message-sender-name">
-                          {isCustomer ? 'You' : 'Reel48'}
+                          {isCustomer ? 'You' : 'Reel48 AI'}
                         </div>
                         <div className="message-content">
                           {message.message_type === 'image' && message.file_url ? (
@@ -549,7 +549,7 @@ const CustomerChatPage: React.FC = () => {
                 {aiThinking && (
                   <div className="message ai-message">
                     <div className="message-wrapper">
-                      <div className="message-sender-name">Reel48</div>
+                      <div className="message-sender-name">Reel48 AI</div>
                       <div className="message-content">
                         <div className="typing-indicator">
                           <div className="typing-dot"></div>
