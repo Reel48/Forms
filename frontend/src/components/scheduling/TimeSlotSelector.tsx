@@ -135,7 +135,7 @@ export default function TimeSlotSelector({
           <p className="time-slot-empty-hint">Try selecting a different date.</p>
         </div>
       ) : (
-        <div className="time-slot-grid">
+        <div className="time-slots-grid">
           {timeSlots.map((slot, index) => {
             // Parse slot time (format: "HH:MM" or ISO string)
             let displayTime = slot;

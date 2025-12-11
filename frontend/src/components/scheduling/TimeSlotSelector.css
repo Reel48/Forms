@@ -86,34 +86,53 @@
   transform: scale(0.98);
 }
 
-.time-slot-grid {
+/* Container for the list of time buttons */
+.time-slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  /* Auto-fit columns: at least 110px wide, but stretch to fill space */
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 0.75rem;
+  margin-top: 1rem;
+  width: 100%;
 }
 
+/* Individual Time Slot Button */
 .time-slot-btn {
-  padding: 0.75rem 1rem;
   background: white;
-  border: 2px solid var(--color-primary, #2563eb);
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
+  padding: 0.75rem 0; /* Vertical padding only, width is handled by grid */
+  
+  color: var(--color-text, #1f2937);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-primary, #2563eb);
+  
   cursor: pointer;
-  transition: all 0.2s;
-  min-height: 44px; /* Touch-friendly */
+  transition: all 0.2s ease;
+  
+  /* Centering */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Hover State - Matches Calendar & Quick Book */
 .time-slot-btn:hover {
+  background: var(--color-bg-secondary, #f9fafb);
+  border-color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2563eb);
+  transform: scale(1.02); /* Subtle pop */
+}
+
+/* Active/Selected State */
+.time-slot-btn.selected {
   background: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
   color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .time-slot-btn:active {
-  transform: translateY(0);
+  transform: scale(0.98);
 }
 
 .time-slot-loading,
@@ -138,19 +157,20 @@
     box-sizing: border-box;
   }
 
-  .time-slot-grid {
+  .time-slots-grid {
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
     gap: 0.5rem;
   }
 
   .time-slot-btn {
-    padding: 0.75rem 0.5rem;
+    padding: 0.75rem 0;
     font-size: 0.8125rem;
     min-height: 44px; /* Touch-friendly */
   }
 
   .quick-book-container {
-    flex-direction: column;
+    /* On mobile, use single column for better touch targets */
+    grid-template-columns: 1fr;
     gap: 0.75rem;
   }
 
