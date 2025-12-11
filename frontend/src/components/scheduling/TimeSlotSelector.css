@@ -24,31 +24,53 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-muted, #6b7280);
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.5rem 0;
 }
 
-.quick-book-buttons {
+/* Container to organize the buttons neatly */
+.quick-book-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem; /* Space between buttons */
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
+/* The Button Style - Matches .calendar-day */
 .quick-book-btn {
-  padding: 0.5rem 1rem;
-  background: var(--color-bg-secondary, #f9fafb);
+  background: white;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
+  padding: 0.6rem 1rem; /* Rectangular padding for text */
+  
+  color: var(--color-text, #1f2937);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-text, #1f2937);
+  
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  
+  /* text centering */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Hover Effect - Matches .calendar-day:hover */
 .quick-book-btn:hover {
+  background: var(--color-bg-secondary, #f9fafb);
+  border-color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2563eb); /* Turns text blue on hover */
+  transform: scale(1.05); /* The "pop" effect */
+}
+
+/* Optional: Active/Selected State */
+.quick-book-btn:active,
+.quick-book-btn.selected {
   background: var(--color-primary, #2563eb);
   border-color: var(--color-primary, #2563eb);
   color: white;
+  transform: scale(0.98); /* Slight press down feel */
 }
 
 .time-slot-grid {
@@ -114,9 +136,9 @@
     min-height: 44px; /* Touch-friendly */
   }
 
-  .quick-book-buttons {
+  .quick-book-container {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .quick-book-btn {

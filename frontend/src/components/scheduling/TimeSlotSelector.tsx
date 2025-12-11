@@ -111,7 +111,7 @@ export default function TimeSlotSelector({
       {quickBookSuggestions.length > 0 && timeSlots.length > 0 && (
         <div className="quick-book-section">
           <p className="quick-book-label">Quick Book:</p>
-          <div className="quick-book-buttons">
+          <div className="quick-book-container">
             {quickBookSuggestions.map((suggestion, index) => (
               <button
                 key={index}
