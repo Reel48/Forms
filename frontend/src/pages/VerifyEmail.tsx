@@ -1,27 +1,93 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authAPI } from '../api';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { getLogoForLightBackground } from '../utils/logoUtils';
 import './Login.css';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user, refreshUser } = useAuth();
   const [token, setToken] = useState('');
+  const [verificationType, setVerificationType] = useState<'custom' | 'supabase'>('custom');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Get token from URL query parameter
+    // Check for Supabase verification (hash fragments or query params)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const supabaseToken = hashParams.get('token');
+    const supabaseType = hashParams.get('type') || searchParams.get('type');
+    const accessToken = hashParams.get('access_token');
+    
+    // Check for custom token in query params
     const tokenFromUrl = searchParams.get('token');
-    if (tokenFromUrl) {
+    
+    // Supabase verification: can come via hash (token + type) or query params (token + type)
+    if ((supabaseToken || tokenFromUrl) && supabaseType === 'email') {
+      // Supabase default verification flow
+      setVerificationType('supabase');
+      const tokenToUse = supabaseToken || tokenFromUrl;
+      const refreshToken = hashParams.get('refresh_token');
+      if (tokenToUse) {
+        handleSupabaseVerification(tokenToUse, accessToken, refreshToken);
+      }
+    } else if (tokenFromUrl && !supabaseType) {
+      // Custom token verification flow (no type parameter)
       setToken(tokenFromUrl);
-      // Auto-verify if token is present
       handleVerify(tokenFromUrl);
     } else {
       setError('Invalid verification link. Please request a new verification email.');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  const handleSupabaseVerification = async (token: string, accessToken?: string | null, refreshToken?: string | null) => {
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    try {
+      // If we have an access_token in the hash, Supabase has already verified
+      // We just need to set the session
+      if (accessToken) {
+        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || ''
+        });
+        
+        if (sessionError) {
+          throw sessionError;
+        }
+      } else {
+        // Otherwise, verify using the token
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          token: token,
+          type: 'email'
+        });
+
+        if (verifyError) {
+          throw verifyError;
+        }
+      }
+
+      // Refresh user data to get updated email confirmation status
+      await refreshUser();
+      setSuccess(true);
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        redirectAfterVerification();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify email. The link may have expired.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleVerify = async (verifyToken?: string) => {
     const tokenToUse = verifyToken || token;
@@ -36,11 +102,15 @@ export default function VerifyEmail() {
 
     try {
       await authAPI.verifyEmail(tokenToUse);
+      
+      // Refresh user data to get updated email confirmation status
+      await refreshUser();
       setSuccess(true);
-      // Redirect to login after 3 seconds
+      
+      // Redirect after a short delay
       setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+        redirectAfterVerification();
+      }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to verify email. The link may have expired.');
     } finally {
@@ -48,21 +118,53 @@ export default function VerifyEmail() {
     }
   };
 
+  const redirectAfterVerification = () => {
+    // If user is authenticated, redirect to dashboard
+    // Otherwise, redirect to login with success message
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login?verified=true');
+    }
+  };
+
   if (success) {
     return (
       <div className="login-container">
         <div className="login-card">
+          {/* Reel48 Logo */}
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <img 
+              src={getLogoForLightBackground()} 
+              alt="Reel48 Logo" 
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+              style={{
+                maxHeight: '48px',
+                width: 'auto',
+                objectFit: 'contain'
+              }}
+            />
+          </div>
+          
           <h1>Email Verified!</h1>
           <div className="success-message">
             <p>Your email has been verified successfully.</p>
             <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-              You can now log in to your account.
+              {user ? 'Redirecting you to your dashboard...' : 'You can now log in to your account.'}
             </p>
           </div>
           <div style={{ marginTop: '20px', textAlign: 'center' }}>
-            <Link to="/login" className="signup-link">
-              Go to Sign In
-            </Link>
+            {user ? (
+              <Link to="/dashboard" className="signup-link">
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link to="/login?verified=true" className="signup-link">
+                Go to Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -72,6 +174,22 @@ export default function VerifyEmail() {
   return (
     <div className="login-container">
       <div className="login-card">
+        {/* Reel48 Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <img 
+            src={getLogoForLightBackground()} 
+            alt="Reel48 Logo" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+            style={{
+              maxHeight: '48px',
+              width: 'auto',
+              objectFit: 'contain'
+            }}
+          />
+        </div>
+        
         <h1>Verify Email</h1>
         
         {error && (
@@ -85,20 +203,34 @@ export default function VerifyEmail() {
           </div>
         )}
 
-        {!error && !success && token && (
+        {!error && !success && (token || verificationType === 'supabase') && (
           <>
             <p style={{ marginBottom: '20px', color: '#666', textAlign: 'center' }}>
               Verifying your email address...
             </p>
             {loading && (
               <div style={{ textAlign: 'center' }}>
-                <div>Please wait...</div>
+                <div style={{ 
+                  display: 'inline-block',
+                  width: '20px',
+                  height: '20px',
+                  border: '3px solid #e5e7eb',
+                  borderTopColor: 'var(--color-primary)',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                  marginTop: '10px'
+                }}></div>
+                <style>{`
+                  @keyframes spin {
+                    to { transform: rotate(360deg); }
+                  }
+                `}</style>
               </div>
             )}
           </>
         )}
 
-        {!token && !error && (
+        {!token && !error && verificationType === 'custom' && (
           <div>
             <p style={{ marginBottom: '20px', color: '#666', textAlign: 'center' }}>
               No verification token found. Please check your email for the verification link.

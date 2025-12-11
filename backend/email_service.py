@@ -771,42 +771,71 @@ class EmailService:
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verify Your Email</title>
+            <title>Verify Your Email - Reel48</title>
         </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">Verify Your Email Address</h1>
-                <p>Hello{(' ' + user_name) if user_name else ''},</p>
-                <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email</a>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+            <div style="background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                <!-- Reel48 Branding Header -->
+                <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0;">
+                    <h1 style="color: #1f2937; margin: 0 0 10px 0; font-size: 28px; font-weight: 600;">Reel48</h1>
+                    <p style="color: #6b7280; margin: 0; font-size: 14px;">Email Verification</p>
                 </div>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #007bff;">{verification_link}</p>
-                <p style="color: #666; font-size: 14px; margin-top: 30px;">
-                    <strong>This link will expire in 24 hours.</strong><br>
-                    If you didn't create an account, please ignore this email.
+                
+                <h2 style="color: #1f2937; margin-top: 0; font-size: 24px; font-weight: 600;">Verify Your Email Address</h2>
+                <p style="color: #374151; font-size: 16px; margin-bottom: 10px;">Hello{(' ' + user_name) if user_name else ''},</p>
+                <p style="color: #374151; font-size: 16px; margin-bottom: 30px;">
+                    Thank you for signing up with Reel48! To complete your registration and secure your account, please verify your email address by clicking the button below:
+                </p>
+                
+                <div style="text-align: center; margin: 40px 0;">
+                    <a href="{verification_link}" style="background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: background-color 0.2s;">
+                        Verify Email Address
+                    </a>
+                </div>
+                
+                <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #2563eb;">
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0; font-weight: 600;">Alternative Method:</p>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">If the button doesn't work, copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #2563eb; font-size: 13px; margin: 0; font-family: monospace;">{verification_link}</p>
+                </div>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
+                        <strong style="color: #374151;">Important:</strong> This verification link will expire in 24 hours for security reasons.
+                    </p>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                        If you didn't create an account with Reel48, you can safely ignore this email. No further action is required.
+                    </p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                    This is an automated message from Reel48. Please do not reply to this email.
+                </p>
+                <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">
+                    If you have any questions, please contact our support team.
                 </p>
             </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
         </body>
         </html>
         """
         
         text_content = f"""
-        Verify Your Email Address
+        Verify Your Email Address - Reel48
         
         Hello{(' ' + user_name) if user_name else ''},
         
-        Thank you for signing up! Please verify your email address by clicking the link below:
+        Thank you for signing up with Reel48! To complete your registration and secure your account, please verify your email address by clicking the link below:
         
         {verification_link}
         
-        This link will expire in 24 hours.
+        Important: This verification link will expire in 24 hours for security reasons.
         
-        If you didn't create an account, please ignore this email.
+        If you didn't create an account with Reel48, you can safely ignore this email. No further action is required.
+        
+        ---
+        This is an automated message from Reel48. Please do not reply to this email.
         """
         
         return self._send_email(to_email, subject, html_content, text_content)

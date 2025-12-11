@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getLogoForLightBackground } from '../utils/logoUtils';
 import './Login.css';
@@ -8,10 +8,21 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check if redirected from email verification
+    if (searchParams.get('verified') === 'true') {
+      setSuccess(true);
+      // Clear the query parameter from URL
+      navigate('/login', { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +59,11 @@ export default function Login() {
         </div>
         <h1>Sign In</h1>
         <form onSubmit={handleSubmit}>
+          {success && (
+            <div className="success-message">
+              <p>Email verified successfully! You can now sign in.</p>
+            </div>
+          )}
           {error && <div className="error-message">{error}</div>}
           
           <div className="form-group">
