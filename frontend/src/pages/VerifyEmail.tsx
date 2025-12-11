@@ -30,10 +30,11 @@ export default function VerifyEmail() {
     if ((supabaseToken || tokenFromUrl) && supabaseType === 'email') {
       // Supabase default verification flow
       setVerificationType('supabase');
-      const tokenToUse = supabaseToken || tokenFromUrl;
       const refreshToken = hashParams.get('refresh_token');
-      if (tokenToUse) {
-        handleSupabaseVerification(tokenToUse, accessToken, refreshToken);
+      if (accessToken) {
+        handleSupabaseVerification(accessToken, refreshToken);
+      } else {
+        setError('Invalid verification link format. Please use the link from your email.');
       }
     } else if (tokenFromUrl && !supabaseType) {
       // Custom token verification flow (no type parameter)
@@ -45,28 +46,20 @@ export default function VerifyEmail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const handleSupabaseVerification = async (token: string, accessToken?: string | null, refreshToken?: string | null) => {
+  const handleSupabaseVerification = async (accessToken: string, refreshToken?: string | null) => {
     setLoading(true);
     setError('');
     setSuccess(false);
 
     try {
-      // If we have an access_token in the hash, Supabase has already verified
-      // We just need to set the session
-      if (accessToken) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || ''
-        });
-        
-        if (sessionError) {
-          throw sessionError;
-        }
-      } else {
-        // For Supabase email verification, we need the email address
-        // If we only have a token without access_token, we can't verify without email
-        // This case should be rare - Supabase typically provides access_token in hash
-        throw new Error('Invalid verification link format. Please use the link from your email.');
+      // Supabase has already verified the email, we just need to set the session
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || ''
+      });
+      
+      if (sessionError) {
+        throw sessionError;
       }
 
       // Refresh user data to get updated email confirmation status
