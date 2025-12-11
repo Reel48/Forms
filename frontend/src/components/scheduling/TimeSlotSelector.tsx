@@ -50,12 +50,21 @@ export default function TimeSlotSelector({
       });
       
       // Extract time slots from availability response
-      // Adjust based on actual Cal.com API response structure
+      // Backend now returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}]}
       const availability = response.data?.availability || [];
+      console.log('Availability response:', response.data);
+      console.log('Availability array:', availability);
+      console.log('Looking for date:', dateStr);
+      
       const dayAvailability = availability.find((a: CalComAvailability) => a.date === dateStr);
-      setTimeSlots(dayAvailability?.slots || []);
+      console.log('Day availability found:', dayAvailability);
+      
+      const slots = dayAvailability?.slots || [];
+      console.log('Time slots:', slots);
+      setTimeSlots(slots);
     } catch (error) {
       console.error('Failed to load time slots:', error);
+      console.error('Error details:', error);
       setTimeSlots([]);
     } finally {
       setLoading(false);

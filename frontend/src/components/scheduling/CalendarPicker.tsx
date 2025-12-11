@@ -39,9 +39,11 @@ export default function CalendarPicker({
         event_type_id: eventTypeId
       });
       
-      // Cal.com API returns availability in a specific format
-      // Adjust based on actual API response structure
-      setAvailability(response.data?.availability || []);
+      // Backend now returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}]}
+      const availabilityData = response.data?.availability || [];
+      console.log('Calendar availability response:', response.data);
+      console.log('Availability array:', availabilityData);
+      setAvailability(availabilityData);
     } catch (error) {
       console.error('Failed to load availability:', error);
       setAvailability([]);

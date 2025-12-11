@@ -57,12 +57,75 @@ async def get_availability(
 ):
     """Get available time slots for scheduling"""
     try:
-        availability = calcom_service.get_availability(
+        raw_availability = calcom_service.get_availability(
             date_from=date_from,
             date_to=date_to,
             event_type_id=event_type_id
         )
-        return availability
+        
+        # Get event type duration (default 30 minutes)
+        event_duration = 30
+        if event_type_id:
+            try:
+                event_types = calcom_service.get_event_types()
+                for et in event_types:
+                    if et.get("id") == event_type_id:
+                        event_duration = et.get("length", 30)
+                        break
+            except Exception:
+                pass
+        
+        # Parse Cal.com API response and convert to our format
+        # Cal.com returns: {dateRanges: [{start, end}], workingHours: [...], busy: [...]}
+        availability_by_date = {}
+        
+        if raw_availability.get("dateRanges"):
+            for date_range in raw_availability.get("dateRanges", []):
+                start_str = date_range.get("start")
+                end_str = date_range.get("end")
+                
+                if not start_str or not end_str:
+                    continue
+                
+                try:
+                    # Parse ISO datetime strings (handle both Z and +00:00 formats)
+                    if start_str.endswith("Z"):
+                        start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                    else:
+                        start_dt = datetime.fromisoformat(start_str)
+                    
+                    if end_str.endswith("Z"):
+                        end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+                    else:
+                        end_dt = datetime.fromisoformat(end_str)
+                    
+                    # Generate time slots within this range (every event_duration minutes)
+                    current_time = start_dt
+                    slot_duration = timedelta(minutes=event_duration)
+                    
+                    while current_time + slot_duration <= end_dt:
+                        date_key = current_time.strftime("%Y-%m-%d")
+                        time_slot = current_time.strftime("%H:%M")
+                        
+                        if date_key not in availability_by_date:
+                            availability_by_date[date_key] = []
+                        
+                        if time_slot not in availability_by_date[date_key]:
+                            availability_by_date[date_key].append(time_slot)
+                        
+                        # Move to next slot (increment by event duration)
+                        current_time += slot_duration
+                except Exception as e:
+                    logger.warning(f"Error parsing date range {date_range}: {str(e)}")
+                    continue
+        
+        # Convert to array format expected by frontend
+        availability_array = [
+            {"date": date, "slots": sorted(slots)}
+            for date, slots in sorted(availability_by_date.items())
+        ]
+        
+        return {"availability": availability_array}
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
