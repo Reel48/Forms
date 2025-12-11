@@ -229,6 +229,23 @@
   text-align: center;
 }
 
+/* Tablet and Mobile responsive */
+@media (max-width: 900px) {
+  /* Increased breakpoint for tablets */
+  .scheduler-wrapper {
+    flex-direction: column; /* Stack them vertically */
+    align-items: stretch;
+    gap: 1.5rem;
+    padding: 0.5rem;
+  }
+
+  .calendar-picker,
+  .time-slots-layout {
+    width: 100%;
+    max-width: 100%; /* Use full width on mobile */
+  }
+}
+
 .booking-notes-section {
   margin-top: 2rem;
   padding-top: 2rem;
