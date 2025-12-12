@@ -1395,6 +1395,10 @@ async def _generate_ai_response_async(
 ) -> None:
     """Asynchronously generate AI response for a customer message"""
     request_id = str(uuid.uuid4())
+    # These are used later when finalizing the placeholder message.
+    file_message_override: Optional[Dict[str, Any]] = None
+    created_quote_id: Optional[str] = None
+    created_folder_id: Optional[str] = None
     def _delete_placeholder() -> None:
         if not placeholder_message_id:
             return
