@@ -468,21 +468,10 @@ button:disabled {
     min-width: 0;
   }
 
+  /* Keep the desktop segmented-control tabs on mobile (wrap if needed) */
   .tabs {
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .tab,
-  .tab-active {
     width: 100%;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
-    margin-bottom: 0;
-  }
-
-  .tab-active {
-    border-bottom: 2px solid var(--color-primary, #2563eb);
+    justify-content: center;
   }
 
   .bookings-grid {
@@ -534,7 +523,8 @@ button:disabled {
   }
 
   .tabs {
-    padding: 0 0.5rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
   }
 
   .tab-content {
