@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { calcomAPI } from '../../api';
 import type { CalComAvailability } from '../../api';
-import { getQuickBookSuggestions, formatTime } from '../../utils/dateUtils';
+import { getQuickBookSuggestions, formatTime, getUserTimezone } from '../../utils/dateUtils';
 import './TimeSlotSelector.css';
 
 interface TimeSlotSelectorProps {
@@ -50,19 +51,43 @@ export default function TimeSlotSelector({
         timezone: timezone
       });
       
-      // Extract time slots from availability response
-      // Backend now returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}]}
+      // Backend returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}], timezone: "America/Chicago"}
       const availability = response.data?.availability || [];
-      console.log('Availability response:', response.data);
-      console.log('Availability array:', availability);
-      console.log('Looking for date:', dateStr);
+      const calcomTimezone = response.data?.timezone || 'America/Chicago';
       
       const dayAvailability = availability.find((a: CalComAvailability) => a.date === dateStr);
-      console.log('Day availability found:', dayAvailability);
-      
       const slots = dayAvailability?.slots || [];
-      console.log('Time slots:', slots);
-      setTimeSlots(slots);
+      
+      // Convert slots from Cal.com timezone to user's timezone
+      const userTz = timezone || getUserTimezone();
+      const convertedSlots = slots.map((slot: string) => {
+        try {
+          // Parse the time slot (HH:MM) in Cal.com timezone
+          const [hours, minutes] = slot.split(':');
+          const dateStr = format(selectedDate, 'yyyy-MM-dd');
+          
+          // Create a date string representing this time in Cal.com timezone
+          // We need to find the UTC equivalent, then convert to user's timezone
+          const dateTimeStr = `${dateStr}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+          
+          // Get timezone offsets
+          const calcomDate = new Date(dateTimeStr);
+          const calcomOffset = getTimezoneOffset(calcomTimezone, calcomDate);
+          const userOffset = getTimezoneOffset(userTz, calcomDate);
+          
+          // Calculate the difference and adjust
+          const offsetDiff = userOffset - calcomOffset;
+          const adjustedDate = new Date(calcomDate.getTime() + offsetDiff);
+          
+          // Format as HH:mm
+          return format(adjustedDate, 'HH:mm');
+        } catch (e) {
+          console.error('Error converting timezone:', e, slot);
+          return slot; // Fallback to original
+        }
+      });
+      
+      setTimeSlots(convertedSlots);
     } catch (error) {
       console.error('Failed to load time slots:', error);
       console.error('Error details:', error);
