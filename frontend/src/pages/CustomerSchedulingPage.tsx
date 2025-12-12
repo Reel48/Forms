@@ -344,7 +344,6 @@ function CustomerSchedulingPage() {
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
                   eventTypeId={selectedEventType?.id}
-                  timezone={timezone}
                 />
                 {selectedDate && (
                   <TimeSlotSelector

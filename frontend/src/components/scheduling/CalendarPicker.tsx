@@ -8,7 +8,6 @@ interface CalendarPickerProps {
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
   eventTypeId?: number;
-  timezone?: string;
   disabledDates?: Date[];
 }
 
@@ -16,7 +15,6 @@ export default function CalendarPicker({
   selectedDate,
   onDateSelect,
   eventTypeId,
-  timezone,
   disabledDates = []
 }: CalendarPickerProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -25,7 +23,7 @@ export default function CalendarPicker({
 
   useEffect(() => {
     loadAvailability();
-  }, [currentMonth, eventTypeId, timezone]);
+  }, [currentMonth, eventTypeId]);
 
   const loadAvailability = async () => {
     try {

@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { calcomAPI } from '../../api';
 import type { CalComAvailability } from '../../api';
-import { getQuickBookSuggestions, formatTime, getUserTimezone } from '../../utils/dateUtils';
+import { getQuickBookSuggestions, getUserTimezone } from '../../utils/dateUtils';
 import './TimeSlotSelector.css';
 
 interface TimeSlotSelectorProps {
@@ -168,18 +168,22 @@ export default function TimeSlotSelector({
       ) : (
         <div className="time-slots-grid">
           {timeSlots.map((slot, index) => {
-            // Parse slot time (format: "HH:MM" or ISO string)
+            // Slots are already in the correct timezone (user's timezone or Cal.com timezone if they match)
+            // Just format "HH:MM" to "h:mm a" (e.g., "09:00" -> "9:00 AM")
             let displayTime = slot;
             try {
               if (slot.includes('T')) {
-                // ISO string
-                displayTime = formatTime(slot, timezone);
+                // ISO string (shouldn't happen, but handle it)
+                const date = new Date(slot);
+                displayTime = format(date, 'h:mm a');
               } else {
-                // Time string like "14:00"
+                // Time string like "09:00" or "14:00"
                 const [hours, minutes] = slot.split(':');
-                const dateTime = new Date(selectedDate);
-                dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                displayTime = formatTime(dateTime.toISOString(), timezone);
+                const hour24 = parseInt(hours);
+                const min = parseInt(minutes);
+                const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+                const ampm = hour24 >= 12 ? 'PM' : 'AM';
+                displayTime = `${hour12}:${minutes} ${ampm}`;
               }
             } catch (e) {
               // Fallback to original slot
