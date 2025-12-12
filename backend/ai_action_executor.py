@@ -101,6 +101,8 @@ class AIActionExecutor:
                 return self._get_availability(parameters)
             elif function_name == "schedule_meeting":
                 return self._schedule_meeting(parameters)
+            elif function_name == "get_folder_shipments":
+                return self._get_folder_shipments(parameters)
             else:
                 return {
                     "success": False,
@@ -855,4 +857,51 @@ class AIActionExecutor:
                 "success": False,
                 "error": f"Failed to schedule meeting: {str(e)}"
             }
+
+    def _get_folder_shipments(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get shipment/tracking status for a folder (read-only)."""
+        try:
+            folder_id = params.get("folder_id")
+            if not folder_id:
+                return {"success": False, "error": "folder_id is required"}
+
+            shipments_resp = (
+                supabase_storage.table("shipments")
+                .select("*")
+                .eq("folder_id", folder_id)
+                .order("created_at", desc=True)
+                .limit(5)
+                .execute()
+            )
+            shipments = shipments_resp.data or []
+
+            # Attach latest event (best-effort)
+            enriched = []
+            for s in shipments:
+                shipment_id = s.get("id")
+                latest_event = None
+                if shipment_id:
+                    try:
+                        ev = (
+                            supabase_storage.table("shipment_tracking_events")
+                            .select("*")
+                            .eq("shipment_id", shipment_id)
+                            .order("timestamp", desc=True)
+                            .limit(1)
+                            .execute()
+                        )
+                        if ev.data:
+                            latest_event = ev.data[0]
+                    except Exception:
+                        latest_event = None
+                enriched.append({**s, "latest_event": latest_event})
+
+            return {
+                "success": True,
+                "result": {"folder_id": folder_id, "shipments": enriched},
+                "message": "Here’s the latest shipment status for this folder."
+            }
+        except Exception as e:
+            logger.error(f"Error getting folder shipments: {str(e)}", exc_info=True)
+            return {"success": False, "error": f"Failed to get shipments: {str(e)}"}
 

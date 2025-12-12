@@ -1845,10 +1845,19 @@ async def _generate_ai_response_async(
         updated_placeholder = False
         if placeholder_message_id:
             try:
-                supabase_storage.table("chat_messages").update({
+                update_payload: Dict[str, Any] = {
                     "message": ai_response,
                     "message_type": "text"
-                }).eq("id", placeholder_message_id).execute()
+                }
+                if isinstance(file_message_override, dict) and file_message_override.get("message_type") == "file":
+                    update_payload = {
+                        "message": file_message_override.get("message") or "Quote PDF",
+                        "message_type": "file",
+                        "file_url": file_message_override.get("file_url"),
+                        "file_name": file_message_override.get("file_name"),
+                        "file_size": file_message_override.get("file_size"),
+                    }
+                supabase_storage.table("chat_messages").update(update_payload).eq("id", placeholder_message_id).execute()
                 updated_placeholder = True
                 logger.info(f"✅ [AI TASK] Placeholder message updated with final AI response")
             except Exception as e:
@@ -1866,6 +1875,14 @@ async def _generate_ai_response_async(
                 "message_type": "text",
                 "created_at": datetime.now().isoformat()
             }
+            if isinstance(file_message_override, dict) and file_message_override.get("message_type") == "file":
+                ai_message_data.update({
+                    "message": file_message_override.get("message") or "Quote PDF",
+                    "message_type": "file",
+                    "file_url": file_message_override.get("file_url"),
+                    "file_name": file_message_override.get("file_name"),
+                    "file_size": file_message_override.get("file_size"),
+                })
             
             print(f"🤖 [AI TASK] Inserting AI message into database...")
             logger.info(f"🤖 [AI TASK] Inserting AI message into database...")
@@ -1874,6 +1891,20 @@ async def _generate_ai_response_async(
                 print(f"❌ [AI TASK] Failed to insert AI message - no data returned")
                 logger.error(f"❌ [AI TASK] Failed to insert AI message - no data returned")
                 return
+
+        # If we attached a PDF, follow up with a short action card with deep links.
+        if isinstance(file_message_override, dict) and file_message_override.get("message_type") == "file":
+            try:
+                frontend_url = (os.getenv("FRONTEND_URL") or "").rstrip("/")
+                if frontend_url and (created_folder_id or created_quote_id):
+                    lines = ["✅ **Quote created**"]
+                    if created_folder_id:
+                        lines.append(f"- [View folder]({frontend_url}/folders/{created_folder_id})")
+                    if created_quote_id:
+                        lines.append(f"- [View quote]({frontend_url}/quotes/{created_quote_id})")
+                    _insert_ai_message(conversation_id, "\n".join(lines), "text")
+            except Exception:
+                pass
 
         # Update conversation timestamp
         try:

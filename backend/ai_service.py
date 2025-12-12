@@ -353,6 +353,20 @@ class AIService:
                     },
                     "required": ["event_type_id", "start_time", "customer_email", "customer_name"]
                 }
+            },
+            {
+                "name": "get_folder_shipments",
+                "description": "Get shipment/tracking status for a folder (read-only). Use when a customer asks about shipping, tracking, delivery status, or where their order is.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder_id": {
+                            "type": "string",
+                            "description": "Folder ID to check shipments for"
+                        }
+                    },
+                    "required": ["folder_id"]
+                }
             }
         ]
     
@@ -649,12 +663,21 @@ class AIService:
                     response_text = "I can help with that. Let me check available meeting times for you."
                 elif first_name == "schedule_meeting":
                     response_text = "Perfect — I’ll go ahead and book that time for you."
+                elif first_name == "get_folder_shipments":
+                    response_text = "I can help with that. Let me check the latest shipping status for you."
                 elif first_name == "create_quote":
                     response_text = "I'll help you with that. Let me create the quote and set everything up for you."
                 else:
                     response_text = "I can help with that. Let me take care of it now."
             elif not response_text:
                 response_text = response.text if hasattr(response, 'text') else ""
+            
+            # Final safety: never return an empty response (be explicit about limits).
+            if not response_text or len(str(response_text).strip()) == 0:
+                response_text = (
+                    "I’m not sure I can help with that via chat right now. "
+                    "If you tell me a bit more detail (or ask to talk to a human), I can route you the right way."
+                )
             
             # Return only valid function calls
             function_calls = valid_function_calls
@@ -831,6 +854,7 @@ COMMUNICATION STYLE:
 - Always be friendly, professional, and customer-focused
 - Use the provided context to answer questions accurately
 - If you don't know something specific, acknowledge it and offer to help them get the information
+- If a request is out of scope for you (no relevant context and no appropriate tools), say so clearly and offer next steps (e.g., connect them with a human, ask for the missing details, or direct them to the relevant page).
 - For pricing questions, always refer to the specific pricing tiers provided in the context
 - Be conversational and helpful - you're representing the company
 - If a customer asks about something not in your knowledge, politely let them know you'll need to check with the team
