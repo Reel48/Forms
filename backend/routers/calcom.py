@@ -58,6 +58,7 @@ async def get_availability(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     event_type_id: Optional[int] = Query(None, description="Event type ID"),
+    timezone: Optional[str] = Query(None, description="User's timezone (e.g., America/Chicago)"),
     user = Depends(get_current_user)
 ):
     """Get available time slots for scheduling"""
@@ -115,23 +116,37 @@ async def get_availability(
                         logger.warning(f"Invalid timezone {timezone_str}, using UTC")
                         tz = ZoneInfo("UTC")
                     
-                    # Convert UTC times to Cal.com timezone for proper date/time extraction
+                    # Convert UTC times to Cal.com timezone first for proper date/time extraction
                     start_dt_tz = start_dt.astimezone(tz) if start_dt.tzinfo else start_dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz)
                     end_dt_tz = end_dt.astimezone(tz) if end_dt.tzinfo else end_dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz)
                     
-                    # Get current time in Cal.com timezone for filtering past slots
+                    # Convert to user's timezone if provided, otherwise use Cal.com timezone
+                    user_tz = None
+                    if timezone:
+                        try:
+                            user_tz = ZoneInfo(timezone)
+                        except Exception:
+                            logger.warning(f"Invalid user timezone {timezone}, using Cal.com timezone")
+                    
+                    # Get current time in appropriate timezone for filtering past slots
                     now_utc = datetime.now(ZoneInfo("UTC"))
-                    now_in_tz = now_utc.astimezone(tz)
+                    now_in_tz = now_utc.astimezone(user_tz if user_tz else tz)
                     
                     current_time = start_dt_tz
                     slot_duration = timedelta(minutes=event_duration)
                     
                     while current_time + slot_duration <= end_dt_tz:
+                        # Convert to user's timezone if provided
+                        if user_tz:
+                            current_time_user = current_time.astimezone(user_tz)
+                        else:
+                            current_time_user = current_time
+                        
                         # Filter out past slots
-                        if current_time > now_in_tz:
-                            date_key = current_time.date().strftime("%Y-%m-%d")
-                            # Format time in the Cal.com timezone (HH:MM)
-                            time_slot = current_time.strftime("%H:%M")
+                        if current_time_user > now_in_tz:
+                            date_key = current_time_user.date().strftime("%Y-%m-%d")
+                            # Format time in the user's timezone (or Cal.com timezone if not provided)
+                            time_slot = current_time_user.strftime("%H:%M")
                             
                             if date_key not in availability_by_date:
                                 availability_by_date[date_key] = []
@@ -154,12 +169,20 @@ async def get_availability(
             working_hours = raw_availability.get("workingHours", [])
             timezone_str = raw_availability.get("timeZone", "America/New_York")
             
-            # Get timezone object (fallback to UTC if invalid)
+            # Get Cal.com timezone object (fallback to UTC if invalid)
             try:
                 tz = ZoneInfo(timezone_str)
             except Exception:
                 logger.warning(f"Invalid timezone {timezone_str}, using UTC")
                 tz = ZoneInfo("UTC")
+            
+            # Get user's timezone if provided, otherwise use Cal.com timezone
+            user_tz = None
+            if timezone:
+                try:
+                    user_tz = ZoneInfo(timezone)
+                except Exception:
+                    logger.warning(f"Invalid user timezone {timezone}, using Cal.com timezone")
             
             # Get the date range we're querying
             if date_from and date_to:
@@ -167,9 +190,9 @@ async def get_availability(
                     start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
                     end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
                     
-                    # Get current time in the Cal.com timezone for comparison
+                    # Get current time in appropriate timezone for comparison
                     now_utc = datetime.now(ZoneInfo("UTC"))
-                    now_in_tz = now_utc.astimezone(tz)
+                    now_in_tz = now_utc.astimezone(user_tz if user_tz else tz)
                     
                     # Generate slots for each day in range based on working hours
                     current_date = start_date
@@ -203,11 +226,17 @@ async def get_availability(
                                 slot_duration = timedelta(minutes=event_duration)
                                 
                                 while current_time + slot_duration <= end_time:
+                                    # Convert to user's timezone if provided
+                                    if user_tz:
+                                        current_time_user = current_time.astimezone(user_tz)
+                                    else:
+                                        current_time_user = current_time
+                                    
                                     # Check if this time is in the past (compare in same timezone)
-                                    if current_time > now_in_tz:
-                                        date_key = current_date.strftime("%Y-%m-%d")
-                                        # Format time in the Cal.com timezone (HH:MM)
-                                        time_slot = current_time.strftime("%H:%M")
+                                    if current_time_user > now_in_tz:
+                                        date_key = current_time_user.date().strftime("%Y-%m-%d")
+                                        # Format time in the user's timezone (or Cal.com timezone if not provided)
+                                        time_slot = current_time_user.strftime("%H:%M")
                                         
                                         if date_key not in availability_by_date:
                                             availability_by_date[date_key] = []

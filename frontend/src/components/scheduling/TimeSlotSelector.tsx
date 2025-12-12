@@ -46,7 +46,8 @@ export default function TimeSlotSelector({
       const response = await calcomAPI.getAvailability({
         date_from: dateStr,
         date_to: dateStr,
-        event_type_id: eventTypeId
+        event_type_id: eventTypeId,
+        timezone: timezone
       });
       
       // Extract time slots from availability response

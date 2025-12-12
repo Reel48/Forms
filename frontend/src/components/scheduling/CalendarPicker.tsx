@@ -36,7 +36,8 @@ export default function CalendarPicker({
       const response = await calcomAPI.getAvailability({
         date_from: format(startDate, 'yyyy-MM-dd'),
         date_to: format(endDate, 'yyyy-MM-dd'),
-        event_type_id: eventTypeId
+        event_type_id: eventTypeId,
+        timezone: timezone
       });
       
       // Backend now returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}]}

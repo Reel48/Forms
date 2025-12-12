@@ -859,11 +859,12 @@ export interface CalComBookingReschedule {
 }
 
 export const calcomAPI = {
-  getAvailability: (params?: { date_from?: string; date_to?: string; event_type_id?: number }) => {
+  getAvailability: (params?: { date_from?: string; date_to?: string; event_type_id?: number; timezone?: string }) => {
     const queryParams = new URLSearchParams();
     if (params?.date_from) queryParams.append('date_from', params.date_from);
     if (params?.date_to) queryParams.append('date_to', params.date_to);
     if (params?.event_type_id) queryParams.append('event_type_id', params.event_type_id.toString());
+    if (params?.timezone) queryParams.append('timezone', params.timezone);
     const queryString = queryParams.toString();
     return api.get<any>(`/api/calcom/availability${queryString ? `?${queryString}` : ''}`);
   },
