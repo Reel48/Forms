@@ -1172,7 +1172,7 @@ class AIActionExecutor:
                 computed_next = "Review and pay your quote"
                 computed_owner = "customer"
             elif tasks_incomplete:
-                computed_next = "Complete the required tasks in your folder"
+                computed_next = "Complete the required tasks in this folder"
                 computed_owner = "customer"
             elif has_shipment:
                 computed_next = "Track your shipment"
@@ -1205,4 +1205,3 @@ class AIActionExecutor:
         except Exception as e:
             logger.error(f"Error getting folder status: {str(e)}", exc_info=True)
             return {"success": False, "error": f"Failed to get folder status: {str(e)}"}
-
