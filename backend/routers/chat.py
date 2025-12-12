@@ -254,9 +254,34 @@ def _event_duration_minutes(event_type_id: Optional[int]) -> int:
 
 
 def _extract_slots_from_availability(raw_availability: Dict[str, Any], duration_minutes: int) -> List[Dict[str, str]]:
-    # Builds discrete slot instants from Cal.com dateRanges windows.
+    """
+    Normalize Cal.com availability payloads into a simple list:
+      [{"start_time": "<iso>Z"}, ...]
+
+    Cal.com can return different shapes depending on endpoint/version.
+    We support:
+    - dateRanges: [{start,end}, ...]
+    - slots: {"YYYY-MM-DD": ["2025-...Z", ...], ...} or list of ISO strings
+    """
     utc = ZoneInfo("UTC")
     slots: List[Dict[str, str]] = []
+
+    # 1) slots mapping or list (preferred when present)
+    raw_slots = raw_availability.get("slots")
+    if isinstance(raw_slots, dict):
+        for _day, times in raw_slots.items():
+            if isinstance(times, list):
+                for t in times:
+                    if isinstance(t, str) and t:
+                        slots.append({"start_time": t})
+    elif isinstance(raw_slots, list):
+        for t in raw_slots:
+            if isinstance(t, str) and t:
+                slots.append({"start_time": t})
+    if slots:
+        return sorted(slots, key=lambda s: s.get("start_time", ""))
+
+    # 2) dateRanges windows (build discrete slot instants)
     date_ranges = raw_availability.get("dateRanges") or []
     if not isinstance(date_ranges, list):
         date_ranges = []
@@ -283,6 +308,26 @@ def _extract_slots_from_availability(raw_availability: Dict[str, Any], duration_
         except Exception:
             continue
     return sorted(slots, key=lambda s: s.get("start_time", ""))
+
+
+def _infer_date_range_from_text(text: str) -> Optional[Dict[str, str]]:
+    """
+    Best-effort, lightweight date constraint routing for scheduling queries like:
+    - today
+    - tomorrow
+    """
+    if not text:
+        return None
+    t = text.lower()
+    today = datetime.now(ZoneInfo("UTC")).date()
+    if "today" in t:
+        d = today.isoformat()
+        return {"date_from": d, "date_to": d}
+    if "tomorrow" in t:
+        from datetime import timedelta
+        d = (today + timedelta(days=1)).isoformat()
+        return {"date_from": d, "date_to": d}
+    return None
 
 
 def _render_availability_message(slots: List[Dict[str, str]], tz: str, limit: int = 10) -> str:
@@ -1261,6 +1306,16 @@ async def generate_ai_response(
                     
                     # Convert any MapComposite or proto objects to dicts
                     func_params = _convert_proto_to_dict(func_params)
+
+                    # Enrich get_availability if the model omitted common params (e.g. user asked "today").
+                    if func_name == "get_availability":
+                        try:
+                            if not func_params.get("date_from") and not func_params.get("date_to"):
+                                inferred = _infer_date_range_from_text(user_message_for_validation or "")
+                                if inferred:
+                                    func_params.update(inferred)
+                        except Exception:
+                            pass
                     
                     # Ensure line_items is properly converted (if present)
                     if "line_items" in func_params:
@@ -1332,8 +1387,8 @@ async def generate_ai_response(
                                 "availability": slots,
                             })
                             _insert_ai_message(conversation_id, _render_availability_message(slots, tz, limit=10))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning(f"Failed to post availability follow-up: {str(e)}", exc_info=True)
 
                     # Persist audit log for AI actions (optional; requires DB migration)
                     try:
@@ -1802,6 +1857,16 @@ async def _generate_ai_response_async(
                     
                     # Convert any MapComposite or proto objects to dicts
                     func_params = _convert_proto_to_dict(func_params)
+
+                    # Enrich get_availability if the model omitted common params (e.g. user asked "today").
+                    if func_name == "get_availability":
+                        try:
+                            if not func_params.get("date_from") and not func_params.get("date_to"):
+                                inferred = _infer_date_range_from_text(user_query or "")
+                                if inferred:
+                                    func_params.update(inferred)
+                        except Exception:
+                            pass
                     
                     # Ensure line_items is properly converted (if present)
                     if "line_items" in func_params:
@@ -1857,8 +1922,8 @@ async def _generate_ai_response_async(
                                 "availability": slots,
                             })
                             _insert_ai_message(conversation_id, _render_availability_message(slots, tz, limit=10))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning(f"Failed to post availability follow-up: {str(e)}", exc_info=True)
 
                     # Persist audit log for AI actions (optional; requires DB migration)
                     try:
