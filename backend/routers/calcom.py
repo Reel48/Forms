@@ -9,6 +9,7 @@ import sys
 import os
 import logging
 import uuid
+import requests
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
@@ -251,16 +252,47 @@ async def create_booking(
             raise HTTPException(status_code=400, detail="Missing required fields: event_type_id and start_time")
         
         # Create booking via Cal.com API
-        booking_response = calcom_service.create_booking(
-            event_type_id=event_type_id,
-            start_time=start_time,
-            attendee_info={
-                "name": customer_info["name"],
-                "email": customer_info["email"],
-            },
-            timezone=timezone,
-            notes=notes if notes else None
-        )
+        try:
+            booking_response = calcom_service.create_booking(
+                event_type_id=event_type_id,
+                start_time=start_time,
+                attendee_info={
+                    "name": customer_info["name"],
+                    "email": customer_info["email"],
+                },
+                timezone=timezone,
+                notes=notes if notes else None
+            )
+        except requests.exceptions.HTTPError as http_err:
+            status_code = getattr(http_err.response, "status_code", None)
+            # Avoid logging or returning any PII; Cal.com error bodies sometimes include request echoes.
+            safe_body = None
+            try:
+                body_json = http_err.response.json() if http_err.response is not None else None
+                if isinstance(body_json, dict):
+                    safe_body = {k: body_json.get(k) for k in ["message", "error", "code"] if k in body_json}
+            except Exception:
+                safe_body = None
+
+            logger.error(
+                "Cal.com create booking failed",
+                extra={
+                    "calcom_status": status_code,
+                    "event_type_id": event_type_id,
+                    "start_time": start_time,
+                    "timezone": timezone,
+                    "calcom_safe_error": safe_body,
+                },
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "Cal.com booking creation failed",
+                    "calcom_status": status_code,
+                    "calcom_error": safe_body,
+                },
+            )
         
         booking_id = booking_response.get("id")
         if not booking_id:
