@@ -1,7 +1,4 @@
-/* Time slot selector styles are now in time-slots-layout class */
-.time-slot-selector {
-  /* This class is kept for backward compatibility but styles moved to time-slots-layout */
-}
+/* Time slot selector styles live on `.time-slots-layout` (from CustomerSchedulingPage.css) */
 
 .time-slot-header {
   margin-bottom: 1rem;
@@ -12,78 +9,6 @@
   font-weight: 600;
   color: var(--color-text, #1f2937);
   margin: 0;
-}
-
-.quick-book-section {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-
-.quick-book-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-muted, #6b7280);
-  margin: 0 0 0.5rem 0;
-}
-
-/* --- UPDATED CONTAINER: Uses Grid to fill space --- */
-.quick-book-container {
-  display: grid;
-  /* This magic line makes columns automatically fit. 
-     They will be at least 180px wide, but stretch to fill the rest of the row. */
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem; /* Consistent spacing */
-  margin-top: 1rem;
-  margin-bottom: 2rem;
-}
-
-/* --- UPDATED BUTTONS: Bigger & Centered --- */
-.quick-book-btn {
-  /* Make the button fill its grid cell */
-  width: 100%;
-  
-  /* Match the styling of the new wider calendar cells */
-  background: white;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  
-  /* Slightly taller padding to match the 'heft' of the calendar days */
-  padding: 0.75rem 1rem;
-  
-  color: var(--color-text, #1f2937);
-  font-size: 0.875rem;
-  font-weight: 500;
-  
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  /* Ensure text is always perfectly centered */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-/* --- HOVER EFFECTS (Kept the same) --- */
-.quick-book-btn:hover {
-  background: var(--color-bg-secondary, #f9fafb);
-  border-color: var(--color-primary, #2563eb);
-  color: var(--color-primary, #2563eb);
-  transform: translateY(-2px); /* Slight lift up */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* Subtle shadow on lift */
-}
-
-.quick-book-btn:active {
-  transform: scale(0.98);
-}
-
-/* Optional: Selected State */
-.quick-book-btn.selected {
-  background: var(--color-primary, #2563eb);
-  border-color: var(--color-primary, #2563eb);
-  color: white;
-  transform: scale(0.98);
 }
 
 /* Container for the list of time buttons */
@@ -116,7 +41,7 @@
   justify-content: center;
 }
 
-/* Hover State - Matches Calendar & Quick Book */
+/* Hover State - Matches calendar */
 .time-slot-btn:hover {
   background: var(--color-bg-secondary, #f9fafb);
   border-color: var(--color-primary, #2563eb);
@@ -166,18 +91,6 @@
     padding: 0.75rem 0;
     font-size: 0.8125rem;
     min-height: 44px; /* Touch-friendly */
-  }
-
-  .quick-book-container {
-    /* On mobile, use single column for better touch targets */
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .quick-book-btn {
-    width: 100%;
-    min-height: 44px; /* Touch-friendly */
-    padding: 0.75rem 1rem;
   }
 
   .time-slot-header h4 {

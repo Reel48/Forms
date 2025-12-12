@@ -2,25 +2,21 @@ import { useState, useEffect } from 'react';
 import { addDays, format } from 'date-fns';
 import { calcomAPI } from '../../api';
 import type { CalComAvailabilitySlot } from '../../api';
-import { getQuickBookSuggestions } from '../../utils/dateUtils';
 import './TimeSlotSelector.css';
 
 interface TimeSlotSelectorProps {
   selectedDate: Date | null;
   onTimeSlotSelect: (dateTime: string) => void;
   eventTypeId?: number;
-  onQuickBook?: (date: Date, time: string) => void;
 }
 
 export default function TimeSlotSelector({
   selectedDate,
   onTimeSlotSelect,
-  eventTypeId,
-  onQuickBook
+  eventTypeId
 }: TimeSlotSelectorProps) {
   const [timeSlots, setTimeSlots] = useState<CalComAvailabilitySlot[]>([]);
   const [loading, setLoading] = useState(false);
-  const [quickBookSuggestions, setQuickBookSuggestions] = useState<Array<{ label: string; date: Date; time: string }>>([]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -29,10 +25,6 @@ export default function TimeSlotSelector({
       setTimeSlots([]);
     }
   }, [selectedDate, eventTypeId]);
-
-  useEffect(() => {
-    setQuickBookSuggestions(getQuickBookSuggestions());
-  }, []);
 
   const loadTimeSlots = async () => {
     if (!selectedDate) return;
@@ -70,17 +62,6 @@ export default function TimeSlotSelector({
     onTimeSlotSelect(slot.start_time);
   };
 
-  const handleQuickBook = (suggestion: { date: Date; time: string }) => {
-    if (onQuickBook) {
-      onQuickBook(suggestion.date, suggestion.time);
-    } else {
-      const [hours, minutes] = suggestion.time.split(':');
-      const dateTime = new Date(suggestion.date);
-      dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      onTimeSlotSelect(dateTime.toISOString());
-    }
-  };
-
   if (!selectedDate) {
     return (
       <div className="time-slots-layout is-empty">
@@ -96,23 +77,6 @@ export default function TimeSlotSelector({
       <div className="time-slot-header">
         <h4>Available Times for {format(selectedDate, 'EEEE, MMMM d')}</h4>
       </div>
-
-      {quickBookSuggestions.length > 0 && timeSlots.length > 0 && (
-        <div className="quick-book-section">
-          <p className="quick-book-label">Quick Book:</p>
-          <div className="quick-book-container">
-            {quickBookSuggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                className="quick-book-btn"
-                onClick={() => handleQuickBook(suggestion)}
-              >
-                {suggestion.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {loading ? (
         <div className="time-slot-loading">

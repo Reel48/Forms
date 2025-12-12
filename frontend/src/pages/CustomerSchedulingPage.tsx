@@ -138,18 +138,6 @@ function CustomerSchedulingPage() {
     }
   };
 
-  const handleQuickBook = async (date: Date, time: string) => {
-    if (!selectedEventType) {
-      alert('Please select a meeting type first.');
-      return;
-    }
-
-    const [hours, minutes] = time.split(':');
-    const dateTime = new Date(date);
-    dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    await handleTimeSlotSelect(dateTime.toISOString());
-  };
-
   const handleJoinMeeting = (meetingUrl: string) => {
     window.open(meetingUrl, '_blank');
   };
@@ -340,7 +328,6 @@ function CustomerSchedulingPage() {
                     selectedDate={selectedDate}
                     onTimeSlotSelect={handleTimeSlotSelect}
                     eventTypeId={selectedEventType?.id}
-                    onQuickBook={handleQuickBook}
                   />
                 )}
               </div>
