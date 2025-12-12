@@ -2140,7 +2140,7 @@ async def _generate_ai_response_async(
                         lines.append(f"- [View folder]({frontend_url}/folders/{created_folder_id})")
                     if created_quote_id:
                         lines.append(f"- [View quote]({frontend_url}/quotes/{created_quote_id})")
-                    _insert_ai_message(conversation_id, "\n".join(lines), "text")
+                    _insert_ai_message(conversation_id, "\n".join(lines))
             except Exception:
                 pass
 
