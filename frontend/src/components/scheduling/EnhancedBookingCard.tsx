@@ -140,7 +140,7 @@ export default function EnhancedBookingCard({
           onClick={handleExportICS}
           title="Add to calendar"
         >
-          📅 Add to Calendar
+          Add to Calendar
         </button>
       </div>
 

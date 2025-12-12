@@ -122,7 +122,17 @@ function CustomerSchedulingPage() {
       alert('Meeting scheduled successfully!');
     } catch (error: any) {
       console.error('Failed to create booking:', error);
-      alert('Failed to schedule meeting. Please try again.');
+      const detail = error?.response?.data?.detail;
+      if (detail) {
+        // Backend returns {"detail": {...}}; show concise info without leaking anything sensitive
+        const msg =
+          typeof detail === 'string'
+            ? detail
+            : JSON.stringify(detail, null, 2);
+        alert(`Failed to schedule meeting:\n\n${msg}`);
+      } else {
+        alert('Failed to schedule meeting. Please try again.');
+      }
     } finally {
       setCreatingBooking(false);
     }
@@ -203,20 +213,19 @@ function CustomerSchedulingPage() {
             <div>
               {upcomingBookings.length === 0 ? (
                 <div className="empty-state-enhanced">
-                  <div className="empty-state-icon">📅</div>
                   <h3>No upcoming meetings</h3>
                   <p>Schedule your first meeting with the Reel48 team to discuss your project needs.</p>
                   <div className="empty-state-benefits">
                     <div className="benefit-item">
-                      <span className="benefit-icon">✓</span>
+                      <span className="benefit-bullet" aria-hidden="true" />
                       <span>Get personalized recommendations</span>
                     </div>
                     <div className="benefit-item">
-                      <span className="benefit-icon">✓</span>
+                      <span className="benefit-bullet" aria-hidden="true" />
                       <span>Discuss custom solutions</span>
                     </div>
                     <div className="benefit-item">
-                      <span className="benefit-icon">✓</span>
+                      <span className="benefit-bullet" aria-hidden="true" />
                       <span>Get answers to your questions</span>
                     </div>
                   </div>
@@ -256,7 +265,6 @@ function CustomerSchedulingPage() {
             <div>
               {pastBookings.length === 0 ? (
                 <div className="empty-state-enhanced">
-                  <div className="empty-state-icon">📋</div>
                   <h3>No past meetings</h3>
                   <p>Your meeting history will appear here once you've had meetings with the Reel48 team.</p>
                 </div>
