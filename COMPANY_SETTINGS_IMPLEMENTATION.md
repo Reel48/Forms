@@ -90,3 +90,4 @@ The `company_settings` table stores:
 - All fields except company name are optional
 
 
+

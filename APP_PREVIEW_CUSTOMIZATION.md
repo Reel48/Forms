@@ -188,3 +188,4 @@ The Open Graph image (`og-image.png`) should be:
 - Check HTTPS is enabled (required for PWA)
 - Test in Chrome DevTools → Application → Manifest
 
+

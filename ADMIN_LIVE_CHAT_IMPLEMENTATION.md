@@ -127,3 +127,4 @@ if is_admin:
 - The frontend AI response trigger function is commented out (not used)
 - Real-time subscriptions handle all live updates automatically
 
+

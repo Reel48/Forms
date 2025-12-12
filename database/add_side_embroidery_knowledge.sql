@@ -13,3 +13,4 @@ INSERT INTO knowledge_embeddings (id, category, title, content, metadata, create
   )
 ON CONFLICT DO NOTHING;
 
+

@@ -32,3 +32,4 @@ verify_aws_account() {
     return 0
 }
 
+

@@ -48,3 +48,4 @@ echo "✨ All favicons generated successfully!"
 echo "📝 Note: You may want to manually adjust og-image.png to add text or improve the design"
 echo "📝 Note: favicon.svg needs to be created manually or converted from your logo"
 
+

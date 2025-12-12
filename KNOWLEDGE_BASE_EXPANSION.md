@@ -53,3 +53,4 @@ Use consistent categories to help the AI understand the type of info:
 - **Update Regularly**: If you change a policy (e.g., shipping times), update the corresponding entry in the database.
 - **Monitor Chat**: Read the chat logs periodically. If the AI says "I don't know," add that information to the knowledge base!
 
+

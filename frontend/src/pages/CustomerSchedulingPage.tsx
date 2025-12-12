@@ -389,7 +389,6 @@ function CustomerSchedulingPage() {
                         selectedDate={selectedDate}
                         onDateSelect={setSelectedDate}
                         eventTypeId={selectedEventType?.id}
-                        timezone={timezone}
                       />
                       {selectedDate && (
                         <div style={{ marginTop: '1.5rem' }}>
@@ -414,7 +413,6 @@ function CustomerSchedulingPage() {
                           selectedDate={selectedDate}
                           onDateSelect={setSelectedDate}
                           eventTypeId={selectedEventType?.id}
-                          timezone={timezone}
                         />
                         {selectedDate && (
                           <TimeSlotSelector

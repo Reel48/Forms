@@ -32,3 +32,4 @@ ON CONFLICT DO NOTHING;
 -- FROM pricing_products 
 -- WHERE product_code LIKE 'EMB-SIDE%' AND is_active = true;
 
+

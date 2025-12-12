@@ -44,3 +44,4 @@ WHERE NOT EXISTS (
   SELECT 1 FROM knowledge_embeddings WHERE title = 'Contact Information'
 );
 
+

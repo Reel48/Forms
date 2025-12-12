@@ -137,3 +137,4 @@ All of the following should now be true:
 
 The implementation is complete and ready to use once Supabase URLs are configured!
 
+

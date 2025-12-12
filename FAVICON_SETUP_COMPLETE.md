@@ -119,3 +119,4 @@ convert favicon/web-app-manifest-512x512.png -resize 800x800 -gravity center -ex
 
 Everything else is ready to go! 🚀
 
+
