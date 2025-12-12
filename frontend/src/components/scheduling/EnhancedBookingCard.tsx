@@ -91,7 +91,13 @@ export default function EnhancedBookingCard({
         <div className="booking-countdown">
           <div className="countdown-label">Meeting starts in:</div>
           <div className="countdown-timer">
-            {countdown.hours > 0 && (
+            {countdown.days > 0 && (
+              <span className="countdown-unit">
+                <span className="countdown-value">{countdown.days}</span>
+                <span className="countdown-label-small">d</span>
+              </span>
+            )}
+            {(countdown.days > 0 || countdown.hours > 0) && (
               <span className="countdown-unit">
                 <span className="countdown-value">{countdown.hours}</span>
                 <span className="countdown-label-small">h</span>
@@ -100,10 +106,6 @@ export default function EnhancedBookingCard({
             <span className="countdown-unit">
               <span className="countdown-value">{countdown.minutes}</span>
               <span className="countdown-label-small">m</span>
-            </span>
-            <span className="countdown-unit">
-              <span className="countdown-value">{countdown.seconds}</span>
-              <span className="countdown-label-small">s</span>
             </span>
           </div>
         </div>

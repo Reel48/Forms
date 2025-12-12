@@ -86,12 +86,12 @@ export function formatTime(dateTime: string, timezone?: string): string {
 }
 
 /**
- * Calculate countdown timer values (hours, minutes, seconds)
+ * Calculate countdown timer values (days, hours, minutes)
  */
 export function getCountdown(dateTime: string, timezone?: string): {
+  days: number;
   hours: number;
   minutes: number;
-  seconds: number;
   totalSeconds: number;
   isPast: boolean;
 } {
@@ -105,14 +105,14 @@ export function getCountdown(dateTime: string, timezone?: string): {
   const isPast = totalSeconds < 0;
   
   const absSeconds = Math.abs(totalSeconds);
-  const hours = Math.floor(absSeconds / 3600);
+  const days = Math.floor(absSeconds / 86400);
+  const hours = Math.floor((absSeconds % 86400) / 3600);
   const minutes = Math.floor((absSeconds % 3600) / 60);
-  const seconds = absSeconds % 60;
   
   return {
+    days,
     hours,
     minutes,
-    seconds,
     totalSeconds,
     isPast
   };
