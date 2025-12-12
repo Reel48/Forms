@@ -47,8 +47,7 @@ export default function TimeSlotSelector({
       const response = await calcomAPI.getAvailability({
         date_from: dateStr,
         date_to: dateStr,
-        event_type_id: eventTypeId,
-        timezone: timezone
+        event_type_id: eventTypeId
       });
       
       // Backend returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}], timezone: "America/Chicago"}
@@ -58,35 +57,42 @@ export default function TimeSlotSelector({
       const dayAvailability = availability.find((a: CalComAvailability) => a.date === dateStr);
       const slots = dayAvailability?.slots || [];
       
-      // Convert slots from Cal.com timezone to user's timezone
+      // Get user's timezone
       const userTz = timezone || getUserTimezone();
-      const convertedSlots = slots.map((slot: string) => {
-        try {
-          // Parse the time slot (HH:MM) in Cal.com timezone
-          const [hours, minutes] = slot.split(':');
-          const dateStr = format(selectedDate, 'yyyy-MM-dd');
-          
-          // Create a date string representing this time in Cal.com timezone
-          const dateTimeStr = `${dateStr}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
-          
-          // Create a date object (this will be interpreted as local time, but we'll fix that)
-          const dateInCalcomTz = new Date(dateTimeStr);
-          
-          // Use date-fns-tz to properly convert:
-          // 1. Treat the date as if it's in Cal.com timezone (fromZonedTime)
-          // 2. Convert to user's timezone (toZonedTime)
-          const utcDate = fromZonedTime(dateInCalcomTz, calcomTimezone);
-          const userZonedDate = toZonedTime(utcDate, userTz);
-          
-          // Format as HH:mm in user's timezone
-          return format(userZonedDate, 'HH:mm');
-        } catch (e) {
-          console.error('Error converting timezone:', e, slot);
-          return slot; // Fallback to original
-        }
-      });
       
-      setTimeSlots(convertedSlots);
+      // If timezones match, no conversion needed - display times as-is
+      if (calcomTimezone === userTz) {
+        setTimeSlots(slots);
+      } else {
+        // Only convert if timezones differ
+        const convertedSlots = slots.map((slot: string) => {
+          try {
+            // Parse the time slot (HH:MM) in Cal.com timezone
+            const [hours, minutes] = slot.split(':');
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            
+            // Create a date string representing this time in Cal.com timezone
+            const dateTimeStr = `${dateStr}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+            
+            // Create a date object (this will be interpreted as local time, but we'll fix that)
+            const dateInCalcomTz = new Date(dateTimeStr);
+            
+            // Use date-fns-tz to properly convert:
+            // 1. Treat the date as if it's in Cal.com timezone (fromZonedTime)
+            // 2. Convert to user's timezone (toZonedTime)
+            const utcDate = fromZonedTime(dateInCalcomTz, calcomTimezone);
+            const userZonedDate = toZonedTime(utcDate, userTz);
+            
+            // Format as HH:mm in user's timezone
+            return format(userZonedDate, 'HH:mm');
+          } catch (e) {
+            console.error('Error converting timezone:', e, slot);
+            return slot; // Fallback to original
+          }
+        });
+        
+        setTimeSlots(convertedSlots);
+      }
     } catch (error) {
       console.error('Failed to load time slots:', error);
       console.error('Error details:', error);
