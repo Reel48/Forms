@@ -1841,57 +1841,69 @@ async def _generate_ai_response_async(
                 logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
                 # Don't fail, just log
         
-        # Remove placeholder now that we have a final response to save.
-        _delete_placeholder()
-
-        # Create AI message
-        ai_message_data = {
-            "id": str(uuid.uuid4()),
-            "conversation_id": conversation_id,
-            "sender_id": OCHO_USER_ID,
-            "message": ai_response,
-            "message_type": "text",
-            "created_at": datetime.now().isoformat()
-        }
-        
-        print(f"🤖 [AI TASK] Inserting AI message into database...")
-        logger.info(f"🤖 [AI TASK] Inserting AI message into database...")
-        message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
-        if message_response.data:
-            print(f"✅ [AI TASK] AI message inserted successfully: {message_response.data[0].get('id')}")
-            logger.info(f"✅ [AI TASK] AI message inserted successfully: {message_response.data[0].get('id')}")
-            # Update conversation timestamp
+        # Finalize: prefer updating placeholder in-place (UPDATE events are reliable; DELETE may not be delivered).
+        updated_placeholder = False
+        if placeholder_message_id:
             try:
-                supabase_storage.table("chat_conversations").update({
-                    "last_message_at": datetime.now().isoformat(),
-                    "updated_at": datetime.now().isoformat()
-                }).eq("id", conversation_id).execute()
-                logger.info(f"✅ [AI TASK] Conversation timestamp updated")
+                supabase_storage.table("chat_messages").update({
+                    "message": ai_response,
+                    "message_type": "text"
+                }).eq("id", placeholder_message_id).execute()
+                updated_placeholder = True
+                logger.info(f"✅ [AI TASK] Placeholder message updated with final AI response")
             except Exception as e:
-                logger.warning(f"⚠️ [AI TASK] Failed to update conversation timestamp: {str(e)}")
+                logger.warning(f"⚠️ [AI TASK] Failed to finalize placeholder message {placeholder_message_id}: {str(e)}")
+
+        if not updated_placeholder:
+            # Fallback: best-effort cleanup then insert a new AI message
+            _delete_placeholder()
+
+            ai_message_data = {
+                "id": str(uuid.uuid4()),
+                "conversation_id": conversation_id,
+                "sender_id": OCHO_USER_ID,
+                "message": ai_response,
+                "message_type": "text",
+                "created_at": datetime.now().isoformat()
+            }
             
-            print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
-            logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+            print(f"🤖 [AI TASK] Inserting AI message into database...")
+            logger.info(f"🤖 [AI TASK] Inserting AI message into database...")
+            message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
+            if not message_response.data:
+                print(f"❌ [AI TASK] Failed to insert AI message - no data returned")
+                logger.error(f"❌ [AI TASK] Failed to insert AI message - no data returned")
+                return
 
-            # Update rolling conversation summary (optional; can be disabled)
-            try:
-                if os.getenv("ENABLE_CHAT_SUMMARY", "true").lower() in ("1", "true", "yes"):
-                    prev = conversation_summary
-                    summary_messages = conversation_history + [
-                        {"role": "user", "content": user_query},
-                        {"role": "model", "content": ai_response},
-                    ]
-                    new_summary = ai_service.summarize_conversation(prev, summary_messages)
-                    if new_summary and new_summary != prev:
-                        supabase_storage.table("chat_conversations").update({
-                            "summary": new_summary,
-                            "summary_updated_at": datetime.now().isoformat()
-                        }).eq("id", conversation_id).execute()
-            except Exception as e:
-                logger.debug(f"Failed to update chat summary for conversation {conversation_id}: {str(e)}")
-        else:
-            print(f"❌ [AI TASK] Failed to insert AI message - no data returned")
-            logger.error(f"❌ [AI TASK] Failed to insert AI message - no data returned")
+        # Update conversation timestamp
+        try:
+            supabase_storage.table("chat_conversations").update({
+                "last_message_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }).eq("id", conversation_id).execute()
+            logger.info(f"✅ [AI TASK] Conversation timestamp updated")
+        except Exception as e:
+            logger.warning(f"⚠️ [AI TASK] Failed to update conversation timestamp: {str(e)}")
+        
+        print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+        logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+
+        # Update rolling conversation summary (optional; can be disabled)
+        try:
+            if os.getenv("ENABLE_CHAT_SUMMARY", "true").lower() in ("1", "true", "yes"):
+                prev = conversation_summary
+                summary_messages = conversation_history + [
+                    {"role": "user", "content": user_query},
+                    {"role": "model", "content": ai_response},
+                ]
+                new_summary = ai_service.summarize_conversation(prev, summary_messages)
+                if new_summary and new_summary != prev:
+                    supabase_storage.table("chat_conversations").update({
+                        "summary": new_summary,
+                        "summary_updated_at": datetime.now().isoformat()
+                    }).eq("id", conversation_id).execute()
+        except Exception as e:
+            logger.debug(f"Failed to update chat summary for conversation {conversation_id}: {str(e)}")
     
     except Exception as e:
         print(f"❌ [AI TASK] Error generating AI response asynchronously: {str(e)}")
@@ -1899,4 +1911,3 @@ async def _generate_ai_response_async(
         import traceback
         print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
         _update_placeholder_to_error("Reel48 AI ran into an error generating a response. Please try again.")
-

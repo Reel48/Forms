@@ -644,7 +644,15 @@ class AIService:
             
             # If no text but we have VALID function calls, generate a response about what we're doing
             if not response_text and valid_function_calls:
-                response_text = "I'll help you with that. Let me create the quote and set everything up for you."
+                first_name = (valid_function_calls[0].get("name") or "").strip()
+                if first_name == "get_availability":
+                    response_text = "I can help with that. Let me check available meeting times for you."
+                elif first_name == "schedule_meeting":
+                    response_text = "Perfect — I’ll go ahead and book that time for you."
+                elif first_name == "create_quote":
+                    response_text = "I'll help you with that. Let me create the quote and set everything up for you."
+                else:
+                    response_text = "I can help with that. Let me take care of it now."
             elif not response_text:
                 response_text = response.text if hasattr(response, 'text') else ""
             
