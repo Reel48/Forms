@@ -174,10 +174,12 @@ async def get_availability(
                     
                     current_date = start_date
                     while current_date <= end_date:
-                        day_of_week = current_date.weekday()  # 0=Monday, 6=Sunday
+                        python_weekday = current_date.weekday()  # 0=Monday, 6=Sunday
+                        # Convert to Cal.com day numbering: 0=Sunday, 1=Monday, ..., 6=Saturday
+                        calcom_day = (python_weekday + 1) % 7
                         
                         for wh in working_hours:
-                            if day_of_week in wh.get("days", []):
+                            if calcom_day in wh.get("days", []):
                                 start_time_minutes = wh.get("startTime", 0)  # e.g., 900 = 9:00 AM
                                 end_time_minutes = wh.get("endTime", 1380)  # e.g., 1380 = 11:00 PM
                                 
