@@ -1605,6 +1605,7 @@ async def _generate_ai_response_async(
             if not ai_response or len(ai_response.strip()) == 0:
                 print(f"⚠️ [AI TASK] AI service returned empty response")
                 logger.warning(f"⚠️ [AI TASK] AI service returned empty response")
+                _update_placeholder_to_error("Reel48 AI returned an empty response. Please try again.")
                 return
             print(f"✅ [AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
             logger.info(f"✅ [AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
