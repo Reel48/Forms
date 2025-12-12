@@ -1,14 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile, Query, BackgroundTasks
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from decimal import Decimal
 
 import sys
 import os
 import uuid
 from datetime import datetime
+import re
 import requests
 import logging
 import asyncio
+from zoneinfo import ZoneInfo
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,6 +23,7 @@ from rag_service import get_rag_service
 from ai_action_executor import AIActionExecutor
 from chat_cleanup import cleanup_old_chat_history
 from attachment_service import download_attachment, extract_text_from_attachment_bytes
+from calcom_service import CalComService
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -160,6 +163,135 @@ if OCHO_USER_ID and OCHO_USER_ID != "00000000-0000-0000-0000-000000000000":
 async def get_ocho_user_id():
     """Get Ocho (AI assistant) user ID for frontend"""
     return {"ocho_user_id": OCHO_USER_ID}
+
+# --- Scheduling helpers (used for follow-up availability messages) ---
+SCHEDULING_TZ_FALLBACK = os.getenv("CHAT_SCHEDULING_DEFAULT_TZ", "America/Chicago")
+
+
+def _infer_timezone_from_text(text: str) -> str:
+    if not text:
+        return SCHEDULING_TZ_FALLBACK
+    t = text.strip()
+    m = re.search(r"\b([A-Za-z]+/[A-Za-z_]+)\b", t)
+    if m:
+        return m.group(1)
+    abbr_map = {
+        "pst": "America/Los_Angeles",
+        "pdt": "America/Los_Angeles",
+        "mst": "America/Denver",
+        "mdt": "America/Denver",
+        "cst": "America/Chicago",
+        "cdt": "America/Chicago",
+        "est": "America/New_York",
+        "edt": "America/New_York",
+    }
+    m2 = re.search(r"\b(pst|pdt|mst|mdt|cst|cdt|est|edt)\b", t.lower())
+    if m2:
+        return abbr_map.get(m2.group(1)) or SCHEDULING_TZ_FALLBACK
+    return SCHEDULING_TZ_FALLBACK
+
+
+def _format_slot_local(start_iso: str, tz: str) -> str:
+    try:
+        utc = ZoneInfo("UTC")
+        local = ZoneInfo(tz)
+        start_dt = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
+        if not start_dt.tzinfo:
+            start_dt = start_dt.replace(tzinfo=utc)
+        local_dt = start_dt.astimezone(local)
+        try:
+            return local_dt.strftime("%a %b %d, %-I:%M %p")
+        except Exception:
+            return local_dt.strftime("%a %b %d, %I:%M %p").lstrip("0")
+    except Exception:
+        return start_iso
+
+
+def _get_pending_action(conversation_id: str) -> Optional[Dict[str, Any]]:
+    try:
+        resp = supabase_storage.table("chat_conversations").select("pending_action").eq("id", conversation_id).single().execute()
+        pa = (resp.data or {}).get("pending_action")
+        return pa if isinstance(pa, dict) else None
+    except Exception:
+        return None
+
+
+def _set_pending_action(conversation_id: str, pending_action: Optional[Dict[str, Any]]) -> None:
+    try:
+        supabase_storage.table("chat_conversations").update({
+            "pending_action": pending_action,
+            "pending_action_updated_at": datetime.now().isoformat(),
+        }).eq("id", conversation_id).execute()
+    except Exception:
+        pass
+
+
+def _insert_ai_message(conversation_id: str, message: str) -> None:
+    try:
+        supabase_storage.table("chat_messages").insert({
+            "id": str(uuid.uuid4()),
+            "conversation_id": conversation_id,
+            "sender_id": OCHO_USER_ID,
+            "message": message,
+            "message_type": "text",
+            "created_at": datetime.now().isoformat(),
+        }).execute()
+    except Exception:
+        pass
+
+
+def _event_duration_minutes(event_type_id: Optional[int]) -> int:
+    if not event_type_id:
+        return 30
+    try:
+        calcom = CalComService()
+        for et in (calcom.get_event_types() or []):
+            if str(et.get("id")) == str(event_type_id):
+                return int(et.get("length") or 30)
+    except Exception:
+        return 30
+    return 30
+
+
+def _extract_slots_from_availability(raw_availability: Dict[str, Any], duration_minutes: int) -> List[Dict[str, str]]:
+    # Builds discrete slot instants from Cal.com dateRanges windows.
+    utc = ZoneInfo("UTC")
+    slots: List[Dict[str, str]] = []
+    date_ranges = raw_availability.get("dateRanges") or []
+    if not isinstance(date_ranges, list):
+        date_ranges = []
+    from datetime import timedelta
+    dur = timedelta(minutes=duration_minutes)
+    for dr in date_ranges:
+        start_str = (dr or {}).get("start")
+        end_str = (dr or {}).get("end")
+        if not start_str or not end_str:
+            continue
+        try:
+            start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+            end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+            if not start_dt.tzinfo:
+                start_dt = start_dt.replace(tzinfo=utc)
+            if not end_dt.tzinfo:
+                end_dt = end_dt.replace(tzinfo=utc)
+            start_dt = start_dt.astimezone(utc)
+            end_dt = end_dt.astimezone(utc)
+            cur = start_dt
+            while cur + dur <= end_dt:
+                slots.append({"start_time": cur.isoformat().replace("+00:00", "Z")})
+                cur += dur
+        except Exception:
+            continue
+    return sorted(slots, key=lambda s: s.get("start_time", ""))
+
+
+def _render_availability_message(slots: List[Dict[str, str]], tz: str, limit: int = 10) -> str:
+    if not slots:
+        return "I’m not seeing any open times right now. Tell me a couple days/times that work for you and I’ll try again."
+    lines = [f"Here are some available times ({tz}). Reply with the number you want:"]
+    for i, s in enumerate(slots[:limit], start=1):
+        lines.append(f"{i}) {_format_slot_local(s.get('start_time',''), tz)}")
+    return "\n".join(lines)
 
 # File upload constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -1184,6 +1316,25 @@ async def generate_ai_response(
                         "error": result.get("error")
                     })
 
+                    # If we just fetched availability, immediately follow up with a 2nd message containing times.
+                    # This prevents the chat from stalling on "Let me check..." without showing options.
+                    if func_name == "get_availability" and result.get("success"):
+                        try:
+                            raw = result.get("result") or {}
+                            tz = _infer_timezone_from_text(user_message_for_validation or "")
+                            duration = _event_duration_minutes(func_params.get("event_type_id"))
+                            slots = _extract_slots_from_availability(raw, duration)[:15]
+                            _set_pending_action(conversation_id, {
+                                "type": "scheduling",
+                                "step": "choose_time",
+                                "event_type_id": func_params.get("event_type_id"),
+                                "timezone": tz,
+                                "availability": slots,
+                            })
+                            _insert_ai_message(conversation_id, _render_availability_message(slots, tz, limit=10))
+                        except Exception:
+                            pass
+
                     # Persist audit log for AI actions (optional; requires DB migration)
                     try:
                         if os.getenv("ENABLE_AI_ACTION_AUDIT", "true").lower() in ("1", "true", "yes"):
@@ -1690,6 +1841,24 @@ async def _generate_ai_response_async(
                     
                     # Get user message for validation
                     result = action_executor.execute_function(func_name, func_params, user_message=user_query)
+
+                    # If we just fetched availability, immediately follow up with a 2nd message containing times.
+                    if func_name == "get_availability" and result.get("success"):
+                        try:
+                            raw = result.get("result") or {}
+                            tz = _infer_timezone_from_text(user_query or "")
+                            duration = _event_duration_minutes(func_params.get("event_type_id"))
+                            slots = _extract_slots_from_availability(raw, duration)[:15]
+                            _set_pending_action(conversation_id, {
+                                "type": "scheduling",
+                                "step": "choose_time",
+                                "event_type_id": func_params.get("event_type_id"),
+                                "timezone": tz,
+                                "availability": slots,
+                            })
+                            _insert_ai_message(conversation_id, _render_availability_message(slots, tz, limit=10))
+                        except Exception:
+                            pass
 
                     # Persist audit log for AI actions (optional; requires DB migration)
                     try:
