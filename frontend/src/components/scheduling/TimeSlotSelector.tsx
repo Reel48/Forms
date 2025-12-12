@@ -67,20 +67,19 @@ export default function TimeSlotSelector({
           const dateStr = format(selectedDate, 'yyyy-MM-dd');
           
           // Create a date string representing this time in Cal.com timezone
-          // We need to find the UTC equivalent, then convert to user's timezone
           const dateTimeStr = `${dateStr}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
           
-          // Get timezone offsets
-          const calcomDate = new Date(dateTimeStr);
-          const calcomOffset = getTimezoneOffset(calcomTimezone, calcomDate);
-          const userOffset = getTimezoneOffset(userTz, calcomDate);
+          // Create a date object (this will be interpreted as local time, but we'll fix that)
+          const dateInCalcomTz = new Date(dateTimeStr);
           
-          // Calculate the difference and adjust
-          const offsetDiff = userOffset - calcomOffset;
-          const adjustedDate = new Date(calcomDate.getTime() + offsetDiff);
+          // Use date-fns-tz to properly convert:
+          // 1. Treat the date as if it's in Cal.com timezone (fromZonedTime)
+          // 2. Convert to user's timezone (toZonedTime)
+          const utcDate = fromZonedTime(dateInCalcomTz, calcomTimezone);
+          const userZonedDate = toZonedTime(utcDate, userTz);
           
-          // Format as HH:mm
-          return format(adjustedDate, 'HH:mm');
+          // Format as HH:mm in user's timezone
+          return format(userZonedDate, 'HH:mm');
         } catch (e) {
           console.error('Error converting timezone:', e, slot);
           return slot; // Fallback to original
