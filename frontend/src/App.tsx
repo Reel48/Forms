@@ -90,7 +90,7 @@ function Navigation() {
   const isDashboardActive = location.pathname === '/dashboard';
   const isEmailTemplatesActive = location.pathname === '/email-templates';
   const isAnalyticsActive = location.pathname === '/analytics';
-  const isChatActive = location.pathname === '/chat';
+  const isChatActive = location.pathname === '/chat' || location.pathname === '/admin/chat';
   const isAdmin = role === 'admin';
 
   // Check if any settings-related page is active
@@ -389,8 +389,8 @@ function Navigation() {
             </li>
             <li>
               <Link
-                to="/chat"
-                className={`nav-tab ${location.pathname.startsWith('/chat') ? 'active' : ''}`}
+                to="/admin/chat"
+                className={`nav-tab ${location.pathname === '/admin/chat' ? 'active' : ''}`}
               >
                 Chat
               </Link>
@@ -543,7 +543,7 @@ function AppContent() {
           <Route path="/esignature/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ESignatureView /></Suspense></ProtectedRoute>} />
           <Route path="/folders" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FoldersList /></Suspense></ProtectedRoute>} />
           <Route path="/folders/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FolderView /></Suspense></ProtectedRoute>} />
-          <Route path="/chat" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><ChatPage /></Suspense></ProtectedRoute>} />
+          <Route path="/admin/chat" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><ChatPage /></Suspense></ProtectedRoute>} />
           
           {/* Admin-only routes */}
           <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />

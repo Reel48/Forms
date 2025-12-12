@@ -1,0 +1,67 @@
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { FaPaperclip } from 'react-icons/fa';
+import type { ChatMessage } from '../../api';
+
+export function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(1)} MB`;
+}
+
+export function ChatMessageBody({
+  message,
+  renderAsMarkdown,
+}: {
+  message: ChatMessage;
+  renderAsMarkdown: boolean;
+}) {
+  if ((message.message_type === 'image' || message.message_type === 'file') && message.file_url) {
+    if (message.message_type === 'image') {
+      return (
+        <img
+          src={message.file_url}
+          alt={message.file_name || 'Image'}
+          style={{ maxWidth: '100%', borderRadius: '8px' }}
+        />
+      );
+    }
+
+    const size = formatFileSize(message.file_size);
+    return (
+      <a
+        href={message.file_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: 'inherit',
+          textDecoration: 'underline',
+        }}
+      >
+        <FaPaperclip />
+        <span>
+          {message.file_name || 'File'}
+          {size ? ` (${size})` : ''}
+        </span>
+      </a>
+    );
+  }
+
+  if (!renderAsMarkdown) {
+    return <>{message.message}</>;
+  }
+
+  return (
+    <div className="markdown-content">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.message}</ReactMarkdown>
+    </div>
+  );
+}
+

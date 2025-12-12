@@ -811,6 +811,19 @@ export interface ChatConversation {
   customer_name?: string;
 }
 
+export interface ChatAiActionLog {
+  id: string;
+  request_id?: string | null;
+  conversation_id: string;
+  trigger_message_id?: string | null;
+  function_name: string;
+  parameters?: any;
+  success: boolean;
+  result?: any;
+  error?: string | null;
+  created_at: string;
+}
+
 // Cal.com Types
 export interface CalComBooking {
   id: string;
@@ -910,6 +923,12 @@ export const chatAPI = {
     if (beforeId) params.append('before_id', beforeId);
     const queryString = params.toString();
     return api.get<ChatMessage[]>(`/api/chat/conversations/${conversationId}/messages${queryString ? `?${queryString}` : ''}`);
+  },
+  getAiActions: (conversationId: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    const queryString = params.toString();
+    return api.get<{ logs: ChatAiActionLog[] }>(`/api/chat/conversations/${conversationId}/ai-actions${queryString ? `?${queryString}` : ''}`);
   },
   sendMessage: (message: ChatMessageCreate) => api.post<ChatMessage>('/api/chat/messages', message),
   markMessageRead: (messageId: string) => api.post<{ message: string }>(`/api/chat/messages/${messageId}/read`),

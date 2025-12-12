@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { chatAPI, type ChatConversation, type ChatMessage } from '../api';
+import { chatAPI, type ChatConversation, type ChatMessage, type ChatAiActionLog } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
 import { FaPaperclip, FaCheck, FaTrash } from 'react-icons/fa';
-import { renderTextWithLinks } from '../utils/textUtils';
+import { ChatMessageBody } from '../components/chat/ChatMessageBody';
+import { useNotifications } from '../components/NotificationSystem';
 import './ChatPage.css';
 
 const ChatPage: React.FC = () => {
   const { user, role } = useAuth();
+  const { showNotification: notify } = useNotifications();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -21,6 +23,11 @@ const ChatPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'resolved', 'archived'
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [ochoUserId, setOchoUserId] = useState<string | null>(null);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [humanOnly, setHumanOnly] = useState(false);
+  const [needsResponseOnly, setNeedsResponseOnly] = useState(false);
+  const [aiLogs, setAiLogs] = useState<ChatAiActionLog[]>([]);
+  const [showAiLogs, setShowAiLogs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +90,7 @@ const ChatPage: React.FC = () => {
               loadConversations(false); // Silent refresh - no loading screen
               // Show notification for messages in other conversations
               const conversation = conversations.find(c => c.id === newMessage.conversation_id);
-              showNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
+              showBrowserNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
             } else {
               // For current conversation, just update the conversation's last_message_at in state
               setConversations((prev) =>
@@ -164,7 +171,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const showNotification = (message: ChatMessage, customerName?: string) => {
+  const showBrowserNotification = (message: ChatMessage, customerName?: string) => {
     // Only show notification if:
     // 1. Notification permission is granted
     // 2. Message is from someone else (not the current user)
@@ -232,7 +239,7 @@ const ChatPage: React.FC = () => {
           setConversations((currentConversations) => {
             const conversation = currentConversations.find(c => c.id === newMessage.conversation_id);
             if (selectedConversation?.id !== newMessage.conversation_id) {
-              showNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
+              showBrowserNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
             }
             return currentConversations;
           });
@@ -324,6 +331,27 @@ const ChatPage: React.FC = () => {
       setShouldAutoScroll(true); // Reset auto-scroll when switching conversations
     }
   }, [selectedConversation?.id, setupRealtimeSubscriptions]);
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      setAiLogs([]);
+      return;
+    }
+    const loadLogs = async () => {
+      try {
+        const resp = await chatAPI.getAiActions(selectedConversation.id, 50);
+        setAiLogs(resp.data.logs || []);
+      } catch (e: any) {
+        // If migration not applied yet, backend returns 501; treat as "not available"
+        if (e?.response?.status === 501) {
+          setAiLogs([]);
+          return;
+        }
+        console.error('Failed to load AI action logs:', e);
+      }
+    };
+    void loadLogs();
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     // Get Ocho user ID on component mount
@@ -461,7 +489,7 @@ const ChatPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to update conversation status:', error);
-      alert('Failed to update conversation status. Please try again.');
+      notify({ type: 'error', message: 'Failed to update conversation status. Please try again.' });
     } finally {
       setUpdatingStatus(false);
     }
@@ -483,14 +511,21 @@ const ChatPage: React.FC = () => {
       setMessages([]);
     } catch (error: any) {
       console.error('Failed to delete conversation:', error);
-      alert(error.response?.data?.detail || 'Failed to delete conversation');
+      notify({ type: 'error', message: error.response?.data?.detail || 'Failed to delete conversation' });
     }
   };
 
   // Filter conversations by status
   const filteredConversations = conversations.filter((conv) => {
-    if (statusFilter === 'all') return true;
-    return conv.status === statusFilter;
+    if (statusFilter !== 'all' && conv.status !== statusFilter) return false;
+    if (unreadOnly && (!conv.unread_count || conv.unread_count <= 0)) return false;
+    if (humanOnly && conv.chat_mode !== 'human') return false;
+    if (needsResponseOnly) {
+      const customerSpokeLast = conv.last_message?.sender_id === conv.customer_id;
+      const hasUnread = Boolean(conv.unread_count && conv.unread_count > 0);
+      if (!(customerSpokeLast && hasUnread)) return false;
+    }
+    return true;
   });
 
   const sendMessage = async () => {
@@ -510,7 +545,7 @@ const ChatPage: React.FC = () => {
       // No need to manually trigger here
     } catch (error) {
       console.error('Failed to send message:', error);
-      alert('Failed to send message. Please try again.');
+      notify({ type: 'error', message: 'Failed to send message. Please try again.' });
     } finally {
       setSending(false);
     }
@@ -546,7 +581,7 @@ const ChatPage: React.FC = () => {
       // No need to reload conversations - Realtime subscription will update the UI
     } catch (error) {
       console.error('Failed to upload file:', error);
-      alert('Failed to upload file. Please try again.');
+      notify({ type: 'error', message: 'Failed to upload file. Please try again.' });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -604,6 +639,20 @@ const ChatPage: React.FC = () => {
             <option value="resolved">Resolved</option>
             <option value="archived">Archived</option>
           </select>
+          <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.5rem' }}>
+            <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem' }}>
+              <input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} />
+              Unread only
+            </label>
+            <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem' }}>
+              <input type="checkbox" checked={needsResponseOnly} onChange={(e) => setNeedsResponseOnly(e.target.checked)} />
+              Needs response
+            </label>
+            <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem' }}>
+              <input type="checkbox" checked={humanOnly} onChange={(e) => setHumanOnly(e.target.checked)} />
+              Human mode
+            </label>
+          </div>
         </div>
         <div className="conversations-list">
           {filteredConversations.length === 0 ? (
@@ -638,6 +687,21 @@ const ChatPage: React.FC = () => {
                         }}
                       >
                         {conv.status}
+                      </span>
+                    )}
+                    {conv.chat_mode === 'human' && (
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          backgroundColor: 'var(--color-warning-light)',
+                          color: 'var(--color-warning)',
+                          textTransform: 'capitalize',
+                        }}
+                        title="AI paused"
+                      >
+                        human
                       </span>
                     )}
                     {conv.unread_count && conv.unread_count > 0 && (
@@ -713,6 +777,38 @@ const ChatPage: React.FC = () => {
                     <option value="resolved">Resolved</option>
                     <option value="archived">Archived</option>
                   </select>
+                  <select
+                    value={selectedConversation.chat_mode || 'ai'}
+                    onChange={async (e) => {
+                      const nextMode = e.target.value as 'ai' | 'human';
+                      try {
+                        await chatAPI.updateChatMode(selectedConversation.id, nextMode);
+                        setSelectedConversation({ ...selectedConversation, chat_mode: nextMode });
+                        setConversations((prev) =>
+                          prev.map((c) => (c.id === selectedConversation.id ? { ...c, chat_mode: nextMode } : c))
+                        );
+                        notify({
+                          type: 'success',
+                          message: nextMode === 'human' ? 'Conversation set to human mode (AI paused)' : 'Conversation set to AI mode',
+                        });
+                      } catch (err) {
+                        console.error('Failed to update chat mode:', err);
+                        notify({ type: 'error', message: 'Failed to update chat mode' });
+                      }
+                    }}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--brand-white)',
+                      cursor: 'pointer',
+                    }}
+                    title="AI vs Human mode"
+                  >
+                    <option value="ai">AI mode</option>
+                    <option value="human">Human mode</option>
+                  </select>
                   <button
                     onClick={handleDeleteConversation}
                     style={{
@@ -739,10 +835,74 @@ const ChatPage: React.FC = () => {
                     <FaTrash style={{ fontSize: '0.75rem' }} />
                     Delete
                   </button>
+                  <button
+                    onClick={() => setShowAiLogs((v) => !v)}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--brand-white)',
+                      cursor: 'pointer',
+                    }}
+                    title="Toggle AI action logs"
+                  >
+                    AI actions {aiLogs.length > 0 ? `(${aiLogs.length})` : ''}
+                  </button>
                   {/* AI auto-responds automatically - no manual button needed */}
                 </div>
               </div>
             </div>
+
+            {showAiLogs && (
+              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)' }}>
+                {aiLogs.length === 0 ? (
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+                    No AI action logs (or audit migration not applied).
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {aiLogs.slice(0, 10).map((log) => (
+                      <div
+                        key={log.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '1rem',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '6px',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--brand-white)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600 }}>{log.function_name}</span>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '0.15rem 0.4rem',
+                              borderRadius: '999px',
+                              background: log.success ? 'var(--color-success-light)' : 'var(--color-danger-light)',
+                              color: log.success ? 'var(--color-success)' : 'var(--color-danger)',
+                            }}
+                          >
+                            {log.success ? 'success' : 'failed'}
+                          </span>
+                          {log.error && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {log.error}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                          {new Date(log.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="messages-container" ref={messagesContainerRef}>
               {loadingMore && (
@@ -778,21 +938,9 @@ const ChatPage: React.FC = () => {
                         <div className="message-sender-name">
                           {senderName}
                         </div>
-                        {message.message_type === 'image' && message.file_url ? (
-                          <img src={message.file_url} alt={message.file_name || 'Image'} className="message-image" />
-                        ) : message.message_type === 'file' && message.file_url ? (
-                          <a
-                            href={message.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="message-file"
-                          >
-                            <FaPaperclip style={{ marginRight: '0.5rem' }} />
-                            {message.file_name || 'File'} ({(message.file_size || 0) / 1024} KB)
-                          </a>
-                        ) : (
-                          <div className="message-text">{renderTextWithLinks(message.message)}</div>
-                        )}
+                        <div className="message-text">
+                          <ChatMessageBody message={message} renderAsMarkdown={Boolean(isAI)} />
+                        </div>
                         <div className="message-time">
                           {formatTime(message.created_at)}
                           {isAdmin && message.read_at && (

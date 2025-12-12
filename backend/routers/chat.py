@@ -20,6 +20,7 @@ from ai_service import get_ai_service
 from rag_service import get_rag_service
 from ai_action_executor import AIActionExecutor
 from chat_cleanup import cleanup_old_chat_history
+from attachment_service import download_attachment, extract_text_from_attachment_bytes
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -225,7 +226,16 @@ async def get_conversations(user = Depends(get_current_user)):
                     # Get all unread messages for all conversations at once
                     # Note: Supabase doesn't support GROUP BY directly, so we'll fetch all unread messages
                     # and count them in Python (still more efficient than N queries)
-                    unread_messages_response = supabase_storage.table("chat_messages").select("conversation_id").in_("conversation_id", conversation_ids).is_("read_at", "null").neq("sender_id", user["id"]).execute()
+                    unread_messages_response = (
+                        supabase_storage
+                        .table("chat_messages")
+                        .select("conversation_id")
+                        .in_("conversation_id", conversation_ids)
+                        .is_("read_at", "null")
+                        .neq("sender_id", user["id"])
+                        .neq("message_type", "system")
+                        .execute()
+                    )
                     unread_messages = unread_messages_response.data if unread_messages_response.data else []
                     
                     # Count unread messages per conversation
@@ -245,7 +255,18 @@ async def get_conversations(user = Depends(get_current_user)):
                     # But we can optimize by doing it in parallel or using a more efficient approach
                     for conv_id in conversation_ids:
                         try:
-                            last_message_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conv_id).order("created_at", desc=True).limit(1).single().execute()
+                            # Skip placeholder/system messages (e.g., AI "thinking" indicator)
+                            last_message_response = (
+                                supabase_storage
+                                .table("chat_messages")
+                                .select("*")
+                                .eq("conversation_id", conv_id)
+                                .neq("message_type", "system")
+                                .order("created_at", desc=True)
+                                .limit(1)
+                                .single()
+                                .execute()
+                            )
                             if last_message_response.data:
                                 last_messages[conv_id] = last_message_response.data
                         except Exception as e:
@@ -367,6 +388,40 @@ async def get_messages(
         logger.error(f"Error getting messages for conversation {conversation_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get messages: {str(e)}")
 
+
+@router.get("/conversations/{conversation_id}/ai-actions")
+async def get_ai_actions(
+    conversation_id: str,
+    limit: int = Query(50, ge=1, le=200, description="Number of AI action logs to return"),
+    user = Depends(get_current_admin)
+):
+    """Get AI action audit logs for a conversation (Admin only)."""
+    try:
+        # Verify conversation exists
+        conv_response = supabase_storage.table("chat_conversations").select("id").eq("id", conversation_id).single().execute()
+        if not conv_response.data:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        try:
+            logs_resp = (
+                supabase_storage
+                .table("chat_ai_action_logs")
+                .select("*")
+                .eq("conversation_id", conversation_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return {"logs": logs_resp.data or []}
+        except Exception as e:
+            # Table may not exist if migration not applied yet
+            raise HTTPException(status_code=501, detail="AI action audit logs are not enabled (migration not applied).")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting AI actions for conversation {conversation_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get AI action logs")
+
 @router.post("/messages", response_model=ChatMessage)
 async def send_message(
     message: ChatMessageCreate, 
@@ -474,44 +529,96 @@ async def send_message(
         # Only respond if: 1) Customer sent the message, 2) No admin has responded recently
         if not is_admin and message.message and len(message.message.strip()) > 0:
             try:
-                # Check if admin has responded recently (within last 5 messages)
-                recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(5).execute()
-                recent_messages = recent_messages_response.data if recent_messages_response.data else []
-                
-                # Check if any recent message is from an admin (verify by checking user_roles)
-                admin_responded_recently = False
-                for msg in recent_messages:
-                    sender_id = msg.get("sender_id", "")
-                    # Skip if sender is the customer or AI
-                    if sender_id == user["id"] or sender_id == OCHO_USER_ID:
-                        continue
+                # Respect chat_mode: if customer requested human support, do not auto-respond with AI.
+                try:
+                    mode_resp = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
+                    chat_mode = (mode_resp.data or {}).get("chat_mode") or "ai"
+                except Exception:
+                    chat_mode = "ai"
+
+                if chat_mode == "human":
+                    logger.info(f"Chat mode is 'human' for conversation {conversation_id}; skipping AI auto-response")
+                else:
+                    # Check if admin has responded recently (within last 5 messages)
+                    recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(5).execute()
+                    recent_messages = recent_messages_response.data if recent_messages_response.data else []
                     
-                    # Verify sender is actually an admin by checking user_roles
-                    try:
-                        role_response = supabase_storage.table("user_roles").select("role").eq("user_id", sender_id).single().execute()
-                        if role_response.data and role_response.data.get("role") == "admin":
-                            admin_responded_recently = True
-                            logger.info(f"Admin {sender_id} has responded recently, skipping AI auto-response for conversation {conversation_id}")
-                            break
-                    except Exception as role_check_error:
-                        # If we can't verify, log but don't assume it's an admin
-                        logger.debug(f"Could not verify role for sender {sender_id}: {str(role_check_error)}")
-                        # Don't treat unknown senders as admins - let AI respond
-                        continue
-                
-                # Only auto-respond if admin hasn't responded recently
-                # (Chat mode toggle removed - always AI unless admin intervenes)
-                
-                if not admin_responded_recently:
-                    # Trigger AI response asynchronously using BackgroundTasks
-                    # This ensures the task completes even after the request returns
-                    logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
-                    try:
-                        # Use BackgroundTasks to ensure task completes
-                        background_tasks.add_task(_generate_ai_response_async, conversation_id, user["id"])
-                        logger.info(f"✅ AI response task added to background tasks")
-                    except Exception as task_error:
-                        logger.error(f"❌ Failed to add AI response to background tasks: {str(task_error)}", exc_info=True)
+                    # Check if any recent message is from an admin (verify by checking user_roles)
+                    admin_responded_recently = False
+                    for msg in recent_messages:
+                        sender_id = msg.get("sender_id", "")
+                        # Skip if sender is the customer or AI
+                        if sender_id == user["id"] or sender_id == OCHO_USER_ID:
+                            continue
+                        
+                        # Verify sender is actually an admin by checking user_roles
+                        try:
+                            role_response = supabase_storage.table("user_roles").select("role").eq("user_id", sender_id).single().execute()
+                            if role_response.data and role_response.data.get("role") == "admin":
+                                admin_responded_recently = True
+                                logger.info(f"Admin {sender_id} has responded recently, skipping AI auto-response for conversation {conversation_id}")
+                                break
+                        except Exception as role_check_error:
+                            # If we can't verify, log but don't assume it's an admin
+                            logger.debug(f"Could not verify role for sender {sender_id}: {str(role_check_error)}")
+                            # Don't treat unknown senders as admins - let AI respond
+                            continue
+                    
+                    if not admin_responded_recently:
+                        # Backpressure: if an AI placeholder is already the latest message, don't enqueue another AI job.
+                        try:
+                            last_msg_resp = (
+                                supabase_storage
+                                .table("chat_messages")
+                                .select("sender_id,message_type,created_at")
+                                .eq("conversation_id", conversation_id)
+                                .order("created_at", desc=True)
+                                .limit(1)
+                                .single()
+                                .execute()
+                            )
+                            last_msg = last_msg_resp.data or {}
+                            if last_msg.get("sender_id") == OCHO_USER_ID and last_msg.get("message_type") == "system":
+                                logger.info(f"AI job already pending for conversation {conversation_id}; skipping enqueue")
+                                admin_responded_recently = True  # prevent enqueue path below
+                        except Exception:
+                            pass
+
+                    if not admin_responded_recently:
+                        # Insert a lightweight placeholder "thinking" message immediately.
+                        # The UI will render this as a typing indicator and it will be deleted/replaced when the final AI response is saved.
+                        placeholder_id = str(uuid.uuid4())
+                        placeholder_created_at = datetime.now().isoformat()
+                        try:
+                            placeholder_message = {
+                                "id": placeholder_id,
+                                "conversation_id": conversation_id,
+                                "sender_id": OCHO_USER_ID,
+                                "message": "Reel48 AI is thinking…",
+                                "message_type": "system",
+                                "created_at": placeholder_created_at
+                            }
+                            supabase_storage.table("chat_messages").insert(placeholder_message).execute()
+                        except Exception as e:
+                            # Don't fail message send if placeholder insert fails
+                            logger.warning(f"Failed to insert AI placeholder message: {str(e)}")
+                            placeholder_id = None
+
+                        # Trigger AI response asynchronously using BackgroundTasks.
+                        # This ensures the task completes even after the request returns.
+                        logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
+                        try:
+                            # Use BackgroundTasks to ensure task completes
+                            background_tasks.add_task(
+                                _generate_ai_response_async,
+                                conversation_id,
+                                user["id"],
+                                placeholder_id,
+                                message_data["id"]
+                            )
+                            logger.info(f"✅ AI response task added to background tasks")
+                        except Exception as task_error:
+                            logger.error(f"❌ Failed to add AI response to background tasks: {str(task_error)}", exc_info=True)
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
@@ -833,6 +940,12 @@ async def generate_ai_response(
         # Check access - only customers can trigger AI responses for their own conversations
         if conv["customer_id"] != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
+
+        # Respect chat_mode: customers cannot trigger AI responses when set to human support.
+        if conv.get("chat_mode") == "human":
+            raise HTTPException(status_code=409, detail="Chat is currently in human support mode. Switch back to AI mode to receive automated responses.")
+
+        request_id = str(uuid.uuid4())
         
         # Get recent messages for context
         messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(10).execute()
@@ -852,6 +965,33 @@ async def generate_ai_response(
             raise HTTPException(status_code=400, detail="No user message found to respond to")
         
         user_query = latest_message.get("message", "")
+        attachments = []
+
+        # Attachment-aware query enrichment (optional; can be disabled)
+        if os.getenv("ENABLE_CHAT_ATTACHMENT_PROCESSING", "true").lower() in ("1", "true", "yes"):
+            try:
+                msg_type = (latest_message.get("message_type") or "text").lower()
+                file_url = latest_message.get("file_url")
+                file_name = latest_message.get("file_name")
+
+                if file_url and msg_type in ("file", "image"):
+                    downloaded = download_attachment(file_url, file_name=file_name)
+                    if downloaded:
+                        if msg_type == "image":
+                            # Multimodal path
+                            attachments.append({"kind": "image", "data": downloaded.data, "mime_type": downloaded.mime_type})
+                            user_query = (user_query or "").strip() or "Please describe the attached image."
+                            user_query += f"\n\n(Attached image: {file_name or 'image'})"
+                        else:
+                            extracted = extract_text_from_attachment_bytes(downloaded.data, downloaded.mime_type, file_name=file_name)
+                            if extracted:
+                                user_query = (user_query or "").strip()
+                                user_query += f"\n\nAttachment ({file_name or 'file'}):\n{extracted}"
+                            else:
+                                user_query = (user_query or "").strip()
+                                user_query += f"\n\n(Attached file: {file_name or 'file'})"
+            except Exception as e:
+                logger.warning(f"Attachment processing failed (non-fatal): {str(e)}")
         
         # Format conversation history (excluding the current message we're responding to)
         conversation_history = []
@@ -886,6 +1026,15 @@ async def generate_ai_response(
             customer_id=customer_id,
             is_admin=is_admin
         )
+
+        # Fetch rolling conversation summary (optional; requires DB migration)
+        conversation_summary = ""
+        try:
+            summary_resp = supabase_storage.table("chat_conversations").select("summary").eq("id", conversation_id).single().execute()
+            if summary_resp.data and summary_resp.data.get("summary"):
+                conversation_summary = summary_resp.data.get("summary") or ""
+        except Exception:
+            conversation_summary = ""
         
         # Get customer-specific context
         customer_context = None
@@ -927,7 +1076,9 @@ async def generate_ai_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
+                conversation_summary=conversation_summary,
                 customer_context=customer_context,
+                attachments=attachments,
                 enable_function_calling=enable_function_calling
             )
             
@@ -1032,6 +1183,29 @@ async def generate_ai_response(
                         "result": result.get("result"),
                         "error": result.get("error")
                     })
+
+                    # Persist audit log for AI actions (optional; requires DB migration)
+                    try:
+                        if os.getenv("ENABLE_AI_ACTION_AUDIT", "true").lower() in ("1", "true", "yes"):
+                            supabase_storage.table("chat_ai_action_logs").insert({
+                                "id": str(uuid.uuid4()),
+                                "request_id": request_id,
+                                "conversation_id": conversation_id,
+                                "trigger_message_id": latest_message.get("id"),
+                                "function_name": func_name,
+                                "parameters": {k: v for k, v in (func_params or {}).items() if k != "client_id"},
+                                "success": bool(result.get("success", False)),
+                                "result": result.get("result"),
+                                "error": result.get("error"),
+                                "created_at": datetime.now().isoformat()
+                            }).execute()
+                    except Exception as e:
+                        logger.debug(f"AI action audit insert failed (non-fatal): {str(e)}")
+
+                    # If the action was blocked for confirmation, ask the customer explicitly and stop further action processing.
+                    if func_name == "create_quote" and result.get("requires_confirmation"):
+                        ai_response = result.get("error") or "Before I create a quote, please confirm you'd like me to proceed."
+                        break
                     
                     # If quote was created, replace the fallback message with a detailed quote overview
                     if func_name == "create_quote" and result.get("success"):
@@ -1111,6 +1285,22 @@ async def generate_ai_response(
                             # Fallback if quote fetch fails
                             quote_number = quote_info.get("quote_number", "")
                             ai_response = f"I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard."
+
+                        # Add lightweight “action card” links (if FRONTEND_URL is configured)
+                        try:
+                            frontend_url = (os.getenv("FRONTEND_URL") or "").rstrip("/")
+                            if frontend_url and folder_id:
+                                folder_link = f"{frontend_url}/folders/{folder_id}"
+                                quote_link = f"{frontend_url}/quotes/{quote_id}" if quote_id else ""
+                                ai_response = (
+                                    "✅ **Quote created**\n\n"
+                                    f"- [View folder]({folder_link})\n"
+                                    + (f"- [View quote]({quote_link})\n" if quote_link else "")
+                                    + "\n"
+                                    + ai_response
+                                )
+                        except Exception:
+                            pass
                         
                         # Auto-assign appropriate design form based on order type
                         if folder_id and "line_items" in func_params:
@@ -1161,6 +1351,23 @@ async def generate_ai_response(
         message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
         if not message_response.data:
             raise HTTPException(status_code=500, detail="Failed to save AI response")
+
+        # Update rolling conversation summary (optional; can be disabled)
+        try:
+            if os.getenv("ENABLE_CHAT_SUMMARY", "true").lower() in ("1", "true", "yes"):
+                prev = conversation_summary
+                summary_messages = conversation_history + [
+                    {"role": "user", "content": user_query},
+                    {"role": "model", "content": ai_response},
+                ]
+                new_summary = ai_service.summarize_conversation(prev, summary_messages)
+                if new_summary and new_summary != prev:
+                    supabase_storage.table("chat_conversations").update({
+                        "summary": new_summary,
+                        "summary_updated_at": datetime.now().isoformat()
+                    }).eq("id", conversation_id).execute()
+        except Exception as e:
+            logger.debug(f"Failed to update chat summary for conversation {conversation_id}: {str(e)}")
         
         # Update conversation timestamp
         try:
@@ -1180,16 +1387,52 @@ async def generate_ai_response(
         raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
 
 
-async def _generate_ai_response_async(conversation_id: str, customer_id: str) -> None:
+async def _generate_ai_response_async(
+    conversation_id: str,
+    customer_id: str,
+    placeholder_message_id: Optional[str] = None,
+    customer_message_id: Optional[str] = None
+) -> None:
     """Asynchronously generate AI response for a customer message"""
+    request_id = str(uuid.uuid4())
+    def _delete_placeholder() -> None:
+        if not placeholder_message_id:
+            return
+        try:
+            supabase_storage.table("chat_messages").delete().eq("id", placeholder_message_id).execute()
+        except Exception as e:
+            logger.warning(f"⚠️ [AI TASK] Failed to delete placeholder message {placeholder_message_id}: {str(e)}")
+
+    def _update_placeholder_to_error(error_text: str) -> None:
+        if not placeholder_message_id:
+            return
+        try:
+            supabase_storage.table("chat_messages").update({
+                "message": error_text,
+                "message_type": "text"
+            }).eq("id", placeholder_message_id).execute()
+        except Exception as e:
+            logger.warning(f"⚠️ [AI TASK] Failed to update placeholder message {placeholder_message_id}: {str(e)}")
+
     # Use print as well as logger to ensure we see this in logs
-    print(f"🤖 [AI TASK] Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
-    logger.info(f"🤖 [AI TASK] Starting AI response generation for conversation {conversation_id}, customer {customer_id}")
+    print(f"🤖 [AI TASK] Starting AI response generation (request_id={request_id}) for conversation {conversation_id}, customer {customer_id}")
+    logger.info(f"🤖 [AI TASK] Starting AI response generation (request_id={request_id}) for conversation {conversation_id}, customer {customer_id}")
     try:
         # Small delay to ensure message is saved
         logger.info(f"Waiting 1.5 seconds before generating AI response...")
         await asyncio.sleep(1.5)
         logger.info(f"Delay complete, proceeding with AI response generation")
+
+        # Respect chat_mode: if set to human, do not respond with AI.
+        try:
+            mode_resp = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
+            chat_mode = (mode_resp.data or {}).get("chat_mode") or "ai"
+        except Exception:
+            chat_mode = "ai"
+        if chat_mode == "human":
+            logger.info(f"Chat mode is 'human' for conversation {conversation_id}; skipping AI response generation")
+            _delete_placeholder()
+            return
         
         # Chat mode check removed - always AI
         
@@ -1209,6 +1452,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     role_response = supabase_storage.table("user_roles").select("role").eq("user_id", latest_sender_id).single().execute()
                     if role_response.data and role_response.data.get("role") == "admin":
                         logger.info(f"Admin {latest_sender_id} responded, skipping AI response for conversation {conversation_id}")
+                        _delete_placeholder()
                         return
                 except Exception as role_check_error:
                     # If we can't verify, log but don't assume it's an admin - proceed with AI response
@@ -1219,6 +1463,7 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         messages = messages_response.data if messages_response.data else []
         
         if not messages:
+            _delete_placeholder()
             return
         
         # Get the most recent customer message
@@ -1229,9 +1474,36 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                 break
         
         if not latest_customer_message:
+            _delete_placeholder()
             return
         
         user_query = latest_customer_message.get("message", "")
+        attachments = []
+
+        # Attachment-aware query enrichment (optional; can be disabled)
+        if os.getenv("ENABLE_CHAT_ATTACHMENT_PROCESSING", "true").lower() in ("1", "true", "yes"):
+            try:
+                msg_type = (latest_customer_message.get("message_type") or "text").lower()
+                file_url = latest_customer_message.get("file_url")
+                file_name = latest_customer_message.get("file_name")
+
+                if file_url and msg_type in ("file", "image"):
+                    downloaded = download_attachment(file_url, file_name=file_name)
+                    if downloaded:
+                        if msg_type == "image":
+                            attachments.append({"kind": "image", "data": downloaded.data, "mime_type": downloaded.mime_type})
+                            user_query = (user_query or "").strip() or "Please describe the attached image."
+                            user_query += f"\n\n(Attached image: {file_name or 'image'})"
+                        else:
+                            extracted = extract_text_from_attachment_bytes(downloaded.data, downloaded.mime_type, file_name=file_name)
+                            if extracted:
+                                user_query = (user_query or "").strip()
+                                user_query += f"\n\nAttachment ({file_name or 'file'}):\n{extracted}"
+                            else:
+                                user_query = (user_query or "").strip()
+                                user_query += f"\n\n(Attached file: {file_name or 'file'})"
+            except Exception as e:
+                logger.warning(f"Attachment processing failed (non-fatal): {str(e)}")
         
         # Format conversation history
         conversation_history = []
@@ -1262,6 +1534,15 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             is_admin=False
         )
         logger.info(f"Context retrieved: {len(context)} characters")
+
+        # Fetch rolling conversation summary (optional; requires DB migration)
+        conversation_summary = ""
+        try:
+            summary_resp = supabase_storage.table("chat_conversations").select("summary").eq("id", conversation_id).single().execute()
+            if summary_resp.data and summary_resp.data.get("summary"):
+                conversation_summary = summary_resp.data.get("summary") or ""
+        except Exception:
+            conversation_summary = ""
         
         # Get customer context
         customer_context = None
@@ -1296,7 +1577,8 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             if not ai_service:
                 print(f"❌ [AI TASK] AI service is not available")
                 logger.error(f"❌ [AI TASK] AI service is not available")
-                return  # Don't create an error message, just skip
+                _update_placeholder_to_error("Reel48 AI is temporarily unavailable right now. Please try again in a moment.")
+                return
             print(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
             logger.info(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
             logger.info(f"🤖 [AI TASK] Context retrieved (length: {len(context)} chars)")
@@ -1305,7 +1587,9 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                 user_message=user_query,
                 conversation_history=conversation_history,
                 context=context,
+                conversation_summary=conversation_summary,
                 customer_context=customer_context,
+                attachments=attachments,
                 enable_function_calling=enable_function_calling
             )
             
@@ -1327,13 +1611,15 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         except ValueError as ve:
             print(f"❌ [AI TASK] AI service not configured: {str(ve)}")
             logger.error(f"❌ [AI TASK] AI service not configured: {str(ve)}", exc_info=True)
-            return  # Don't create an error message, just skip
+            _update_placeholder_to_error("Reel48 AI is temporarily unavailable right now. Please try again in a moment.")
+            return
         except Exception as ai_error:
             print(f"❌ [AI TASK] Error calling AI service: {str(ai_error)}")
             logger.error(f"❌ [AI TASK] Error calling AI service: {str(ai_error)}", exc_info=True)
             import traceback
             print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
-            return  # Don't create an error message, just skip
+            _update_placeholder_to_error("Reel48 AI ran into an error generating a response. Please try again.")
+            return
         
         # Execute function calls if any
         if function_calls and admin_user_id:
@@ -1399,6 +1685,29 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                     
                     # Get user message for validation
                     result = action_executor.execute_function(func_name, func_params, user_message=user_query)
+
+                    # Persist audit log for AI actions (optional; requires DB migration)
+                    try:
+                        if os.getenv("ENABLE_AI_ACTION_AUDIT", "true").lower() in ("1", "true", "yes"):
+                            supabase_storage.table("chat_ai_action_logs").insert({
+                                "id": str(uuid.uuid4()),
+                                "request_id": request_id,
+                                "conversation_id": conversation_id,
+                                "trigger_message_id": latest_customer_message.get("id"),
+                                "function_name": func_name,
+                                "parameters": {k: v for k, v in (func_params or {}).items() if k != "client_id"},
+                                "success": bool(result.get("success", False)),
+                                "result": result.get("result"),
+                                "error": result.get("error"),
+                                "created_at": datetime.now().isoformat()
+                            }).execute()
+                    except Exception as e:
+                        logger.debug(f"AI action audit insert failed (non-fatal): {str(e)}")
+
+                    # If the action was blocked for confirmation, ask the customer explicitly and stop further action processing.
+                    if func_name == "create_quote" and result.get("requires_confirmation"):
+                        ai_response = result.get("error") or "Before I create a quote, please confirm you'd like me to proceed."
+                        break
                     
                     # Update response with results
                     if func_name == "create_quote" and result.get("success"):
@@ -1478,6 +1787,22 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                             # Fallback if quote fetch fails
                             quote_number = quote_info.get("quote_number", "")
                             ai_response = f"I've created your quote, and everything is set up for you to view inside of the quote's folder! You can view the folder in your customer dashboard."
+
+                        # Add lightweight “action card” links (if FRONTEND_URL is configured)
+                        try:
+                            frontend_url = (os.getenv("FRONTEND_URL") or "").rstrip("/")
+                            if frontend_url and folder_id:
+                                folder_link = f"{frontend_url}/folders/{folder_id}"
+                                quote_link = f"{frontend_url}/quotes/{quote_id}" if quote_id else ""
+                                ai_response = (
+                                    "✅ **Quote created**\n\n"
+                                    f"- [View folder]({folder_link})\n"
+                                    + (f"- [View quote]({quote_link})\n" if quote_link else "")
+                                    + "\n"
+                                    + ai_response
+                                )
+                        except Exception:
+                            pass
                         
                         # Auto-assign appropriate design form based on order type
                         if folder_id and "line_items" in func_params:
@@ -1515,6 +1840,9 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
                 logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
                 # Don't fail, just log
         
+        # Remove placeholder now that we have a final response to save.
+        _delete_placeholder()
+
         # Create AI message
         ai_message_data = {
             "id": str(uuid.uuid4()),
@@ -1543,6 +1871,23 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
             
             print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
             logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+
+            # Update rolling conversation summary (optional; can be disabled)
+            try:
+                if os.getenv("ENABLE_CHAT_SUMMARY", "true").lower() in ("1", "true", "yes"):
+                    prev = conversation_summary
+                    summary_messages = conversation_history + [
+                        {"role": "user", "content": user_query},
+                        {"role": "model", "content": ai_response},
+                    ]
+                    new_summary = ai_service.summarize_conversation(prev, summary_messages)
+                    if new_summary and new_summary != prev:
+                        supabase_storage.table("chat_conversations").update({
+                            "summary": new_summary,
+                            "summary_updated_at": datetime.now().isoformat()
+                        }).eq("id", conversation_id).execute()
+            except Exception as e:
+                logger.debug(f"Failed to update chat summary for conversation {conversation_id}: {str(e)}")
         else:
             print(f"❌ [AI TASK] Failed to insert AI message - no data returned")
             logger.error(f"❌ [AI TASK] Failed to insert AI message - no data returned")
@@ -1552,4 +1897,5 @@ async def _generate_ai_response_async(conversation_id: str, customer_id: str) ->
         logger.error(f"❌ [AI TASK] Error generating AI response asynchronously: {str(e)}", exc_info=True)
         import traceback
         print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
+        _update_placeholder_to_error("Reel48 AI ran into an error generating a response. Please try again.")
 

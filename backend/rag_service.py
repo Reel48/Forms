@@ -14,6 +14,21 @@ from database import supabase_storage
 
 logger = logging.getLogger(__name__)
 
+MAX_SECTION_CHARS = int(os.getenv("RAG_MAX_SECTION_CHARS", "3500"))
+MAX_TOTAL_CONTEXT_CHARS = int(os.getenv("RAG_MAX_TOTAL_CONTEXT_CHARS", "9000"))
+
+def _normalize_query(query: str) -> List[str]:
+    # Basic normalization: lowercase tokens, drop very short tokens.
+    tokens = [t.strip().lower() for t in (query or "").split()]
+    return [t for t in tokens if len(t) >= 3]
+
+def _truncate(text: str, max_chars: int) -> str:
+    if not text:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1] + "…"
+
 class RAGService:
     """Service for retrieving relevant context for RAG"""
     
@@ -48,32 +63,33 @@ class RAGService:
             # 1. Get pricing information (from pricing table, not quotes)
             pricing_context = self._get_pricing_info(user_query, limit)
             if pricing_context:
-                context_parts.append(pricing_context)
+                context_parts.append(_truncate(pricing_context, MAX_SECTION_CHARS))
             
             # 2. Search customer's own quotes (only if customer_id provided)
             if customer_id:
                 quote_context = self._search_customer_quotes(user_query, customer_id, limit)
                 if quote_context:
-                    context_parts.append(quote_context)
+                    context_parts.append(_truncate(quote_context, MAX_SECTION_CHARS))
             
             # 3. Search customer's own forms (only if customer_id provided)
             if customer_id:
                 form_context = self._search_customer_forms(user_query, customer_id, limit)
                 if form_context:
-                    context_parts.append(form_context)
+                    context_parts.append(_truncate(form_context, MAX_SECTION_CHARS))
             
             # 4. Search knowledge base (FAQs, company info) - public info only
             knowledge_context = self._search_knowledge_base(user_query, limit)
             if knowledge_context:
-                context_parts.append(knowledge_context)
+                context_parts.append(_truncate(knowledge_context, MAX_SECTION_CHARS))
             
             # 5. Get customer-specific information (only their own)
             if customer_id:
                 customer_context = self._get_customer_context(customer_id)
                 if customer_context:
-                    context_parts.append(customer_context)
-            
-            return "\n\n".join(context_parts) if context_parts else ""
+                    context_parts.append(_truncate(customer_context, MAX_SECTION_CHARS))
+
+            combined = "\n\n".join([p for p in context_parts if p]) if context_parts else ""
+            return _truncate(combined, MAX_TOTAL_CONTEXT_CHARS) if combined else ""
             
         except Exception as e:
             logger.error(f"Error retrieving context: {str(e)}", exc_info=True)
@@ -82,7 +98,10 @@ class RAGService:
     def _get_pricing_info(self, query: str, limit: int = 10) -> str:
         """Get pricing information from pricing table (not from quotes)"""
         try:
-            query_lower = query.lower()
+            query_lower = (query or "").lower()
+            query_tokens = _normalize_query(query_lower)
+            wants_hats = any(k in query_lower for k in ["hat", "hats", "cap", "caps"])
+            wants_coozies = any(k in query_lower for k in ["coozie", "coozies", "koozie", "koozies", "can cooler"])
             
             # Search pricing products
             products_query = supabase_storage.table("pricing_products").select("*").eq("is_active", True)
@@ -97,14 +116,19 @@ class RAGService:
                 category = (product.get("category") or "").lower()
                 
                 # Check if query keywords match
-                if any(keyword in name or keyword in description or keyword in category for keyword in query_lower.split()):
+                if any(keyword in name or keyword in description or keyword in category for keyword in query_tokens):
                     relevant_products.append(product)
                     if len(relevant_products) >= limit:
                         break
             
-            # If no specific matches, include all active products (up to limit)
+            # If no matches, avoid dumping entire pricing catalog. Only include obvious categories.
             if not relevant_products:
-                relevant_products = products[:limit]
+                if wants_hats:
+                    relevant_products = [p for p in products if "hat" in (p.get("category") or "").lower() or "hat" in (p.get("product_name") or "").lower()][:limit]
+                elif wants_coozies:
+                    relevant_products = [p for p in products if "cooz" in (p.get("category") or "").lower() or "cooz" in (p.get("product_name") or "").lower()][:limit]
+                else:
+                    return ""
             
             if relevant_products:
                 product_texts = []
@@ -188,7 +212,8 @@ class RAGService:
         """Search ONLY the customer's own quotes (strict data isolation)"""
         try:
             # SECURITY: Always filter by customer_id - never show other customers' quotes
-            query_lower = query.lower()
+            query_lower = (query or "").lower()
+            query_tokens = _normalize_query(query_lower)
             
             # Get client_id from customer_id (user_id)
             client_response = supabase_storage.table("clients").select("id").eq("user_id", customer_id).single().execute()
@@ -208,7 +233,7 @@ class RAGService:
                 title = (quote.get("title") or "").lower()
                 quote_number = (quote.get("quote_number") or "").lower()
                 
-                if any(keyword in title or keyword in quote_number for keyword in query_lower.split()):
+                if any(keyword in title or keyword in quote_number for keyword in query_tokens):
                     relevant_quotes.append(quote)
                     if len(relevant_quotes) >= limit:
                         break
@@ -239,7 +264,8 @@ class RAGService:
         """Search ONLY forms assigned to this customer (strict data isolation)"""
         try:
             # SECURITY: Only show forms that are assigned to this customer via folders
-            query_lower = query.lower()
+            query_lower = (query or "").lower()
+            query_tokens = _normalize_query(query_lower)
             
             # Get forms assigned to this customer through folders
             # First, get folders assigned to this customer
@@ -276,7 +302,7 @@ class RAGService:
                 name = (form.get("name") or "").lower()
                 description = (form.get("description") or "").lower()
                 
-                if any(keyword in name or keyword in description for keyword in query_lower.split()):
+                if any(keyword in name or keyword in description for keyword in query_tokens):
                     relevant_forms.append(form)
                     if len(relevant_forms) >= limit:
                         break
@@ -300,13 +326,26 @@ class RAGService:
     def _search_knowledge_base(self, query: str, limit: int = 5) -> str:
         """Search knowledge base (FAQs, company info)"""
         try:
-            query_lower = query.lower()
+            query_lower = (query or "").lower()
+            query_tokens = _normalize_query(query_lower)
             context_items = []
             
-            # Search knowledge_embeddings table
+            # Search knowledge_embeddings table (prefer database-side FTS if available)
             try:
-                knowledge_response = supabase_storage.table("knowledge_embeddings").select("*").limit(limit * 2).execute()
-                knowledge_items = knowledge_response.data if knowledge_response.data else []
+                knowledge_items = []
+
+                # Attempt RPC FTS function if present (optional migration).
+                try:
+                    fts_response = supabase_storage.rpc("rag_search_knowledge_embeddings", {"query_text": query, "match_limit": limit}).execute()
+                    if fts_response.data:
+                        knowledge_items = fts_response.data
+                except Exception:
+                    knowledge_items = []
+
+                # Fallback: small bounded fetch + keyword scoring (avoid dumping all KB entries).
+                if not knowledge_items:
+                    knowledge_response = supabase_storage.table("knowledge_embeddings").select("*").limit(50).execute()
+                    knowledge_items = knowledge_response.data if knowledge_response.data else []
                 
                 # Filter relevant items based on query keywords
                 relevant_items = []
@@ -321,16 +360,16 @@ class RAGService:
                     topic = (metadata.get("topic") or "").lower()
                     subtopic = (metadata.get("subtopic") or "").lower()
                     
-                    # Check if query keywords match in content, title, category, topic, or subtopic
-                    query_keywords = query_lower.split()
-                    if any(keyword in content or keyword in title or keyword in category or keyword in topic or keyword in subtopic for keyword in query_keywords):
+                    # Check if query keywords match in content, title, category, topic, or subtopic.
+                    # Require at least one match to avoid dumping irrelevant KB.
+                    if any(keyword in content or keyword in title or keyword in category or keyword in topic or keyword in subtopic for keyword in query_tokens):
                         relevant_items.append(item)
                         if len(relevant_items) >= limit:
                             break
                 
-                # If no specific matches, include all items (up to limit)
+                # If no matches, return nothing (bounded context).
                 if not relevant_items:
-                    relevant_items = knowledge_items[:limit]
+                    return ""
                 
                 # Format knowledge base items
                 for item in relevant_items[:limit]:
@@ -372,7 +411,7 @@ class RAGService:
             context_parts = []
             
             # Get customer info
-            client_response = supabase_storage.table("clients").select("name, company, email").eq("user_id", customer_id).single().execute()
+            client_response = supabase_storage.table("clients").select("id, name, company, email").eq("user_id", customer_id).single().execute()
             if client_response.data:
                 client = client_response.data
                 if client.get("company"):

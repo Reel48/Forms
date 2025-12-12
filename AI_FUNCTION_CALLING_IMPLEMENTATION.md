@@ -4,6 +4,44 @@
 
 The AI chatbot can now automatically create quotes, folders, and assign forms/files/e-signatures to customer folders. This enables the AI to handle the complete order workflow from customer inquiry to quote creation and form assignment.
 
+## Current Runtime Architecture (as implemented in code)
+
+### Endpoints + data model
+- **Backend router**: `backend/routers/chat.py` (`/api/chat/*`)
+  - Conversations stored in **`chat_conversations`**
+  - Messages stored in **`chat_messages`**
+  - AI messages are stored as normal chat messages with `sender_id = OCHO_USER_ID` (retrieved from env or looked up via `clients.email = ocho@reel48.ai` fallback).
+
+### How AI responses are generated
+1. Customer sends message via `POST /api/chat/messages` (creates conversation if needed; one conversation per customer).
+2. Backend inserts the customer message.
+3. Backend schedules `_generate_ai_response_async(conversation_id, customer_id)` via **FastAPI `BackgroundTasks`**.
+4. Background task:
+   - Fetches the most recent customer message + last ~10 messages for context
+   - Retrieves RAG context via `backend/rag_service.py`
+   - Calls Gemini via `backend/ai_service.py`
+   - Executes function calls via `backend/ai_action_executor.py` (if enabled) and mutates the final AI response text based on results (e.g., quote overview formatting)
+   - Inserts the AI response as a new row into `chat_messages`
+
+### Delivery to UI (no streaming)
+- There is **no token streaming**. The UI updates when a new `chat_messages` row appears.
+- Customer + Admin UIs subscribe to Supabase **Realtime** (postgres_changes) for `chat_messages` and (some) `chat_conversations` updates:
+  - Customer page: `frontend/src/pages/CustomerChatPage.tsx`
+  - Admin inbox: `frontend/src/pages/ChatPage.tsx`
+  - Customer widget: `frontend/src/components/CustomerChatWidget.tsx`
+
+### Current RAG behavior
+- RAG is implemented in `backend/rag_service.py`.
+- Retrieval is primarily **keyword-based filtering** over:
+  - `pricing_products` + `pricing_tiers` (+ discounts)
+  - Customer’s own `quotes`
+  - Customer’s own assigned `forms`
+  - `knowledge_embeddings` (not true vector similarity)
+
+### Current UX behavior (important)
+- Customer chat currently shows an **AI “typing/thinking” indicator** that is driven by the frontend (set true after sending) and hidden when a new AI message arrives; it also uses a **30s timeout** fallback.
+- Admin chat does not use the thinking indicator (admins don’t trigger AI manually; AI auto-responds to customers unless admin intervenes).
+
 ## What Was Implemented
 
 ### 1. **Action Executor Service** (`backend/ai_action_executor.py`)

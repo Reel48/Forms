@@ -4,25 +4,29 @@ import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
 import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft } from 'react-icons/fa';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { ChatMessageBody } from '../components/chat/ChatMessageBody';
+import { useNotifications } from '../components/NotificationSystem';
 import './CustomerChatPage.css';
 
 const CustomerChatPage: React.FC = () => {
   const { user } = useAuth();
+  const { showNotification } = useNotifications();
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [aiThinking, setAiThinking] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
     return (saved as 'dark' | 'light') || 'light';
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
@@ -30,8 +34,6 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
-  const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ochoUserIdRef = useRef<string | null>(null);
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -61,26 +63,6 @@ const CustomerChatPage: React.FC = () => {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
-            
-            // Check if this is an AI message - hide thinking indicator
-            // Use ref to get current value without closure issues
-            const isAIMessage = ochoUserIdRef.current && newMessage.sender_id === ochoUserIdRef.current;
-            console.log('📨 New message received:', {
-              sender_id: newMessage.sender_id,
-              ochoUserId: ochoUserIdRef.current,
-              isAI: isAIMessage,
-              message_preview: newMessage.message?.substring(0, 50)
-            });
-            
-            if (isAIMessage) {
-              console.log('✅ AI message detected, hiding thinking indicator');
-              setAiThinking(false);
-              // Clear any existing timeout
-              if (thinkingTimeoutRef.current) {
-                clearTimeout(thinkingTimeoutRef.current);
-                thinkingTimeoutRef.current = null;
-              }
-            }
             
             setMessages((prev) => {
               if (prev.some((msg) => msg.id === newMessage.id)) {
@@ -133,15 +115,6 @@ const CustomerChatPage: React.FC = () => {
   useEffect(() => {
     loadConversation();
     
-    // Fetch OCHO user ID for identifying AI messages
-    chatAPI.getOchoUserId().then((response) => {
-      const ochoId = response.data.ocho_user_id;
-      ochoUserIdRef.current = ochoId; // Store in ref for use in callbacks
-      console.log('✅ Ocho user ID loaded:', ochoId);
-    }).catch((error) => {
-      console.error('❌ Failed to get Ocho user ID:', error);
-    });
-    
     // Apply theme
     const container = document.querySelector('.customer-chat-page');
     if (container) {
@@ -161,10 +134,6 @@ const CustomerChatPage: React.FC = () => {
         realtimeClient.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
       }
-      // Clear thinking timeout on unmount
-      if (thinkingTimeoutRef.current) {
-        clearTimeout(thinkingTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -173,12 +142,6 @@ const CustomerChatPage: React.FC = () => {
       loadMessages(conversation.id);
       setupRealtimeSubscriptions(conversation.id);
       markAllAsRead();
-      // Reset thinking indicator when conversation changes
-      setAiThinking(false);
-      if (thinkingTimeoutRef.current) {
-        clearTimeout(thinkingTimeoutRef.current);
-        thinkingTimeoutRef.current = null;
-      }
     }
   }, [conversation?.id, setupRealtimeSubscriptions]);
 
@@ -196,10 +159,66 @@ const CustomerChatPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (shouldAutoScroll && messages.length > 0) {
       scrollToBottom();
     }
-  }, [messages]);
+  }, [messages, shouldAutoScroll]);
+
+  const checkIfNearBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 100;
+    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    setShouldAutoScroll(nearBottom);
+    return nearBottom;
+  }, []);
+
+  const loadMoreMessages = useCallback(async (conversationId: string) => {
+    if (loadingMore || !hasMoreMessages) return;
+    const oldest = messages[0];
+    if (!oldest) return;
+    try {
+      setLoadingMore(true);
+      const container = messagesContainerRef.current;
+      const previousScrollHeight = container?.scrollHeight || 0;
+
+      const response = await chatAPI.getMessages(conversationId, 50, oldest.id);
+      const older = response.data;
+      if (older.length > 0) {
+        setMessages((prev) => [...older, ...prev]);
+        setHasMoreMessages(older.length === 50);
+        // Restore scroll position so the list doesn't jump.
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - previousScrollHeight;
+          }
+        }, 0);
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch (error) {
+      console.error('Failed to load older messages:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMoreMessages, loadingMore, messages]);
+
+  // Scroll listener: disable auto-scroll if user is reading older messages.
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const onScroll = () => {
+      checkIfNearBottom();
+      if (container.scrollTop === 0 && hasMoreMessages && !loadingMore && conversation?.id) {
+        void loadMoreMessages(conversation.id);
+      }
+    };
+
+    container.addEventListener('scroll', onScroll);
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [checkIfNearBottom, hasMoreMessages, loadingMore, conversation?.id, loadMoreMessages]);
 
   // Auto-expand textarea function
   const autoExpand = useCallback((element: HTMLTextAreaElement) => {
@@ -265,10 +284,11 @@ const CustomerChatPage: React.FC = () => {
     }
   };
 
-  const loadMessages = async (conversationId: string) => {
+  const loadMessages = async (conversationId: string, limit: number = 50) => {
     try {
-      const response = await chatAPI.getMessages(conversationId);
+      const response = await chatAPI.getMessages(conversationId, limit);
       setMessages(response.data);
+      setHasMoreMessages(response.data.length === limit);
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
@@ -356,19 +376,6 @@ const CustomerChatPage: React.FC = () => {
       }
       
       // Show thinking indicator - AI will respond automatically
-      console.log('💭 Setting thinking indicator to true, ochoUserId:', ochoUserIdRef.current);
-      setAiThinking(true);
-      
-      // Set timeout to hide indicator if no response arrives (30 seconds)
-      if (thinkingTimeoutRef.current) {
-        clearTimeout(thinkingTimeoutRef.current);
-      }
-      thinkingTimeoutRef.current = setTimeout(() => {
-        console.log('⏱️ Thinking indicator timeout (30s) - hiding indicator');
-        setAiThinking(false);
-        thinkingTimeoutRef.current = null;
-      }, 30000); // 30 second timeout
-      
       if (!messageText) {
         setNewMessage('');
         if (textareaRef.current) {
@@ -377,8 +384,7 @@ const CustomerChatPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      alert('Failed to send message. Please try again.');
-      setAiThinking(false); // Hide thinking indicator on error
+      showNotification({ type: 'error', message: 'Failed to send message. Please try again.' });
     } finally {
       setSending(false);
     }
@@ -419,25 +425,9 @@ const CustomerChatPage: React.FC = () => {
           }
         }
       }
-
-      // Show thinking indicator - AI will respond automatically
-      console.log('💭 Setting thinking indicator to true (file upload), ochoUserId:', ochoUserIdRef.current);
-      setAiThinking(true);
-      
-      // Set timeout to hide indicator if no response arrives (30 seconds)
-      if (thinkingTimeoutRef.current) {
-        clearTimeout(thinkingTimeoutRef.current);
-      }
-      thinkingTimeoutRef.current = setTimeout(() => {
-        console.log('⏱️ Thinking indicator timeout (30s) - hiding indicator');
-        setAiThinking(false);
-        thinkingTimeoutRef.current = null;
-      }, 30000); // 30 second timeout
-
     } catch (error) {
       console.error('Failed to upload file:', error);
-      alert('Failed to upload file. Please try again.');
-      setAiThinking(false); // Hide thinking indicator on error
+      showNotification({ type: 'error', message: 'Failed to upload file. Please try again.' });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -469,6 +459,29 @@ const CustomerChatPage: React.FC = () => {
             </Link>
           </div>
           <div className="header-right">
+            {conversation?.id && (
+              <button
+                onClick={async () => {
+                  const nextMode = conversation?.chat_mode === 'human' ? 'ai' : 'human';
+                  try {
+                    await chatAPI.updateChatMode(conversation.id, nextMode);
+                    setConversation((prev) => (prev ? { ...prev, chat_mode: nextMode } : prev));
+                    showNotification({
+                      type: 'success',
+                      message: nextMode === 'human' ? 'Switched to human support mode' : 'Switched back to AI mode',
+                    });
+                  } catch (e) {
+                    console.error('Failed to update chat mode:', e);
+                    showNotification({ type: 'error', message: 'Failed to update chat mode. Please try again.' });
+                  }
+                }}
+                className="theme-toggle-btn"
+                title={conversation?.chat_mode === 'human' ? 'Switch back to AI' : 'Talk to a human'}
+                style={{ marginRight: '0.5rem' }}
+              >
+                {conversation?.chat_mode === 'human' ? 'Use AI' : 'Talk to a human'}
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               className="theme-toggle-btn"
@@ -479,8 +492,13 @@ const CustomerChatPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="customer-chat-messages">
+        <div className="customer-chat-messages" ref={messagesContainerRef}>
           <div className="message-width-limiter">
+            {conversation?.chat_mode === 'human' && (
+              <div style={{ padding: '0.75rem 1rem', margin: '0.75rem 0', borderRadius: '8px', background: 'var(--color-warning-light)', border: '1px solid var(--color-warning)' }}>
+                You’re chatting with human support. AI replies are paused.
+              </div>
+            )}
             {!conversation || messages.length === 0 ? (
               <div className="empty-state-container">
                 <div className="greeting">
@@ -501,6 +519,11 @@ const CustomerChatPage: React.FC = () => {
               </div>
             ) : (
               <div id="chat-container">
+                {loadingMore && (
+                  <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-muted)' }}>
+                    Loading older messages...
+                  </div>
+                )}
                 {messages.map((message) => {
                   const isCustomer = message.sender_id === user?.id;
                   
@@ -514,52 +537,20 @@ const CustomerChatPage: React.FC = () => {
                           {isCustomer ? 'You' : 'Reel48 AI'}
                         </div>
                         <div className="message-content">
-                          {message.message_type === 'image' && message.file_url ? (
-                            <img
-                              src={message.file_url}
-                              alt={message.file_name || 'Image'}
-                              style={{ maxWidth: '100%', borderRadius: '8px' }}
-                            />
-                          ) : message.message_type === 'file' && message.file_url ? (
-                            <a
-                              href={message.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit', textDecoration: 'underline' }}
-                            >
-                              <FaPaperclip />
-                              {message.file_name || 'File'}
-                            </a>
+                          {!isCustomer && message.message_type === 'system' ? (
+                            <div className="typing-indicator">
+                              <div className="typing-dot"></div>
+                              <div className="typing-dot"></div>
+                              <div className="typing-dot"></div>
+                            </div>
                           ) : (
-                            isCustomer ? (
-                              message.message
-                            ) : (
-                              <div className="markdown-content">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {message.message}
-                                </ReactMarkdown>
-                              </div>
-                            )
+                          <ChatMessageBody message={message} renderAsMarkdown={!isCustomer} />
                           )}
                         </div>
                       </div>
                     </div>
                   );
                 })}
-                {aiThinking && (
-                  <div className="message ai-message">
-                    <div className="message-wrapper">
-                      <div className="message-sender-name">Reel48 AI</div>
-                      <div className="message-content">
-                        <div className="typing-indicator">
-                          <div className="typing-dot"></div>
-                          <div className="typing-dot"></div>
-                          <div className="typing-dot"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -568,6 +559,28 @@ const CustomerChatPage: React.FC = () => {
 
         <div className="input-area-wrapper">
           <div className="input-island">
+            {!shouldAutoScroll && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShouldAutoScroll(true);
+                  scrollToBottom();
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '-44px',
+                  right: '16px',
+                  padding: '8px 12px',
+                  borderRadius: '999px',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--brand-white)',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Jump to latest
+              </button>
+            )}
             <input
               ref={fileInputRef}
               type="file"

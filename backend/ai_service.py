@@ -17,6 +17,12 @@ except ImportError:
     GENAI_AVAILABLE = False
     logger.warning("google-generativeai package not installed - AI features will not be available")
 
+# Optional multimodal support (images) for google.generativeai
+try:
+    from google.generativeai.types import Part  # type: ignore
+except Exception:
+    Part = None  # type: ignore
+
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY and GENAI_AVAILABLE and genai:
@@ -111,10 +117,14 @@ class AIService:
         return [
             {
                 "name": "create_quote",
-                "description": "Create a quote for a customer order. Use this when a customer wants to place an order or get a quote for products. YOU MUST ALWAYS PROVIDE line_items - a list of products with description, quantity, and unit_price. Never call this function without line_items. 🚨 CRITICAL: For hat quotes, you MUST ask about side embroideries BEFORE calling this function. Do NOT call create_quote for hats until you have asked: 'Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost.'",
+                "description": "Create a quote for a customer order. Use this when a customer explicitly wants a quote or to place an order. YOU MUST ALWAYS PROVIDE line_items - a list of products with description, quantity, and unit_price. Never call this function without line_items. Confirmation: Only call if the customer clearly asked you to create a quote/order, OR set confirmed=true after the customer explicitly confirms. 🚨 CRITICAL: For hat quotes, you MUST ask about side embroideries BEFORE calling this function. Do NOT call create_quote for hats until you have asked: 'Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost.'",
                 "parameters": {
                     "type": "object",
                     "properties": {
+                        "confirmed": {
+                            "type": "boolean",
+                            "description": "Set true only after the customer explicitly confirms they want you to create the quote now."
+                        },
                         "client_id": {
                             "type": "string",
                             "description": "The UUID of the client/customer for whom the quote is being created"
@@ -351,7 +361,9 @@ class AIService:
         user_message: str,
         conversation_history: List[Dict[str, str]],
         context: str = "",
+        conversation_summary: str = "",
         customer_context: Optional[Dict] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
         enable_function_calling: bool = False
     ) -> Dict[str, Any]:
         """
@@ -369,10 +381,15 @@ class AIService:
         """
         try:
             # Build system prompt with context
-            system_prompt = self._build_system_prompt(context, customer_context, enable_function_calling)
+            system_prompt = self._build_system_prompt(context, customer_context, enable_function_calling, conversation_summary=conversation_summary)
             
-            # If function calling is enabled, use Gemini's function calling feature
-            if enable_function_calling:
+            # If we have image attachments, prefer a direct multimodal generation path for reliability.
+            # (Function calling + multimodal is supported by Gemini, but the message formatting differs and
+            #  is easy to break; this keeps UX stable.)
+            has_image = bool(attachments) and any((a or {}).get("kind") == "image" for a in attachments or [])
+
+            # If function calling is enabled, use Gemini's function calling feature (text-only).
+            if enable_function_calling and not has_image:
                 return self._generate_with_function_calling(
                     user_message, conversation_history, system_prompt
                 )
@@ -399,12 +416,24 @@ class AIService:
             
             logger.debug(f"Generated prompt length: {len(full_prompt)} characters")
             
-            # Generate response using simple prompt format
+            # Generate response using simple prompt format (or multimodal if attachments include images)
             try:
                 print(f"🔧 [AI SERVICE] Calling Gemini API with prompt length: {len(full_prompt)} chars")
                 print(f"🔧 [AI SERVICE] Using model: {self.model._model_name if hasattr(self.model, '_model_name') else 'unknown'}")
                 logger.debug(f"🔧 [AI SERVICE] Calling Gemini API with prompt length: {len(full_prompt)} chars")
-                response = self.model.generate_content(full_prompt)
+                if has_image and Part is not None:
+                    parts: List[Any] = [full_prompt]
+                    for att in attachments or []:
+                        if not att:
+                            continue
+                        if att.get("kind") == "image" and att.get("data") and att.get("mime_type"):
+                            try:
+                                parts.append(Part.from_bytes(data=att["data"], mime_type=att["mime_type"]))
+                            except Exception as e:
+                                logger.warning(f"Failed to attach image part: {str(e)}")
+                    response = self.model.generate_content(parts)
+                else:
+                    response = self.model.generate_content(full_prompt)
                 print(f"🔧 [AI SERVICE] Received response from Gemini API")
                 
                 # Check if response has text
@@ -471,6 +500,57 @@ class AIService:
                 logger.error(f"Unexpected error in AI generation: {error_type}: {error_msg}")
             
             return {"response": error_response, "function_calls": []}
+
+    def summarize_conversation(self, previous_summary: str, recent_messages: List[Dict[str, str]]) -> str:
+        """
+        Produce a short rolling summary to improve long-running chat coherence.
+        This is intentionally bounded and can be disabled via env.
+        """
+        if not recent_messages:
+            return previous_summary or ""
+
+        try:
+            summary_model_name = os.getenv("GEMINI_SUMMARY_MODEL_NAME", "gemini-2.5-flash")
+            try:
+                summary_model = genai.GenerativeModel(summary_model_name)
+            except Exception:
+                # fallback to main model
+                summary_model = self.model
+
+            # Format last messages as plain text for summarization.
+            transcript_lines: List[str] = []
+            for msg in recent_messages[-20:]:
+                role = msg.get("role", "user")
+                content = msg.get("content", msg.get("message", ""))
+                if not content:
+                    continue
+                speaker = "Assistant" if role == "model" else "User"
+                transcript_lines.append(f"{speaker}: {content}")
+
+            transcript = "\n".join(transcript_lines)
+
+            prompt = (
+                "You are summarizing a customer support chat.\n"
+                "Goal: keep a short, factual memory to help future responses.\n"
+                "Rules:\n"
+                "- Keep it under 12 bullet points.\n"
+                "- Include: customer intent, product(s), quantities, constraints, decisions, outstanding questions, and any created objects (quote/folder).\n"
+                "- Do NOT invent facts.\n"
+                "- If previous summary exists, update it instead of rewriting from scratch.\n\n"
+                f"Previous summary:\n{previous_summary or '(none)'}\n\n"
+                f"Recent transcript:\n{transcript}\n\n"
+                "Updated summary (bullets):"
+            )
+
+            resp = summary_model.generate_content(prompt)
+            text = getattr(resp, "text", "") if resp else ""
+            if not text or len(text.strip()) == 0:
+                return previous_summary or ""
+            # Hard bound
+            return text.strip()[:2000]
+        except Exception as e:
+            logger.warning(f"Failed to summarize conversation: {str(e)}")
+            return previous_summary or ""
     
     def _generate_with_function_calling(
         self,
@@ -594,7 +674,7 @@ class AIService:
                 "function_calls": []
             }
     
-    def _build_system_prompt(self, context: str, customer_context: Optional[Dict] = None, enable_function_calling: bool = False) -> str:
+    def _build_system_prompt(self, context: str, customer_context: Optional[Dict] = None, enable_function_calling: bool = False, conversation_summary: str = "") -> str:
         """Build system prompt with context and customer information"""
         
         prompt = """You are a friendly and professional customer service representative for Reel48. Your primary role is to help customers with their questions and provide excellent service.
@@ -988,6 +1068,16 @@ AI: "I apologize if I missed asking about side embroideries for this new quote. 
 - **NEVER use functions without also providing a text explanation**
 - If you see in the conversation history that a quote was already created, you can modify it using update_quote if needed
 - **If customer asks to modify a quote**: Use update_quote - don't say you can't modify quotes
+"""
+
+        if conversation_summary:
+            prompt += f"""
+
+═══════════════════════════════════════════════════════════════════════════════
+CONVERSATION SUMMARY (ROLLING MEMORY)
+═══════════════════════════════════════════════════════════════════════════════
+
+{conversation_summary}
 """
         
         # Add retrieved context
