@@ -170,11 +170,6 @@ function CustomerSchedulingPage() {
   return (
     <div className="container">
       <div className="scheduling-page">
-        <div className="page-header">
-          <h1>Schedule a Meeting</h1>
-          <p>Book a time to meet with the Reel48 team</p>
-        </div>
-
         <div className="tabs">
           <button
             className={activeTab === 'upcoming' ? 'tab-active' : 'tab'}
@@ -293,8 +288,8 @@ function CustomerSchedulingPage() {
 
           {activeTab === 'book' && (
             <div className="booking-widget-container">
-              <h2>Book a Meeting</h2>
-              <p>Select an available time slot below to schedule your meeting.</p>
+              <h2>Schedule a Meeting</h2>
+              <p>Book a time to meet with the Reel48 team.</p>
 
               {eventTypes.length > 0 && (
                 <div className="event-type-selector">
