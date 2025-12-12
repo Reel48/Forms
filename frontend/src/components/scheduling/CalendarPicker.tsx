@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay, isToday, isPast } from 'date-fns';
+import { useMemo, useState, useEffect } from 'react';
+import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay, isToday, isPast } from 'date-fns';
 import { calcomAPI } from '../../api';
-import type { CalComAvailability } from '../../api';
+import type { CalComAvailabilitySlot } from '../../api';
 import './CalendarPicker.css';
 
 interface CalendarPickerProps {
@@ -18,7 +18,7 @@ export default function CalendarPicker({
   disabledDates = []
 }: CalendarPickerProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [availability, setAvailability] = useState<CalComAvailability[]>([]);
+  const [slots, setSlots] = useState<CalComAvailabilitySlot[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -30,21 +30,20 @@ export default function CalendarPicker({
       setLoading(true);
       const startDate = startOfMonth(currentMonth);
       const endDate = endOfMonth(currentMonth);
+      const dateFrom = format(addDays(startDate, -1), 'yyyy-MM-dd');
+      const dateTo = format(addDays(endDate, 1), 'yyyy-MM-dd');
       
       const response = await calcomAPI.getAvailability({
-        date_from: format(startDate, 'yyyy-MM-dd'),
-        date_to: format(endDate, 'yyyy-MM-dd'),
+        date_from: dateFrom,
+        date_to: dateTo,
         event_type_id: eventTypeId
       });
       
-      // Backend now returns: {availability: [{date: "YYYY-MM-DD", slots: ["HH:MM", ...]}]}
-      const availabilityData = response.data?.availability || [];
-      console.log('Calendar availability response:', response.data);
-      console.log('Availability array:', availabilityData);
-      setAvailability(availabilityData);
+      const apiSlots = response.data?.slots || [];
+      setSlots(apiSlots);
     } catch (error) {
       console.error('Failed to load availability:', error);
-      setAvailability([]);
+      setSlots([]);
     } finally {
       setLoading(false);
     }
@@ -70,13 +69,22 @@ export default function CalendarPicker({
     calendarDays.push(day);
   });
 
+  const slotCountByLocalDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of slots) {
+      const d = format(new Date(s.start_time), 'yyyy-MM-dd');
+      map.set(d, (map.get(d) || 0) + 1);
+    }
+    return map;
+  }, [slots]);
+
   const isDateAvailable = (date: Date): boolean => {
     if (isPast(date) && !isToday(date)) return false;
     if (disabledDates.some(d => isSameDay(d, date))) return false;
     
     const dateStr = format(date, 'yyyy-MM-dd');
-    const dayAvailability = availability.find(a => a.date === dateStr);
-    return dayAvailability ? dayAvailability.slots.length > 0 : true; // Default to available if no data
+    const count = slotCountByLocalDate.get(dateStr);
+    return typeof count === 'number' ? count > 0 : true; // Default to available if no data
   };
 
   const getDateAvailabilityStatus = (date: Date): 'available' | 'unavailable' | 'past' | 'unknown' => {
@@ -84,10 +92,10 @@ export default function CalendarPicker({
     if (disabledDates.some(d => isSameDay(d, date))) return 'unavailable';
     
     const dateStr = format(date, 'yyyy-MM-dd');
-    const dayAvailability = availability.find(a => a.date === dateStr);
+    const count = slotCountByLocalDate.get(dateStr);
     
-    if (!dayAvailability) return 'unknown';
-    return dayAvailability.slots.length > 0 ? 'available' : 'unavailable';
+    if (typeof count !== 'number') return 'unknown';
+    return count > 0 ? 'available' : 'unavailable';
   };
 
   const handleDateClick = (date: Date) => {

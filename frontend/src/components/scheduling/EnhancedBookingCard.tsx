@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import type { CalComBooking } from '../../api';
-import { formatRelativeTime, formatDateTimeWithTimezone, getCountdown, getTimezoneAbbreviation } from '../../utils/dateUtils';
+import { formatRelativeTime, formatDateTimeWithTimezone, getCountdown } from '../../utils/dateUtils';
 import { generateICSFile } from '../../utils/icsUtils';
 import './EnhancedBookingCard.css';
 
@@ -11,7 +11,6 @@ interface EnhancedBookingCardProps {
   onCancel?: (bookingId: string) => void;
   onReschedule?: (bookingId: string) => void;
   onJoinMeeting?: (meetingUrl: string) => void;
-  timezone?: string;
 }
 
 export default function EnhancedBookingCard({
@@ -19,17 +18,16 @@ export default function EnhancedBookingCard({
   showActions = true,
   onCancel,
   onReschedule,
-  onJoinMeeting,
-  timezone
+  onJoinMeeting
 }: EnhancedBookingCardProps) {
-  const [countdown, setCountdown] = useState(getCountdown(booking.start_time, timezone));
+  const [countdown, setCountdown] = useState(getCountdown(booking.start_time));
   const [isUpcoming, setIsUpcoming] = useState(new Date(booking.start_time) > new Date() && booking.status === 'confirmed');
 
   useEffect(() => {
     if (!isUpcoming) return;
 
     const interval = setInterval(() => {
-      const newCountdown = getCountdown(booking.start_time, timezone);
+      const newCountdown = getCountdown(booking.start_time);
       setCountdown(newCountdown);
       if (newCountdown.isPast || newCountdown.totalSeconds <= 0) {
         setIsUpcoming(false);
@@ -37,7 +35,7 @@ export default function EnhancedBookingCard({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [booking.start_time, timezone, isUpcoming]);
+  }, [booking.start_time, isUpcoming]);
 
   const handleExportICS = () => {
     generateICSFile(booking);
@@ -72,15 +70,13 @@ export default function EnhancedBookingCard({
     rescheduled: '#f59e0b'
   };
 
-  const tzAbbr = getTimezoneAbbreviation(timezone);
-
   return (
     <div className="enhanced-booking-card">
       <div className="booking-card-header">
         <div className="booking-title-section">
           <h3 className="booking-title">{booking.event_type || 'Meeting'}</h3>
           <p className="booking-relative-time">
-            {isUpcoming ? formatRelativeTime(booking.start_time, timezone) : formatRelativeTime(booking.start_time, timezone)}
+            {formatRelativeTime(booking.start_time)}
           </p>
         </div>
         <span 
@@ -116,15 +112,11 @@ export default function EnhancedBookingCard({
       <div className="booking-details">
         <div className="booking-detail-item">
           <span className="detail-label">Date & Time:</span>
-          <span className="detail-value">{formatDateTimeWithTimezone(booking.start_time, timezone)}</span>
+          <span className="detail-value">{formatDateTimeWithTimezone(booking.start_time)}</span>
         </div>
         <div className="booking-detail-item">
           <span className="detail-label">Duration:</span>
           <span className="detail-value">{getDuration()}</span>
-        </div>
-        <div className="booking-detail-item">
-          <span className="detail-label">Timezone:</span>
-          <span className="detail-value">{tzAbbr}</span>
         </div>
         {booking.notes && (
           <div className="booking-detail-item">

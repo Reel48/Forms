@@ -62,7 +62,7 @@ async def get_availability(
 ):
     """Get available time slots for scheduling
     
-    Returns times in Cal.com's configured timezone. Frontend will convert to user's timezone.
+    Returns available slot instants in UTC ISO format. Frontend should format in the viewer's timezone.
     """
     try:
         raw_availability = calcom_service.get_availability(
@@ -83,11 +83,14 @@ async def get_availability(
             except Exception:
                 pass
         
-        # Get Cal.com's timezone from response
+        # Get Cal.com's timezone from response (used only if we must interpret workingHours)
         calcom_timezone = raw_availability.get("timeZone", "America/Chicago")
-        
-        # Parse Cal.com API response and convert to our format
-        availability_by_date = {}
+
+        utc_tz = ZoneInfo("UTC")
+        now_utc = datetime.now(utc_tz)
+
+        # We return an unambiguous list of UTC instants
+        slots: List[Dict[str, str]] = []
         
         # Process dateRanges (specific available time windows)
         if raw_availability.get("dateRanges"):
@@ -112,46 +115,31 @@ async def get_availability(
                     
                     # Ensure timezone-aware
                     if not start_dt.tzinfo:
-                        start_dt = start_dt.replace(tzinfo=ZoneInfo("UTC"))
+                        start_dt = start_dt.replace(tzinfo=utc_tz)
                     if not end_dt.tzinfo:
-                        end_dt = end_dt.replace(tzinfo=ZoneInfo("UTC"))
-                    
-                    # Convert from UTC to Cal.com's timezone
-                    try:
-                        calcom_tz = ZoneInfo(calcom_timezone)
-                    except Exception:
-                        calcom_tz = ZoneInfo("America/Chicago")  # Default fallback
-                    
-                    start_dt_calcom = start_dt.astimezone(calcom_tz)
-                    end_dt_calcom = end_dt.astimezone(calcom_tz)
-                    
-                    # Get current time in Cal.com timezone for filtering
-                    now_utc = datetime.now(ZoneInfo("UTC"))
-                    now_calcom = now_utc.astimezone(calcom_tz)
-                    
-                    # Generate time slots
-                    current_time = start_dt_calcom
+                        end_dt = end_dt.replace(tzinfo=utc_tz)
+
+                    start_dt_utc = start_dt.astimezone(utc_tz)
+                    end_dt_utc = end_dt.astimezone(utc_tz)
+
+                    # Generate time slots in UTC
+                    current_time = start_dt_utc
                     slot_duration = timedelta(minutes=event_duration)
                     
-                    while current_time + slot_duration <= end_dt_calcom:
+                    while current_time + slot_duration <= end_dt_utc:
                         # Filter out past slots
-                        if current_time > now_calcom:
-                            date_key = current_time.date().strftime("%Y-%m-%d")
-                            time_slot = current_time.strftime("%H:%M")
-                            
-                            if date_key not in availability_by_date:
-                                availability_by_date[date_key] = []
-                            
-                            if time_slot not in availability_by_date[date_key]:
-                                availability_by_date[date_key].append(time_slot)
-                        
+                        if current_time > now_utc:
+                            slots.append({
+                                "start_time": current_time.astimezone(utc_tz).isoformat().replace("+00:00", "Z"),
+                                "end_time": (current_time + slot_duration).astimezone(utc_tz).isoformat().replace("+00:00", "Z"),
+                            })
                         current_time += slot_duration
                 except Exception as e:
                     logger.warning(f"Error parsing date range {date_range}: {str(e)}")
                     continue
         
         # If no dateRanges, use workingHours as fallback
-        if not availability_by_date and raw_availability.get("workingHours"):
+        if not slots and raw_availability.get("workingHours"):
             logger.info("No dateRanges found, using workingHours")
             
             working_hours = raw_availability.get("workingHours", [])
@@ -162,8 +150,7 @@ async def get_availability(
             except Exception:
                 calcom_tz = ZoneInfo("America/Chicago")  # Default fallback
             
-            # Get current time in Cal.com timezone
-            now_utc = datetime.now(ZoneInfo("UTC"))
+            # Get current time in Cal.com timezone (for comparisons in local schedule time)
             now_calcom = now_utc.astimezone(calcom_tz)
             
             # Get date range
@@ -205,14 +192,13 @@ async def get_availability(
                                 while current_time + slot_duration <= end_time:
                                     # Filter out past slots
                                     if current_time > now_calcom:
-                                        date_key = current_date.strftime("%Y-%m-%d")
-                                        time_slot = current_time.strftime("%H:%M")
-                                        
-                                        if date_key not in availability_by_date:
-                                            availability_by_date[date_key] = []
-                                        
-                                        if time_slot not in availability_by_date[date_key]:
-                                            availability_by_date[date_key].append(time_slot)
+                                        start_utc = current_time.astimezone(utc_tz)
+                                        end_utc = (current_time + slot_duration).astimezone(utc_tz)
+                                        if start_utc > now_utc:
+                                            slots.append({
+                                                "start_time": start_utc.isoformat().replace("+00:00", "Z"),
+                                                "end_time": end_utc.isoformat().replace("+00:00", "Z"),
+                                            })
                                     
                                     current_time += slot_duration
                                 break
@@ -221,16 +207,12 @@ async def get_availability(
                 except Exception as e:
                     logger.warning(f"Error generating slots from workingHours: {str(e)}", exc_info=True)
         
-        # Convert to array format expected by frontend
-        availability_array = [
-            {"date": date, "slots": sorted(slots)}
-            for date, slots in sorted(availability_by_date.items())
-        ]
-        
-        # Include timezone in response so frontend knows what timezone the times are in
+        # Sort slots by start time for stable UI
+        slots_sorted = sorted(slots, key=lambda s: s.get("start_time", ""))
+
         return {
-            "availability": availability_array,
-            "timezone": calcom_timezone  # Tell frontend what timezone these times are in
+            "timezone": "UTC",
+            "slots": slots_sorted
         }
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -272,9 +254,12 @@ async def create_booking(
         booking_response = calcom_service.create_booking(
             event_type_id=event_type_id,
             start_time=start_time,
-            customer_name=customer_info["name"],
-            customer_email=customer_info["email"],
-            notes=notes
+            attendee_info={
+                "name": customer_info["name"],
+                "email": customer_info["email"],
+            },
+            timezone=timezone,
+            notes=notes if notes else None
         )
         
         booking_id = booking_response.get("id")

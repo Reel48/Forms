@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { calcomAPI } from '../api';
 import type { CalComBooking } from '../api';
+import { formatDateTimeWithTimezone, formatTime } from '../utils/dateUtils';
 import './AdminCalendarView.css';
 
 interface GoogleCalendarEvent {
@@ -74,25 +75,7 @@ function AdminCalendarView() {
     return { start, end };
   };
 
-  const formatDateTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
-
-  const formatTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
+  const formatDateTime = (dateTime: string) => formatDateTimeWithTimezone(dateTime);
 
   const handleCancelBooking = async (bookingId: string) => {
     if (!confirm('Are you sure you want to cancel this meeting?')) {

@@ -22,7 +22,6 @@ function CustomerSchedulingPage() {
   // Booking state
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEventType, setSelectedEventType] = useState<CalComEventType | null>(null);
-  const [timezone, setTimezone] = useState<string>(getUserTimezone());
   const [bookingNotes, setBookingNotes] = useState('');
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -89,7 +88,7 @@ function CustomerSchedulingPage() {
   const handleRescheduleBooking = async (bookingId: string, newStartTime: string) => {
     setReschedulingBooking(bookingId);
     try {
-      await calcomAPI.rescheduleBooking(bookingId, { start_time: newStartTime, timezone });
+      await calcomAPI.rescheduleBooking(bookingId, { start_time: newStartTime, timezone: getUserTimezone() });
       await loadData();
       setReschedulingBooking(null);
       setSelectedDate(null);
@@ -113,7 +112,7 @@ function CustomerSchedulingPage() {
       await calcomAPI.createBooking({
         event_type_id: selectedEventType.id,
         start_time: dateTime,
-        timezone,
+        timezone: getUserTimezone(),
         notes: bookingNotes || undefined
       });
       await loadData();
@@ -176,21 +175,6 @@ function CustomerSchedulingPage() {
         <div className="page-header">
           <h1>Schedule a Meeting</h1>
           <p>Book a time to meet with the Reel48 team</p>
-          <div className="timezone-selector">
-            <label htmlFor="timezone-select">Timezone:</label>
-            <select
-              id="timezone-select"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="timezone-select"
-            >
-              <option value="America/New_York">Eastern Time (ET)</option>
-              <option value="America/Chicago">Central Time (CT)</option>
-              <option value="America/Denver">Mountain Time (MT)</option>
-              <option value="America/Los_Angeles">Pacific Time (PT)</option>
-              <option value={timezone}>{timezone}</option>
-            </select>
-          </div>
         </div>
 
         <div className="tabs">
@@ -260,7 +244,6 @@ function CustomerSchedulingPage() {
                         }
                       }}
                       onJoinMeeting={handleJoinMeeting}
-                      timezone={timezone}
                       isMobile={isMobile}
                     />
                   ))}
@@ -303,7 +286,6 @@ function CustomerSchedulingPage() {
                         booking={booking}
                         showActions={false}
                         onJoinMeeting={handleJoinMeeting}
-                        timezone={timezone}
                         isMobile={isMobile}
                       />
                     ))}
@@ -350,7 +332,6 @@ function CustomerSchedulingPage() {
                     selectedDate={selectedDate}
                     onTimeSlotSelect={handleTimeSlotSelect}
                     eventTypeId={selectedEventType?.id}
-                    timezone={timezone}
                     onQuickBook={handleQuickBook}
                   />
                 )}
@@ -399,7 +380,6 @@ function CustomerSchedulingPage() {
                               setShowRescheduleSheet(false);
                             }}
                             eventTypeId={selectedEventType?.id}
-                            timezone={timezone}
                           />
                         </div>
                       )}
@@ -421,7 +401,6 @@ function CustomerSchedulingPage() {
                               handleRescheduleBooking(reschedulingBooking, dateTime);
                             }}
                             eventTypeId={selectedEventType?.id}
-                            timezone={timezone}
                           />
                         )}
                         <div className="reschedule-modal-actions">

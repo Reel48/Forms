@@ -9,7 +9,6 @@ interface SwipeableBookingCardProps {
   onCancel?: (bookingId: string) => void;
   onReschedule?: (bookingId: string) => void;
   onJoinMeeting?: (meetingUrl: string) => void;
-  timezone?: string;
   isMobile?: boolean;
 }
 
@@ -19,7 +18,6 @@ export default function SwipeableBookingCard({
   onCancel,
   onReschedule,
   onJoinMeeting,
-  timezone,
   isMobile = false
 }: SwipeableBookingCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -89,7 +87,6 @@ export default function SwipeableBookingCard({
         onCancel={onCancel}
         onReschedule={onReschedule}
         onJoinMeeting={onJoinMeeting}
-        timezone={timezone}
       />
     );
   }
@@ -108,7 +105,6 @@ export default function SwipeableBookingCard({
           booking={booking}
           showActions={false}
           onJoinMeeting={onJoinMeeting}
-          timezone={timezone}
         />
       </div>
       {showActions && (

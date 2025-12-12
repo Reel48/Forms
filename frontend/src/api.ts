@@ -846,6 +846,11 @@ export interface CalComAvailability {
   slots: string[];
 }
 
+export interface CalComAvailabilitySlot {
+  start_time: string; // UTC ISO string
+  end_time: string;   // UTC ISO string
+}
+
 export interface CalComBookingCreate {
   event_type_id: number;
   start_time: string;
@@ -865,7 +870,7 @@ export const calcomAPI = {
     if (params?.date_to) queryParams.append('date_to', params.date_to);
     if (params?.event_type_id) queryParams.append('event_type_id', params.event_type_id.toString());
     const queryString = queryParams.toString();
-    return api.get<any>(`/api/calcom/availability${queryString ? `?${queryString}` : ''}`);
+    return api.get<{ timezone: 'UTC'; slots: CalComAvailabilitySlot[] }>(`/api/calcom/availability${queryString ? `?${queryString}` : ''}`);
   },
   getEventTypes: () => api.get<{ event_types: CalComEventType[] }>('/api/calcom/event-types'),
   createBooking: (booking: CalComBookingCreate) => api.post<CalComBooking>('/api/calcom/bookings', booking),
