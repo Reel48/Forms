@@ -1412,6 +1412,11 @@ async def generate_ai_response(
                     if func_name == "create_quote" and result.get("requires_confirmation"):
                         ai_response = result.get("error") or "Before I create a quote, please confirm you'd like me to proceed."
                         break
+
+                    # Delivery status (ETA) - replace response with DB-backed answer.
+                    if func_name == "get_delivery_status" and result.get("success"):
+                        ai_response = _render_delivery_status_message(result.get("result") or {})
+                        continue
                     
                     # If quote was created, replace the fallback message with a detailed quote overview
                     if func_name == "create_quote" and result.get("success"):
@@ -2140,7 +2145,7 @@ async def _generate_ai_response_async(
                         lines.append(f"- [View folder]({frontend_url}/folders/{created_folder_id})")
                     if created_quote_id:
                         lines.append(f"- [View quote]({frontend_url}/quotes/{created_quote_id})")
-                    _insert_ai_message(conversation_id, "\n".join(lines))
+                    _insert_ai_message(conversation_id, "\n".join(lines), "text")
             except Exception:
                 pass
 

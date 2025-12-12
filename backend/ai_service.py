@@ -367,6 +367,19 @@ class AIService:
                     },
                     "required": ["folder_id"]
                 }
+            },
+            {
+                "name": "get_delivery_status",
+                "description": "Get delivery status/ETA for the customer's order. Use when a customer asks when their order will arrive, delivery ETA, delivery date, or shipping progress. Prefer this over guessing.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "quote_number": {
+                            "type": "string",
+                            "description": "Optional: Quote number (e.g. 'Q-1234') to look up the correct order/folder"
+                        }
+                    }
+                }
             }
         ]
     
@@ -665,6 +678,8 @@ class AIService:
                     response_text = "Perfect — I’ll go ahead and book that time for you."
                 elif first_name == "get_folder_shipments":
                     response_text = "I can help with that. Let me check the latest shipping status for you."
+                elif first_name == "get_delivery_status":
+                    response_text = "I can help with that. Let me check the latest delivery estimate for you."
                 elif first_name == "create_quote":
                     response_text = "I'll help you with that. Let me create the quote and set everything up for you."
                 else:
@@ -855,6 +870,7 @@ COMMUNICATION STYLE:
 - Use the provided context to answer questions accurately
 - If you don't know something specific, acknowledge it and offer to help them get the information
 - If a request is out of scope for you (no relevant context and no appropriate tools), say so clearly and offer next steps (e.g., connect them with a human, ask for the missing details, or direct them to the relevant page).
+- For delivery/ETA questions about an order, use tools to look up real shipment/ETA data (e.g., get_delivery_status or get_folder_shipments) instead of guessing.
 - For pricing questions, always refer to the specific pricing tiers provided in the context
 - Be conversational and helpful - you're representing the company
 - If a customer asks about something not in your knowledge, politely let them know you'll need to check with the team

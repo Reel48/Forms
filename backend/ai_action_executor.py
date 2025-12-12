@@ -103,6 +103,8 @@ class AIActionExecutor:
                 return self._schedule_meeting(parameters)
             elif function_name == "get_folder_shipments":
                 return self._get_folder_shipments(parameters)
+            elif function_name == "get_delivery_status":
+                return self._get_delivery_status(parameters)
             else:
                 return {
                     "success": False,
@@ -904,4 +906,91 @@ class AIActionExecutor:
         except Exception as e:
             logger.error(f"Error getting folder shipments: {str(e)}", exc_info=True)
             return {"success": False, "error": f"Failed to get shipments: {str(e)}"}
+
+    def _get_delivery_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get delivery status/ETA for the customer's order.
+
+        SECURITY: Expects `client_id` to be injected upstream (chat router overrides client_id from conversation).
+        """
+        try:
+            client_id = params.get("client_id")
+            quote_number = (params.get("quote_number") or "").strip()
+
+            if not client_id:
+                return {"success": False, "error": "client_id is required"}
+
+            folder_id = None
+
+            # If quote_number is provided, use it to find the specific folder_id.
+            if quote_number:
+                q = (
+                    supabase_storage.table("quotes")
+                    .select("id, quote_number, folder_id, status, title")
+                    .eq("client_id", client_id)
+                    .eq("quote_number", quote_number)
+                    .single()
+                    .execute()
+                )
+                if q.data:
+                    folder_id = q.data.get("folder_id")
+
+            # Otherwise, fall back to the most recently updated folder for this client.
+            if not folder_id:
+                f = (
+                    supabase_storage.table("folders")
+                    .select("id")
+                    .eq("client_id", client_id)
+                    .order("updated_at", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                if f.data:
+                    folder_id = f.data[0].get("id")
+
+            if not folder_id:
+                return {"success": False, "error": "No folder/order found for this customer"}
+
+            shipments_resp = (
+                supabase_storage.table("shipments")
+                .select("*")
+                .eq("folder_id", folder_id)
+                .order("created_at", desc=True)
+                .limit(5)
+                .execute()
+            )
+            shipments = shipments_resp.data or []
+
+            latest_shipment = shipments[0] if shipments else None
+            latest_event = None
+            if latest_shipment and latest_shipment.get("id"):
+                try:
+                    ev = (
+                        supabase_storage.table("shipment_tracking_events")
+                        .select("*")
+                        .eq("shipment_id", latest_shipment.get("id"))
+                        .order("timestamp", desc=True)
+                        .limit(1)
+                        .execute()
+                    )
+                    if ev.data:
+                        latest_event = ev.data[0]
+                except Exception:
+                    latest_event = None
+
+            return {
+                "success": True,
+                "result": {
+                    "client_id": client_id,
+                    "folder_id": folder_id,
+                    "quote_number": quote_number or None,
+                    "latest_shipment": latest_shipment,
+                    "latest_event": latest_event,
+                    "shipments": shipments,
+                },
+                "message": "Here’s the latest delivery estimate we have on file."
+            }
+        except Exception as e:
+            logger.error(f"Error getting delivery status: {str(e)}", exc_info=True)
+            return {"success": False, "error": f"Failed to get delivery status: {str(e)}"}
 
