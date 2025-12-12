@@ -158,7 +158,9 @@ class CalComService:
         start_time: str,
         attendee_info: Dict[str, str],
         timezone: str = "America/New_York",
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
+        language: str = "en",
+        metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Create a new booking
@@ -173,6 +175,9 @@ class CalComService:
         Returns:
             Booking details including booking ID and meeting URL
         """
+        if metadata is None:
+            metadata = {}
+
         data = {
             "eventTypeId": event_type_id,
             "start": start_time,
@@ -180,7 +185,10 @@ class CalComService:
                 "name": attendee_info.get("name", ""),
                 "email": attendee_info.get("email", "")
             },
-            "timeZone": timezone
+            "timeZone": timezone,
+            # Cal.com v1 now expects these fields to exist
+            "language": language,
+            "metadata": metadata
         }
         
         if notes:
@@ -231,7 +239,10 @@ class CalComService:
         """
         data = {
             "start": new_start_time,
-            "timeZone": timezone
+            "timeZone": timezone,
+            # Keep parity with create_booking: Cal.com may require these fields as well
+            "language": "en",
+            "metadata": {}
         }
         
         return self._make_request("PATCH", f"/bookings/{booking_id}", data=data)
