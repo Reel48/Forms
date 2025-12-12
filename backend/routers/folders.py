@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Tuple
+from datetime import datetime
+import uuid
+import logging
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,6 +15,190 @@ from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
+
+logger = logging.getLogger(__name__)
+
+# Customer-facing order stages (folder = order)
+ORDER_STAGES = {
+    "quote_sent",
+    "quote_accepted_or_paid",
+    "design_info_needed",
+    "production",
+    "shipped",
+    "delivered",
+    "closed",
+}
+
+
+def _safe_now_iso() -> str:
+    return datetime.now().isoformat()
+
+
+def _compute_shipping_summary(folder_id: str) -> Dict[str, Any]:
+    """Compute shipping summary from shipments + latest tracking event."""
+    try:
+        shipments = (
+            supabase_storage
+            .table("shipments")
+            .select("*")
+            .eq("folder_id", folder_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        ).data or []
+        shipment = shipments[0] if shipments else None
+    except Exception:
+        shipment = None
+
+    latest_event = None
+    if shipment and shipment.get("id"):
+        try:
+            ev = (
+                supabase_storage
+                .table("shipment_tracking_events")
+                .select("*")
+                .eq("shipment_id", shipment.get("id"))
+                .order("timestamp", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if ev.data:
+                latest_event = ev.data[0]
+        except Exception:
+            latest_event = None
+
+    if not shipment:
+        return {"has_shipment": False}
+
+    status = shipment.get("status") or (latest_event or {}).get("status")
+    return {
+        "has_shipment": True,
+        "status": status,
+        "carrier_name": shipment.get("carrier_name") or shipment.get("carrier"),
+        "tracking_number": shipment.get("tracking_number"),
+        "estimated_delivery_date": shipment.get("estimated_delivery_date"),
+        "actual_delivery_date": shipment.get("actual_delivery_date"),
+        "latest_event": latest_event,
+    }
+
+
+def _compute_progress(files: List[Dict[str, Any]], forms: List[Dict[str, Any]], esignatures: List[Dict[str, Any]]) -> Dict[str, Any]:
+    forms_total = len(forms or [])
+    esigs_total = len(esignatures or [])
+    tasks_total = forms_total + esigs_total
+    forms_completed = len([f for f in (forms or []) if f.get("is_completed")])
+    esigs_completed = len([e for e in (esignatures or []) if e.get("is_completed")])
+    tasks_completed = forms_completed + esigs_completed
+    files_total = len(files or [])
+    files_viewed = len([f for f in (files or []) if f.get("is_completed")])
+    return {
+        "tasks_total": tasks_total,
+        "tasks_completed": tasks_completed,
+        "forms_total": forms_total,
+        "forms_completed": forms_completed,
+        "esignatures_total": esigs_total,
+        "esignatures_completed": esigs_completed,
+        "files_total": files_total,
+        "files_viewed": files_viewed,
+    }
+
+
+def _compute_stage_and_next_step(
+    folder: Dict[str, Any],
+    quote: Optional[Dict[str, Any]],
+    progress: Dict[str, Any],
+    shipping: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Deterministic stage/next-step used for customer clarity.
+    Optional DB overrides: folders.stage / next_step / next_step_owner.
+    """
+    # Overrides (optional columns)
+    stage_override = folder.get("stage")
+    next_override = folder.get("next_step")
+    next_owner_override = folder.get("next_step_owner")
+
+    payment_status = (quote or {}).get("payment_status") or ""
+    quote_status = (quote or {}).get("status") or ""
+    has_quote = bool(quote)
+    unpaid = has_quote and str(payment_status).lower() not in ("paid", "succeeded")
+
+    has_shipment = bool(shipping.get("has_shipment"))
+    delivered_at = shipping.get("actual_delivery_date")
+    shipped_status = str(shipping.get("status") or "").lower()
+
+    tasks_total = int(progress.get("tasks_total") or 0)
+    tasks_completed = int(progress.get("tasks_completed") or 0)
+    tasks_incomplete = tasks_total > 0 and tasks_completed < tasks_total
+
+    # Compute stage
+    if delivered_at or shipped_status == "delivered":
+        computed_stage = "delivered"
+    elif has_shipment:
+        computed_stage = "shipped"
+    elif unpaid:
+        computed_stage = "quote_sent"
+    elif has_quote and (str(payment_status).lower() == "paid" or str(quote_status).lower() in ("accepted", "approved")):
+        computed_stage = "design_info_needed" if tasks_incomplete else "production"
+    else:
+        # No quote yet / unknown state
+        computed_stage = "quote_sent"
+
+    # Compute next step + owner
+    if unpaid:
+        computed_next = "Review and pay your quote"
+        computed_owner = "customer"
+    elif tasks_incomplete:
+        computed_next = "Complete the required tasks in this folder"
+        computed_owner = "customer"
+    elif has_shipment:
+        computed_next = "Track your shipment"
+        computed_owner = "customer"
+    elif has_quote:
+        computed_next = "We’re working on production — we’ll notify you when it ships"
+        computed_owner = "reel48"
+    else:
+        computed_next = "We’re preparing your quote — we’ll notify you when it’s ready"
+        computed_owner = "reel48"
+
+    return {
+        "stage": stage_override if stage_override else computed_stage,
+        "next_step": next_override if next_override else computed_next,
+        "next_step_owner": next_owner_override if next_owner_override else computed_owner,
+        "computed_stage": computed_stage,
+        "computed_next_step": computed_next,
+        "computed_next_step_owner": computed_owner,
+    }
+
+
+def _emit_folder_event(folder_id: str, event_type: str, title: str, details: Optional[Dict[str, Any]] = None, created_by: Optional[str] = None) -> None:
+    """Best-effort folder event insert (non-fatal)."""
+    try:
+        supabase_storage.table("folder_events").insert({
+            "id": str(uuid.uuid4()),
+            "folder_id": folder_id,
+            "event_type": event_type,
+            "title": title,
+            "details": details or {},
+            "created_by": created_by,
+            "created_at": _safe_now_iso(),
+        }).execute()
+    except Exception:
+        # Table may not exist yet or insert may fail; do not break request flows.
+        return
+
+
+def _get_folder_client_email(folder_id: str) -> Optional[str]:
+    try:
+        folder = supabase_storage.table("folders").select("client_id").eq("id", folder_id).single().execute().data
+        client_id = (folder or {}).get("client_id")
+        if not client_id:
+            return None
+        client = supabase_storage.table("clients").select("email").eq("id", client_id).single().execute().data
+        email = (client or {}).get("email")
+        return email.lower().strip() if isinstance(email, str) and email.strip() else None
+    except Exception:
+        return None
 
 @router.get("", response_model=List[Folder])
 async def list_folders(
@@ -542,7 +729,25 @@ async def assign_form_to_folder(
             
             if not response.data:
                 raise HTTPException(status_code=500, detail="Failed to create assignment")
-            
+
+            # Best-effort event for timeline
+            try:
+                form_name = None
+                try:
+                    f = supabase_storage.table("forms").select("name").eq("id", form_id).single().execute()
+                    form_name = (f.data or {}).get("name")
+                except Exception:
+                    form_name = None
+                _emit_folder_event(
+                    folder_id=folder_id,
+                    event_type="form_assigned",
+                    title=f"Form assigned{': ' + form_name if form_name else ''}",
+                    details={"form_id": form_id, "form_name": form_name},
+                    created_by=user.get("id"),
+                )
+            except Exception:
+                pass
+
             return response.data[0]
         except Exception as e:
             error_msg = str(e)
@@ -670,6 +875,25 @@ async def assign_file_to_folder(
             response = supabase_storage.table("file_folder_assignments").insert(assignment_data).execute()
             if not response.data:
                 raise HTTPException(status_code=500, detail="Failed to create assignment")
+
+            # Best-effort event for timeline
+            try:
+                file_name = None
+                try:
+                    f = supabase_storage.table("files").select("name").eq("id", file_id).single().execute()
+                    file_name = (f.data or {}).get("name")
+                except Exception:
+                    file_name = None
+                _emit_folder_event(
+                    folder_id=folder_id,
+                    event_type="file_assigned",
+                    title=f"File added{': ' + file_name if file_name else ''}",
+                    details={"file_id": file_id, "file_name": file_name},
+                    created_by=user.get("id"),
+                )
+            except Exception:
+                pass
+
             return response.data[0]
         except Exception as e:
             error_msg = str(e)
@@ -859,7 +1083,41 @@ async def assign_esignature_to_folder(
         except Exception as e:
             # If assignment fails, that's okay - the copy was created successfully
             print(f"Warning: Could not create assignment record: {str(e)}")
-        
+
+        # Best-effort event for timeline
+        try:
+            _emit_folder_event(
+                folder_id=folder_id,
+                event_type="esignature_assigned",
+                title="E-signature document assigned",
+                details={"template_document_id": document_id, "document_id": copy_doc.get("id"), "name": copy_doc.get("name")},
+                created_by=user.get("id"),
+            )
+        except Exception:
+            pass
+
+        # Email notification (best-effort): customer needs to sign
+        try:
+            import os as _os
+            if _os.getenv("ENABLE_FOLDER_EVENT_EMAILS", "false").lower() == "true":
+                from email_service import email_service, FRONTEND_URL
+                to_email = _get_folder_client_email(folder_id)
+                if to_email:
+                    folder_link = f"{FRONTEND_URL}/folders/{folder_id}"
+                    subject = "Signature required for your order"
+                    html = f"""
+                    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                      <h2>Signature required</h2>
+                      <p>Please sign the required document in your order folder:</p>
+                      <p><b>{copy_doc.get('name') or 'E-signature document'}</b></p>
+                      <p><a href="{folder_link}">Open your order folder</a></p>
+                    </div>
+                    """
+                    text = f"Signature required\n\nPlease sign: {copy_doc.get('name') or 'E-signature document'}\nOpen your order folder: {folder_link}"
+                    email_service._send_email(to_email, subject, html, text)
+        except Exception:
+            pass
+
         return copy_doc
     except HTTPException:
         raise
@@ -1112,12 +1370,28 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             logger.warning(f"Error fetching e-signatures: {str(e)}")
             pass
         
+        # Compute customer-friendly status summary
+        progress = _compute_progress(files, forms, esignatures)
+        shipping_summary = _compute_shipping_summary(folder_id)
+        stage_info = _compute_stage_and_next_step(folder, quote, progress, shipping_summary)
+
         return {
             "folder": folder,
             "quote": quote,
             "files": files,
             "forms": forms,
-            "esignatures": esignatures
+            "esignatures": esignatures,
+            "summary": {
+                "stage": stage_info.get("stage"),
+                "next_step": stage_info.get("next_step"),
+                "next_step_owner": stage_info.get("next_step_owner"),
+                "computed_stage": stage_info.get("computed_stage"),
+                "computed_next_step": stage_info.get("computed_next_step"),
+                "computed_next_step_owner": stage_info.get("computed_next_step_owner"),
+                "progress": progress,
+                "shipping": shipping_summary,
+                "updated_at": folder.get("updated_at"),
+            }
         }
     except HTTPException:
         raise
@@ -1128,3 +1402,53 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to get folder content: {str(e)}")
 
+
+@router.get("/{folder_id}/events")
+async def get_folder_events(
+    folder_id: str,
+    limit: int = Query(50, ge=1, le=200, description="Number of events to return"),
+    user = Depends(get_current_user),
+):
+    """Get activity timeline for a folder (order)."""
+    try:
+        is_admin = user.get("role") == "admin"
+
+        folder_resp = supabase_storage.table("folders").select("id, created_by").eq("id", folder_id).single().execute()
+        if not folder_resp.data:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        folder = folder_resp.data
+
+        if not is_admin:
+            try:
+                assignment = (
+                    supabase_storage
+                    .table("folder_assignments")
+                    .select("folder_id")
+                    .eq("folder_id", folder_id)
+                    .eq("user_id", user["id"])
+                    .execute()
+                )
+                if not assignment.data and folder.get("created_by") != user["id"]:
+                    raise HTTPException(status_code=403, detail="Access denied")
+            except HTTPException:
+                raise
+            except Exception:
+                if folder.get("created_by") != user["id"]:
+                    raise HTTPException(status_code=403, detail="Access denied")
+
+        events = (
+            supabase_storage
+            .table("folder_events")
+            .select("*")
+            .eq("folder_id", folder_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        ).data or []
+
+        return {"events": events}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting folder events: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get folder events: {str(e)}")

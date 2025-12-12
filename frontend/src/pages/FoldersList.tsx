@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { foldersAPI, type Folder } from '../api';
+import { foldersAPI, type Folder, type FolderSummary } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import './FoldersList.css';
 
@@ -8,11 +8,14 @@ const FoldersList: React.FC = () => {
   const navigate = useNavigate();
   const { role, loading: authLoading } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [summariesByFolderId, setSummariesByFolderId] = useState<Record<string, FolderSummary>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [clientFilter] = useState<string>('all');
+  const [needsActionOnly, setNeedsActionOnly] = useState<boolean>(false);
+  const [stageFilter, setStageFilter] = useState<string>('all');
 
   useEffect(() => {
     loadFolders();
@@ -30,7 +33,27 @@ const FoldersList: React.FC = () => {
         filters.client_id = clientFilter;
       }
       const response = await foldersAPI.getAll(filters);
-      setFolders(response.data);
+      const data = response.data || [];
+      setFolders(data);
+
+      // Customer-first: fetch per-folder summary from folder content endpoint
+      if (role !== 'admin' && data.length > 0) {
+        const results = await Promise.allSettled(
+          data.map(async (f) => {
+            const c = await foldersAPI.getContent(f.id);
+            return { id: f.id, summary: c.data.summary };
+          })
+        );
+        const next: Record<string, FolderSummary> = {};
+        for (const r of results) {
+          if (r.status === 'fulfilled' && r.value?.id && r.value?.summary) {
+            next[r.value.id] = r.value.summary;
+          }
+        }
+        setSummariesByFolderId(next);
+      } else {
+        setSummariesByFolderId({});
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load folders');
     } finally {
@@ -38,10 +61,23 @@ const FoldersList: React.FC = () => {
     }
   };
 
-  const filteredFolders = folders.filter((folder) =>
-    folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    folder.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFolders = folders
+    .filter((folder) => (
+      folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      folder.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    ))
+    .filter((folder) => {
+      if (role === 'admin') return true;
+      const summary = summariesByFolderId[folder.id];
+      if (needsActionOnly && summary?.next_step_owner !== 'customer') return false;
+      if (stageFilter !== 'all' && summary?.stage !== stageFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const aTs = (summariesByFolderId[a.id]?.updated_at || a.updated_at || a.created_at || '').toString();
+      const bTs = (summariesByFolderId[b.id]?.updated_at || b.updated_at || b.created_at || '').toString();
+      return bTs.localeCompare(aTs);
+    });
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -120,6 +156,34 @@ const FoldersList: React.FC = () => {
             <option value="archived">Archived</option>
             <option value="cancelled">Cancelled</option>
           </select>
+
+          {role !== 'admin' && (
+            <>
+              <select
+                id="folders-stage-filter"
+                name="folders-stage-filter"
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Stages</option>
+                <option value="quote_sent">Quote</option>
+                <option value="design_info_needed">Needs Info</option>
+                <option value="production">Production</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+              </select>
+
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={needsActionOnly}
+                  onChange={(e) => setNeedsActionOnly(e.target.checked)}
+                />
+                Needs action from me
+              </label>
+            </>
+          )}
         </div>
       </div>
 
@@ -141,16 +205,31 @@ const FoldersList: React.FC = () => {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Status</th>
-                <th>Description</th>
-                <th>Has Quote</th>
-                <th>Client ID</th>
-                <th>Created</th>
+                {role === 'admin' ? (
+                  <>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Has Quote</th>
+                    <th>Client ID</th>
+                    <th>Created</th>
+                  </>
+                ) : (
+                  <>
+                    <th>Stage</th>
+                    <th>Next step</th>
+                    <th>Last update</th>
+                    <th>ETA</th>
+                  </>
+                )}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredFolders.map((folder) => (
+                (() => {
+                  const summary = summariesByFolderId[folder.id];
+                  const eta = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
+                  return (
                 <tr
                   key={folder.id}
                   style={{ cursor: 'pointer' }}
@@ -159,35 +238,63 @@ const FoldersList: React.FC = () => {
                   <td className="mobile-name-column">
                     <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{folder.name}</strong>
                   </td>
-                  <td className="mobile-status-column">
-                    <span className={getStatusBadgeClass(folder.status)}>
-                      {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {folder.description || '-'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {folder.quote_id ? 'Yes' : 'No'}
-                    </span>
-                  </td>
-                  <td>
-                    {folder.client_id ? (
-                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                        {folder.client_id.substring(0, 8)}...
-                      </span>
-                    ) : (
-                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {formatDate(folder.created_at)}
-                    </span>
-                  </td>
+                  {role === 'admin' ? (
+                    <>
+                      <td className="mobile-status-column">
+                        <span className={getStatusBadgeClass(folder.status)}>
+                          {folder.status.charAt(0).toUpperCase() + folder.status.slice(1)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {folder.description || '-'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {folder.quote_id ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td>
+                        {folder.client_id ? (
+                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                            {folder.client_id.substring(0, 8)}...
+                          </span>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {formatDate(folder.created_at)}
+                        </span>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {summary?.stage || '-'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {summary?.next_step || '-'}
+                          {summary?.next_step_owner ? ` (${summary.next_step_owner})` : ''}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {summary?.updated_at ? formatDate(summary.updated_at) : formatDate(folder.updated_at)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                          {eta ? formatDate(eta) : '-'}
+                        </span>
+                      </td>
+                    </>
+                  )}
                   <td onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <button
@@ -212,6 +319,8 @@ const FoldersList: React.FC = () => {
                     </div>
                   </td>
                 </tr>
+                  );
+                })()
               ))}
             </tbody>
           </table>

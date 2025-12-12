@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaCheck } from 'react-icons/fa';
-import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client } from '../api';
+import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
 import ShipmentTracker from '../components/ShipmentTracker';
@@ -29,6 +29,8 @@ const FolderView: React.FC = () => {
   const [renamingFileName, setRenamingFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAddShipment, setShowAddShipment] = useState(false);
+  const [events, setEvents] = useState<FolderEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   const isNewFolder = id === 'new';
 
@@ -56,10 +58,26 @@ const FolderView: React.FC = () => {
       setError(null);
       const response = await foldersAPI.getContent(id!);
       setContent(response.data);
+      // Load activity feed in parallel (best-effort)
+      loadFolderEvents();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load folder content');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFolderEvents = async () => {
+    if (!id || id === 'new') return;
+    try {
+      setEventsLoading(true);
+      const res = await foldersAPI.getEvents(id, { limit: 50 });
+      setEvents(res.data.events || []);
+    } catch (e) {
+      // Best-effort: don’t block the page if events fail
+      setEvents([]);
+    } finally {
+      setEventsLoading(false);
     }
   };
 
@@ -171,6 +189,17 @@ const FolderView: React.FC = () => {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+    });
+  };
+
+  const formatDateTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
     });
   };
 
@@ -291,7 +320,18 @@ const FolderView: React.FC = () => {
     );
   }
 
-  const { folder, quote, files, forms, esignatures } = content;
+  const { folder, quote, files, forms, esignatures, summary } = content;
+  const tasksTotal = summary?.progress?.tasks_total ?? 0;
+  const tasksCompleted = summary?.progress?.tasks_completed ?? 0;
+  const progressPct = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
+  const waitingChip =
+    summary?.next_step_owner === 'customer'
+      ? 'Waiting on you'
+      : summary?.next_step_owner === 'reel48'
+        ? 'Waiting on Reel48'
+        : null;
+  const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
+  const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';
 
   return (
     <div className="folder-view-container">
@@ -305,6 +345,73 @@ const FolderView: React.FC = () => {
         {folder.description && (
           <p className="folder-description">{folder.description}</p>
         )}
+
+        {/* Status center (customer clarity) */}
+        {summary && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              border: '1px solid var(--color-border, #e5e7eb)',
+              borderRadius: '10px',
+              background: 'white',
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+              {summary.stage && (
+                <span
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '999px',
+                    background: '#f3f4f6',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Stage: {summary.stage}
+                </span>
+              )}
+              {waitingChip && (
+                <span
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '999px',
+                    background: summary.next_step_owner === 'customer' ? '#fee2e2' : '#e0f2fe',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {waitingChip}
+                </span>
+              )}
+              {summary.shipping?.has_shipment && etaDate && (
+                <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                  {summary.shipping?.actual_delivery_date ? 'Delivered:' : 'ETA:'} {formatDate(etaDate)}
+                </span>
+              )}
+            </div>
+
+            {summary.next_step && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <div className="text-muted" style={{ fontSize: '0.8rem' }}>Next step</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{summary.next_step}</div>
+              </div>
+            )}
+
+            <div style={{ marginTop: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                <div className="text-muted" style={{ fontSize: '0.8rem' }}>
+                  Tasks: {tasksCompleted}/{tasksTotal}
+                </div>
+                <div className="text-muted" style={{ fontSize: '0.8rem' }}>{progressPct}%</div>
+              </div>
+              <div style={{ height: '10px', background: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '10px', width: `${progressPct}%`, background: '#2563eb' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="folder-meta-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span className={`status-badge status-${folder.status}`}>
@@ -337,6 +444,42 @@ const FolderView: React.FC = () => {
       </div>
 
       <div className="folder-content">
+        {/* Activity Feed */}
+        <section className="content-section">
+          <div className="section-header">
+            <h2>Activity</h2>
+            <button
+              onClick={() => loadFolderEvents()}
+              className="btn-secondary btn-sm"
+              disabled={eventsLoading}
+            >
+              {eventsLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+
+          {eventsLoading ? (
+            <div className="empty-content"><p>Loading activity…</p></div>
+          ) : events.length === 0 ? (
+            <div className="empty-content"><p>No activity yet.</p></div>
+          ) : (
+            <div className="card" style={{ padding: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {events.map((ev) => (
+                  <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{ev.title}</div>
+                      <div className="text-muted" style={{ fontSize: '0.85rem' }}>{ev.event_type}</div>
+                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {formatDateTime(ev.created_at)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Quote Section */}
         {quote && (
           <section className="content-section">
@@ -778,18 +921,33 @@ const FolderView: React.FC = () => {
 
         {/* Shipment Tracking Section */}
         <section className="content-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2>Shipment Tracking</h2>
-            {role === 'admin' && (
-              <button
-                onClick={() => setShowAddShipment(true)}
-                className="btn-primary"
-              >
-                Add Shipment
-              </button>
-            )}
-          </div>
-          <ShipmentTracker folderId={folder.id} />
+          <details open={openShipments}>
+            <summary
+              style={{
+                listStyle: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h2 style={{ margin: 0 }}>Shipment Tracking</h2>
+              {role === 'admin' && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowAddShipment(true);
+                  }}
+                  className="btn-primary"
+                >
+                  Add Shipment
+                </button>
+              )}
+            </summary>
+            <ShipmentTracker folderId={folder.id} />
+          </details>
         </section>
 
         {/* Content Manager (Admin Only) */}

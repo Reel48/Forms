@@ -323,8 +323,25 @@ async def upload_file(
             except:
                 pass
             raise HTTPException(status_code=500, detail="Failed to create file record")
-        
-        return response.data[0]
+
+        created_file = response.data[0]
+
+        # Best-effort folder event (only for folder uploads, not templates)
+        if folder_id:
+            try:
+                supabase_storage.table("folder_events").insert({
+                    "id": str(uuid.uuid4()),
+                    "folder_id": folder_id,
+                    "event_type": "file_uploaded",
+                    "title": f"File uploaded: {created_file.get('name') or 'File'}",
+                    "details": {"file_id": created_file.get("id"), "name": created_file.get("name"), "storage_path": created_file.get("storage_path")},
+                    "created_by": user.get("id"),
+                    "created_at": datetime.now().isoformat(),
+                }).execute()
+            except Exception:
+                pass
+
+        return created_file
     except HTTPException:
         raise
     except Exception as e:

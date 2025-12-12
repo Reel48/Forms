@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime
+import uuid
 import sys
 import os
 import json
@@ -10,9 +11,33 @@ from models import Shipment, ShipmentCreate, ShipmentUpdate, TrackingEvent
 from database import supabase_storage
 from auth import get_current_user
 from shippo_service import ShippoService
+from email_service import email_service, FRONTEND_URL
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/shipments", tags=["shipments"])
+
+# Default off: enable explicitly via env when desired
+ENABLE_FOLDER_EVENT_EMAILS = os.getenv("ENABLE_FOLDER_EVENT_EMAILS", "false").lower() == "true"
+
+
+def _get_folder_client_email(folder_id: str) -> Optional[str]:
+    try:
+        folder = supabase_storage.table("folders").select("client_id").eq("id", folder_id).single().execute().data
+        client_id = (folder or {}).get("client_id")
+        if not client_id:
+            return None
+        client = supabase_storage.table("clients").select("email").eq("id", client_id).single().execute().data
+        email = (client or {}).get("email")
+        return email.lower().strip() if isinstance(email, str) and email.strip() else None
+    except Exception:
+        return None
+
+
+def _send_folder_email(to_email: str, subject: str, html_content: str, text_content: str) -> None:
+    try:
+        email_service._send_email(to_email, subject, html_content, text_content)
+    except Exception:
+        return
 
 async def update_shipment_tracking(shipment_id: str):
     """Update shipment tracking information from Shippo"""
@@ -23,6 +48,8 @@ async def update_shipment_tracking(shipment_id: str):
             return
         
         shipment = shipment_response.data
+        old_status = (shipment.get("status") or "").lower() if isinstance(shipment.get("status"), str) else shipment.get("status")
+        old_actual_delivery = shipment.get("actual_delivery_date")
         
         if not ShippoService.is_configured():
             logger.warning("Shippo not configured, skipping tracking update")
@@ -77,6 +104,61 @@ async def update_shipment_tracking(shipment_id: str):
             update_data["actual_delivery_date"] = actual_delivery.isoformat()
         
         supabase_storage.table("shipments").update(update_data).eq("id", shipment_id).execute()
+
+        # Best-effort folder event when status transitions (or delivered)
+        try:
+            new_status = status
+            delivered_now = bool(actual_delivery) and not bool(old_actual_delivery)
+            if shipment.get("folder_id") and ((new_status and new_status != old_status) or delivered_now):
+                event_type = "shipment_delivered" if (new_status == "delivered" or delivered_now) else "shipment_status_updated"
+                title = "Shipment delivered" if event_type == "shipment_delivered" else f"Shipment status updated: {new_status}"
+                folder_id = shipment.get("folder_id")
+                supabase_storage.table("folder_events").insert({
+                    "id": str(uuid.uuid4()),
+                    "folder_id": folder_id,
+                    "event_type": event_type,
+                    "title": title,
+                    "details": {
+                        "shipment_id": shipment_id,
+                        "tracking_number": shipment.get("tracking_number"),
+                        "carrier": shipment.get("carrier"),
+                        "status": new_status,
+                        "estimated_delivery_date": update_data.get("estimated_delivery_date"),
+                        "actual_delivery_date": update_data.get("actual_delivery_date"),
+                    },
+                    "created_by": None,
+                    "created_at": datetime.now().isoformat(),
+                }).execute()
+
+                # Email notification (best-effort)
+                if ENABLE_FOLDER_EVENT_EMAILS and folder_id:
+                    to_email = _get_folder_client_email(folder_id)
+                    if to_email:
+                        folder_link = f"{FRONTEND_URL}/folders/{folder_id}"
+                        if event_type == "shipment_delivered":
+                            subject = "Your order was delivered"
+                            html = f"""
+                            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                              <h2>Your order was delivered</h2>
+                              <p>Tracking: <b>{shipment.get('tracking_number') or ''}</b></p>
+                              <p><a href="{folder_link}">View order status</a></p>
+                            </div>
+                            """
+                            text = f"Your order was delivered.\n\nTracking: {shipment.get('tracking_number') or ''}\nView order status: {folder_link}"
+                        else:
+                            subject = "Shipment update"
+                            html = f"""
+                            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                              <h2>Shipment update</h2>
+                              <p>Status: <b>{new_status}</b></p>
+                              <p>Tracking: <b>{shipment.get('tracking_number') or ''}</b></p>
+                              <p><a href="{folder_link}">View order status</a></p>
+                            </div>
+                            """
+                            text = f"Shipment update\n\nStatus: {new_status}\nTracking: {shipment.get('tracking_number') or ''}\nView order status: {folder_link}"
+                        _send_folder_email(to_email, subject, html, text)
+        except Exception:
+            pass
         
         # Store tracking events
         tracking_history = tracking_info.get("tracking_history", [])
@@ -168,6 +250,42 @@ async def create_shipment(
             raise HTTPException(status_code=500, detail="Failed to create shipment")
         
         created_shipment = response.data[0]
+
+        # Best-effort folder event for timeline
+        try:
+            supabase_storage.table("folder_events").insert({
+                "id": str(uuid.uuid4()),
+                "folder_id": created_shipment.get("folder_id"),
+                "event_type": "shipment_created",
+                "title": "Shipment created",
+                "details": {
+                    "shipment_id": created_shipment.get("id"),
+                    "tracking_number": created_shipment.get("tracking_number"),
+                    "carrier": created_shipment.get("carrier"),
+                    "carrier_name": created_shipment.get("carrier_name"),
+                },
+                "created_by": user.get("id"),
+                "created_at": datetime.now().isoformat(),
+            }).execute()
+
+            # Email notification (best-effort)
+            if ENABLE_FOLDER_EVENT_EMAILS and created_shipment.get("folder_id"):
+                to_email = _get_folder_client_email(created_shipment.get("folder_id"))
+                if to_email:
+                    folder_link = f"{FRONTEND_URL}/folders/{created_shipment.get('folder_id')}"
+                    subject = "Your order has shipped"
+                    html = f"""
+                    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                      <h2>Your order has shipped</h2>
+                      <p>Carrier: <b>{created_shipment.get('carrier_name') or created_shipment.get('carrier') or ''}</b></p>
+                      <p>Tracking: <b>{created_shipment.get('tracking_number') or ''}</b></p>
+                      <p><a href="{folder_link}">View order status</a></p>
+                    </div>
+                    """
+                    text = f"Your order has shipped.\n\nCarrier: {created_shipment.get('carrier_name') or created_shipment.get('carrier') or ''}\nTracking: {created_shipment.get('tracking_number') or ''}\nView order status: {folder_link}"
+                    _send_folder_email(to_email, subject, html, text)
+        except Exception:
+            pass
         
         # Fetch tracking info and update (async, don't wait)
         try:

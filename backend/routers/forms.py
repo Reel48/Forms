@@ -2214,6 +2214,44 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
             except Exception as e:
                 # Log but don't fail the submission
                 print(f"Warning: Failed to send admin notification email to {admin['email']}: {str(e)}")
+
+        # Best-effort folder event(s) for customer timeline.
+        # We infer the folder(s) by: submitter_email -> client -> folders -> form_folder_assignments(form_id).
+        try:
+            submitter_email_norm = (submission.get("submitter_email") or "").lower().strip()
+            if submitter_email_norm:
+                client_resp = supabase_storage.table("clients").select("id").eq("email", submitter_email_norm).limit(1).execute()
+                client_id = (client_resp.data or [{}])[0].get("id") if (client_resp.data or []) else None
+                if client_id:
+                    folder_rows = supabase_storage.table("folders").select("id").eq("client_id", client_id).execute().data or []
+                    folder_ids = [f.get("id") for f in folder_rows if f.get("id")]
+                    if folder_ids:
+                        assignments = (
+                            supabase_storage
+                            .table("form_folder_assignments")
+                            .select("folder_id")
+                            .eq("form_id", form_id)
+                            .in_("folder_id", folder_ids)
+                            .execute()
+                        ).data or []
+                        for a in assignments:
+                            fid = a.get("folder_id")
+                            if not fid:
+                                continue
+                            try:
+                                supabase_storage.table("folder_events").insert({
+                                    "id": str(uuid.uuid4()),
+                                    "folder_id": fid,
+                                    "event_type": "form_submitted",
+                                    "title": f"Form submitted: {form_name}",
+                                    "details": {"form_id": form_id, "form_name": form_name, "submission_id": submission_id},
+                                    "created_by": current_user.get("id") if current_user else None,
+                                    "created_at": now,
+                                }).execute()
+                            except Exception:
+                                pass
+        except Exception:
+            pass
         
         return submission
         

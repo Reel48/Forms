@@ -498,6 +498,27 @@ async def create_quote(quote: QuoteCreate, current_admin: dict = Depends(get_cur
             user_email=current_admin.get("email"),
             description="Quote created" + (f" with folder" if folder_id else "")
         )
+
+        # Best-effort folder event for customer timeline (only when a folder exists)
+        if folder_id:
+            try:
+                supabase_storage.table("folder_events").insert({
+                    "id": str(uuid.uuid4()),
+                    "folder_id": folder_id,
+                    "event_type": "quote_created",
+                    "title": f"Quote created ({created_quote_full.get('quote_number')})",
+                    "details": {
+                        "quote_id": created_quote_full.get("id"),
+                        "quote_number": created_quote_full.get("quote_number"),
+                        "total": created_quote_full.get("total"),
+                        "status": created_quote_full.get("status"),
+                        "payment_status": created_quote_full.get("payment_status"),
+                    },
+                    "created_by": current_admin.get("id"),
+                    "created_at": datetime.now().isoformat(),
+                }).execute()
+            except Exception:
+                pass
         
         return created_quote_full
         
@@ -871,6 +892,29 @@ async def update_quote(quote_id: str, quote_update: QuoteUpdate, current_admin: 
         
         module_logger.info(f"Returning updated quote with folder_id: {updated_quote.get('folder_id')}")
         module_logger.info(f"Full quote data keys: {list(updated_quote.keys())}")
+
+        # Best-effort folder event (if quote is linked to a folder)
+        try:
+            folder_id_for_event = updated_quote.get("folder_id") or folder_id
+            if folder_id_for_event:
+                supabase_storage.table("folder_events").insert({
+                    "id": str(uuid.uuid4()),
+                    "folder_id": folder_id_for_event,
+                    "event_type": "quote_updated",
+                    "title": f"Quote updated ({updated_quote.get('quote_number')})",
+                    "details": {
+                        "quote_id": updated_quote.get("id"),
+                        "quote_number": updated_quote.get("quote_number"),
+                        "total": updated_quote.get("total"),
+                        "status": updated_quote.get("status"),
+                        "payment_status": updated_quote.get("payment_status"),
+                    },
+                    "created_by": current_admin.get("id"),
+                    "created_at": datetime.now().isoformat(),
+                }).execute()
+        except Exception:
+            pass
+
         return updated_quote
         
     except HTTPException:

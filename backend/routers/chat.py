@@ -1413,6 +1413,35 @@ async def generate_ai_response(
                         ai_response = result.get("error") or "Before I create a quote, please confirm you'd like me to proceed."
                         break
                     
+                    # Folder order status tool (customer clarity)
+                    if func_name == "get_folder_status" and result.get("success"):
+                        try:
+                            info = result.get("result") or {}
+                            stage = info.get("stage")
+                            next_step = info.get("next_step")
+                            owner = info.get("next_step_owner")
+                            shipping = info.get("shipping") or {}
+                            eta = shipping.get("actual_delivery_date") or shipping.get("estimated_delivery_date")
+                            quote_number = info.get("quote_number")
+                            deep_link = info.get("deep_link") or ""
+
+                            lines = []
+                            lines.append("Here’s the latest status for your order:")
+                            if quote_number:
+                                lines.append(f"- Quote: {quote_number}")
+                            if stage:
+                                lines.append(f"- Stage: {stage}")
+                            if next_step:
+                                lines.append(f"- Next step: {next_step}" + (f" ({owner})" if owner else ""))
+                            if eta:
+                                lines.append(f"- {'Delivered' if shipping.get('actual_delivery_date') else 'ETA'}: {eta}")
+                            if deep_link:
+                                lines.append(f"\nOpen your order folder: {deep_link}")
+                            ai_response = "\n".join(lines)
+                        except Exception:
+                            ai_response = result.get("message") or "Here’s the latest status for your order."
+                        break
+
                     # If quote was created, replace the fallback message with a detailed quote overview
                     if func_name == "create_quote" and result.get("success"):
                         quote_info = result.get("result", {})
@@ -1949,6 +1978,34 @@ async def _generate_ai_response_async(
                         break
                     
                     # Update response with results
+                    if func_name == "get_folder_status" and result.get("success"):
+                        try:
+                            info = result.get("result") or {}
+                            stage = info.get("stage")
+                            next_step = info.get("next_step")
+                            owner = info.get("next_step_owner")
+                            shipping = info.get("shipping") or {}
+                            eta = shipping.get("actual_delivery_date") or shipping.get("estimated_delivery_date")
+                            quote_number = info.get("quote_number")
+                            deep_link = info.get("deep_link") or ""
+
+                            lines = []
+                            lines.append("Here’s the latest status for your order:")
+                            if quote_number:
+                                lines.append(f"- Quote: {quote_number}")
+                            if stage:
+                                lines.append(f"- Stage: {stage}")
+                            if next_step:
+                                lines.append(f"- Next step: {next_step}" + (f" ({owner})" if owner else ""))
+                            if eta:
+                                lines.append(f"- {'Delivered' if shipping.get('actual_delivery_date') else 'ETA'}: {eta}")
+                            if deep_link:
+                                lines.append(f"\nOpen your order folder: {deep_link}")
+                            ai_response = "\n".join(lines)
+                        except Exception:
+                            ai_response = result.get("message") or "Here’s the latest status for your order."
+                        break
+
                     if func_name == "create_quote" and result.get("success"):
                         quote_info = result.get("result", {})
                         quote_id = quote_info.get("quote_id", "")

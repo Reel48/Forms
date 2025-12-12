@@ -380,6 +380,23 @@ class AIService:
                         }
                     }
                 }
+            },
+            {
+                "name": "get_folder_status",
+                "description": "Get the current order stage + next step + ETA for the customer's order folder. Use when a customer asks: 'what's next', 'status of my order', 'where are we at', 'what stage is my order', or similar.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder_id": {
+                            "type": "string",
+                            "description": "Optional: Folder ID (preferred if known)"
+                        },
+                        "quote_number": {
+                            "type": "string",
+                            "description": "Optional: Quote number to find the folder"
+                        }
+                    }
+                }
             }
         ]
     

@@ -704,6 +704,45 @@ export interface FolderContent {
   files: any[];
   forms: any[];
   esignatures: any[];
+  summary?: FolderSummary;
+}
+
+export interface FolderSummary {
+  stage?: string;
+  next_step?: string;
+  next_step_owner?: 'customer' | 'reel48' | string;
+  computed_stage?: string;
+  computed_next_step?: string;
+  computed_next_step_owner?: 'customer' | 'reel48' | string;
+  progress?: {
+    tasks_total?: number;
+    tasks_completed?: number;
+    forms_total?: number;
+    forms_completed?: number;
+    esignatures_total?: number;
+    esignatures_completed?: number;
+    files_total?: number;
+    files_viewed?: number;
+  };
+  shipping?: {
+    has_shipment?: boolean;
+    status?: string;
+    carrier_name?: string;
+    tracking_number?: string;
+    estimated_delivery_date?: string;
+    actual_delivery_date?: string;
+  };
+  updated_at?: string;
+}
+
+export interface FolderEvent {
+  id: string;
+  folder_id: string;
+  event_type: string;
+  title: string;
+  details?: any;
+  created_by?: string | null;
+  created_at: string;
 }
 
 // Folders API
@@ -730,6 +769,12 @@ export const foldersAPI = {
   assignESignature: (id: string, documentId: string) => api.post<any>(`/api/folders/${id}/esignature/${documentId}`),
   removeESignature: (id: string, documentId: string) => api.delete<{ message: string }>(`/api/folders/${id}/esignature/${documentId}`),
   getContent: (id: string) => api.get<FolderContent>(`/api/folders/${id}/content`),
+  getEvents: (id: string, params?: { limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit) query.append('limit', String(params.limit));
+    const qs = query.toString();
+    return api.get<{ events: FolderEvent[] }>(`/api/folders/${id}/events${qs ? `?${qs}` : ''}`);
+  },
 };
 
 // Shipments API

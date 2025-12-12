@@ -647,7 +647,27 @@ async def sign_document(
         
         # Use service role client to bypass RLS
         supabase_storage.table("esignature_documents").update(update_data).eq("id", document_id).execute()
-        
+
+        # Best-effort folder event for timeline (only if doc is in a folder)
+        try:
+            folder_id = signature_data_record.get("folder_id")
+            if folder_id:
+                supabase_storage.table("folder_events").insert({
+                    "id": str(uuid.uuid4()),
+                    "folder_id": folder_id,
+                    "event_type": "esignature_signed",
+                    "title": "E-signature signed",
+                    "details": {
+                        "document_id": document_id,
+                        "document_name": document.get("name"),
+                        "signed_file_id": signed_file_id,
+                    },
+                    "created_by": user.get("id"),
+                    "created_at": datetime.now().isoformat(),
+                }).execute()
+        except Exception:
+            pass
+
         return signature_response.data[0]
     except HTTPException:
         raise

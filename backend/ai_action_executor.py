@@ -105,6 +105,8 @@ class AIActionExecutor:
                 return self._get_folder_shipments(parameters)
             elif function_name == "get_delivery_status":
                 return self._get_delivery_status(parameters)
+            elif function_name == "get_folder_status":
+                return self._get_folder_status(parameters)
             else:
                 return {
                     "success": False,
@@ -993,4 +995,214 @@ class AIActionExecutor:
         except Exception as e:
             logger.error(f"Error getting delivery status: {str(e)}", exc_info=True)
             return {"success": False, "error": f"Failed to get delivery status: {str(e)}"}
+
+    def _get_folder_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get order stage + next step + ETA for the customer's order.
+
+        SECURITY: Expects `client_id` to be injected upstream (chat router overrides client_id from conversation).
+        """
+        try:
+            client_id = params.get("client_id")
+            folder_id = (params.get("folder_id") or "").strip()
+            quote_number = (params.get("quote_number") or "").strip()
+
+            if not client_id:
+                return {"success": False, "error": "client_id is required"}
+
+            # Resolve folder_id by quote number (if provided)
+            if not folder_id and quote_number:
+                q = (
+                    supabase_storage.table("quotes")
+                    .select("id, quote_number, folder_id")
+                    .eq("client_id", client_id)
+                    .eq("quote_number", quote_number)
+                    .limit(1)
+                    .execute()
+                )
+                if q.data:
+                    folder_id = q.data[0].get("folder_id")
+
+            # Otherwise use latest folder for client
+            if not folder_id:
+                f = (
+                    supabase_storage.table("folders")
+                    .select("id")
+                    .eq("client_id", client_id)
+                    .order("updated_at", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                if f.data:
+                    folder_id = f.data[0].get("id")
+
+            if not folder_id:
+                return {"success": False, "error": "No folder/order found for this customer"}
+
+            folder = supabase_storage.table("folders").select("*").eq("id", folder_id).single().execute().data
+            if not folder:
+                return {"success": False, "error": "Folder not found"}
+
+            quote = None
+            if folder.get("quote_id"):
+                try:
+                    quote = (
+                        supabase_storage.table("quotes")
+                        .select("id, quote_number, status, payment_status, total")
+                        .eq("id", folder.get("quote_id"))
+                        .single()
+                        .execute()
+                    ).data
+                except Exception:
+                    quote = None
+
+            # Shipping summary
+            shipments = (
+                supabase_storage.table("shipments")
+                .select("*")
+                .eq("folder_id", folder_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            ).data or []
+            shipment = shipments[0] if shipments else None
+
+            shipping = {"has_shipment": bool(shipment)}
+            if shipment:
+                shipping.update({
+                    "status": shipment.get("status"),
+                    "carrier_name": shipment.get("carrier_name") or shipment.get("carrier"),
+                    "tracking_number": shipment.get("tracking_number"),
+                    "estimated_delivery_date": shipment.get("estimated_delivery_date"),
+                    "actual_delivery_date": shipment.get("actual_delivery_date"),
+                })
+
+            # Task completion (best-effort)
+            progress = {
+                "tasks_total": 0, "tasks_completed": 0,
+                "forms_total": 0, "forms_completed": 0,
+                "esignatures_total": 0, "esignatures_completed": 0,
+            }
+
+            client = None
+            try:
+                client = supabase_storage.table("clients").select("email, user_id").eq("id", client_id).single().execute().data
+            except Exception:
+                client = None
+            client_email = (client or {}).get("email")
+            client_user_id = (client or {}).get("user_id")
+            client_email_norm = client_email.lower().strip() if isinstance(client_email, str) and client_email.strip() else None
+
+            try:
+                assigned = supabase_storage.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute().data or []
+                form_ids = [a.get("form_id") for a in assigned if a.get("form_id")]
+                progress["forms_total"] = len(form_ids)
+                if form_ids and client_email_norm:
+                    completed = 0
+                    for fid in form_ids:
+                        chk = (
+                            supabase_storage.table("form_submissions")
+                            .select("id")
+                            .eq("form_id", fid)
+                            .eq("submitter_email", client_email_norm)
+                            .limit(1)
+                            .execute()
+                        )
+                        if chk.data:
+                            completed += 1
+                    progress["forms_completed"] = completed
+            except Exception:
+                pass
+
+            try:
+                docs = (
+                    supabase_storage.table("esignature_documents")
+                    .select("id")
+                    .eq("folder_id", folder_id)
+                    .eq("is_template", False)
+                    .execute()
+                ).data or []
+                doc_ids = [d.get("id") for d in docs if d.get("id")]
+                progress["esignatures_total"] = len(doc_ids)
+                completed = 0
+                for did in doc_ids:
+                    qsig = supabase_storage.table("esignature_signatures").select("id").eq("document_id", did)
+                    if client_user_id:
+                        qsig = qsig.eq("user_id", client_user_id)
+                    qsig = qsig.limit(1).execute()
+                    if qsig.data:
+                        completed += 1
+                progress["esignatures_completed"] = completed
+            except Exception:
+                pass
+
+            progress["tasks_total"] = int(progress["forms_total"]) + int(progress["esignatures_total"])
+            progress["tasks_completed"] = int(progress["forms_completed"]) + int(progress["esignatures_completed"])
+
+            # Stage + next step (aligns with folder content summary)
+            stage_override = folder.get("stage")
+            next_override = folder.get("next_step")
+            next_owner_override = folder.get("next_step_owner")
+
+            payment_status = (quote or {}).get("payment_status") or ""
+            quote_status = (quote or {}).get("status") or ""
+            has_quote = bool(quote)
+            unpaid = has_quote and str(payment_status).lower() not in ("paid", "succeeded")
+
+            has_shipment = bool(shipping.get("has_shipment"))
+            delivered_at = shipping.get("actual_delivery_date")
+            shipped_status = str(shipping.get("status") or "").lower()
+
+            tasks_total = int(progress.get("tasks_total") or 0)
+            tasks_completed = int(progress.get("tasks_completed") or 0)
+            tasks_incomplete = tasks_total > 0 and tasks_completed < tasks_total
+
+            if delivered_at or shipped_status == "delivered":
+                computed_stage = "delivered"
+            elif has_shipment:
+                computed_stage = "shipped"
+            elif unpaid:
+                computed_stage = "quote_sent"
+            elif has_quote and (str(payment_status).lower() == "paid" or str(quote_status).lower() in ("accepted", "approved")):
+                computed_stage = "design_info_needed" if tasks_incomplete else "production"
+            else:
+                computed_stage = "quote_sent"
+
+            if unpaid:
+                computed_next = "Review and pay your quote"
+                computed_owner = "customer"
+            elif tasks_incomplete:
+                computed_next = "Complete the required tasks in your folder"
+                computed_owner = "customer"
+            elif has_shipment:
+                computed_next = "Track your shipment"
+                computed_owner = "customer"
+            elif has_quote:
+                computed_next = "We’re working on production — we’ll notify you when it ships"
+                computed_owner = "reel48"
+            else:
+                computed_next = "We’re preparing your quote — we’ll notify you when it’s ready"
+                computed_owner = "reel48"
+
+            return {
+                "success": True,
+                "result": {
+                    "client_id": client_id,
+                    "folder_id": folder_id,
+                    "quote_number": (quote or {}).get("quote_number") or None,
+                    "stage": stage_override or computed_stage,
+                    "next_step": next_override or computed_next,
+                    "next_step_owner": next_owner_override or computed_owner,
+                    "computed_stage": computed_stage,
+                    "computed_next_step": computed_next,
+                    "computed_next_step_owner": computed_owner,
+                    "progress": progress,
+                    "shipping": shipping,
+                    "deep_link": f"/folders/{folder_id}",
+                },
+                "message": "Here’s the latest status for your order."
+            }
+        except Exception as e:
+            logger.error(f"Error getting folder status: {str(e)}", exc_info=True)
+            return {"success": False, "error": f"Failed to get folder status: {str(e)}"}
 
