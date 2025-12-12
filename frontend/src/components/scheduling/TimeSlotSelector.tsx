@@ -180,7 +180,6 @@ export default function TimeSlotSelector({
                 // Time string like "09:00" or "14:00"
                 const [hours, minutes] = slot.split(':');
                 const hour24 = parseInt(hours);
-                const min = parseInt(minutes);
                 const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
                 const ampm = hour24 >= 12 ? 'PM' : 'AM';
                 displayTime = `${hour12}:${minutes} ${ampm}`;
