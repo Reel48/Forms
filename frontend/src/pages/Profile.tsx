@@ -551,7 +551,7 @@ function Profile() {
                   <button
                     type="button"
                     onClick={handleSendSmsCode}
-                    disabled={smsWorking || !phoneE164.trim()}
+                    disabled={smsWorking}
                     className="btn-outline btn-sm"
                   >
                     Send code
@@ -567,7 +567,7 @@ function Profile() {
                   <button
                     type="button"
                     onClick={handleConfirmSmsCode}
-                    disabled={smsWorking || !phoneE164.trim() || !smsCode.trim()}
+                    disabled={smsWorking || !smsCode.trim()}
                     className="btn-outline btn-sm"
                   >
                     Confirm code

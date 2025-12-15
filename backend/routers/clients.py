@@ -54,11 +54,11 @@ def _normalize_phone_e164(phone: str) -> str:
 
 
 class SmsStartRequest(BaseModel):
-    phone_e164: str
+    phone_e164: Optional[str] = None
 
 
 class SmsConfirmRequest(BaseModel):
-    phone_e164: str
+    phone_e164: Optional[str] = None
     code: str
 
 
