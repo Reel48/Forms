@@ -146,25 +146,33 @@ def revoke_all_user_tokens(user_id: str, reason: str = "logout_all") -> int:
         revoked_count = 0
         if sessions.data:
             for session in sessions.data:
+                session_id = session.get("id")
                 token_hash = session.get("token_hash")
                 expires_at_raw = session.get("expires_at")
-                if token_hash and expires_at_raw:
-                    # Parse expires_at safely
+
+                # Always mark the session inactive, even if we can't revoke the token hash.
+                if session_id:
                     try:
-                        expires_at = (
-                            datetime.fromisoformat(expires_at_raw.replace("Z", "+00:00"))
-                            if isinstance(expires_at_raw, str)
-                            else expires_at_raw
-                        )
-                        if not isinstance(expires_at, datetime):
+                        supabase_storage.table("user_sessions").update({"is_active": False}).eq("id", session_id).execute()
+                        revoked_count += 1
+                    except Exception as e:
+                        logger.warning("Failed to mark session inactive (id=%s): %s", session_id, str(e))
+
+                # If we have a token hash, revoke it immediately.
+                if token_hash:
+                    # Parse expires_at if available, otherwise fallback to a short horizon.
+                    expires_at: datetime
+                    try:
+                        if isinstance(expires_at_raw, str):
+                            expires_at = datetime.fromisoformat(expires_at_raw.replace("Z", "+00:00"))
+                        elif isinstance(expires_at_raw, datetime):
+                            expires_at = expires_at_raw
+                        else:
                             expires_at = datetime.now().replace(microsecond=0) + timedelta(hours=1)
                     except Exception:
                         expires_at = datetime.now().replace(microsecond=0) + timedelta(hours=1)
 
-                    # Blacklist token hash and mark session inactive
                     revoke_token_hash(token_hash, user_id, expires_at, reason=reason)
-                    supabase_storage.table("user_sessions").update({"is_active": False}).eq("id", session["id"]).execute()
-                    revoked_count += 1
         
         return revoked_count
     except Exception as e:

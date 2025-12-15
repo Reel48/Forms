@@ -194,8 +194,7 @@ async def create_client(client: ClientCreate, current_admin: dict = Depends(get_
             )
             return validated_client
         except Exception as validation_error:
-            import traceback
-            traceback.print_exc()
+            logger.warning("Failed to validate created client response", exc_info=True)
             # Return the raw data anyway, but log the validation error
             try:
                 log_audit_event(
