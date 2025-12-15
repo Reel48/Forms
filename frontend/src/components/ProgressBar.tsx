@@ -13,6 +13,8 @@ export default function ProgressBar({ value, label, ariaLabel }: ProgressBarProp
     <div
       className="progressBarRoot"
       style={{
+        width: '100%',
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
         gap: '10px',
@@ -36,6 +38,7 @@ export default function ProgressBar({ value, label, ariaLabel }: ProgressBarProp
         style={{
           height: '8px',
           width: '100%',
+          minWidth: '100%',
           background: '#e5e7eb',
           borderRadius: '999px',
           overflow: 'hidden',
