@@ -4,6 +4,7 @@ import { FaCheck } from 'react-icons/fa';
 import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
+import ProgressBar from '../components/ProgressBar';
 import ShipmentTracker from '../components/ShipmentTracker';
 import AddShipmentModal from '../components/AddShipmentModal';
 import './FolderView.css';
@@ -430,16 +431,8 @@ const FolderView: React.FC = () => {
               </div>
             )}
 
-            <div style={{ marginTop: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
-                <div className="text-muted" style={{ fontSize: '0.8rem' }}>
-                  Tasks: {tasksCompleted}/{tasksTotal}
-                </div>
-                <div className="text-muted" style={{ fontSize: '0.8rem' }}>{progressPct}%</div>
-              </div>
-              <div style={{ height: '10px', background: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{ height: '10px', width: `${progressPct}%`, background: '#2563eb' }} />
-              </div>
+            <div style={{ marginTop: '1rem' }}>
+              <ProgressBar value={progressPct} label={`${progressPct}%`} ariaLabel="Folder progress" />
             </div>
           </div>
         )}

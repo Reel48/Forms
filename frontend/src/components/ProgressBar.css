@@ -1,0 +1,41 @@
+.progressBarRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progressBarLabelRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.progressBarLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.progressBarTrack {
+  height: 8px;
+  width: 100%;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 999px;
+  transition: width 280ms ease-out;
+}
+
+@media (max-width: 480px) {
+  .progressBarRoot {
+    gap: 8px;
+  }
+
+  .progressBarLabel {
+    font-size: 0.8rem;
+  }
+}
