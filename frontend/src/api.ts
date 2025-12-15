@@ -707,6 +707,17 @@ export interface FolderContent {
   summary?: FolderSummary;
 }
 
+export interface FolderTask {
+  id: string;
+  kind: 'quote' | 'esignature' | 'form' | 'file_review' | string;
+  title: string;
+  description?: string | null;
+  status: 'complete' | 'incomplete' | string;
+  owner?: 'customer' | 'reel48' | string;
+  deeplink?: string | null;
+  counts?: { completed?: number; total?: number };
+}
+
 export interface FolderSummary {
   stage?: string;
   next_step?: string;
@@ -724,6 +735,7 @@ export interface FolderSummary {
     files_total?: number;
     files_viewed?: number;
   };
+  tasks?: FolderTask[];
   shipping?: {
     has_shipment?: boolean;
     status?: string;

@@ -14,6 +14,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import supabase_storage
+from folder_tasks import build_customer_tasks, compute_stage_and_next_step
 
 logger = logging.getLogger(__name__)
 
@@ -1077,13 +1078,6 @@ class AIActionExecutor:
                     "actual_delivery_date": shipment.get("actual_delivery_date"),
                 })
 
-            # Task completion (best-effort)
-            progress = {
-                "tasks_total": 0, "tasks_completed": 0,
-                "forms_total": 0, "forms_completed": 0,
-                "esignatures_total": 0, "esignatures_completed": 0,
-            }
-
             client = None
             try:
                 client = supabase_storage.table("clients").select("email, user_id").eq("id", client_id).single().execute().data
@@ -1093,96 +1087,115 @@ class AIActionExecutor:
             client_user_id = (client or {}).get("user_id")
             client_email_norm = client_email.lower().strip() if isinstance(client_email, str) and client_email.strip() else None
 
+            # Build task list (best-effort) so next-step messaging matches folder summary
+            # Forms: per-form completion for this customer's email
+            forms_for_tasks: List[Dict[str, Any]] = []
             try:
                 assigned = supabase_storage.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute().data or []
                 form_ids = [a.get("form_id") for a in assigned if a.get("form_id")]
-                progress["forms_total"] = len(form_ids)
-                if form_ids and client_email_norm:
-                    completed = 0
-                    for fid in form_ids:
-                        chk = (
-                            supabase_storage.table("form_submissions")
-                            .select("id")
-                            .eq("form_id", fid)
-                            .eq("submitter_email", client_email_norm)
-                            .limit(1)
-                            .execute()
-                        )
-                        if chk.data:
-                            completed += 1
-                    progress["forms_completed"] = completed
+                name_map: Dict[str, str] = {}
+                if form_ids:
+                    try:
+                        metas = supabase_storage.table("forms").select("id,name").in_("id", form_ids).execute().data or []
+                        name_map = {m.get("id"): (m.get("name") or "Form") for m in metas if m.get("id")}
+                    except Exception:
+                        name_map = {}
+                for fid in form_ids:
+                    if not fid:
+                        continue
+                    completed = False
+                    if client_email_norm:
+                        try:
+                            chk = (
+                                supabase_storage.table("form_submissions")
+                                .select("id")
+                                .eq("form_id", fid)
+                                .eq("submitter_email", client_email_norm)
+                                .limit(1)
+                                .execute()
+                            )
+                            completed = bool(chk.data)
+                        except Exception:
+                            completed = False
+                    forms_for_tasks.append({"id": fid, "name": name_map.get(fid) or "Form", "is_completed": completed})
             except Exception:
-                pass
+                forms_for_tasks = []
 
+            # E-signatures: per-doc completion for this customer's user_id
+            esigs_for_tasks: List[Dict[str, Any]] = []
             try:
                 docs = (
                     supabase_storage.table("esignature_documents")
-                    .select("id")
+                    .select("id,name")
                     .eq("folder_id", folder_id)
                     .eq("is_template", False)
                     .execute()
                 ).data or []
-                doc_ids = [d.get("id") for d in docs if d.get("id")]
-                progress["esignatures_total"] = len(doc_ids)
-                completed = 0
-                for did in doc_ids:
-                    qsig = supabase_storage.table("esignature_signatures").select("id").eq("document_id", did)
-                    if client_user_id:
-                        qsig = qsig.eq("user_id", client_user_id)
-                    qsig = qsig.limit(1).execute()
-                    if qsig.data:
-                        completed += 1
-                progress["esignatures_completed"] = completed
+                for d in docs:
+                    did = d.get("id")
+                    if not did:
+                        continue
+                    completed = False
+                    try:
+                        qsig = supabase_storage.table("esignature_signatures").select("id").eq("document_id", did)
+                        if client_user_id:
+                            qsig = qsig.eq("user_id", client_user_id)
+                        qsig = qsig.limit(1).execute()
+                        completed = bool(qsig.data)
+                    except Exception:
+                        completed = False
+                    esigs_for_tasks.append({"id": did, "name": d.get("name"), "is_completed": completed})
             except Exception:
-                pass
+                esigs_for_tasks = []
 
-            progress["tasks_total"] = int(progress["forms_total"]) + int(progress["esignatures_total"])
-            progress["tasks_completed"] = int(progress["forms_completed"]) + int(progress["esignatures_completed"])
+            # Files: viewed count for this customer
+            files_total = 0
+            files_viewed = 0
+            try:
+                file_rows = (
+                    supabase_storage.table("files")
+                    .select("id")
+                    .eq("folder_id", folder_id)
+                    .eq("is_reusable", False)
+                    .execute()
+                ).data or []
+                file_ids = [f.get("id") for f in file_rows if f.get("id")]
+                files_total = len(file_ids)
+                if client_user_id and file_ids:
+                    views = (
+                        supabase_storage.table("file_views")
+                        .select("file_id")
+                        .eq("user_id", client_user_id)
+                        .in_("file_id", file_ids)
+                        .execute()
+                    ).data or []
+                    files_viewed = len({v.get("file_id") for v in views if v.get("file_id")})
+            except Exception:
+                files_total = 0
+                files_viewed = 0
 
-            # Stage + next step (aligns with folder content summary)
-            stage_override = folder.get("stage")
-            next_override = folder.get("next_step")
-            next_owner_override = folder.get("next_step_owner")
+            tasks = build_customer_tasks(
+                folder_id=folder_id,
+                quote=quote,
+                forms=forms_for_tasks,
+                esignatures=esigs_for_tasks,
+                files_total=files_total,
+                files_viewed=files_viewed,
+            )
 
-            payment_status = (quote or {}).get("payment_status") or ""
-            quote_status = (quote or {}).get("status") or ""
-            has_quote = bool(quote)
-            unpaid = has_quote and str(payment_status).lower() not in ("paid", "succeeded")
+            stage_info = compute_stage_and_next_step(folder=folder, quote=quote, shipping=shipping, tasks=tasks)
+            tasks_progress = stage_info.get("tasks_progress") or {}
 
-            has_shipment = bool(shipping.get("has_shipment"))
-            delivered_at = shipping.get("actual_delivery_date")
-            shipped_status = str(shipping.get("status") or "").lower()
-
-            tasks_total = int(progress.get("tasks_total") or 0)
-            tasks_completed = int(progress.get("tasks_completed") or 0)
-            tasks_incomplete = tasks_total > 0 and tasks_completed < tasks_total
-
-            if delivered_at or shipped_status == "delivered":
-                computed_stage = "delivered"
-            elif has_shipment:
-                computed_stage = "shipped"
-            elif unpaid:
-                computed_stage = "quote_sent"
-            elif has_quote and (str(payment_status).lower() == "paid" or str(quote_status).lower() in ("accepted", "approved")):
-                computed_stage = "design_info_needed" if tasks_incomplete else "production"
-            else:
-                computed_stage = "quote_sent"
-
-            if unpaid:
-                computed_next = "Review and pay your quote"
-                computed_owner = "customer"
-            elif tasks_incomplete:
-                computed_next = "Complete the required tasks in this folder"
-                computed_owner = "customer"
-            elif has_shipment:
-                computed_next = "Track your shipment"
-                computed_owner = "customer"
-            elif has_quote:
-                computed_next = "We’re working on production — we’ll notify you when it ships"
-                computed_owner = "reel48"
-            else:
-                computed_next = "We’re preparing your quote — we’ll notify you when it’s ready"
-                computed_owner = "reel48"
+            progress = {
+                "tasks_total": tasks_progress.get("tasks_total", 0),
+                "tasks_completed": tasks_progress.get("tasks_completed", 0),
+                "forms_total": len(forms_for_tasks),
+                "forms_completed": len([f for f in forms_for_tasks if f.get("is_completed")]),
+                "esignatures_total": len(esigs_for_tasks),
+                "esignatures_completed": len([e for e in esigs_for_tasks if e.get("is_completed")]),
+                "files_total": files_total,
+                "files_viewed": files_viewed,
+            }
 
             return {
                 "success": True,
@@ -1190,12 +1203,12 @@ class AIActionExecutor:
                     "client_id": client_id,
                     "folder_id": folder_id,
                     "quote_number": (quote or {}).get("quote_number") or None,
-                    "stage": stage_override or computed_stage,
-                    "next_step": next_override or computed_next,
-                    "next_step_owner": next_owner_override or computed_owner,
-                    "computed_stage": computed_stage,
-                    "computed_next_step": computed_next,
-                    "computed_next_step_owner": computed_owner,
+                    "stage": stage_info.get("stage"),
+                    "next_step": stage_info.get("next_step"),
+                    "next_step_owner": stage_info.get("next_step_owner"),
+                    "computed_stage": stage_info.get("computed_stage"),
+                    "computed_next_step": stage_info.get("computed_next_step"),
+                    "computed_next_step_owner": stage_info.get("computed_next_step_owner"),
                     "progress": progress,
                     "shipping": shipping,
                     "deep_link": f"/folders/{folder_id}",

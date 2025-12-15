@@ -13,6 +13,7 @@ from models import (
 )
 from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin
+from folder_tasks import build_customer_tasks, compute_stage_and_next_step
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
 
@@ -85,89 +86,19 @@ def _compute_shipping_summary(folder_id: str) -> Dict[str, Any]:
 def _compute_progress(files: List[Dict[str, Any]], forms: List[Dict[str, Any]], esignatures: List[Dict[str, Any]]) -> Dict[str, Any]:
     forms_total = len(forms or [])
     esigs_total = len(esignatures or [])
-    tasks_total = forms_total + esigs_total
     forms_completed = len([f for f in (forms or []) if f.get("is_completed")])
     esigs_completed = len([e for e in (esignatures or []) if e.get("is_completed")])
-    tasks_completed = forms_completed + esigs_completed
     files_total = len(files or [])
     files_viewed = len([f for f in (files or []) if f.get("is_completed")])
     return {
-        "tasks_total": tasks_total,
-        "tasks_completed": tasks_completed,
+        # NOTE: tasks_total/tasks_completed are now derived from summary.tasks
+        # so the progress bar and task list always match.
         "forms_total": forms_total,
         "forms_completed": forms_completed,
         "esignatures_total": esigs_total,
         "esignatures_completed": esigs_completed,
         "files_total": files_total,
         "files_viewed": files_viewed,
-    }
-
-
-def _compute_stage_and_next_step(
-    folder: Dict[str, Any],
-    quote: Optional[Dict[str, Any]],
-    progress: Dict[str, Any],
-    shipping: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Deterministic stage/next-step used for customer clarity.
-    Optional DB overrides: folders.stage / next_step / next_step_owner.
-    """
-    # Overrides (optional columns)
-    stage_override = folder.get("stage")
-    next_override = folder.get("next_step")
-    next_owner_override = folder.get("next_step_owner")
-
-    payment_status = (quote or {}).get("payment_status") or ""
-    quote_status = (quote or {}).get("status") or ""
-    has_quote = bool(quote)
-    unpaid = has_quote and str(payment_status).lower() not in ("paid", "succeeded")
-
-    has_shipment = bool(shipping.get("has_shipment"))
-    delivered_at = shipping.get("actual_delivery_date")
-    shipped_status = str(shipping.get("status") or "").lower()
-
-    tasks_total = int(progress.get("tasks_total") or 0)
-    tasks_completed = int(progress.get("tasks_completed") or 0)
-    tasks_incomplete = tasks_total > 0 and tasks_completed < tasks_total
-
-    # Compute stage
-    if delivered_at or shipped_status == "delivered":
-        computed_stage = "delivered"
-    elif has_shipment:
-        computed_stage = "shipped"
-    elif unpaid:
-        computed_stage = "quote_sent"
-    elif has_quote and (str(payment_status).lower() == "paid" or str(quote_status).lower() in ("accepted", "approved")):
-        computed_stage = "design_info_needed" if tasks_incomplete else "production"
-    else:
-        # No quote yet / unknown state
-        computed_stage = "quote_sent"
-
-    # Compute next step + owner
-    if unpaid:
-        computed_next = "Review and pay your quote"
-        computed_owner = "customer"
-    elif tasks_incomplete:
-        computed_next = "Complete the required tasks in this folder"
-        computed_owner = "customer"
-    elif has_shipment:
-        computed_next = "Track your shipment"
-        computed_owner = "customer"
-    elif has_quote:
-        computed_next = "We’re working on production — we’ll notify you when it ships"
-        computed_owner = "reel48"
-    else:
-        computed_next = "We’re preparing your quote — we’ll notify you when it’s ready"
-        computed_owner = "reel48"
-
-    return {
-        "stage": stage_override if stage_override else computed_stage,
-        "next_step": next_override if next_override else computed_next,
-        "next_step_owner": next_owner_override if next_owner_override else computed_owner,
-        "computed_stage": computed_stage,
-        "computed_next_step": computed_next,
-        "computed_next_step_owner": computed_owner,
     }
 
 
@@ -1373,7 +1304,24 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
         # Compute customer-friendly status summary
         progress = _compute_progress(files, forms, esignatures)
         shipping_summary = _compute_shipping_summary(folder_id)
-        stage_info = _compute_stage_and_next_step(folder, quote, progress, shipping_summary)
+        tasks = build_customer_tasks(
+            folder_id=folder_id,
+            quote=quote,
+            forms=forms,
+            esignatures=esignatures,
+            files_total=int(progress.get("files_total") or 0),
+            files_viewed=int(progress.get("files_viewed") or 0),
+        )
+        stage_info = compute_stage_and_next_step(
+            folder=folder,
+            quote=quote,
+            shipping=shipping_summary,
+            tasks=tasks,
+        )
+        tasks_progress = (stage_info.get("tasks_progress") or {})
+        # Ensure progress reflects the tasks list (single source of truth for progress bar)
+        progress["tasks_total"] = tasks_progress.get("tasks_total", 0)
+        progress["tasks_completed"] = tasks_progress.get("tasks_completed", 0)
 
         return {
             "folder": folder,
@@ -1389,6 +1337,7 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 "computed_next_step": stage_info.get("computed_next_step"),
                 "computed_next_step_owner": stage_info.get("computed_next_step_owner"),
                 "progress": progress,
+                "tasks": tasks,
                 "shipping": shipping_summary,
                 "updated_at": folder.get("updated_at"),
             }

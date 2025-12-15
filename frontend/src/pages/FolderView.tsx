@@ -332,6 +332,7 @@ const FolderView: React.FC = () => {
         : null;
   const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
   const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';
+  const tasks = summary?.tasks || [];
 
   return (
     <div className="folder-view-container">
@@ -344,6 +345,42 @@ const FolderView: React.FC = () => {
         </div>
         {folder.description && (
           <p className="folder-description">{folder.description}</p>
+        )}
+
+        {/* Shipping summary (customer only; hidden until a shipment exists) */}
+        {role !== 'admin' && summary?.shipping?.has_shipment && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              border: '1px solid var(--color-border, #e5e7eb)',
+              borderRadius: '10px',
+              background: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1rem' }}>Shipping</div>
+              <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                Status: {summary.shipping.status || '—'}
+                {summary.shipping.tracking_number ? ` • Tracking: ${summary.shipping.tracking_number}` : ''}
+                {etaDate ? ` • ${summary.shipping.actual_delivery_date ? 'Delivered' : 'ETA'}: ${formatDate(etaDate)}` : ''}
+              </div>
+            </div>
+            <button
+              className="btn-primary btn-sm"
+              onClick={() => {
+                const el = document.getElementById('shipment-tracking');
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            >
+              View tracking
+            </button>
+          </div>
         )}
 
         {/* Status center (customer clarity) */}
@@ -376,17 +413,12 @@ const FolderView: React.FC = () => {
                   style={{
                     padding: '0.25rem 0.5rem',
                     borderRadius: '999px',
-                    background: summary.next_step_owner === 'customer' ? '#fee2e2' : '#e0f2fe',
+                    background: '#f3f4f6',
                     fontSize: '0.875rem',
                     fontWeight: 600,
                   }}
                 >
                   {waitingChip}
-                </span>
-              )}
-              {summary.shipping?.has_shipment && etaDate && (
-                <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                  {summary.shipping?.actual_delivery_date ? 'Delivered:' : 'ETA:'} {formatDate(etaDate)}
                 </span>
               )}
             </div>
@@ -444,6 +476,183 @@ const FolderView: React.FC = () => {
       </div>
 
       <div className="folder-content">
+        {role !== 'admin' ? (
+          <>
+            {/* Tasks (customer) */}
+            <section className="content-section">
+              <div className="section-header">
+                <h2>Tasks</h2>
+                <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                  {tasksCompleted}/{tasksTotal} completed
+                </span>
+              </div>
+
+              {tasks.length === 0 ? (
+                <div className="empty-content">
+                  <p>No tasks right now.</p>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {tasks.map((t: any) => {
+                      const isComplete = t.status === 'complete';
+                      const action = (t.deeplink || '') as string;
+                      return (
+                        <div
+                          key={t.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '1rem',
+                            padding: '0.75rem',
+                            borderRadius: '10px',
+                            border: '1px solid var(--color-border, #e5e7eb)',
+                            background: isComplete ? '#ecfdf5' : 'white',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                            <div
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '999px',
+                                border: isComplete ? '1px solid #16a34a' : '1px solid #d1d5db',
+                                background: isComplete ? '#16a34a' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginTop: '2px',
+                              }}
+                            >
+                              {isComplete && <FaCheck style={{ color: 'white', fontSize: '12px' }} />}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700 }}>{t.title}</div>
+                              {t.description && (
+                                <div className="text-muted" style={{ fontSize: '0.875rem' }}>{t.description}</div>
+                              )}
+                              <div style={{ marginTop: '0.25rem' }}>
+                                {isComplete ? (
+                                  <span style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>Completed</span>
+                                ) : (
+                                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>Next up</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {action ? (
+                            <button
+                              className="btn-primary btn-sm"
+                              onClick={() => {
+                                if (action.includes('#project-files')) {
+                                  const el = document.getElementById('project-files');
+                                  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  return;
+                                }
+                                navigate(action);
+                              }}
+                            >
+                              {t.kind === 'file_review' ? 'Review' : 'Open'}
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Shipment Tracking (customer; hidden until shipment exists) */}
+            {summary?.shipping?.has_shipment && (
+              <section className="content-section" id="shipment-tracking">
+                <div className="section-header">
+                  <h2>Shipment Tracking</h2>
+                </div>
+                <ShipmentTracker folderId={folder.id} />
+              </section>
+            )}
+
+            {/* Project Files (customer) */}
+            <section className="content-section" id="project-files">
+              <div className="section-header">
+                <h2>Project Files ({files.length})</h2>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                    disabled={uploading}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn-primary btn-sm"
+                    disabled={uploading}
+                  >
+                    {uploading ? 'Uploading...' : 'Upload Files'}
+                  </button>
+                </div>
+              </div>
+
+              {files.length === 0 ? (
+                <div className="empty-content">
+                  <p>No files in this project yet.</p>
+                </div>
+              ) : (
+                <div className="card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Viewed</th>
+                        <th>Uploaded</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {files.map((file: any) => (
+                        <tr
+                          key={file.id}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/files/${file.id}`)}
+                        >
+                          <td className="mobile-name-column">
+                            <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{file.name}</strong>
+                          </td>
+                          <td>
+                            {file.is_completed ? (
+                              <span style={{ color: '#166534', fontWeight: 600 }}>✓</span>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                              {formatDate(file.created_at)}
+                            </span>
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="btn-primary btn-sm"
+                              onClick={() => navigate(`/files/${file.id}`)}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        ) : (
+          <>
         {/* Activity Feed */}
         <section className="content-section">
           <div className="section-header">
@@ -727,15 +936,7 @@ const FolderView: React.FC = () => {
                     <tr
                       key={`form-${form.id}`}
                       style={{ cursor: 'pointer' }}
-                      onClick={(e) => {
-                        // For customers, open in new tab; for admins, navigate in same tab
-                        if (role === 'customer') {
-                          e.preventDefault();
-                          window.open(`/forms/${form.id}`, '_blank');
-                        } else {
-                          navigate(`/forms/${form.id}`);
-                        }
-                      }}
+                      onClick={() => navigate(`/forms/${form.id}`)}
                     >
                       <td className="mobile-checkmark-column" onClick={(e) => e.stopPropagation()}>
                         <div
@@ -959,6 +1160,8 @@ const FolderView: React.FC = () => {
               onContentRemoved={handleContentChange}
             />
           </section>
+        )}
+          </>
         )}
       </div>
 
