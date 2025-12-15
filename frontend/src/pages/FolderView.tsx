@@ -33,7 +33,6 @@ const FolderView: React.FC = () => {
   const [events, setEvents] = useState<FolderEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [latestNote, setLatestNote] = useState<FolderNote | null>(null);
-  const [latestNoteExpanded, setLatestNoteExpanded] = useState(false);
   const [notesHistory, setNotesHistory] = useState<FolderNote[]>([]);
   const [notesHistoryOpen, setNotesHistoryOpen] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -84,8 +83,6 @@ const FolderView: React.FC = () => {
       const res = await foldersAPI.getNotes(id, { limit: 1, offset: 0 });
       const note = (res.data.notes || [])[0] || null;
       setLatestNote(note);
-      // If note changes, collapse it by default
-      setLatestNoteExpanded(false);
     } catch (e) {
       setLatestNote(null);
     } finally {
@@ -535,16 +532,9 @@ const FolderView: React.FC = () => {
                   View history
                 </button>
                 <button
-                  className="btn-secondary btn-sm"
-                  onClick={() => setLatestNoteExpanded((v) => !v)}
-                >
-                  {latestNoteExpanded ? 'Hide' : 'View'}
-                </button>
-                <button
                   className="btn-primary btn-sm"
                   onClick={async () => {
                     await markLatestNoteRead();
-                    setLatestNoteExpanded(false);
                   }}
                   disabled={notesLoading}
                 >
@@ -552,11 +542,9 @@ const FolderView: React.FC = () => {
                 </button>
               </div>
             </div>
-            {latestNoteExpanded && (
-              <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                {latestNote.body}
-              </div>
-            )}
+            <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+              {latestNote.body}
+            </div>
           </div>
         )}
 
@@ -785,19 +773,10 @@ const FolderView: React.FC = () => {
                         {formatDateTime(latestNote.created_at)}
                       </div>
                     </div>
-                    <button
-                      className="btn-primary btn-sm"
-                      onClick={() => setLatestNoteExpanded((v) => !v)}
-                      disabled={notesLoading}
-                    >
-                      {latestNoteExpanded ? 'Hide' : 'View'}
-                    </button>
                   </div>
-                  {latestNoteExpanded && (
-                    <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                      {latestNote.body}
-                    </div>
-                  )}
+                  <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                    {latestNote.body}
+                  </div>
                 </div>
               </section>
             )}
