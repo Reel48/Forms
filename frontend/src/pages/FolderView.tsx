@@ -451,15 +451,14 @@ const FolderView: React.FC = () => {
           </div>
         )}
 
-        {/* Status + Notes row (inline layout so it renders correctly before CSS loads) */}
+        {/* Status + Notes stack (explicit sizing so it renders correctly before CSS loads) */}
         {(summary || (latestNote && hasUnreadNote)) && (
           <div
             style={{
               marginTop: '0.75rem',
               display: 'flex',
+              flexDirection: 'column',
               gap: '0.75rem',
-              alignItems: 'stretch',
-              flexWrap: 'wrap',
               width: '100%',
               minWidth: 0,
             }}
@@ -468,8 +467,8 @@ const FolderView: React.FC = () => {
             {summary && (
               <div
                 style={{
-                  flex: '1 1 320px',
                   minWidth: 0,
+                  width: '100%',
                   padding: '0.75rem',
                   border: '1px solid var(--color-border, #e5e7eb)',
                   borderRadius: '10px',
@@ -522,8 +521,8 @@ const FolderView: React.FC = () => {
             {latestNote && hasUnreadNote && (
               <div
                 style={{
-                  flex: '2 1 420px',
                   minWidth: 0,
+                  width: '100%',
                   padding: '0.75rem',
                   border: '1px solid var(--color-border, #e5e7eb)',
                   borderRadius: '10px',
