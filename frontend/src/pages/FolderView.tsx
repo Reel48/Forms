@@ -451,100 +451,117 @@ const FolderView: React.FC = () => {
           </div>
         )}
 
-        {/* Status center (customer clarity) */}
-        {summary && (
+        {/* Status + Notes row (inline layout so it renders correctly before CSS loads) */}
+        {(summary || (latestNote && hasUnreadNote)) && (
           <div
             style={{
               marginTop: '0.75rem',
-              padding: '0.75rem',
-              border: '1px solid var(--color-border, #e5e7eb)',
-              borderRadius: '10px',
-              background: 'white',
+              display: 'flex',
+              gap: '0.75rem',
+              alignItems: 'stretch',
+              flexWrap: 'wrap',
+              width: '100%',
+              minWidth: 0,
             }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-              {summary.stage && (
-                <span
-                  style={{
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '999px',
-                    background: '#f3f4f6',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  Stage: {summary.stage}
-                </span>
-              )}
-              {waitingChip && (
-                <span
-                  style={{
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '999px',
-                    background: '#f3f4f6',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {waitingChip}
-                </span>
-              )}
-            </div>
+            {/* Status center (customer clarity) */}
+            {summary && (
+              <div
+                style={{
+                  flex: '1 1 320px',
+                  minWidth: 0,
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border, #e5e7eb)',
+                  borderRadius: '10px',
+                  background: 'white',
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                  {summary.stage && (
+                    <span
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '999px',
+                        background: '#f3f4f6',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Stage: {summary.stage}
+                    </span>
+                  )}
+                  {waitingChip && (
+                    <span
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '999px',
+                        background: '#f3f4f6',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {waitingChip}
+                    </span>
+                  )}
+                </div>
 
-            {summary.next_step && (
-              <div style={{ marginTop: '0.5rem' }}>
-                <div className="text-muted" style={{ fontSize: '0.8rem' }}>Next step</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{summary.next_step}</div>
+                {summary.next_step && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <div className="text-muted" style={{ fontSize: '0.8rem' }}>Next step</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{summary.next_step}</div>
+                  </div>
+                )}
+
+                <div style={{ marginTop: '1rem' }}>
+                  <ProgressBar value={progressPct} label={`${progressPct}%`} ariaLabel="Folder progress" />
+                </div>
               </div>
             )}
 
-            <div style={{ marginTop: '1rem' }}>
-              <ProgressBar value={progressPct} label={`${progressPct}%`} ariaLabel="Folder progress" />
-            </div>
-          </div>
-        )}
-
-        {/* Notes (customer: sits under progress, above Tasks; only moves to bottom after acknowledge) */}
-        {latestNote && hasUnreadNote && (
-          <div
-            style={{
-              marginTop: '0.75rem',
-              padding: '0.75rem',
-              border: '1px solid var(--color-border, #e5e7eb)',
-              borderRadius: '10px',
-              background: 'white',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ fontWeight: 800 }}>{latestNote.title || 'Update'}</div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', background: '#ecfdf5', color: '#166534' }}>
-                    New
-                  </span>
+            {/* Notes (customer: under progress, above Tasks; only moves after acknowledge) */}
+            {latestNote && hasUnreadNote && (
+              <div
+                style={{
+                  flex: '2 1 420px',
+                  minWidth: 0,
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border, #e5e7eb)',
+                  borderRadius: '10px',
+                  background: 'white',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ fontWeight: 800 }}>{latestNote.title || 'Update'}</div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', background: '#ecfdf5', color: '#166534' }}>
+                        New
+                      </span>
+                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                      {formatDateTime(latestNote.created_at)}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn-secondary btn-sm" onClick={() => openNotesHistory()}>
+                      View history
+                    </button>
+                    <button
+                      className="btn-primary btn-sm"
+                      onClick={async () => {
+                        await markLatestNoteRead();
+                      }}
+                      disabled={notesLoading}
+                    >
+                      Acknowledge
+                    </button>
+                  </div>
                 </div>
-                <div className="text-muted" style={{ fontSize: '0.85rem' }}>
-                  {formatDateTime(latestNote.created_at)}
+                <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                  {latestNote.body}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <button className="btn-secondary btn-sm" onClick={() => openNotesHistory()}>
-                  View history
-                </button>
-                <button
-                  className="btn-primary btn-sm"
-                  onClick={async () => {
-                    await markLatestNoteRead();
-                  }}
-                  disabled={notesLoading}
-                >
-                  Acknowledge
-                </button>
-              </div>
-            </div>
-            <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-              {latestNote.body}
-            </div>
+            )}
           </div>
         )}
 
