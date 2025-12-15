@@ -163,6 +163,7 @@ def _assert_folder_access(folder_id: str, user: Dict[str, Any]) -> Dict[str, Any
 
 
 class FolderNoteCreate(BaseModel):
+    title: str
     body: str
 
 @router.get("", response_model=List[Folder])
@@ -1446,7 +1447,10 @@ async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_us
         if not folder_resp.data:
             raise HTTPException(status_code=404, detail="Folder not found")
 
+        title = (payload.title or "").strip()
         body = (payload.body or "").strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="Note title is required")
         if not body:
             raise HTTPException(status_code=400, detail="Note body is required")
 
@@ -1455,6 +1459,7 @@ async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_us
         insert = {
             "id": note_id,
             "folder_id": folder_id,
+            "title": title,
             "body": body,
             "created_by": admin_user.get("id"),
             "created_at": now,
@@ -1466,14 +1471,14 @@ async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_us
             _emit_folder_event(
                 folder_id=folder_id,
                 event_type="note_added",
-                title="Note added",
-                details={"note_id": note_id},
+                title=f"Note added: {title}",
+                details={"note_id": note_id, "note_title": title},
                 created_by=admin_user.get("id"),
             )
         except Exception:
             pass
 
-        return {"id": note_id, "folder_id": folder_id, "body": body, "created_by": admin_user.get("id"), "created_at": now}
+        return {"id": note_id, "folder_id": folder_id, "title": title, "body": body, "created_by": admin_user.get("id"), "created_at": now}
     except HTTPException:
         raise
     except Exception as e:

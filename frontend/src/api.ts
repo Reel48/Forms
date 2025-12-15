@@ -760,6 +760,7 @@ export interface FolderEvent {
 export interface FolderNote {
   id: string;
   folder_id: string;
+  title: string;
   body: string;
   created_by: string;
   created_at: string;
@@ -803,7 +804,7 @@ export const foldersAPI = {
     const qs = query.toString();
     return api.get<{ notes: FolderNote[] }>(`/api/folders/${id}/notes${qs ? `?${qs}` : ''}`);
   },
-  createNote: (id: string, body: string) => api.post<FolderNote>(`/api/folders/${id}/notes`, { body }),
+  createNote: (id: string, title: string, body: string) => api.post<FolderNote>(`/api/folders/${id}/notes`, { title, body }),
   markNoteRead: (id: string, noteId: string) => api.post<{ success: boolean }>(`/api/folders/${id}/notes/${noteId}/read`, {}),
 };
 
