@@ -444,14 +444,17 @@ async def start_sms_opt_in(payload: SmsStartRequest, current_user: dict = Depend
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
 
-    phone_e164 = _normalize_phone_e164(payload.phone_e164)
-
     # Find client record for this user
-    resp = supabase_storage.table("clients").select("id").eq("user_id", user_id).execute()
+    resp = supabase_storage.table("clients").select("id, phone_e164, phone").eq("user_id", user_id).execute()
     if not resp.data:
         raise HTTPException(status_code=404, detail="Client profile not found")
 
-    client_id = resp.data[0]["id"]
+    row = resp.data[0]
+    client_id = row["id"]
+
+    # If frontend didn't pass a phone, fall back to the profile's stored phone.
+    candidate = (payload.phone_e164 or "").strip() or (row.get("phone_e164") or "").strip() or (row.get("phone") or "").strip()
+    phone_e164 = _normalize_phone_e164(candidate)
 
     from sms_service import start_verify
 
@@ -476,17 +479,20 @@ async def confirm_sms_opt_in(payload: SmsConfirmRequest, current_user: dict = De
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
 
-    phone_e164 = _normalize_phone_e164(payload.phone_e164)
     code = (payload.code or "").strip()
     if len(code) < 4 or len(code) > 10:
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     # Find client record for this user
-    resp = supabase_storage.table("clients").select("id").eq("user_id", user_id).execute()
+    resp = supabase_storage.table("clients").select("id, phone_e164, phone").eq("user_id", user_id).execute()
     if not resp.data:
         raise HTTPException(status_code=404, detail="Client profile not found")
 
-    client_id = resp.data[0]["id"]
+    row = resp.data[0]
+    client_id = row["id"]
+
+    candidate = (payload.phone_e164 or "").strip() or (row.get("phone_e164") or "").strip() or (row.get("phone") or "").strip()
+    phone_e164 = _normalize_phone_e164(candidate)
 
     from sms_service import check_verify
 
