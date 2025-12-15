@@ -11,7 +11,10 @@ import sys
 import os
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, repo_root)
+sys.path.insert(0, backend_dir)
 
 from database import supabase_storage
 from folder_tasks import build_customer_tasks, compute_stage_and_next_step

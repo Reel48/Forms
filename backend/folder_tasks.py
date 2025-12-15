@@ -7,6 +7,10 @@ def _is_paid(payment_status: Optional[str]) -> bool:
     return str(payment_status or "").lower() in ("paid", "succeeded")
 
 
+def _is_quote_accepted_or_approved(quote_status: Optional[str]) -> bool:
+    return str(quote_status or "").lower() in ("accepted", "approved")
+
+
 def build_customer_tasks(
     *,
     folder_id: str,
@@ -126,31 +130,35 @@ def compute_stage_and_next_step(
     next_owner_override = folder.get("next_step_owner")
 
     has_quote = bool(quote)
-    unpaid = has_quote and not _is_paid((quote or {}).get("payment_status"))
+    payment_paid = _is_paid((quote or {}).get("payment_status")) if has_quote else False
+    quote_status = (quote or {}).get("status") if has_quote else None
+    quote_confirmed = has_quote and (payment_paid or _is_quote_accepted_or_approved(quote_status))
+    # Per requirements: even if accepted/approved, payment can still be required (task remains incomplete)
+    unpaid_by_payment = has_quote and not payment_paid
 
     has_shipment = bool((shipping or {}).get("has_shipment"))
     delivered_at = (shipping or {}).get("actual_delivery_date")
     shipped_status = str((shipping or {}).get("status") or "").lower()
 
     progress = compute_tasks_progress(tasks)
-    tasks_total = int(progress.get("tasks_total") or 0)
-    tasks_completed = int(progress.get("tasks_completed") or 0)
-    tasks_incomplete = tasks_total > 0 and tasks_completed < tasks_total
+    # For stage advancement, ignore the payment task (accepted/approved should be able to advance stages even if unpaid)
+    non_payment_tasks = [t for t in (tasks or []) if t.get("id") != "task_quote_payment"]
+    non_payment_incomplete = any(t.get("status") == "incomplete" for t in non_payment_tasks)
 
     # Stage
     if delivered_at or shipped_status == "delivered":
         computed_stage = "delivered"
     elif has_shipment:
         computed_stage = "shipped"
-    elif unpaid:
+    elif not quote_confirmed:
         computed_stage = "quote_sent"
     elif has_quote:
-        computed_stage = "design_info_needed" if tasks_incomplete else "production"
+        computed_stage = "design_info_needed" if non_payment_incomplete else "production"
     else:
         computed_stage = "quote_sent"
 
     # Next step
-    if unpaid:
+    if unpaid_by_payment:
         computed_next = "Review and pay your quote"
         computed_owner = "customer"
     else:
