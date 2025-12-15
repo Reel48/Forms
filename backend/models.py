@@ -82,6 +82,15 @@ class Client(ClientBase):
     stripe_customer_id: Optional[str] = None
     user_id: Optional[str] = None  # Link to auth.users
     registration_source: Optional[str] = "admin_created"  # admin_created or self_registered
+
+    # Notification preferences (added via migration)
+    phone_e164: Optional[str] = None
+    preferred_notification_channel: Optional[str] = "email"  # email | sms
+    sms_opt_in: Optional[bool] = False
+    sms_opt_in_at: Optional[datetime] = None
+    sms_opt_out_at: Optional[datetime] = None
+    sms_verified: Optional[bool] = False
+    sms_verified_at: Optional[datetime] = None
     
     @field_validator('created_at', mode='before')
     @classmethod

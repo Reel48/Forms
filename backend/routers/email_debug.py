@@ -1,19 +1,23 @@
 """
 Debug endpoint to check email service configuration
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from email_service import email_service, EMAIL_PROVIDER, FROM_EMAIL, FROM_NAME, FRONTEND_URL
 import os
+from auth import get_current_admin
 
 router = APIRouter(prefix="/api/debug", tags=["debug"])
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
 
 @router.get("/email-config")
-async def get_email_config():
+async def get_email_config(_admin: dict = Depends(get_current_admin)):
     """
     Debug endpoint to check email service configuration.
     Shows what's configured without exposing sensitive data.
     """
+    if ENVIRONMENT == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     # Get provider-specific config (always SES)
     provider_config = {
         "aws_region": os.getenv("AWS_REGION", "us-east-1"),
@@ -39,11 +43,13 @@ async def get_email_config():
 
 
 @router.post("/test-email")
-async def test_email(email: str):
+async def test_email(email: str, _admin: dict = Depends(get_current_admin)):
     """
     Test endpoint to send a test email.
     Only use this in development!
     """
+    if ENVIRONMENT == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     if not email:
         raise HTTPException(status_code=400, detail="Email address required")
     

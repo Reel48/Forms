@@ -16,6 +16,12 @@ function Profile() {
   const [loginActivityLoading, setLoginActivityLoading] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loginActivities, setLoginActivities] = useState<any[]>([]);
+  const [phoneE164, setPhoneE164] = useState('');
+  const [smsCode, setSmsCode] = useState('');
+  const [smsWorking, setSmsWorking] = useState(false);
+  const [smsVerified, setSmsVerified] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [preferredChannel, setPreferredChannel] = useState<'email' | 'sms'>('email');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -66,6 +72,10 @@ function Profile() {
           address_country: client.address_country || 'US',
         });
         setProfilePictureUrl(client.profile_picture_url || null);
+        setPhoneE164(client.phone_e164 || '');
+        setSmsVerified(Boolean(client.sms_verified));
+        setSmsOptIn(Boolean(client.sms_opt_in));
+        setPreferredChannel(client.preferred_notification_channel === 'sms' ? 'sms' : 'email');
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -187,6 +197,68 @@ function Profile() {
       setUploadingPicture(false);
       // Reset input
       e.target.value = '';
+    }
+  };
+
+  const handleSendSmsCode = async () => {
+    try {
+      setSmsWorking(true);
+      await clientsAPI.startSmsOptIn(phoneE164);
+      alert('Verification code sent.');
+    } catch (error: any) {
+      console.error('Send SMS code error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to send verification code.';
+      alert(errorMessage);
+    } finally {
+      setSmsWorking(false);
+    }
+  };
+
+  const handleConfirmSmsCode = async () => {
+    try {
+      setSmsWorking(true);
+      await clientsAPI.confirmSmsOptIn(phoneE164, smsCode);
+      alert('Phone verified. SMS enabled.');
+      setSmsCode('');
+      await loadProfile();
+    } catch (error: any) {
+      console.error('Confirm SMS code error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to confirm verification code.';
+      alert(errorMessage);
+    } finally {
+      setSmsWorking(false);
+    }
+  };
+
+  const handleSetPreferredChannel = async (channel: 'email' | 'sms') => {
+    try {
+      setSmsWorking(true);
+      await clientsAPI.updateNotificationPreferences(channel);
+      setPreferredChannel(channel);
+      alert('Notification preference updated.');
+      await loadProfile();
+    } catch (error: any) {
+      console.error('Update notification preference error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to update notification preference.';
+      alert(errorMessage);
+      await loadProfile();
+    } finally {
+      setSmsWorking(false);
+    }
+  };
+
+  const handleSmsOptOut = async () => {
+    try {
+      setSmsWorking(true);
+      await clientsAPI.smsOptOut();
+      alert('SMS notifications disabled.');
+      await loadProfile();
+    } catch (error: any) {
+      console.error('SMS opt-out error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to disable SMS notifications.';
+      alert(errorMessage);
+    } finally {
+      setSmsWorking(false);
     }
   };
 
@@ -444,6 +516,94 @@ function Profile() {
                 )}
               </div>
             </div>
+
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 style={{ marginBottom: '0.5rem' }}>Notifications</h3>
+              <p style={{ color: '#666', marginBottom: '1rem' }}>
+                Choose whether you prefer order updates via email or text message (SMS). SMS requires one-time verification.
+              </p>
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Phone (E.164)</label>
+                  <input
+                    type="text"
+                    value={phoneE164}
+                    onChange={(e) => setPhoneE164(e.target.value)}
+                    placeholder="+15551234567"
+                    style={{ width: '100%', padding: '10px', borderRadius: 6, border: '1px solid #ddd' }}
+                    disabled={smsWorking}
+                  />
+                  <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
+                    <strong>Status:</strong> Verified: {smsVerified ? 'Yes' : 'No'} • SMS enabled: {smsOptIn ? 'Yes' : 'No'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleSendSmsCode}
+                    disabled={smsWorking || !phoneE164.trim()}
+                    className="btn-outline btn-sm"
+                  >
+                    Send code
+                  </button>
+                  <input
+                    type="text"
+                    value={smsCode}
+                    onChange={(e) => setSmsCode(e.target.value)}
+                    placeholder="Code"
+                    style={{ width: 140, padding: '10px', borderRadius: 6, border: '1px solid #ddd' }}
+                    disabled={smsWorking}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleConfirmSmsCode}
+                    disabled={smsWorking || !phoneE164.trim() || !smsCode.trim()}
+                    className="btn-outline btn-sm"
+                  >
+                    Confirm code
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSmsOptOut}
+                    disabled={smsWorking}
+                    className="btn-outline btn-sm"
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    Opt out of SMS
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>
+                  <div style={{ fontWeight: 600 }}>Preferred channel:</div>
+                  <button
+                    type="button"
+                    onClick={() => handleSetPreferredChannel('email')}
+                    disabled={smsWorking}
+                    className="btn-outline btn-sm"
+                    style={{ background: preferredChannel === 'email' ? '#007bff' : undefined, color: preferredChannel === 'email' ? '#fff' : undefined }}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetPreferredChannel('sms')}
+                    disabled={smsWorking}
+                    className="btn-outline btn-sm"
+                    style={{ background: preferredChannel === 'sms' ? '#007bff' : undefined, color: preferredChannel === 'sms' ? '#fff' : undefined }}
+                  >
+                    Text (SMS)
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div style={{ marginTop: '1.5rem' }}>
               <h3 style={{ marginBottom: '0.5rem' }}>Sessions</h3>
               <p style={{ color: '#666', marginBottom: '1rem' }}>

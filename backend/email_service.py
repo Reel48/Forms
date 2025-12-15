@@ -12,10 +12,59 @@ logger = logging.getLogger(__name__)
 
 # Get email configuration from environment
 EMAIL_PROVIDER = "ses"  # Always use SES
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@formsapp.com")  # Default sender email
-FROM_NAME = os.getenv("FROM_NAME", "Forms App")  # Default sender name
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@reel48.com")  # Default sender email
+FROM_NAME = os.getenv("FROM_NAME", "Reel48")  # Default sender name
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")  # Frontend URL for password reset links
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+
+BRAND_PRIMARY = "#111827"  # near-black
+BRAND_ACCENT = "#2563eb"   # blue
+BRAND_BG = "#f5f5f5"
+
+
+def _wrap_branded_html(*, title: str, inner_html: str, preheader: Optional[str] = None) -> str:
+    """Wrap email content in a shared Reel48-branded layout."""
+    pre = (preheader or "").strip()
+    preheader_html = (
+        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{pre}</div>'
+        if pre
+        else ""
+    )
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111827; background-color: {BRAND_BG}; margin: 0; padding: 0;">
+  {preheader_html}
+  <div style="max-width: 640px; margin: 0 auto; padding: 24px;">
+    <div style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); overflow: hidden;">
+      <div style="padding: 22px 24px; border-bottom: 1px solid #e5e7eb;">
+        <div style="font-size: 20px; font-weight: 700; color: {BRAND_PRIMARY};">Reel48</div>
+      </div>
+      <div style="padding: 24px;">
+        {inner_html}
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 18px; color: #9ca3af; font-size: 12px;">
+      <div>This is an automated message from Reel48.</div>
+      <div>Please do not reply to this email.</div>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+def _wrap_branded_text(*, title: str, body: str) -> str:
+    return f"""{title}
+
+{body.strip()}
+
+---
+This is an automated message from Reel48. Please do not reply."""
 
 
 class EmailService:
@@ -50,23 +99,19 @@ class EmailService:
                 response = self.ses_client.get_send_quota()
                 max_24_hour_send = response.get('Max24HourSend', 0)
                 logger.info(f"AWS SES initialized. Max 24h send: {max_24_hour_send}")
-                print(f"SUCCESS: AWS SES initialized. Quota: {max_24_hour_send} emails/day")
                 self.client = self.ses_client
             except ClientError as e:
                 error_code = e.response.get('Error', {}).get('Code', 'Unknown')
                 if error_code == 'AccessDenied':
                     logger.warning("AWS SES access denied. Check IAM permissions.")
-                    print("WARNING: AWS SES access denied. App Runner service role needs ses:SendEmail permission.")
                 else:
                     logger.warning(f"AWS SES verification failed: {error_code}")
                 self.client = None
         except ImportError:
             logger.error("boto3 not installed. Install with: pip install boto3")
-            print("ERROR: boto3 not installed. Run: pip install boto3")
             self.client = None
         except Exception as e:
             logger.error(f"Failed to initialize AWS SES: {str(e)}", exc_info=True)
-            print(f"ERROR: Failed to initialize AWS SES: {str(e)}")
             self.client = None
     
     
@@ -94,7 +139,6 @@ class EmailService:
             logger.error(error_msg)
             logger.error(f"Would send email to {to_email} with subject: {subject}")
             logger.error(f"FROM_EMAIL: {FROM_EMAIL}, FROM_NAME: {FROM_NAME}")
-            print(f"ERROR: {error_msg}")
             return False
         
         # Always use AWS SES
@@ -124,26 +168,16 @@ class EmailService:
             
             message_id = response.get('MessageId')
             logger.info(f"Email sent successfully to {to_email} (MessageId: {message_id})")
-            print(f"SUCCESS: Email sent to {to_email} via AWS SES (MessageId: {message_id})")
             return True
             
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
             error_message = e.response.get('Error', {}).get('Message', str(e))
             logger.error(f"AWS SES error - {error_code}: {error_message}")
-            print(f"ERROR: AWS SES - {error_code}: {error_message}")
-            
-            if error_code == 'MessageRejected':
-                print("  → Sender email may not be verified. Check AWS SES Console → Verified identities")
-            elif error_code == 'MailFromDomainNotVerified':
-                print("  → Mail-from domain not verified. Verify your domain in AWS SES")
-            elif error_code == 'AccessDenied':
-                print("  → IAM permissions issue. App Runner service role needs ses:SendEmail permission")
             
             return False
         except Exception as e:
             logger.error(f"Exception sending email via AWS SES: {str(e)}", exc_info=True)
-            print(f"ERROR: {str(e)}")
             return False
     
     
@@ -165,52 +199,43 @@ class EmailService:
             True if email sent successfully, False otherwise
         """
         reset_link = f"{FRONTEND_URL}/reset-password?token={reset_token}"
-        
-        subject = "Reset Your Password"
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reset Your Password</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">Password Reset Request</h1>
-                <p>Hello{(' ' + user_name) if user_name else ''},</p>
-                <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{reset_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Reset Password</a>
-                </div>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #007bff;">{reset_link}</p>
-                <p style="color: #666; font-size: 14px; margin-top: 30px;">
-                    <strong>This link will expire in 1 hour.</strong><br>
-                    If you didn't request a password reset, please ignore this email.
-                </p>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+
+        subject = "Reel48 — reset your password"
+
+        hello = f"Hello{(' ' + user_name) if user_name else ''},"
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">Reset your password</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">{hello}</p>
+        <p style="margin: 0 0 18px 0; color: #374151;">
+          We received a request to reset your Reel48 password. Use the button below to create a new password.
+        </p>
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{reset_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            Reset password
+          </a>
+        </div>
+        <p style="margin: 18px 0 8px 0; color:#6b7280; font-size: 13px;">Or copy and paste this link into your browser:</p>
+        <p style="margin: 0; word-break: break-all; color: {BRAND_ACCENT}; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">{reset_link}</p>
+        <div style="margin-top: 18px; padding: 14px; background-color: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 13px; color: #6b7280;"><b style=\"color:#374151;\">Important:</b> This link expires in 1 hour.</div>
+          <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">If you didn't request a password reset, you can ignore this email.</div>
+        </div>
         """
-        
-        text_content = f"""
-        Password Reset Request
-        
-        Hello{(' ' + user_name) if user_name else ''},
-        
-        We received a request to reset your password. Click the link below to create a new password:
-        
-        {reset_link}
-        
-        This link will expire in 1 hour.
-        
-        If you didn't request a password reset, please ignore this email.
-        """
+        html_content = _wrap_branded_html(
+            title="Reset your password — Reel48",
+            inner_html=inner_html,
+            preheader="Reset your Reel48 password.",
+        )
+
+        text_body = f"""{hello}
+
+We received a request to reset your Reel48 password.
+
+Reset password: {reset_link}
+
+Important: This link expires in 1 hour.
+If you didn't request a password reset, you can ignore this email."""
+        text_content = _wrap_branded_text(title="Reset your password — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -236,53 +261,42 @@ class EmailService:
             True if email sent successfully, False otherwise
         """
         form_link = f"{FRONTEND_URL}/forms/{form_id}"
-        
-        subject = f"New Form Assigned: {form_name}"
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>New Form Assigned</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">New Form Assigned</h1>
-                <p>Hello{(' ' + user_name) if user_name else ''},</p>
-                <p>A new form has been assigned to you:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
-                    <h2 style="margin-top: 0; color: #007bff;">{form_name}</h2>
-                    {f'<p style="color: #666; margin-bottom: 0;">Assigned by: {assigned_by}</p>' if assigned_by else ''}
-                </div>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{form_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Form</a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                    Please complete this form at your earliest convenience.
-                </p>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+
+        subject = f"Reel48 — new form assigned: {form_name}"
+
+        hello = f"Hello{(' ' + user_name) if user_name else ''},"
+        assigned_by_line = (
+            f"<div style=\"color:#6b7280; font-size: 13px; margin-top: 6px;\">Assigned by: <b style=\"color:#374151;\">{assigned_by}</b></div>"
+            if assigned_by
+            else ""
+        )
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">New form assigned</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">{hello}</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{form_name}</div>
+          {assigned_by_line}
+        </div>
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{form_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            Open form
+          </a>
+        </div>
+        <p style="margin: 0; color:#6b7280; font-size: 13px;">Please complete this form at your earliest convenience.</p>
         """
-        
-        text_content = f"""
-        New Form Assigned
-        
-        Hello{(' ' + user_name) if user_name else ''},
-        
-        A new form has been assigned to you: {form_name}
-        
-        {f'Assigned by: {assigned_by}' if assigned_by else ''}
-        
-        View the form here: {form_link}
-        
-        Please complete this form at your earliest convenience.
-        """
+        html_content = _wrap_branded_html(
+            title="New form assigned — Reel48",
+            inner_html=inner_html,
+            preheader=f"A new form has been assigned to you: {form_name}",
+        )
+
+        text_body = f"""{hello}
+
+A new form has been assigned to you: {form_name}
+{f'Assigned by: {assigned_by}' if assigned_by else ''}
+
+Open form: {form_link}"""
+        text_content = _wrap_branded_text(title="New form assigned — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -310,56 +324,46 @@ class EmailService:
             True if email sent successfully, False otherwise
         """
         quote_link = f"{FRONTEND_URL}/quotes/{quote_id}"
-        
-        subject = f"New Quote Assigned: {quote_title}"
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>New Quote Assigned</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">New Quote Assigned</h1>
-                <p>Hello{(' ' + user_name) if user_name else ''},</p>
-                <p>A new quote has been assigned to you:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
-                    <h2 style="margin-top: 0; color: #28a745;">{quote_title}</h2>
-                    <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
-                    {f'<p style="color: #666; margin-bottom: 0;">Assigned by: {assigned_by}</p>' if assigned_by else ''}
-                </div>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{quote_link}" style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Quote</a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                    Please review this quote and let us know if you have any questions.
-                </p>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+
+        subject = f"Reel48 — new quote assigned: {quote_title}"
+
+        hello = f"Hello{(' ' + user_name) if user_name else ''},"
+        assigned_by_line = (
+            f"<div style=\"color:#6b7280; font-size: 13px; margin-top: 6px;\">Assigned by: <b style=\"color:#374151;\">{assigned_by}</b></div>"
+            if assigned_by
+            else ""
+        )
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">New quote assigned</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">{hello}</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{quote_title}</div>
+          <div style="color:#6b7280; font-size: 13px; margin-top: 6px;">Quote number: <b style="color:#374151;">{quote_number}</b></div>
+          {assigned_by_line}
+        </div>
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{quote_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            View quote
+          </a>
+        </div>
+        <p style="margin: 0; color:#6b7280; font-size: 13px;">Please review this quote and let us know if you have any questions.</p>
         """
-        
-        text_content = f"""
-        New Quote Assigned
-        
-        Hello{(' ' + user_name) if user_name else ''},
-        
-        A new quote has been assigned to you:
-        
-        Quote: {quote_title}
-        Quote Number: {quote_number}
-        {f'Assigned by: {assigned_by}' if assigned_by else ''}
-        
-        View the quote here: {quote_link}
-        
-        Please review this quote and let us know if you have any questions.
-        """
+        html_content = _wrap_branded_html(
+            title="New quote assigned — Reel48",
+            inner_html=inner_html,
+            preheader=f"A new quote was assigned: {quote_title}",
+        )
+
+        text_body = f"""{hello}
+
+A new quote has been assigned to you:
+
+Quote: {quote_title}
+Quote number: {quote_number}
+{f'Assigned by: {assigned_by}' if assigned_by else ''}
+
+View quote: {quote_link}"""
+        text_content = _wrap_branded_text(title="New quote assigned — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -421,7 +425,7 @@ class EmailService:
                 """
         else:
             # Use default template
-            subject = f"New Form Submission: {form_name}"
+            subject = f"Reel48 — new form submission: {form_name}"
             
             submitter_info = ""
             if submitter_name or submitter_email:
@@ -433,42 +437,34 @@ class EmailService:
                 </ul>
                 """
             
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>New Form Submission</title>
-            </head>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                    <h1 style="color: #2c3e50; margin-top: 0;">New Form Submission</h1>
-                    <p>A new submission has been received for the form:</p>
-                    <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
-                        <h2 style="margin-top: 0; color: #007bff;">{form_name}</h2>
-                        {submitter_info}
-                    </div>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{submission_link}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Submission</a>
-                    </div>
-                </div>
-                <p style="color: #999; font-size: 12px; text-align: center;">
-                    This is an automated message. Please do not reply to this email.
-                </p>
-            </body>
-            </html>
+            inner_html = f"""
+            <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">New form submission</h2>
+            <p style="margin: 0 0 14px 0; color: #374151;">A new submission has been received for:</p>
+            <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+              <div style="font-weight: 700; color: {BRAND_PRIMARY};">{form_name}</div>
+              <div style="margin-top: 10px; color:#6b7280; font-size: 13px;">
+                {submitter_info}
+              </div>
+            </div>
+            <div style="text-align:center; margin: 22px 0;">
+              <a href="{submission_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+                View submission
+              </a>
+            </div>
             """
+            html_content = _wrap_branded_html(
+                title="New form submission — Reel48",
+                inner_html=inner_html,
+                preheader=f"New submission received for {form_name}",
+            )
             
-            text_content = f"""
-            New Form Submission
-            
-            A new submission has been received for the form: {form_name}
-            
-            {f'Submitted by: {submitter_name} ({submitter_email})' if submitter_name or submitter_email else ''}
-            
-            View the submission here: {submission_link}
-            """
+            submitter_text = f"Submitted by: {submitter_name} ({submitter_email})" if submitter_name or submitter_email else ""
+            text_body = f"""A new submission has been received for: {form_name}
+
+{submitter_text}
+
+View submission: {submission_link}"""
+            text_content = _wrap_branded_text(title="New form submission — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -497,7 +493,7 @@ class EmailService:
         """
         quote_link = f"{FRONTEND_URL}/quotes/{quote_id}"
         
-        subject = f"Quote Accepted: {quote_title}"
+        subject = f"Reel48 — quote accepted: {quote_title}"
         
         customer_info = ""
         if customer_name or customer_email:
@@ -509,50 +505,38 @@ class EmailService:
             </ul>
             """
         
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Quote Accepted</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">Quote Accepted</h1>
-                <p>A quote has been accepted by a customer:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
-                    <h2 style="margin-top: 0; color: #28a745;">{quote_title}</h2>
-                    <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
-                    {customer_info}
-                </div>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{quote_link}" style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View Quote</a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                    You may want to create an invoice for this quote.
-                </p>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">Quote accepted</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">A quote has been accepted by a customer.</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{quote_title}</div>
+          <div style="color:#6b7280; font-size: 13px; margin-top: 6px;">Quote number: <b style="color:#374151;">{quote_number}</b></div>
+          <div style="margin-top: 10px; color:#6b7280; font-size: 13px;">{customer_info}</div>
+        </div>
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{quote_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            View quote
+          </a>
+        </div>
+        <p style="margin: 0; color:#6b7280; font-size: 13px;">You may want to create an invoice for this quote.</p>
         """
+        html_content = _wrap_branded_html(
+            title="Quote accepted — Reel48",
+            inner_html=inner_html,
+            preheader=f"Quote accepted: {quote_title}",
+        )
         
-        text_content = f"""
-        Quote Accepted
-        
-        A quote has been accepted by a customer:
-        
-        Quote: {quote_title}
-        Quote Number: {quote_number}
-        {f'Accepted by: {customer_name} ({customer_email})' if customer_name or customer_email else ''}
-        
-        View the quote here: {quote_link}
-        
-        You may want to create an invoice for this quote.
-        """
+        accepted_by = f"Accepted by: {customer_name} ({customer_email})" if customer_name or customer_email else ""
+        text_body = f"""A quote has been accepted:
+
+Quote: {quote_title}
+Quote number: {quote_number}
+{accepted_by}
+
+View quote: {quote_link}
+
+You may want to create an invoice for this quote."""
+        text_content = _wrap_branded_text(title="Quote accepted — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -581,7 +565,7 @@ class EmailService:
         Returns:
             True if email sent successfully, False otherwise
         """
-        subject = f"Payment Received: {quote_title}"
+        subject = f"Reel48 — payment received: {quote_title}"
         
         invoice_info = ""
         if invoice_number:
@@ -597,52 +581,37 @@ class EmailService:
             </div>
             """
         
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Payment Received</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">Payment Received</h1>
-                <p>Hello{(' ' + customer_name) if customer_name else ''},</p>
-                <p>Thank you! We have received your payment for:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
-                    <h2 style="margin-top: 0; color: #28a745;">{quote_title}</h2>
-                    <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
-                    {invoice_info}
-                </div>
-                {invoice_link_html}
-                <p style="color: #666; font-size: 14px;">
-                    Your payment has been processed successfully. A receipt has been generated for your records.
-                </p>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+        hello = f"Hello{(' ' + customer_name) if customer_name else ''},"
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">Payment received</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">{hello}</p>
+        <p style="margin: 0 0 14px 0; color: #374151;">Thank you! We’ve received your payment for:</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{quote_title}</div>
+          <div style="color:#6b7280; font-size: 13px; margin-top: 6px;">Quote number: <b style="color:#374151;">{quote_number}</b></div>
+          <div style="margin-top: 10px; color:#6b7280; font-size: 13px;">{invoice_info}</div>
+        </div>
+        {invoice_link_html}
+        <p style="margin: 0; color:#6b7280; font-size: 13px;">Your payment has been processed successfully. A receipt has been generated for your records.</p>
         """
+        html_content = _wrap_branded_html(
+            title="Payment received — Reel48",
+            inner_html=inner_html,
+            preheader=f"Payment received for {quote_title}",
+        )
         
-        text_content = f"""
-        Payment Received
-        
-        Hello{(' ' + customer_name) if customer_name else ''},
-        
-        Thank you! We have received your payment for:
-        
-        Quote: {quote_title}
-        Quote Number: {quote_number}
-        {f'Invoice Number: {invoice_number}' if invoice_number else ''}
-        {f'Amount Paid: {amount_paid}' if amount_paid else ''}
-        
-        {f'View invoice: {invoice_url}' if invoice_url else ''}
-        
-        Your payment has been processed successfully. A receipt has been generated for your records.
-        """
+        text_body = f"""{hello}
+
+Thank you! We have received your payment for:
+
+Quote: {quote_title}
+Quote number: {quote_number}
+{f'Invoice number: {invoice_number}' if invoice_number else ''}
+{f'Amount paid: {amount_paid}' if amount_paid else ''}
+{f'View invoice: {invoice_url}' if invoice_url else ''}
+
+Your payment has been processed successfully. A receipt has been generated for your records."""
+        text_content = _wrap_branded_text(title="Payment received — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -675,7 +644,7 @@ class EmailService:
         """
         quote_link = f"{FRONTEND_URL}/quotes/{quote_id}" if quote_id else None
         
-        subject = f"Invoice Paid: {quote_title}"
+        subject = f"Reel48 — invoice paid: {quote_title}"
         
         payment_info = ""
         if invoice_number:
@@ -701,46 +670,32 @@ class EmailService:
             </div>
             """
         
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invoice Paid</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">Invoice Paid</h1>
-                <p>An invoice has been paid:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
-                    <h2 style="margin-top: 0; color: #28a745;">{quote_title}</h2>
-                    <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
-                    {payment_info}
-                    {customer_info}
-                </div>
-                {quote_link_html}
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">Invoice paid</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">An invoice has been paid.</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{quote_title}</div>
+          <div style="color:#6b7280; font-size: 13px; margin-top: 6px;">Quote number: <b style="color:#374151;">{quote_number}</b></div>
+          <div style="margin-top: 10px; color:#6b7280; font-size: 13px;">{payment_info}</div>
+          <div style="margin-top: 10px; color:#6b7280; font-size: 13px;">{customer_info}</div>
+        </div>
+        {quote_link_html}
         """
+        html_content = _wrap_branded_html(
+            title="Invoice paid — Reel48",
+            inner_html=inner_html,
+            preheader=f"Invoice paid for {quote_title}",
+        )
         
-        text_content = f"""
-        Invoice Paid
-        
-        An invoice has been paid:
-        
-        Quote: {quote_title}
-        Quote Number: {quote_number}
-        {f'Invoice Number: {invoice_number}' if invoice_number else ''}
-        {f'Amount Paid: {amount_paid}' if amount_paid else ''}
-        {f'Customer: {customer_name} ({customer_email})' if customer_name or customer_email else ''}
-        
-        {f'View quote: {quote_link}' if quote_link else ''}
-        """
+        text_body = f"""An invoice has been paid:
+
+Quote: {quote_title}
+Quote number: {quote_number}
+{f'Invoice number: {invoice_number}' if invoice_number else ''}
+{f'Amount paid: {amount_paid}' if amount_paid else ''}
+{f'Customer: {customer_name} ({customer_email})' if customer_name or customer_email else ''}
+{f'View quote: {quote_link}' if quote_link else ''}"""
+        text_content = _wrap_branded_text(title="Invoice paid — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     
@@ -763,81 +718,88 @@ class EmailService:
         """
         verification_link = f"{FRONTEND_URL}/verify-email?token={verification_token}"
         
-        subject = "Verify Your Email Address"
+        subject = "Reel48 — verify your email"
         
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verify Your Email - Reel48</title>
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-            <div style="background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-                <!-- Reel48 Branding Header -->
-                <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0;">
-                    <h1 style="color: #1f2937; margin: 0 0 10px 0; font-size: 28px; font-weight: 600;">Reel48</h1>
-                    <p style="color: #6b7280; margin: 0; font-size: 14px;">Email Verification</p>
-                </div>
-                
-                <h2 style="color: #1f2937; margin-top: 0; font-size: 24px; font-weight: 600;">Verify Your Email Address</h2>
-                <p style="color: #374151; font-size: 16px; margin-bottom: 10px;">Hello{(' ' + user_name) if user_name else ''},</p>
-                <p style="color: #374151; font-size: 16px; margin-bottom: 30px;">
-                    Thank you for signing up with Reel48! To complete your registration and secure your account, please verify your email address by clicking the button below:
-                </p>
-                
-                <div style="text-align: center; margin: 40px 0;">
-                    <a href="{verification_link}" style="background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: background-color 0.2s;">
-                        Verify Email Address
-                    </a>
-                </div>
-                
-                <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #2563eb;">
-                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0; font-weight: 600;">Alternative Method:</p>
-                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">If the button doesn't work, copy and paste this link into your browser:</p>
-                    <p style="word-break: break-all; color: #2563eb; font-size: 13px; margin: 0; font-family: monospace;">{verification_link}</p>
-                </div>
-                
-                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
-                        <strong style="color: #374151;">Important:</strong> This verification link will expire in 24 hours for security reasons.
-                    </p>
-                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                        If you didn't create an account with Reel48, you can safely ignore this email. No further action is required.
-                    </p>
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                    This is an automated message from Reel48. Please do not reply to this email.
-                </p>
-                <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">
-                    If you have any questions, please contact our support team.
-                </p>
-            </div>
-        </body>
-        </html>
+        hello = f"Hello{(' ' + user_name) if user_name else ''},"
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">Verify your email</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">{hello}</p>
+        <p style="margin: 0 0 18px 0; color: #374151;">
+          Thanks for signing up with Reel48. Please verify your email address to finish creating your account.
+        </p>
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{verification_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            Verify email
+          </a>
+        </div>
+        <p style="margin: 18px 0 8px 0; color:#6b7280; font-size: 13px;">If the button doesn’t work, copy and paste this link:</p>
+        <p style="margin: 0; word-break: break-all; color: {BRAND_ACCENT}; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">{verification_link}</p>
+        <div style="margin-top: 18px; padding: 14px; background-color: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 13px; color: #6b7280;"><b style=\"color:#374151;\">Important:</b> This link expires in 24 hours.</div>
+          <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">If you didn’t create an account, you can ignore this email.</div>
+        </div>
         """
+        html_content = _wrap_branded_html(
+            title="Verify your email — Reel48",
+            inner_html=inner_html,
+            preheader="Verify your email to finish creating your Reel48 account.",
+        )
         
-        text_content = f"""
-        Verify Your Email Address - Reel48
+        text_body = f"""{hello}
+
+Thanks for signing up with Reel48. Verify your email to finish creating your account:
+
+{verification_link}
+
+Important: This link expires in 24 hours.
+If you didn’t create an account, you can ignore this email."""
+        text_content = _wrap_branded_text(title="Verify your email — Reel48", body=text_body)
         
-        Hello{(' ' + user_name) if user_name else ''},
-        
-        Thank you for signing up with Reel48! To complete your registration and secure your account, please verify your email address by clicking the link below:
-        
-        {verification_link}
-        
-        Important: This verification link will expire in 24 hours for security reasons.
-        
-        If you didn't create an account with Reel48, you can safely ignore this email. No further action is required.
-        
-        ---
-        This is an automated message from Reel48. Please do not reply to this email.
+        return self._send_email(to_email, subject, html_content, text_content)
+
+    def send_folder_note_added(
+        self,
+        *,
+        to_email: str,
+        folder_id: str,
+        folder_name: str,
+        note_title: str,
+        note_body: str,
+        created_at: Optional[str] = None,
+    ) -> bool:
+        folder_link = f"{FRONTEND_URL}/folders/{folder_id}"
+        subject = f"Reel48 update — {folder_name}"
+
+        created_line = f"<div style=\"color:#9ca3af; font-size: 12px; margin-top: 10px;\">{created_at}</div>" if created_at else ""
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">New note added</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">We added a new note to your order.</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{note_title}</div>
+          {created_line}
+          <div style="margin-top: 10px; color:#374151; white-space: pre-wrap;">{note_body}</div>
+        </div>
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{folder_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            Open your order folder
+          </a>
+        </div>
+        <p style="margin: 0; color:#6b7280; font-size: 13px;">If you have any questions, just reply in your folder notes.</p>
         """
-        
+        html_content = _wrap_branded_html(
+            title="New note added — Reel48",
+            inner_html=inner_html,
+            preheader=f"New note added to your order: {note_title}",
+        )
+
+        text_body = f"""We added a new note to your order.
+
+{note_title}
+{note_body}
+
+Open your order folder: {folder_link}"""
+        text_content = _wrap_branded_text(title="New note added — Reel48", body=text_body)
+
         return self._send_email(to_email, subject, html_content, text_content)
     
     def send_quote_email(
@@ -871,7 +833,7 @@ class EmailService:
         """
         quote_link = share_link or f"{FRONTEND_URL}/quotes/{quote_id}"
         
-        subject = f"Quote: {quote_title}"
+        subject = f"Reel48 — quote: {quote_title}"
         
         custom_message_html = ""
         if custom_message:
@@ -885,58 +847,54 @@ class EmailService:
         if sender_name:
             sender_info = f"<p style=\"color: #666; margin-bottom: 0;\">From: {sender_name}</p>"
         
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Quote: {quote_title}</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-                <h1 style="color: #2c3e50; margin-top: 0;">Quote: {quote_title}</h1>
-                <p>Hello{(' ' + customer_name) if customer_name else ''},</p>
-                <p>Please find your quote below:</p>
-                <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #667eea;">
-                    <h2 style="margin-top: 0; color: #667eea;">{quote_title}</h2>
-                    <p style="color: #666; margin: 5px 0;"><strong>Quote Number:</strong> {quote_number}</p>
-                    {sender_info}
-                </div>
-                {custom_message_html}
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{quote_link}" style="background-color: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; margin: 5px;">View Quote</a>
-                    {f'<a href="{pdf_url}" style="background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; margin: 5px;">Download PDF</a>' if pdf_url else ''}
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                    Please review this quote and let us know if you have any questions.
-                </p>
-            </div>
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                This is an automated message. Please do not reply to this email.
-            </p>
-        </body>
-        </html>
+        hello = f"Hello{(' ' + customer_name) if customer_name else ''},"
+        pdf_button = (
+            f'<a href="{pdf_url}" style="background-color: #ef4444; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700; margin-left: 10px;">Download PDF</a>'
+            if pdf_url
+            else ""
+        )
+        inner_html = f"""
+        <h2 style="margin: 0 0 12px 0; color: {BRAND_PRIMARY};">Your quote is ready</h2>
+        <p style="margin: 0 0 14px 0; color: #374151;">{hello}</p>
+        <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff;">
+          <div style="font-weight: 700; color: {BRAND_PRIMARY};">{quote_title}</div>
+          <div style="color:#6b7280; font-size: 13px; margin-top: 6px;">Quote number: <b style="color:#374151;">{quote_number}</b></div>
+          <div style="color:#6b7280; font-size: 13px; margin-top: 6px;">{sender_info}</div>
+        </div>
+        {custom_message_html}
+        <div style="text-align:center; margin: 22px 0;">
+          <a href="{quote_link}" style="background-color: {BRAND_ACCENT}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 10px; display: inline-block; font-weight: 700;">
+            View quote
+          </a>
+          {pdf_button}
+        </div>
+        <p style="margin: 0; color:#6b7280; font-size: 13px;">Please review this quote and let us know if you have any questions.</p>
         """
+        html_content = _wrap_branded_html(
+            title=f"Quote — Reel48",
+            inner_html=inner_html,
+            preheader=f"Your Reel48 quote: {quote_title}",
+        )
         
-        text_content = f"""
-        Quote: {quote_title}
-        
-        Hello{(' ' + customer_name) if customer_name else ''},
-        
-        Please find your quote below:
-        
-        Quote: {quote_title}
-        Quote Number: {quote_number}
-        {f'From: {sender_name}' if sender_name else ''}
-        
-        {custom_message if custom_message else ''}
-        
-        View the quote here: {quote_link}
-        {f'Download PDF: {pdf_url}' if pdf_url else ''}
-        
-        Please review this quote and let us know if you have any questions.
-        """
+        hello = f"Hello{(' ' + customer_name) if customer_name else ''},"
+        from_line = f"From: {sender_name}" if sender_name else ""
+        pdf_line = f"Download PDF: {pdf_url}" if pdf_url else ""
+        msg = (custom_message or "").strip()
+        text_body = f"""{hello}
+
+Please find your quote below:
+
+Quote: {quote_title}
+Quote number: {quote_number}
+{from_line}
+
+{msg}
+
+View quote: {quote_link}
+{pdf_line}
+
+Please review this quote and let us know if you have any questions."""
+        text_content = _wrap_branded_text(title="Quote — Reel48", body=text_body)
         
         return self._send_email(to_email, subject, html_content, text_content)
     

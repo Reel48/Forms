@@ -1443,9 +1443,12 @@ async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_us
     """Create an admin-authored note/update for a folder."""
     try:
         # Ensure folder exists
-        folder_resp = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
+        folder_resp = supabase_storage.table("folders").select("id, name, client_id").eq("id", folder_id).single().execute()
         if not folder_resp.data:
             raise HTTPException(status_code=404, detail="Folder not found")
+        folder_row = folder_resp.data or {}
+        folder_name = folder_row.get("name") or "Order"
+        client_id = folder_row.get("client_id")
 
         title = (payload.title or "").strip()
         body = (payload.body or "").strip()
@@ -1475,6 +1478,44 @@ async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_us
                 details={"note_id": note_id, "note_title": title},
                 created_by=admin_user.get("id"),
             )
+        except Exception:
+            pass
+
+        # Best-effort customer notification (email or SMS based on preference)
+        try:
+            client = None
+            if client_id:
+                client = (
+                    supabase_storage
+                    .table("clients")
+                    .select("email, phone_e164, preferred_notification_channel, sms_opt_in, sms_verified")
+                    .eq("id", client_id)
+                    .single()
+                    .execute()
+                ).data
+
+            preferred = ((client or {}).get("preferred_notification_channel") or "email").lower()
+            phone_e164 = (client or {}).get("phone_e164")
+            sms_ok = bool((client or {}).get("sms_opt_in")) and bool((client or {}).get("sms_verified")) and bool(phone_e164)
+
+            if preferred == "sms" and sms_ok:
+                from sms_service import send_notification
+                from email_service import FRONTEND_URL
+                folder_link = f"{FRONTEND_URL}/folders/{folder_id}"
+                body_text = f"Reel48 update — {folder_name}\n\n{title}\n{body}\n\nOpen: {folder_link}"
+                send_notification(to=str(phone_e164), body=body_text)
+            else:
+                to_email = (client or {}).get("email") or _get_folder_client_email(folder_id)
+                if to_email:
+                    from email_service import email_service
+                    email_service.send_folder_note_added(
+                        to_email=to_email,
+                        folder_id=folder_id,
+                        folder_name=folder_name,
+                        note_title=title,
+                        note_body=body,
+                        created_at=now,
+                    )
         except Exception:
             pass
 

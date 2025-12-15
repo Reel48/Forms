@@ -12,10 +12,36 @@ from auth import get_current_user, get_current_admin
 from audit_logger import log_audit_event
 import requests
 import logging
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/clients", tags=["clients"])
+
+
+def _validate_phone_e164(phone: str) -> str:
+    phone = (phone or "").strip()
+    if not phone.startswith("+"):
+        raise HTTPException(status_code=400, detail="Phone number must be in E.164 format (e.g. +15551234567)")
+    digits = phone[1:]
+    if not digits.isdigit() or len(digits) < 8 or len(digits) > 15:
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    if digits[0] == "0":
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    return phone
+
+
+class SmsStartRequest(BaseModel):
+    phone_e164: str
+
+
+class SmsConfirmRequest(BaseModel):
+    phone_e164: str
+    code: str
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    preferred_notification_channel: str  # email | sms
 
 @router.get("", response_model=List[Client])
 async def get_clients(current_admin: dict = Depends(get_current_admin)):
@@ -388,6 +414,139 @@ async def update_my_profile(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/profile/me/sms/start")
+async def start_sms_opt_in(payload: SmsStartRequest, current_user: dict = Depends(get_current_user)):
+    """Start Twilio Verify OTP flow for SMS opt-in."""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    phone_e164 = _validate_phone_e164(payload.phone_e164)
+
+    # Find client record for this user
+    resp = supabase_storage.table("clients").select("id").eq("user_id", user_id).execute()
+    if not resp.data:
+        raise HTTPException(status_code=404, detail="Client profile not found")
+
+    client_id = resp.data[0]["id"]
+
+    from sms_service import start_verify
+
+    try:
+        start_verify(to=phone_e164, channel="sms")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to send verification code")
+
+    # Save phone on profile (best-effort)
+    try:
+        supabase_storage.table("clients").update({"phone_e164": phone_e164}).eq("id", client_id).execute()
+    except Exception:
+        pass
+
+    return {"message": "Verification code sent"}
+
+
+@router.post("/profile/me/sms/confirm")
+async def confirm_sms_opt_in(payload: SmsConfirmRequest, current_user: dict = Depends(get_current_user)):
+    """Confirm OTP and mark SMS as verified + opted-in."""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    phone_e164 = _validate_phone_e164(payload.phone_e164)
+    code = (payload.code or "").strip()
+    if len(code) < 4 or len(code) > 10:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    # Find client record for this user
+    resp = supabase_storage.table("clients").select("id").eq("user_id", user_id).execute()
+    if not resp.data:
+        raise HTTPException(status_code=404, detail="Client profile not found")
+
+    client_id = resp.data[0]["id"]
+
+    from sms_service import check_verify
+
+    approved = False
+    try:
+        approved = check_verify(to=phone_e164, code=code)
+    except Exception:
+        approved = False
+
+    if not approved:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+
+    now = __import__("datetime").datetime.now().isoformat()
+    supabase_storage.table("clients").update(
+        {
+            "phone_e164": phone_e164,
+            "sms_verified": True,
+            "sms_verified_at": now,
+            "sms_opt_in": True,
+            "sms_opt_in_at": now,
+            "sms_opt_out_at": None,
+        }
+    ).eq("id", client_id).execute()
+
+    return {"message": "Phone verified. SMS notifications enabled."}
+
+
+@router.put("/profile/me/notification-preferences")
+async def update_notification_preferences(
+    payload: NotificationPreferencesUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Set preferred notification channel (email or sms)."""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    channel = (payload.preferred_notification_channel or "").strip().lower()
+    if channel not in ("email", "sms"):
+        raise HTTPException(status_code=400, detail="preferred_notification_channel must be 'email' or 'sms'")
+
+    resp = (
+        supabase_storage
+        .table("clients")
+        .select("id, sms_opt_in, sms_verified, phone_e164")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(status_code=404, detail="Client profile not found")
+
+    client = resp.data[0]
+    if channel == "sms":
+        if not client.get("phone_e164") or not client.get("sms_opt_in") or not client.get("sms_verified"):
+            raise HTTPException(status_code=400, detail="Verify your phone and enable SMS before selecting SMS notifications")
+
+    supabase_storage.table("clients").update({"preferred_notification_channel": channel}).eq("id", client["id"]).execute()
+    return {"message": "Notification preferences updated"}
+
+
+@router.post("/profile/me/sms/opt-out")
+async def sms_opt_out(current_user: dict = Depends(get_current_user)):
+    """Disable SMS notifications and switch preference back to email."""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    resp = supabase_storage.table("clients").select("id").eq("user_id", user_id).execute()
+    if not resp.data:
+        raise HTTPException(status_code=404, detail="Client profile not found")
+
+    now = __import__("datetime").datetime.now().isoformat()
+    supabase_storage.table("clients").update(
+        {
+            "sms_opt_in": False,
+            "sms_opt_out_at": now,
+            "preferred_notification_channel": "email",
+        }
+    ).eq("id", resp.data[0]["id"]).execute()
+
+    return {"message": "SMS notifications disabled"}
+
 # Profile picture size limit: 5MB
 MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024
 
@@ -501,4 +660,3 @@ async def upload_profile_picture(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

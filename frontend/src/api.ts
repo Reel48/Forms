@@ -110,6 +110,14 @@ export interface Client {
   stripe_customer_id?: string;
   user_id?: string;
   registration_source?: string;  // 'admin_created' or 'self_registered'
+  // Notification preferences (SMS)
+  phone_e164?: string;
+  preferred_notification_channel?: 'email' | 'sms' | string;
+  sms_opt_in?: boolean;
+  sms_opt_in_at?: string;
+  sms_opt_out_at?: string;
+  sms_verified?: boolean;
+  sms_verified_at?: string;
   // Structured address fields
   address_line1?: string;
   address_line2?: string;
@@ -386,6 +394,13 @@ export const clientsAPI = {
       },
     });
   },
+  startSmsOptIn: (phone_e164: string) =>
+    api.post<{ message: string }>('/api/clients/profile/me/sms/start', { phone_e164 }),
+  confirmSmsOptIn: (phone_e164: string, code: string) =>
+    api.post<{ message: string }>('/api/clients/profile/me/sms/confirm', { phone_e164, code }),
+  updateNotificationPreferences: (preferred_notification_channel: 'email' | 'sms') =>
+    api.put<{ message: string }>('/api/clients/profile/me/notification-preferences', { preferred_notification_channel }),
+  smsOptOut: () => api.post<{ message: string }>('/api/clients/profile/me/sms/opt-out'),
 };
 
 // Company Settings API
