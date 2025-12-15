@@ -10,7 +10,7 @@ interface AuthContextType {
   role: 'admin' | 'customer' | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ requiresVerification?: boolean } | void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -310,43 +310,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // Backend-primary auth: uses backend endpoint so we get rate limiting,
+    // account lockout, session tracking, and consistent logging.
+    const response = await api.post('/api/auth/login', { email, password });
+    const accessToken: string | undefined = response.data?.session?.access_token;
+    const refreshToken: string | undefined = response.data?.session?.refresh_token;
+
+    if (!accessToken || !refreshToken) {
+      throw new Error('Login failed: missing session tokens');
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
     });
 
-    if (error) throw error;
-
-    if (data.session) {
-      setSession(data.session);
-      setUser(data.user);
-      // Update API client with token first
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.session.access_token}`;
-      // Then fetch role with the token directly
-      await fetchUserRole(data.session.access_token);
+    if (sessionError) {
+      throw sessionError;
     }
+
+    // Ensure local state and role are correct
+    await refreshUser();
   };
 
   const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) throw error;
-
-    if (data.session) {
-      setSession(data.session);
-      setUser(data.user);
-      // Update API client with token first
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.session.access_token}`;
-      // Then fetch role with the token directly
-      await fetchUserRole(data.session.access_token);
-    }
+    // Backend-primary registration: creates auth user with email_confirm=false,
+    // sends verification email, and does NOT create a session until verified.
+    const response = await api.post('/api/auth/register', { email, password });
+    const requiresVerification = Boolean(response.data?.requires_verification);
+    return { requiresVerification };
   };
 
   const signOut = async () => {
     try {
+      // Revoke token server-side (best-effort) before clearing the browser session.
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession?.access_token) {
+          await api.post(
+            '/api/auth/logout',
+            {},
+            { headers: { Authorization: `Bearer ${currentSession.access_token}` } }
+          );
+        }
+      } catch {
+        // Ignore logout errors; still clear local session
+      }
+
       const { error } = await supabase.auth.signOut();
       // If error is about missing session, that's okay - we still want to clear local state
       if (error && !error.message?.includes('session missing') && !error.message?.includes('Auth session missing')) {

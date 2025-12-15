@@ -35,8 +35,13 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await signUp(email, password);
-      navigate('/');
+      const result = await signUp(email, password);
+      if (result && 'requiresVerification' in result && result.requiresVerification) {
+        navigate('/login?registered=true');
+        return;
+      }
+      // Fallback: if backend didn't require verification, send to login
+      navigate('/login?registered=true');
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to sign up');
     } finally {

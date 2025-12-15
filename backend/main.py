@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException
 # Trigger deployment test - GitHub Secrets configured
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,6 +14,8 @@ import traceback
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from chat_cleanup import cleanup_old_chat_history
+from auth import get_current_admin
+from database import supabase_storage
 
 load_dotenv()
 
@@ -40,7 +42,7 @@ allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") i
 
 # Log allowed origins for debugging (don't log in production with sensitive data)
 if os.getenv("ENVIRONMENT") != "production":
-    print(f"DEBUG: Allowed CORS origins: {allowed_origins}")
+    logger.info("Allowed CORS origins: %s", allowed_origins)
 
 # Add rate limit exception handler
 @app.exception_handler(RateLimitExceeded)
@@ -71,10 +73,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(traceback.format_exc())
     
     # Create response with CORS headers
-    response = JSONResponse(
-        status_code=500,
-        content={"detail": f"Internal server error: {str(exc)}"}
-    )
+    if os.getenv("ENVIRONMENT") == "production":
+        response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    else:
+        response = JSONResponse(status_code=500, content={"detail": f"Internal server error: {str(exc)}"})
     
     # Ensure CORS headers are added even on errors
     origin = request.headers.get("origin")
@@ -97,10 +99,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error(f"Request method: {request.method}")
     
     # Create response with CORS headers
-    response = JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors(), "body": exc.body}
-    )
+    if os.getenv("ENVIRONMENT") == "production":
+        response = JSONResponse(status_code=422, content={"detail": exc.errors()})
+    else:
+        response = JSONResponse(status_code=422, content={"detail": exc.errors(), "body": exc.body})
     
     # Ensure CORS headers are added even on errors
     origin = request.headers.get("origin")
@@ -167,8 +169,10 @@ async def health():
     return {"status": "healthy"}
 
 @app.get("/debug/routes")
-async def debug_routes():
+async def debug_routes(current_admin: dict = Depends(get_current_admin)):
     """Debug endpoint to list all registered routes"""
+    if os.getenv("ENVIRONMENT") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     routes = []
     for route in app.routes:
         if hasattr(route, 'path') and hasattr(route, 'methods'):
@@ -184,20 +188,43 @@ async def debug_routes():
     }
 
 @app.get("/debug/jwt-config")
-async def debug_jwt_config():
-    """Debug endpoint to check JWT configuration (remove in production)"""
-    import os
+async def debug_jwt_config(current_admin: dict = Depends(get_current_admin)):
+    """Debug endpoint to check JWT configuration (admin-only; disabled in production)."""
+    if os.getenv("ENVIRONMENT") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
     return {
         "jwt_secret_configured": bool(jwt_secret),
         "jwt_secret_length": len(jwt_secret) if jwt_secret else 0,
-        "jwt_secret_preview": jwt_secret[:20] + "..." if jwt_secret and len(jwt_secret) > 20 else jwt_secret if jwt_secret else None,
         "supabase_url": os.getenv("SUPABASE_URL"),
     }
 
-# Setup scheduled task for chat history cleanup
-def setup_chat_cleanup_scheduler():
-    """Setup daily cleanup of old chat history"""
+# Scheduled maintenance (chat + auth/security housekeeping)
+def run_security_maintenance():
+    """
+    Run periodic security maintenance tasks.
+    Best-effort: failures should not impact API availability.
+    """
+    tasks = [
+        "cleanup_expired_verification_tokens",
+        "cleanup_expired_revoked_tokens",
+        "cleanup_expired_sessions",
+        "cleanup_expired_reset_tokens",
+        "cleanup_old_login_attempts",
+        "unlock_expired_accounts",
+    ]
+
+    for fn in tasks:
+        try:
+            supabase_storage.rpc(fn, {}).execute()
+            logger.info("Security maintenance ran: %s()", fn)
+        except Exception as e:
+            # Function might not exist yet in some environments; don't fail startup
+            logger.warning("Security maintenance failed for %s(): %s", fn, str(e))
+
+
+def setup_schedulers():
+    """Setup daily background maintenance jobs"""
     scheduler = BackgroundScheduler()
     
     # Run cleanup daily at 2 AM UTC (adjust timezone as needed)
@@ -209,15 +236,24 @@ def setup_chat_cleanup_scheduler():
         name='Cleanup old chat history',
         replace_existing=True
     )
+
+    # Run security maintenance daily at 3 AM UTC
+    scheduler.add_job(
+        run_security_maintenance,
+        trigger=CronTrigger(hour=3, minute=0),  # 3 AM UTC daily
+        id='security_maintenance',
+        name='Security maintenance cleanup',
+        replace_existing=True
+    )
     
     scheduler.start()
-    logger.info("Chat cleanup scheduler started - will run daily at 2 AM UTC")
+    logger.info("Schedulers started (chat cleanup + security maintenance)")
     return scheduler
 
 # Start scheduler when app starts
 scheduler = None
 try:
-    scheduler = setup_chat_cleanup_scheduler()
+    scheduler = setup_schedulers()
 except Exception as e:
     logger.error(f"Failed to start chat cleanup scheduler: {str(e)}", exc_info=True)
     # Don't fail app startup if scheduler fails - cleanup can be done manually

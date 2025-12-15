@@ -8,13 +8,17 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Client, ClientCreate
 from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from stripe_service import StripeService
-from auth import get_current_user
+from auth import get_current_user, get_current_admin
+from audit_logger import log_audit_event
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/clients", tags=["clients"])
 
 @router.get("", response_model=List[Client])
-async def get_clients():
+async def get_clients(current_admin: dict = Depends(get_current_admin)):
     """
     Get all clients - includes both manually created clients and self-registered users.
     Returns all users from auth.users that have a customer role, creating client records
@@ -51,7 +55,7 @@ async def get_clients():
                     }).eq("id", client["id"]).execute()
                     client["registration_source"] = "self_registered"
                 except Exception as e:
-                    print(f"Warning: Failed to update registration_source for client {client['id']}: {str(e)}")
+                    logger.warning("Failed to update registration_source for client %s: %s", client.get("id"), str(e))
         
         # For each customer user, ensure they have a client record
         for user_id in customer_user_ids:
@@ -71,7 +75,7 @@ async def get_clients():
                         }).eq("id", client["id"]).execute()
                         client["registration_source"] = "self_registered"
                     except Exception as e:
-                        print(f"Warning: Failed to update registration_source for client {client['id']}: {str(e)}")
+                        logger.warning("Failed to update registration_source for client %s: %s", client.get("id"), str(e))
                 continue  # Already have a client record
             
             # Fetch user details from Auth API
@@ -112,7 +116,7 @@ async def get_clients():
                         if insert_response.data:
                             all_clients.append(insert_response.data[0])
             except Exception as e:
-                print(f"Warning: Failed to fetch/create client for user {user_id}: {str(e)}")
+                logger.warning("Failed to fetch/create client for user %s: %s", user_id, str(e))
                 continue
         
         return all_clients
@@ -120,7 +124,7 @@ async def get_clients():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{client_id}", response_model=Client)
-async def get_client(client_id: str):
+async def get_client(client_id: str, current_admin: dict = Depends(get_current_admin)):
     """Get a specific client"""
     try:
         response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
@@ -133,7 +137,7 @@ async def get_client(client_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("", response_model=Client)
-async def create_client(client: ClientCreate):
+async def create_client(client: ClientCreate, current_admin: dict = Depends(get_current_admin)):
     """Create a new client"""
     try:
         # Use model_dump() for Pydantic v2 compatibility, fallback to dict() for v1
@@ -141,8 +145,7 @@ async def create_client(client: ClientCreate):
             client_data = client.model_dump(exclude_none=True)
         except AttributeError:
             client_data = client.dict(exclude_none=True)
-        
-        print(f"DEBUG: Client data to insert: {client_data}")
+        # Avoid logging PII-heavy payloads in production logs
         
         # Let Supabase generate UUID and created_at automatically
         # Only include fields that are provided
@@ -159,14 +162,10 @@ async def create_client(client: ClientCreate):
                 client_data["stripe_customer_id"] = stripe_customer_id
             except Exception as e:
                 # Log error but don't fail client creation
-                print(f"Failed to create Stripe customer: {e}")
+                logger.warning("Failed to create Stripe customer: %s", e)
         
         # Insert into Supabase (let it generate id and created_at)
-        print(f"DEBUG: Inserting into Supabase: {client_data}")
         insert_response = supabase_storage.table("clients").insert(client_data).execute()
-        
-        print(f"DEBUG: Insert response: {insert_response}")
-        print(f"DEBUG: Insert response data: {insert_response.data}")
         
         if not insert_response.data:
             raise HTTPException(status_code=500, detail="Failed to create client: No data returned")
@@ -175,11 +174,7 @@ async def create_client(client: ClientCreate):
         created_client_id = insert_response.data[0]["id"]
         
         # Fetch the complete client record with all fields
-        print(f"DEBUG: Fetching created client with id: {created_client_id}")
         response = supabase_storage.table("clients").select("*").eq("id", created_client_id).execute()
-        
-        print(f"DEBUG: Fetch response: {response}")
-        print(f"DEBUG: Fetch response data: {response.data}")
         
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to fetch created client")
@@ -187,28 +182,39 @@ async def create_client(client: ClientCreate):
         # Try to validate the response
         try:
             result = response.data[0]
-            print(f"DEBUG: Returning result: {result}")
             # Validate using the Client model
             validated_client = Client(**result)
+            log_audit_event(
+                actor_user_id=current_admin.get("id"),
+                action="client_created",
+                entity_type="client",
+                entity_id=str(validated_client.id),
+                target_user_id=validated_client.user_id,
+                details={"registration_source": validated_client.registration_source},
+            )
             return validated_client
         except Exception as validation_error:
-            print(f"DEBUG: Validation error: {validation_error}")
             import traceback
             traceback.print_exc()
             # Return the raw data anyway, but log the validation error
+            try:
+                log_audit_event(
+                    actor_user_id=current_admin.get("id"),
+                    action="client_created",
+                    entity_type="client",
+                    entity_id=str(response.data[0].get("id")),
+                    target_user_id=response.data[0].get("user_id"),
+                )
+            except Exception:
+                pass
             return response.data[0]
     except HTTPException:
         raise
     except Exception as e:
-        # Log the full error for debugging
-        import traceback
-        error_details = str(e)
-        print(f"DEBUG: Full error traceback:")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to create client: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Failed to create client: {str(e)}")
 
 @router.put("/{client_id}", response_model=Client)
-async def update_client(client_id: str, client: ClientCreate):
+async def update_client(client_id: str, client: ClientCreate, current_admin: dict = Depends(get_current_admin)):
     """Update a client"""
     try:
         # Get existing client to check for Stripe customer ID
@@ -234,7 +240,7 @@ async def update_client(client_id: str, client: ClientCreate):
                 client_data["stripe_customer_id"] = stripe_customer_id
             except Exception as e:
                 # Log error but don't fail client update
-                print(f"Failed to update Stripe customer: {e}")
+                logger.warning("Failed to update Stripe customer: %s", e)
         
         # Update the client - Supabase returns updated data by default
         response = supabase_storage.table("clients").update(client_data).eq("id", client_id).execute()
@@ -245,6 +251,17 @@ async def update_client(client_id: str, client: ClientCreate):
         updated_response = supabase_storage.table("clients").select("*").eq("id", client_id).execute()
         if not updated_response.data:
             raise HTTPException(status_code=404, detail="Client not found after update")
+
+        try:
+            log_audit_event(
+                actor_user_id=current_admin.get("id"),
+                action="client_updated",
+                entity_type="client",
+                entity_id=str(client_id),
+                target_user_id=updated_response.data[0].get("user_id"),
+            )
+        except Exception:
+            pass
         return updated_response.data[0]
     except HTTPException:
         raise
@@ -252,12 +269,30 @@ async def update_client(client_id: str, client: ClientCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{client_id}")
-async def delete_client(client_id: str):
+async def delete_client(client_id: str, current_admin: dict = Depends(get_current_admin)):
     """Delete a client"""
     try:
+        # Fetch for audit context before delete
+        try:
+            existing = supabase_storage.table("clients").select("id,user_id").eq("id", client_id).execute()
+            existing_user_id = existing.data[0].get("user_id") if existing.data else None
+        except Exception:
+            existing_user_id = None
+
         response = supabase_storage.table("clients").delete().eq("id", client_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Client not found")
+
+        try:
+            log_audit_event(
+                actor_user_id=current_admin.get("id"),
+                action="client_deleted",
+                entity_type="client",
+                entity_id=str(client_id),
+                target_user_id=existing_user_id,
+            )
+        except Exception:
+            pass
         return {"message": "Client deleted successfully"}
     except HTTPException:
         raise
@@ -337,7 +372,7 @@ async def update_my_profile(
                 client_data["stripe_customer_id"] = stripe_customer_id
             except Exception as e:
                 # Log error but don't fail profile update
-                print(f"Failed to update Stripe customer: {e}")
+                logger.warning("Failed to update Stripe customer: %s", e)
         
         # Update the client
         update_response = supabase_storage.table("clients").update(client_data).eq("id", client_id).execute()
@@ -406,7 +441,7 @@ async def upload_profile_picture(
                     full_old_path = f"profile-pictures/{old_path}" if not old_path.startswith("profile-pictures/") else old_path
                     supabase_storage.storage.from_("profile-pictures").remove([full_old_path])
             except Exception as e:
-                print(f"Warning: Could not delete old profile picture: {e}")
+                logger.warning("Could not delete old profile picture: %s", e)
         
         # Upload to Supabase Storage (bucket: profile-pictures)
         try:
@@ -418,10 +453,9 @@ async def upload_profile_picture(
                     "upsert": "false"
                 }
             )
-            print(f"Profile picture uploaded successfully: {unique_filename}")
         except Exception as storage_error:
             error_msg = str(storage_error)
-            print(f"Storage upload error: {error_msg}")
+            logger.error("Storage upload error: %s", error_msg)
             if "bucket" in error_msg.lower() or "not found" in error_msg.lower():
                 raise HTTPException(
                     status_code=500, 
@@ -442,7 +476,7 @@ async def upload_profile_picture(
         try:
             public_url = supabase_storage.storage.from_("profile-pictures").get_public_url(unique_filename)
         except Exception as url_error:
-            print(f"Warning: Could not get public URL: {str(url_error)}")
+            logger.warning("Could not get public URL: %s", str(url_error))
             # Fallback: construct URL manually
             public_url = f"{supabase_url}/storage/v1/object/public/profile-pictures/{unique_filename}"
         

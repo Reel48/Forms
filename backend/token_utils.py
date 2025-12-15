@@ -70,12 +70,42 @@ def revoke_token(token: str, user_id: str, reason: str = "logout") -> bool:
         return False
 
 
-def is_token_revoked(token: str) -> bool:
+def revoke_token_hash(token_hash: str, user_id: str, expires_at: datetime, reason: str = "logout") -> bool:
+    """
+    Revoke a token when we only have its hash (e.g., for session revocation).
+    """
+    try:
+        # Check if token hash is already revoked
+        existing = (
+            supabase_storage.table("revoked_tokens")
+            .select("*")
+            .eq("token_hash", token_hash)
+            .execute()
+        )
+        if existing.data and len(existing.data) > 0:
+            return True
+
+        supabase_storage.table("revoked_tokens").insert({
+            "token_hash": token_hash,
+            "user_id": user_id,
+            "expires_at": expires_at.isoformat(),
+            "reason": reason,
+            "revoked_at": datetime.now().isoformat()
+        }).execute()
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to revoke token hash: {str(e)}")
+        return False
+
+
+def is_token_revoked(token: str, *, fail_closed: bool = False) -> bool:
     """
     Check if a token has been revoked.
     
     Args:
         token: The JWT token to check
+        fail_closed: If True, treat errors as revoked (more secure).
     
     Returns:
         True if token is revoked, False otherwise
@@ -93,8 +123,8 @@ def is_token_revoked(token: str) -> bool:
         return False
     except Exception as e:
         logger.error(f"Failed to check token revocation: {str(e)}")
-        # On error, assume not revoked (fail open)
-        return False
+        # On error, either fail open or fail closed depending on caller
+        return True if fail_closed else False
 
 
 def revoke_all_user_tokens(user_id: str, reason: str = "logout_all") -> int:
@@ -117,11 +147,23 @@ def revoke_all_user_tokens(user_id: str, reason: str = "logout_all") -> int:
         if sessions.data:
             for session in sessions.data:
                 token_hash = session.get("token_hash")
-                if token_hash:
-                    # Mark session as inactive
-                    supabase_storage.table("user_sessions").update({
-                        "is_active": False
-                    }).eq("id", session["id"]).execute()
+                expires_at_raw = session.get("expires_at")
+                if token_hash and expires_at_raw:
+                    # Parse expires_at safely
+                    try:
+                        expires_at = (
+                            datetime.fromisoformat(expires_at_raw.replace("Z", "+00:00"))
+                            if isinstance(expires_at_raw, str)
+                            else expires_at_raw
+                        )
+                        if not isinstance(expires_at, datetime):
+                            expires_at = datetime.now().replace(microsecond=0) + timedelta(hours=1)
+                    except Exception:
+                        expires_at = datetime.now().replace(microsecond=0) + timedelta(hours=1)
+
+                    # Blacklist token hash and mark session inactive
+                    revoke_token_hash(token_hash, user_id, expires_at, reason=reason)
+                    supabase_storage.table("user_sessions").update({"is_active": False}).eq("id", session["id"]).execute()
                     revoked_count += 1
         
         return revoked_count

@@ -10,6 +10,9 @@ from typing import Optional
 import os
 from jose import JWTError, jwt
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
@@ -24,8 +27,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 JWT_SECRET = JWT_SECRET_RAW
 
 if not JWT_SECRET:
-    print("WARNING: SUPABASE_JWT_SECRET not set. Token verification may fail.")
-    print("Get this from: Supabase Dashboard > Settings > API > JWT Secret")
+    logger.warning("SUPABASE_JWT_SECRET not set. Token verification may fail.")
 
 
 async def get_current_user(
@@ -46,7 +48,7 @@ async def get_current_user(
         )
     
     # Check if token has been revoked
-    if is_token_revoked(token):
+    if is_token_revoked(token, fail_closed=True):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been revoked. Please log in again.",
@@ -102,22 +104,18 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except JWTError as jwt_err:
-            print(f"JWT decode error: {str(jwt_err)}")
-            print(f"Token (first 50 chars): {token[:50]}...")
-            print(f"JWT_SECRET configured: {bool(JWT_SECRET)}")
-            print(f"JWT_SECRET length: {len(JWT_SECRET) if JWT_SECRET else 0}")
+            logger.warning("JWT decode error: %s", str(jwt_err))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid authentication token: {str(jwt_err)}",
+                detail="Invalid authentication token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except Exception as e:
-            print(f"Unexpected error during JWT decode: {str(e)}")
             import traceback
             traceback.print_exc()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token verification failed: {str(e)}",
+                detail="Token verification failed",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
@@ -144,7 +142,7 @@ async def get_current_user(
                     user_name = user_metadata.get("name", user_name)
             else:
                 # User not found in auth, but we have token - use token data
-                print(f"Warning: User {user_id} not found in Supabase Auth, using token data")
+                logger.warning("User %s not found in Supabase Auth; using token data", user_id)
                 user = type('User', (), {
                     'id': user_id,
                     'email': user_email,
@@ -153,8 +151,7 @@ async def get_current_user(
             
         except Exception as e:
             # Fallback: use token payload if we can't get user from Supabase
-            print(f"Warning: Could not fetch user from Supabase: {str(e)}")
-            print("Using token payload data")
+            logger.warning("Could not fetch user from Supabase; using token payload data: %s", str(e))
             user = type('User', (), {
                 'id': user_id,
                 'email': user_email,
@@ -168,16 +165,13 @@ async def get_current_user(
             
             if role_response.data and len(role_response.data) > 0:
                 role = role_response.data[0].get("role", "customer")
-                print(f"Successfully fetched role for user {user_id}: {role}")
             else:
                 # No role found, default to customer
-                print(f"No role found for user {user_id}, defaulting to 'customer'")
                 role = "customer"
         except Exception as e:
             # If role not found, default to customer
             # Log the error for debugging
-            print(f"Error fetching user role for user {user_id}: {str(e)}")
-            print("Defaulting to 'customer' role")
+            logger.warning("Error fetching user role for user %s; defaulting to customer: %s", user_id, str(e))
             role = "customer"
         
         user_data = {
@@ -192,12 +186,11 @@ async def get_current_user(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Authentication error: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {str(e)}",
+            detail="Authentication failed",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

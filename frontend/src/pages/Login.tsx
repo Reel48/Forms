@@ -9,6 +9,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
@@ -20,6 +21,10 @@ export default function Login() {
     if (searchParams.get('verified') === 'true') {
       setSuccess(true);
       // Clear the query parameter from URL
+      navigate('/login', { replace: true });
+    }
+    if (searchParams.get('registered') === 'true') {
+      setRegistered(true);
       navigate('/login', { replace: true });
     }
   }, [searchParams, navigate]);
@@ -59,6 +64,11 @@ export default function Login() {
         </div>
         <h1>Sign In</h1>
         <form onSubmit={handleSubmit}>
+          {registered && (
+            <div className="success-message">
+              <p>Account created. Please check your email for a verification link before signing in.</p>
+            </div>
+          )}
           {success && (
             <div className="success-message">
               <p>Email verified successfully! You can now sign in.</p>

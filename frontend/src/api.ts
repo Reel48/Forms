@@ -2,9 +2,13 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Log the API URL being used (helpful for debugging)
-console.log('API URL configured:', API_URL);
-console.log('VITE_API_URL env var:', import.meta.env.VITE_API_URL);
+const IS_DEV = import.meta.env.DEV;
+
+// Log the API URL being used (dev only)
+if (IS_DEV) {
+  console.log('API URL configured:', API_URL);
+  console.log('VITE_API_URL env var:', import.meta.env.VITE_API_URL);
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -18,13 +22,7 @@ api.interceptors.request.use(
   (config) => {
     // Token will be added by AuthContext when user is logged in
     // This ensures token is included in all requests
-    // Log Authorization header for debugging (first 20 chars only)
-    if (config.headers?.Authorization) {
-      const authHeader = config.headers.Authorization as string;
-      console.log('Request Authorization header:', authHeader.substring(0, 30) + '...');
-    } else {
-      console.log('Request has no Authorization header');
-    }
+    // Never log Authorization headers (tokens) in any environment.
     return config;
   },
   (error) => {
@@ -70,20 +68,15 @@ api.interceptors.response.use(
 // Add request interceptor to log all API requests
 api.interceptors.request.use(
   (config) => {
-    console.log('API Request:', config.method?.toUpperCase(), config.url, 'to', config.baseURL);
-    if (config.data && config.url?.includes('/forms') && config.method?.toUpperCase() === 'POST') {
-      console.log('Form creation payload:', JSON.stringify(config.data, null, 2));
-      if (config.data.fields) {
-        console.log(`Fields in payload: ${config.data.fields.length} fields`);
-        console.log('Fields details:', config.data.fields.map((f: any) => ({ type: f.field_type, label: f.label })));
-      } else {
-        console.log('WARNING: No fields property in form creation payload!');
-      }
+    if (IS_DEV) {
+      console.log('API Request:', config.method?.toUpperCase(), config.url, 'to', config.baseURL);
     }
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    if (IS_DEV) {
+      console.error('API Request Error:', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -91,11 +84,15 @@ api.interceptors.request.use(
 // Add response interceptor to log API responses
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.config.url);
+    if (IS_DEV) {
+      console.log('API Response:', response.status, response.config.url);
+    }
     return response;
   },
   (error) => {
-    console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
+    if (IS_DEV) {
+      console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
+    }
     return Promise.reject(error);
   }
 );

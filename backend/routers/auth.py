@@ -15,7 +15,7 @@ from account_lockout import (
     reset_failed_attempts,
     record_login_attempt
 )
-from token_utils import revoke_token, revoke_all_user_tokens, hash_token
+from token_utils import revoke_token, revoke_all_user_tokens, revoke_token_hash, hash_token
 from password_history_utils import check_password_history, add_password_to_history
 from rate_limiter import (
     login_rate_limit,
@@ -127,7 +127,7 @@ async def register(user_data: UserRegister, request: Request):
                     }).eq("id", existing["id"]).execute()
         except Exception as e:
             # Log error but don't fail registration - client record can be created later
-            print(f"Warning: Failed to create/update client record for user {user.id}: {str(e)}")
+            logger.warning("Failed to create/update client record during registration for user %s: %s", user.id, str(e))
         
         # Generate email verification token
         verification_token = secrets.token_urlsafe(32)
@@ -339,7 +339,7 @@ async def login(credentials: UserLogin, request: Request):
             role_response = supabase_storage.table("user_roles").select("*").eq("user_id", user.id).execute()
             role = role_response.data[0].get("role", "customer") if role_response.data and len(role_response.data) > 0 else "customer"
         except Exception as e:
-            print(f"Error fetching user role for user {user.id}: {str(e)}")
+            logger.warning("Error fetching user role for user %s: %s", user.id, str(e))
             role = "customer"
         
         return {
@@ -430,7 +430,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
                     }).execute()
         except Exception as e:
             # Log error but don't fail the /me endpoint
-            print(f"Warning: Failed to update client record for user {user_id}: {str(e)}")
+            logger.warning("Failed to update client record in /me for user %s: %s", user_id, str(e))
     
     return {
         "id": current_user.get("id"),
@@ -546,7 +546,7 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
                             "name": user_name
                         }
         except Exception as e:
-            print(f"Warning: Could not fetch users from auth API: {e}")
+            logger.warning("Could not fetch users from auth API: %s", e)
             # Fall back to individual lookups if bulk fetch fails
             all_auth_users = {}
         
@@ -581,7 +581,7 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
                             user_name = user_response.user.user_metadata.get('name')
                 except Exception as e:
                     # Log but continue - some users might not be accessible via admin API
-                    print(f"Warning: Could not fetch user {user_id} from auth API: {e}")
+                    logger.warning("Could not fetch user %s from auth API: %s", user_id, e)
                     # Skip this user - they won't appear in the assignment list
                     continue
             
@@ -630,7 +630,7 @@ async def get_users(current_admin: dict = Depends(get_current_admin)):
                             "type": "client"  # Indicates this is a client without a user account
                         })
         except Exception as e:
-            print(f"Error fetching clients: {e}")
+            logger.warning("Error fetching clients: %s", e)
             # Continue without clients if there's an error
         
         # Return all users - they should always be available for assignment
@@ -706,7 +706,7 @@ async def create_user_for_client(
                         if user.get("email", "").lower() == email.lower():
                             return user
             except Exception as e:
-                print(f"Error searching for user by email: {e}")
+                logger.warning("Error searching for user by email: %s", e)
             
             return None
         
@@ -729,7 +729,7 @@ async def create_user_for_client(
                         "updated_at": datetime.now().isoformat()
                     }).execute()
             except Exception as e:
-                print(f"Warning: Could not ensure user role exists: {e}")
+                logger.warning("Could not ensure user role exists: %s", e)
             
             # Link user to client
             supabase_storage.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
@@ -815,7 +815,7 @@ async def create_user_for_client(
                                 "updated_at": datetime.now().isoformat()
                             }).execute()
                     except Exception as e:
-                        print(f"Warning: Could not ensure user role exists: {e}")
+                        logger.warning("Could not ensure user role exists: %s", e)
                     
                     # Link user to client
                     supabase_storage.table("clients").update({"user_id": user_id}).eq("id", request.client_id).execute()
@@ -973,19 +973,14 @@ async def request_password_reset(request_data: PasswordResetRequest, request: Re
                 
                 if email_sent:
                     logger.info(f"Password reset email sent successfully to {user_email}")
-                    print(f"SUCCESS: Password reset email sent to {user_email}")
                 else:
                     # Log detailed error - email might be disabled in dev
                     logger.error(f"Failed to send password reset email to {user_email}")
-                    logger.error(f"Reset token generated: {reset_token[:20]}...")
-                    logger.error(f"Reset link would be: {os.getenv('FRONTEND_URL', 'http://localhost:5173')}/reset-password?token={reset_token}")
-                    print(f"ERROR: Failed to send password reset email to {user_email}")
-                    print(f"Check if AWS SES is configured correctly (IAM permissions, FROM_EMAIL, etc.)")
-                    print(f"Reset token (for manual testing): {reset_token}")
+                    logger.error("Password reset email failed to send (reset link redacted). Frontend base: %s", os.getenv('FRONTEND_URL', 'http://localhost:5173'))
+                    # Do not print or expose reset tokens; check server logs for delivery issues.
                 
             except Exception as e:
                 logger.error(f"Error in password reset flow: {str(e)}", exc_info=True)
-                print(f"Error storing reset token or sending email: {str(e)}")
                 # Continue anyway - we'll still try to send email
         
         # Always return success to prevent email enumeration attacks
@@ -997,7 +992,7 @@ async def request_password_reset(request_data: PasswordResetRequest, request: Re
         raise
     except Exception as e:
         # Always return success to prevent email enumeration
-        print(f"Error in password reset request: {str(e)}")
+        logger.error("Error in password reset request: %s", str(e))
         return {
             "message": "If an account with that email exists, a password reset link has been sent."
         }
@@ -1097,7 +1092,7 @@ async def confirm_password_reset(reset_data: PasswordResetConfirm, request: Requ
                 supabase_storage.table("password_reset_tokens").update({"used": True}).eq("id", token_record["id"]).execute()
             except Exception as e:
                 # Log but don't fail - token is already used
-                print(f"Warning: Failed to mark reset token as used: {str(e)}")
+                logger.warning("Failed to mark reset token as used: %s", str(e))
             
             # Add password to history
             try:
@@ -1421,14 +1416,26 @@ async def revoke_session(
         
         session = session_response.data[0]
         token_hash = session.get("token_hash")
+        expires_at_raw = session.get("expires_at")
         
         # Mark session as inactive
         supabase_storage.table("user_sessions").update({
             "is_active": False
         }).eq("id", session_id).execute()
-        
-        # Note: We can't revoke the actual token without the token string
-        # The token will expire naturally, but we've marked the session inactive
+
+        # Revoke token hash so API calls with that access token are blocked immediately
+        if token_hash and expires_at_raw:
+            try:
+                expires_at = (
+                    datetime.fromisoformat(expires_at_raw.replace("Z", "+00:00"))
+                    if isinstance(expires_at_raw, str)
+                    else expires_at_raw
+                )
+                if not isinstance(expires_at, datetime):
+                    expires_at = datetime.now() + timedelta(hours=1)
+            except Exception:
+                expires_at = datetime.now() + timedelta(hours=1)
+            revoke_token_hash(token_hash, user_id, expires_at, reason="session_revoked")
         
         return {"message": "Session revoked successfully"}
     except HTTPException:
@@ -1449,13 +1456,8 @@ async def logout_all_devices(current_user: dict = Depends(get_current_user)):
     try:
         user_id = current_user.get("id")
         
-        # Revoke all user tokens
+        # Revoke all user tokens and mark sessions inactive
         revoked_count = revoke_all_user_tokens(user_id, reason="logout_all")
-        
-        # Mark all sessions as inactive
-        supabase_storage.table("user_sessions").update({
-            "is_active": False
-        }).eq("user_id", user_id).eq("is_active", True).execute()
         
         return {
             "message": "Logged out from all devices successfully",

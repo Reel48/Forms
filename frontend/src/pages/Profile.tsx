@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clientsAPI } from '../api';
+import { clientsAPI, authAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 
 function Profile() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'sessions' | 'login_activity'>('profile');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [loginActivityLoading, setLoginActivityLoading] = useState(false);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loginActivities, setLoginActivities] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,7 +33,15 @@ function Profile() {
   });
 
   useEffect(() => {
-    loadProfile();
+    if (activeTab === 'profile' || activeTab === 'security') {
+      loadProfile();
+    }
+    if (activeTab === 'sessions') {
+      loadSessions();
+    }
+    if (activeTab === 'login_activity') {
+      loadLoginActivity();
+    }
   }, [activeTab]);
 
   const loadProfile = async () => {
@@ -59,6 +71,56 @@ function Profile() {
       console.error('Failed to load profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      const response = await authAPI.getSessions();
+      setSessions(response.data?.sessions || []);
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+      setSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const loadLoginActivity = async () => {
+    try {
+      setLoginActivityLoading(true);
+      const response = await authAPI.getLoginActivity(20);
+      setLoginActivities(response.data?.activities || []);
+    } catch (error) {
+      console.error('Failed to load login activity:', error);
+      setLoginActivities([]);
+    } finally {
+      setLoginActivityLoading(false);
+    }
+  };
+
+  const handleLogoutAllDevices = async () => {
+    try {
+      await authAPI.logoutAll();
+      alert('Logged out from all devices. Please sign in again.');
+      await signOut();
+      navigate('/login');
+    } catch (error: any) {
+      console.error('Logout all devices error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to log out from all devices.';
+      alert(errorMessage);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      await authAPI.revokeSession(sessionId);
+      await loadSessions();
+    } catch (error: any) {
+      console.error('Revoke session error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to revoke session.';
+      alert(errorMessage);
     }
   };
 
@@ -175,6 +237,36 @@ function Profile() {
             }}
           >
             Security
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('sessions')}
+            style={{
+              padding: '10px 20px',
+              border: 'none',
+              background: activeTab === 'sessions' ? '#007bff' : 'transparent',
+              color: activeTab === 'sessions' ? 'white' : '#666',
+              cursor: 'pointer',
+              borderRadius: '4px 4px 0 0',
+              fontWeight: activeTab === 'sessions' ? 'bold' : 'normal'
+            }}
+          >
+            Sessions
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('login_activity')}
+            style={{
+              padding: '10px 20px',
+              border: 'none',
+              background: activeTab === 'login_activity' ? '#007bff' : 'transparent',
+              color: activeTab === 'login_activity' ? 'white' : '#666',
+              cursor: 'pointer',
+              borderRadius: '4px 4px 0 0',
+              fontWeight: activeTab === 'login_activity' ? 'bold' : 'normal'
+            }}
+          >
+            Login Activity
           </button>
         </div>
 
@@ -352,6 +444,27 @@ function Profile() {
                 )}
               </div>
             </div>
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 style={{ marginBottom: '0.5rem' }}>Sessions</h3>
+              <p style={{ color: '#666', marginBottom: '1rem' }}>
+                If you suspect your account is compromised, you can log out from all devices.
+              </p>
+              <button
+                onClick={handleLogoutAllDevices}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  backgroundColor: '#0f172a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Log Out All Devices
+              </button>
+            </div>
             <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #e0e0e0' }}>
               <h3 style={{ marginBottom: '0.5rem' }}>Logout</h3>
               <p style={{ color: '#666', marginBottom: '1rem' }}>
@@ -380,6 +493,142 @@ function Profile() {
                 Logout
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Sessions Tab */}
+        {activeTab === 'sessions' && (
+          <div>
+            <h2 style={{ marginBottom: '1rem' }}>Active Sessions</h2>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              These are the devices and browsers currently logged into your account.
+            </p>
+            {sessionsLoading ? (
+              <div>Loading sessions...</div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '1rem' }}>
+                  <button
+                    onClick={handleLogoutAllDevices}
+                    style={{
+                      padding: '0.6rem 1rem',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Log Out All Devices
+                  </button>
+                </div>
+                {sessions.length === 0 ? (
+                  <div style={{ padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                    No active sessions found.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {sessions.map((s: any) => {
+                      let deviceInfo: any = s.device_info;
+                      try {
+                        if (typeof deviceInfo === 'string') deviceInfo = JSON.parse(deviceInfo);
+                      } catch {
+                        // ignore
+                      }
+                      const deviceLabel = deviceInfo?.browser ? `${deviceInfo.browser} (${deviceInfo.type || 'device'})` : (s.user_agent ? 'Unknown device' : 'Session');
+                      const lastUsed = s.last_used_at ? new Date(s.last_used_at).toLocaleString() : 'Unknown';
+                      const created = s.created_at ? new Date(s.created_at).toLocaleString() : 'Unknown';
+                      return (
+                        <div
+                          key={s.id}
+                          style={{
+                            padding: '1rem',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700 }}>{deviceLabel}</div>
+                            <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                              IP: {s.ip_address || 'Unknown'} • Created: {created} • Last used: {lastUsed}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRevokeSession(s.id)}
+                            style={{
+                              padding: '0.6rem 1rem',
+                              fontSize: '0.95rem',
+                              fontWeight: '600',
+                              backgroundColor: '#dc2626',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Login Activity Tab */}
+        {activeTab === 'login_activity' && (
+          <div>
+            <h2 style={{ marginBottom: '1rem' }}>Login Activity</h2>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              Recent sign-in attempts for your account.
+            </p>
+            {loginActivityLoading ? (
+              <div>Loading activity...</div>
+            ) : (
+              <>
+                {loginActivities.length === 0 ? (
+                  <div style={{ padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                    No recent login activity found.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {loginActivities.map((a: any) => {
+                      const attemptedAt = a.attempted_at ? new Date(a.attempted_at).toLocaleString() : 'Unknown';
+                      const bg = a.success ? '#ecfdf5' : '#fef2f2';
+                      const border = a.success ? '#bbf7d0' : '#fecaca';
+                      const title = a.success ? 'Successful login' : 'Failed login';
+                      const reason = a.failure_reason ? `Reason: ${a.failure_reason}` : '';
+                      return (
+                        <div
+                          key={a.id}
+                          style={{
+                            padding: '1rem',
+                            backgroundColor: bg,
+                            border: `1px solid ${border}`,
+                            borderRadius: '8px',
+                          }}
+                        >
+                          <div style={{ fontWeight: 700 }}>{title}</div>
+                          <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                            {attemptedAt} • IP: {a.ip_address || 'Unknown'} {reason ? `• ${reason}` : ''}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
