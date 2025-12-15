@@ -708,7 +708,14 @@ async def send_message(
             try:
                 # Respect chat_mode: if customer requested human support, do not auto-respond with AI.
                 try:
-                    mode_resp = supabase_storage.table("chat_conversations").select("chat_mode").eq("id", conversation_id).single().execute()
+                    mode_resp = (
+                        supabase_storage
+                        .table("chat_conversations")
+                        .select("chat_mode")
+                        .eq("id", conversation_id)
+                        .single()
+                        .execute()
+                    )
                     chat_mode = (mode_resp.data or {}).get("chat_mode") or "ai"
                 except Exception:
                     chat_mode = "ai"
@@ -717,9 +724,17 @@ async def send_message(
                     logger.info(f"Chat mode is 'human' for conversation {conversation_id}; skipping AI auto-response")
                 else:
                     # Check if admin has responded recently (within last 5 messages)
-                    recent_messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(5).execute()
+                    recent_messages_response = (
+                        supabase_storage
+                        .table("chat_messages")
+                        .select("*")
+                        .eq("conversation_id", conversation_id)
+                        .order("created_at", desc=True)
+                        .limit(5)
+                        .execute()
+                    )
                     recent_messages = recent_messages_response.data if recent_messages_response.data else []
-                    
+
                     # Check if any recent message is from an admin (verify by checking user_roles)
                     admin_responded_recently = False
                     for msg in recent_messages:
@@ -727,22 +742,30 @@ async def send_message(
                         # Skip if sender is the customer or AI
                         if sender_id == user["id"] or sender_id == OCHO_USER_ID:
                             continue
-                        
+
                         # Verify sender is actually an admin by checking user_roles
                         try:
-                            role_response = supabase_storage.table("user_roles").select("role").eq("user_id", sender_id).single().execute()
+                            role_response = (
+                                supabase_storage
+                                .table("user_roles")
+                                .select("role")
+                                .eq("user_id", sender_id)
+                                .single()
+                                .execute()
+                            )
                             if role_response.data and role_response.data.get("role") == "admin":
                                 admin_responded_recently = True
-                                logger.info(f"Admin {sender_id} has responded recently, skipping AI auto-response for conversation {conversation_id}")
+                                logger.info(
+                                    f"Admin {sender_id} has responded recently, skipping AI auto-response for conversation {conversation_id}"
+                                )
                                 break
                         except Exception as role_check_error:
                             # If we can't verify, log but don't assume it's an admin
                             logger.debug(f"Could not verify role for sender {sender_id}: {str(role_check_error)}")
-                            # Don't treat unknown senders as admins - let AI respond
                             continue
-                    
+
+                    # Backpressure: if an AI placeholder is already the latest message, don't enqueue another AI job.
                     if not admin_responded_recently:
-                        # Backpressure: if an AI placeholder is already the latest message, don't enqueue another AI job.
                         try:
                             last_msg_resp = (
                                 supabase_storage
@@ -757,7 +780,7 @@ async def send_message(
                             last_msg = last_msg_resp.data or {}
                             if last_msg.get("sender_id") == OCHO_USER_ID and last_msg.get("message_type") == "system":
                                 logger.info(f"AI job already pending for conversation {conversation_id}; skipping enqueue")
-                                admin_responded_recently = True  # prevent enqueue path below
+                                admin_responded_recently = True
                         except Exception:
                             pass
 
@@ -773,7 +796,7 @@ async def send_message(
                                 "sender_id": OCHO_USER_ID,
                                 "message": "Reel48 AI is thinking…",
                                 "message_type": "system",
-                                "created_at": placeholder_created_at
+                                "created_at": placeholder_created_at,
                             }
                             supabase_storage.table("chat_messages").insert(placeholder_message).execute()
                         except Exception as e:
@@ -785,17 +808,19 @@ async def send_message(
                         # This ensures the task completes even after the request returns.
                         logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
                         try:
-                            # Use BackgroundTasks to ensure task completes
                             background_tasks.add_task(
                                 _generate_ai_response_async,
                                 conversation_id,
                                 user["id"],
                                 placeholder_id,
-                                message_data["id"]
+                                message_data["id"],
                             )
-                            logger.info(f"✅ AI response task added to background tasks")
+                            logger.info("✅ AI response task added to background tasks")
                         except Exception as task_error:
-                            logger.error(f"❌ Failed to add AI response to background tasks: {str(task_error)}", exc_info=True)
+                            logger.error(
+                                f"❌ Failed to add AI response to background tasks: {str(task_error)}",
+                                exc_info=True,
+                            )
             except Exception as e:
                 logger.error(f"Failed to trigger AI response: {str(e)}", exc_info=True)
                 # Don't fail the message send if AI fails
@@ -1370,7 +1395,7 @@ async def generate_ai_response(
                         "result": result.get("result"),
                         "error": result.get("error")
                     })
-
+                    
                     # If we just fetched availability, immediately follow up with a 2nd message containing times.
                     # This prevents the chat from stalling on "Let me check..." without showing options.
                     if func_name == "get_availability" and result.get("success"):
@@ -2168,7 +2193,7 @@ async def _generate_ai_response_async(
                 "sender_id": OCHO_USER_ID,
                 "message": ai_response,
                 "message_type": "text",
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             }
             if isinstance(file_message_override, dict) and file_message_override.get("message_type") == "file":
                 ai_message_data.update({
@@ -2178,41 +2203,41 @@ async def _generate_ai_response_async(
                     "file_name": file_message_override.get("file_name"),
                     "file_size": file_message_override.get("file_size"),
                 })
-            
-            print(f"🤖 [AI TASK] Inserting AI message into database...")
-            logger.info(f"🤖 [AI TASK] Inserting AI message into database...")
+
+            print("🤖 [AI TASK] Inserting AI message into database...")
+            logger.info("🤖 [AI TASK] Inserting AI message into database...")
             message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
             if not message_response.data:
-                print(f"❌ [AI TASK] Failed to insert AI message - no data returned")
-                logger.error(f"❌ [AI TASK] Failed to insert AI message - no data returned")
+                print("❌ [AI TASK] Failed to insert AI message - no data returned")
+                logger.error("❌ [AI TASK] Failed to insert AI message - no data returned")
                 return
 
-        # If we attached a PDF, follow up with a short action card with deep links.
-        if isinstance(file_message_override, dict) and file_message_override.get("message_type") == "file":
-            try:
-                frontend_url = (os.getenv("FRONTEND_URL") or "").rstrip("/")
-                if frontend_url and (created_folder_id or created_quote_id):
-                    lines = ["✅ **Quote created**"]
-                    if created_folder_id:
-                        lines.append(f"- [View folder]({frontend_url}/folders/{created_folder_id})")
-                    if created_quote_id:
-                        lines.append(f"- [View quote]({frontend_url}/quotes/{created_quote_id})")
-                    _insert_ai_message(conversation_id, "\n".join(lines))
-            except Exception:
-                pass
+            # If we attached a PDF, follow up with a short action card with deep links.
+            if isinstance(file_message_override, dict) and file_message_override.get("message_type") == "file":
+                try:
+                    frontend_url = (os.getenv("FRONTEND_URL") or "").rstrip("/")
+                    if frontend_url and (created_folder_id or created_quote_id):
+                        lines = ["✅ **Quote created**"]
+                        if created_folder_id:
+                            lines.append(f"- [View folder]({frontend_url}/folders/{created_folder_id})")
+                        if created_quote_id:
+                            lines.append(f"- [View quote]({frontend_url}/quotes/{created_quote_id})")
+                        _insert_ai_message(conversation_id, "\n".join(lines))
+                except Exception:
+                    pass
 
-        # Update conversation timestamp
-        try:
-            supabase_storage.table("chat_conversations").update({
-                "last_message_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
-            }).eq("id", conversation_id).execute()
-            logger.info(f"✅ [AI TASK] Conversation timestamp updated")
-        except Exception as e:
-            logger.warning(f"⚠️ [AI TASK] Failed to update conversation timestamp: {str(e)}")
-        
-        print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
-        logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+            # Update conversation timestamp
+            try:
+                supabase_storage.table("chat_conversations").update({
+                    "last_message_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                }).eq("id", conversation_id).execute()
+                logger.info("✅ [AI TASK] Conversation timestamp updated")
+            except Exception as e:
+                logger.warning(f"⚠️ [AI TASK] Failed to update conversation timestamp: {str(e)}")
+
+            print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+            logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
 
         # Update rolling conversation summary (optional; can be disabled)
         try:
