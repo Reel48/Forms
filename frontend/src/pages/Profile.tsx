@@ -72,7 +72,8 @@ function Profile() {
           address_country: client.address_country || 'US',
         });
         setProfilePictureUrl(client.profile_picture_url || null);
-        setPhoneE164(client.phone_e164 || '');
+        // Prefer stored E.164; otherwise prefill with existing phone field for convenience.
+        setPhoneE164(client.phone_e164 || client.phone || '');
         setSmsVerified(Boolean(client.sms_verified));
         setSmsOptIn(Boolean(client.sms_opt_in));
         setPreferredChannel(client.preferred_notification_channel === 'sms' ? 'sms' : 'email');
@@ -540,6 +541,9 @@ function Profile() {
                   />
                   <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
                     <strong>Status:</strong> Verified: {smsVerified ? 'Yes' : 'No'} • SMS enabled: {smsOptIn ? 'Yes' : 'No'}
+                    <div style={{ marginTop: 4 }}>
+                      Format examples: <code>+15551234567</code> or <code>5551234567</code>
+                    </div>
                   </div>
                 </div>
 

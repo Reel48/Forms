@@ -19,16 +19,38 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/clients", tags=["clients"])
 
 
-def _validate_phone_e164(phone: str) -> str:
-    phone = (phone or "").strip()
-    if not phone.startswith("+"):
-        raise HTTPException(status_code=400, detail="Phone number must be in E.164 format (e.g. +15551234567)")
-    digits = phone[1:]
-    if not digits.isdigit() or len(digits) < 8 or len(digits) > 15:
-        raise HTTPException(status_code=400, detail="Invalid phone number format")
-    if digits[0] == "0":
-        raise HTTPException(status_code=400, detail="Invalid phone number format")
-    return phone
+def _normalize_phone_e164(phone: str) -> str:
+    """
+    Normalize common phone inputs into E.164.
+
+    Accepts:
+    - +15551234567 (already E.164)
+    - 5551234567 (assumes US -> +1)
+    - 1 (555) 123-4567 (assumes US -> +1)
+    """
+    raw = (phone or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+
+    if raw.startswith("+"):
+        digits = raw[1:]
+        if not digits.isdigit() or len(digits) < 8 or len(digits) > 15 or digits[0] == "0":
+            raise HTTPException(status_code=400, detail="Invalid phone number format")
+        return f"+{digits}"
+
+    # Strip all non-digits
+    digits_only = "".join(ch for ch in raw if ch.isdigit())
+    if len(digits_only) == 10:
+        # Assume US 10-digit -> +1XXXXXXXXXX
+        return f"+1{digits_only}"
+    if len(digits_only) == 11 and digits_only.startswith("1"):
+        # Assume US leading 1 -> +1XXXXXXXXXX
+        return f"+{digits_only}"
+
+    raise HTTPException(
+        status_code=400,
+        detail="Phone number must be E.164 (e.g. +15551234567) or a 10-digit US number (e.g. 5551234567)",
+    )
 
 
 class SmsStartRequest(BaseModel):
@@ -422,7 +444,7 @@ async def start_sms_opt_in(payload: SmsStartRequest, current_user: dict = Depend
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
 
-    phone_e164 = _validate_phone_e164(payload.phone_e164)
+    phone_e164 = _normalize_phone_e164(payload.phone_e164)
 
     # Find client record for this user
     resp = supabase_storage.table("clients").select("id").eq("user_id", user_id).execute()
@@ -454,7 +476,7 @@ async def confirm_sms_opt_in(payload: SmsConfirmRequest, current_user: dict = De
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
 
-    phone_e164 = _validate_phone_e164(payload.phone_e164)
+    phone_e164 = _normalize_phone_e164(payload.phone_e164)
     code = (payload.code or "").strip()
     if len(code) < 4 or len(code) > 10:
         raise HTTPException(status_code=400, detail="Invalid verification code")
