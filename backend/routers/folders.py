@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 import uuid
 import logging
+from pydantic import BaseModel
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -130,6 +131,39 @@ def _get_folder_client_email(folder_id: str) -> Optional[str]:
         return email.lower().strip() if isinstance(email, str) and email.strip() else None
     except Exception:
         return None
+
+
+def _assert_folder_access(folder_id: str, user: Dict[str, Any]) -> Dict[str, Any]:
+    """Fetch folder and assert current user can access it."""
+    is_admin = user.get("role") == "admin"
+    folder_resp = supabase_storage.table("folders").select("id, created_by").eq("id", folder_id).single().execute()
+    if not folder_resp.data:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    folder = folder_resp.data
+
+    if not is_admin:
+        try:
+            assignment = (
+                supabase_storage
+                .table("folder_assignments")
+                .select("folder_id")
+                .eq("folder_id", folder_id)
+                .eq("user_id", user["id"])
+                .execute()
+            )
+            if not assignment.data and folder.get("created_by") != user["id"]:
+                raise HTTPException(status_code=403, detail="Access denied")
+        except HTTPException:
+            raise
+        except Exception:
+            if folder.get("created_by") != user["id"]:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+    return folder
+
+
+class FolderNoteCreate(BaseModel):
+    body: str
 
 @router.get("", response_model=List[Folder])
 async def list_folders(
@@ -1401,3 +1435,124 @@ async def get_folder_events(
     except Exception as e:
         logger.error(f"Error getting folder events: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get folder events: {str(e)}")
+
+
+@router.post("/{folder_id}/notes")
+async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_user = Depends(get_current_admin)):
+    """Create an admin-authored note/update for a folder."""
+    try:
+        # Ensure folder exists
+        folder_resp = supabase_storage.table("folders").select("id").eq("id", folder_id).single().execute()
+        if not folder_resp.data:
+            raise HTTPException(status_code=404, detail="Folder not found")
+
+        body = (payload.body or "").strip()
+        if not body:
+            raise HTTPException(status_code=400, detail="Note body is required")
+
+        note_id = str(uuid.uuid4())
+        now = _safe_now_iso()
+        insert = {
+            "id": note_id,
+            "folder_id": folder_id,
+            "body": body,
+            "created_by": admin_user.get("id"),
+            "created_at": now,
+        }
+        supabase_storage.table("folder_notes").insert(insert).execute()
+
+        # Optional: emit folder event for activity feed
+        try:
+            _emit_folder_event(
+                folder_id=folder_id,
+                event_type="note_added",
+                title="Note added",
+                details={"note_id": note_id},
+                created_by=admin_user.get("id"),
+            )
+        except Exception:
+            pass
+
+        return {"id": note_id, "folder_id": folder_id, "body": body, "created_by": admin_user.get("id"), "created_at": now}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating folder note: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create note: {str(e)}")
+
+
+@router.get("/{folder_id}/notes")
+async def list_folder_notes(
+    folder_id: str,
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    user = Depends(get_current_user),
+):
+    """List folder notes (newest-first). Includes is_read for the current user."""
+    try:
+        _assert_folder_access(folder_id, user)
+
+        notes = (
+            supabase_storage
+            .table("folder_notes")
+            .select("*")
+            .eq("folder_id", folder_id)
+            .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        ).data or []
+
+        note_ids = [n.get("id") for n in notes if n.get("id")]
+        reads_by_note: set[str] = set()
+        if note_ids:
+            try:
+                reads = (
+                    supabase_storage
+                    .table("folder_note_reads")
+                    .select("note_id")
+                    .eq("user_id", user["id"])
+                    .in_("note_id", note_ids)
+                    .execute()
+                ).data or []
+                reads_by_note = {r.get("note_id") for r in reads if r.get("note_id")}
+            except Exception:
+                reads_by_note = set()
+
+        for n in notes:
+            nid = n.get("id")
+            n["is_read"] = bool(nid and nid in reads_by_note)
+
+        return {"notes": notes}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing folder notes: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list notes: {str(e)}")
+
+
+@router.post("/{folder_id}/notes/{note_id}/read")
+async def mark_folder_note_read(folder_id: str, note_id: str, user = Depends(get_current_user)):
+    """Mark a note as read for the current user (idempotent)."""
+    try:
+        _assert_folder_access(folder_id, user)
+
+        note = supabase_storage.table("folder_notes").select("id, folder_id").eq("id", note_id).single().execute().data
+        if not note or note.get("folder_id") != folder_id:
+            raise HTTPException(status_code=404, detail="Note not found")
+
+        try:
+            supabase_storage.table("folder_note_reads").insert({
+                "note_id": note_id,
+                "user_id": user["id"],
+                "read_at": _safe_now_iso(),
+            }).execute()
+        except Exception:
+            # Duplicate (already read) is fine
+            pass
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error marking note read: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to mark read: {str(e)}")

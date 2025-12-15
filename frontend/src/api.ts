@@ -757,6 +757,15 @@ export interface FolderEvent {
   created_at: string;
 }
 
+export interface FolderNote {
+  id: string;
+  folder_id: string;
+  body: string;
+  created_by: string;
+  created_at: string;
+  is_read?: boolean;
+}
+
 // Folders API
 export const foldersAPI = {
   getAll: (filters?: { client_id?: string; quote_id?: string; status?: string }) => {
@@ -787,6 +796,15 @@ export const foldersAPI = {
     const qs = query.toString();
     return api.get<{ events: FolderEvent[] }>(`/api/folders/${id}/events${qs ? `?${qs}` : ''}`);
   },
+  getNotes: (id: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    if (params?.offset !== undefined) query.append('offset', String(params.offset));
+    const qs = query.toString();
+    return api.get<{ notes: FolderNote[] }>(`/api/folders/${id}/notes${qs ? `?${qs}` : ''}`);
+  },
+  createNote: (id: string, body: string) => api.post<FolderNote>(`/api/folders/${id}/notes`, { body }),
+  markNoteRead: (id: string, noteId: string) => api.post<{ success: boolean }>(`/api/folders/${id}/notes/${noteId}/read`, {}),
 };
 
 // Shipments API

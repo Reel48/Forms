@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaCheck } from 'react-icons/fa';
-import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent } from '../api';
+import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent, type FolderNote } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
 import ProgressBar from '../components/ProgressBar';
@@ -32,6 +32,13 @@ const FolderView: React.FC = () => {
   const [showAddShipment, setShowAddShipment] = useState(false);
   const [events, setEvents] = useState<FolderEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [latestNote, setLatestNote] = useState<FolderNote | null>(null);
+  const [latestNoteExpanded, setLatestNoteExpanded] = useState(false);
+  const [notesHistory, setNotesHistory] = useState<FolderNote[]>([]);
+  const [notesHistoryOpen, setNotesHistoryOpen] = useState(false);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [creatingNote, setCreatingNote] = useState(false);
+  const [newNoteBody, setNewNoteBody] = useState('');
 
   const isNewFolder = id === 'new';
 
@@ -61,10 +68,69 @@ const FolderView: React.FC = () => {
       setContent(response.data);
       // Load activity feed in parallel (best-effort)
       loadFolderEvents();
+      loadLatestNote();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load folder content');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLatestNote = async () => {
+    if (!id || id === 'new') return;
+    try {
+      setNotesLoading(true);
+      const res = await foldersAPI.getNotes(id, { limit: 1, offset: 0 });
+      const note = (res.data.notes || [])[0] || null;
+      setLatestNote(note);
+      // If note changes, collapse it by default
+      setLatestNoteExpanded(false);
+    } catch (e) {
+      setLatestNote(null);
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  const openNotesHistory = async () => {
+    if (!id || id === 'new') return;
+    setNotesHistoryOpen(true);
+    try {
+      const res = await foldersAPI.getNotes(id, { limit: 50, offset: 0 });
+      setNotesHistory(res.data.notes || []);
+    } catch (e) {
+      setNotesHistory([]);
+    }
+  };
+
+  const markLatestNoteRead = async () => {
+    if (!id || id === 'new' || !latestNote?.id) return;
+    if (latestNote.is_read) return;
+    try {
+      await foldersAPI.markNoteRead(id, latestNote.id);
+      setLatestNote({ ...latestNote, is_read: true });
+      setNotesHistory((prev) => prev.map((n) => (n.id === latestNote.id ? { ...n, is_read: true } : n)));
+    } catch (e) {
+      // best-effort
+    }
+  };
+
+  const createNote = async () => {
+    if (!id || id === 'new') return;
+    const body = newNoteBody.trim();
+    if (!body) return;
+    try {
+      setCreatingNote(true);
+      await foldersAPI.createNote(id, body);
+      setNewNoteBody('');
+      await loadLatestNote();
+      if (notesHistoryOpen) {
+        await openNotesHistory();
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to create note');
+    } finally {
+      setCreatingNote(false);
     }
   };
 
@@ -334,6 +400,7 @@ const FolderView: React.FC = () => {
   const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
   const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';
   const tasks = summary?.tasks || [];
+  const hasUnreadNote = role !== 'admin' && !!latestNote && latestNote.is_read === false;
 
   return (
     <div className="folder-view-container">
@@ -381,6 +448,56 @@ const FolderView: React.FC = () => {
             >
               View tracking
             </button>
+          </div>
+        )}
+
+        {/* Notes (pinned at top when latest is unread) */}
+        {latestNote && hasUnreadNote && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              border: '1px solid var(--color-border, #e5e7eb)',
+              borderRadius: '10px',
+              background: 'white',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+              <div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 800 }}>Update</div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', background: '#ecfdf5', color: '#166534' }}>
+                    New
+                  </span>
+                </div>
+                <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                  {formatDateTime(latestNote.created_at)}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button className="btn-secondary btn-sm" onClick={() => openNotesHistory()}>
+                  View history
+                </button>
+                <button
+                  className="btn-primary btn-sm"
+                  onClick={async () => {
+                    const next = !latestNoteExpanded;
+                    setLatestNoteExpanded(next);
+                    if (next) {
+                      await markLatestNoteRead();
+                    }
+                  }}
+                  disabled={notesLoading}
+                >
+                  {latestNoteExpanded ? 'Hide' : 'View update'}
+                </button>
+              </div>
+            </div>
+            {latestNoteExpanded && (
+              <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                {latestNote.body}
+              </div>
+            )}
           </div>
         )}
 
@@ -643,6 +760,47 @@ const FolderView: React.FC = () => {
                 </div>
               )}
             </section>
+
+            {/* Notes (moves to bottom after latest is read) */}
+            {latestNote && !hasUnreadNote && (
+              <section className="content-section">
+                <div className="section-header">
+                  <h2>Notes</h2>
+                  <button className="btn-secondary btn-sm" onClick={() => openNotesHistory()}>
+                    View history
+                  </button>
+                </div>
+
+                <div className="card" style={{ padding: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>Latest update</div>
+                      <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                        {formatDateTime(latestNote.created_at)}
+                      </div>
+                    </div>
+                    <button
+                      className="btn-primary btn-sm"
+                      onClick={async () => {
+                        const next = !latestNoteExpanded;
+                        setLatestNoteExpanded(next);
+                        if (next) {
+                          await markLatestNoteRead();
+                        }
+                      }}
+                      disabled={notesLoading}
+                    >
+                      {latestNoteExpanded ? 'Hide' : 'View update'}
+                    </button>
+                  </div>
+                  {latestNoteExpanded && (
+                    <div style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      {latestNote.body}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </>
         ) : (
           <>
@@ -680,6 +838,58 @@ const FolderView: React.FC = () => {
               </div>
             </div>
           )}
+        </section>
+
+        {/* Notes (admin) */}
+        <section className="content-section">
+          <div className="section-header">
+            <h2>Notes</h2>
+            <button className="btn-secondary btn-sm" onClick={() => openNotesHistory()}>
+              View history
+            </button>
+          </div>
+
+          <div className="card" style={{ padding: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div>
+                <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                  Leave an update for the customer
+                </div>
+                <textarea
+                  value={newNoteBody}
+                  onChange={(e) => setNewNoteBody(e.target.value)}
+                  rows={4}
+                  placeholder="Write an update..."
+                  style={{
+                    width: '100%',
+                    border: '1px solid var(--color-border, #e5e7eb)',
+                    borderRadius: '10px',
+                    padding: '0.75rem',
+                    resize: 'vertical',
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button className="btn-primary btn-sm" onClick={() => createNote()} disabled={creatingNote || newNoteBody.trim().length === 0}>
+                    {creatingNote ? 'Posting...' : 'Post note'}
+                  </button>
+                </div>
+              </div>
+
+              {latestNote ? (
+                <div style={{ borderTop: '1px solid var(--color-border, #e5e7eb)', paddingTop: '0.75rem' }}>
+                  <div style={{ fontWeight: 700 }}>Latest note</div>
+                  <div className="text-muted" style={{ fontSize: '0.85rem' }}>{formatDateTime(latestNote.created_at)}</div>
+                  <div style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                    {latestNote.body}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                  No notes yet.
+                </div>
+              )}
+            </div>
+          </div>
         </section>
 
         {/* Quote Section */}
@@ -1157,6 +1367,80 @@ const FolderView: React.FC = () => {
           </>
         )}
       </div>
+
+      {notesHistoryOpen && (
+        <div
+          onClick={() => setNotesHistoryOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(720px, 100%)',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              background: 'white',
+              borderRadius: '12px',
+              border: '1px solid var(--color-border, #e5e7eb)',
+              padding: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>Note history</div>
+                <div className="text-muted" style={{ fontSize: '0.85rem' }}>Latest first</div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn-secondary btn-sm" onClick={() => openNotesHistory()}>
+                  Refresh
+                </button>
+                <button className="btn-secondary btn-sm" onClick={() => setNotesHistoryOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {notesHistory.length === 0 ? (
+                <div className="text-muted">No notes yet.</div>
+              ) : (
+                notesHistory.map((n) => (
+                  <div
+                    key={n.id}
+                    style={{
+                      border: '1px solid var(--color-border, #e5e7eb)',
+                      borderRadius: '10px',
+                      padding: '0.75rem',
+                      background: role !== 'admin' && n.is_read === false ? '#ecfdf5' : 'white',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <div className="text-muted" style={{ fontSize: '0.85rem' }}>{formatDateTime(n.created_at)}</div>
+                      {role !== 'admin' && n.is_read === false && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', background: '#ecfdf5', color: '#166534' }}>
+                          New
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      {n.body}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddShipment && (
         <AddShipmentModal
