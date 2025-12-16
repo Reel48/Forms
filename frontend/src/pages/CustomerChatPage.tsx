@@ -41,6 +41,15 @@ const CustomerChatPage: React.FC = () => {
   const micStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const voiceVizRafRef = useRef<number | null>(null);
+  const voiceVizLevelRef = useRef<number>(0);
+  const voiceVizSpeakingRef = useRef<boolean>(false);
+  const voiceVizUiLevelRef = useRef<number>(0);
+  const voiceVizUiSpeakingRef = useRef<boolean>(false);
+  const voiceCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [voiceVizLevel, setVoiceVizLevel] = useState(0);
+  const [voiceVizSpeaking, setVoiceVizSpeaking] = useState(false);
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -205,6 +214,124 @@ const CustomerChatPage: React.FC = () => {
     nextPlayTimeRef.current = startAt + buffer.duration;
   };
 
+  const stopVoiceVisualizer = () => {
+    if (voiceVizRafRef.current != null) {
+      cancelAnimationFrame(voiceVizRafRef.current);
+      voiceVizRafRef.current = null;
+    }
+    analyserRef.current = null;
+    voiceVizLevelRef.current = 0;
+    voiceVizSpeakingRef.current = false;
+    voiceVizUiLevelRef.current = 0;
+    voiceVizUiSpeakingRef.current = false;
+    setVoiceVizLevel(0);
+    setVoiceVizSpeaking(false);
+  };
+
+  const startVoiceVisualizer = () => {
+    const draw = () => {
+      const analyser = analyserRef.current;
+      const canvas = voiceCanvasRef.current;
+      if (!analyser || !canvas) {
+        voiceVizRafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      const parent = canvas.parentElement;
+      const cssWidth = parent ? parent.clientWidth : canvas.clientWidth;
+      const cssHeight = parent ? parent.clientHeight : canvas.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+      const nextW = Math.max(1, Math.floor(cssWidth * dpr));
+      const nextH = Math.max(1, Math.floor(cssHeight * dpr));
+      if (canvas.width !== nextW || canvas.height !== nextH) {
+        canvas.width = nextW;
+        canvas.height = nextH;
+      }
+
+      const ctx2d = canvas.getContext('2d');
+      if (!ctx2d) {
+        voiceVizRafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      // Measure RMS (voice activity) from time-domain signal
+      const timeData = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(timeData);
+      let sumSq = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const v = (timeData[i] - 128) / 128;
+        sumSq += v * v;
+      }
+      const rms = Math.sqrt(sumSq / timeData.length);
+      const speaking = rms > 0.03;
+      const targetLevel = Math.max(0, Math.min(1, (rms - 0.02) / 0.18));
+      const smoothed = voiceVizLevelRef.current * 0.85 + targetLevel * 0.15;
+      voiceVizLevelRef.current = smoothed;
+      voiceVizSpeakingRef.current = speaking;
+
+      // Update React state at a lower rate to avoid excess renders
+      if (Math.abs(smoothed - voiceVizUiLevelRef.current) > 0.02) {
+        voiceVizUiLevelRef.current = smoothed;
+        setVoiceVizLevel(smoothed);
+      }
+      if (speaking !== voiceVizUiSpeakingRef.current) {
+        voiceVizUiSpeakingRef.current = speaking;
+        setVoiceVizSpeaking(speaking);
+      }
+
+      // Draw "audio waves": white with subtle gradient ripple
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      const w = canvas.width;
+      const h = canvas.height;
+      const mid = h / 2;
+      const maxBar = h * 0.35 * smoothed;
+
+      // Baseline (flat when silent)
+      ctx2d.beginPath();
+      ctx2d.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx2d.lineWidth = Math.max(1, 1.5 * dpr);
+      ctx2d.moveTo(0, mid);
+      ctx2d.lineTo(w, mid);
+      ctx2d.stroke();
+
+      if (maxBar > 0.5) {
+        const freq = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freq);
+
+        const bars = 56;
+        const gap = Math.max(2 * dpr, 2);
+        const barW = Math.max(3 * dpr, (w - (bars - 1) * gap) / bars);
+        const grad = ctx2d.createLinearGradient(0, 0, w, 0);
+        grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+        grad.addColorStop(0.5, 'rgba(168,199,250,0.95)');
+        grad.addColorStop(1, 'rgba(255,255,255,0.95)');
+
+        ctx2d.lineCap = 'round';
+        ctx2d.strokeStyle = grad;
+        ctx2d.lineWidth = Math.max(2 * dpr, 2);
+
+        let x = (w - (bars * barW + (bars - 1) * gap)) / 2;
+        for (let i = 0; i < bars; i++) {
+          const idx = Math.floor((i / bars) * freq.length);
+          const v = freq[idx] / 255;
+          const barH = Math.max(0, v * maxBar);
+          const y1 = mid - barH;
+          const y2 = mid + barH;
+          ctx2d.beginPath();
+          ctx2d.moveTo(x + barW / 2, y1);
+          ctx2d.lineTo(x + barW / 2, y2);
+          ctx2d.stroke();
+          x += barW + gap;
+        }
+      }
+
+      voiceVizRafRef.current = requestAnimationFrame(draw);
+    };
+
+    if (voiceVizRafRef.current != null) return;
+    voiceVizRafRef.current = requestAnimationFrame(draw);
+  };
+
   const stopVoice = async () => {
     try {
       setVoiceActive(false);
@@ -216,6 +343,7 @@ const CustomerChatPage: React.FC = () => {
     } catch {
       // ignore
     } finally {
+      stopVoiceVisualizer();
       voiceWsRef.current = null;
       try {
         processorRef.current?.disconnect();
@@ -260,6 +388,12 @@ const CustomerChatPage: React.FC = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
       const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.85;
+      analyserRef.current = analyser;
+      source.connect(analyser);
+      startVoiceVisualizer();
       const processor = ctx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
 
@@ -642,8 +776,10 @@ const CustomerChatPage: React.FC = () => {
     );
   }
 
+  const hasTextToSend = Boolean(newMessage.trim());
+
   return (
-    <div className="customer-chat-page">
+    <div className={`customer-chat-page ${voiceActive ? 'voice-mode' : ''}`}>
       {/* Main Chat Area */}
       <div className="chat-main-area">
         <div className="customer-chat-header">
@@ -829,27 +965,28 @@ const CustomerChatPage: React.FC = () => {
 
             <button
               type="button"
-              className={`send-btn ${voiceActive ? 'active' : ''}`}
+              className={`send-btn ${hasTextToSend || voiceActive ? 'active' : ''}`}
               onClick={() => {
+                if (hasTextToSend) {
+                  void sendMessage();
+                  return;
+                }
                 if (voiceActive) {
                   void stopVoice();
                 } else {
                   void startVoice();
                 }
               }}
-              disabled={sending || uploading}
-              title={voiceActive ? 'Stop voice' : 'Talk to AI'}
-              style={{ marginRight: '8px' }}
+              disabled={sending || uploading || (!hasTextToSend && !conversation?.id)}
+              title={
+                hasTextToSend
+                  ? 'Send message'
+                  : voiceActive
+                  ? 'Stop voice'
+                  : 'Talk to AI'
+              }
             >
-              {voiceActive ? <FaStop /> : <FaMicrophone />}
-            </button>
-            
-            <button
-              className={`send-btn ${newMessage.trim() ? 'active' : ''}`}
-              onClick={() => sendMessage()}
-              disabled={!newMessage.trim() || sending}
-            >
-              <FaArrowUp />
+              {hasTextToSend ? <FaArrowUp /> : voiceActive ? <FaStop /> : <FaMicrophone />}
             </button>
           </div>
           {voiceError && (
@@ -859,6 +996,30 @@ const CustomerChatPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {voiceActive && (
+        <div className="voice-overlay" role="dialog" aria-label="Live voice chat">
+          <div className="voice-overlay-panel">
+            <div className="voice-overlay-top">
+              <div className="voice-overlay-title">
+                Live voice chat
+                <span className="voice-overlay-subtitle">
+                  {voiceVizSpeaking ? 'Listening…' : voiceVizLevel > 0.1 ? 'Listening…' : 'Say something…'}
+                </span>
+              </div>
+              <button type="button" className="voice-overlay-stop" onClick={() => void stopVoice()}>
+                <FaStop /> End
+              </button>
+            </div>
+
+            <div className="voice-wave-wrap" aria-hidden="true">
+              <canvas ref={voiceCanvasRef} className="voice-wave-canvas" />
+            </div>
+
+            <div className="voice-overlay-hint">You can keep typing while voice is on.</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
