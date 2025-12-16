@@ -3,10 +3,11 @@
   "outputDirectory": "frontend/dist",
   "devCommand": "npm run dev",
   "installCommand": "npm install && cd frontend && npm install",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/assets/(.*)", "status": 404 },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
