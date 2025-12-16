@@ -17,6 +17,29 @@ from chat_cleanup import cleanup_old_chat_history
 from auth import get_current_admin
 from database import supabase_storage
 
+
+class WebSocketLoggingMiddleware:
+    """
+    Lightweight ASGI middleware to log websocket connection attempts (path + origin).
+    Helps confirm whether websocket requests reach the app (vs. being blocked upstream).
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "websocket":
+            try:
+                headers = {k.decode("latin-1"): v.decode("latin-1") for k, v in (scope.get("headers") or [])}
+                origin = headers.get("origin")
+                path = scope.get("path")
+                client = scope.get("client")
+                logger.info("WS connect attempt: path=%s origin=%s client=%s", path, origin, client)
+            except Exception:
+                # Never break the WS due to logging
+                pass
+        await self.app(scope, receive, send)
+
 load_dotenv()
 
 # Configure logging
@@ -39,6 +62,10 @@ allowed_origins_raw = os.getenv(
     "http://localhost:5173,http://localhost:3000"
 )
 allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
+
+# Optional regex origin matcher (useful for preview subdomains).
+# Example: ^https://([a-z0-9-]+\.)?example\.com$|^https://.*\.vercel\.app$
+allowed_origin_regex = os.getenv("ALLOWED_ORIGIN_REGEX", "").strip() or None
 
 # Log allowed origins for debugging (don't log in production with sensitive data)
 if os.getenv("ENVIRONMENT") != "production":
@@ -137,6 +164,7 @@ async def log_requests(request: Request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=allowed_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
@@ -259,4 +287,7 @@ try:
 except Exception as e:
     logger.error(f"Failed to start chat cleanup scheduler: {str(e)}", exc_info=True)
     # Don't fail app startup if scheduler fails - cleanup can be done manually
+
+# Wrap app with websocket logging middleware (outermost)
+app = WebSocketLoggingMiddleware(app)
 

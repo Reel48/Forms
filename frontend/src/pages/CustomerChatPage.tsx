@@ -158,11 +158,18 @@ const CustomerChatPage: React.FC = () => {
   const getRealtimeWsUrl = () => {
     // Use the existing backend API URL and connect to the backend WebSocket endpoint.
     const apiUrl = (import.meta as any).env?.VITE_API_URL as string | undefined;
-    const base = (apiUrl || window.location.origin).replace(/\/+$/, '');
-    if (base.startsWith('https://')) return `wss://${base.substring('https://'.length)}/api/realtime/ws/voice`;
-    if (base.startsWith('http://')) return `ws://${base.substring('http://'.length)}/api/realtime/ws/voice`;
-    if (base.startsWith('wss://') || base.startsWith('ws://')) return `${base}/api/realtime/ws/voice`;
-    return `wss://${base}/api/realtime/ws/voice`;
+    try {
+      const origin = apiUrl ? new URL(apiUrl).origin : window.location.origin;
+      const wsOrigin = origin.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+      return `${wsOrigin.replace(/\/+$/, '')}/api/realtime/ws/voice`;
+    } catch {
+      // Fallback for unexpected/invalid values (keep legacy behavior).
+      const base = (apiUrl || window.location.origin).replace(/\/+$/, '');
+      if (base.startsWith('https://')) return `wss://${base.substring('https://'.length)}/api/realtime/ws/voice`;
+      if (base.startsWith('http://')) return `ws://${base.substring('http://'.length)}/api/realtime/ws/voice`;
+      if (base.startsWith('wss://') || base.startsWith('ws://')) return `${base}/api/realtime/ws/voice`;
+      return `wss://${base}/api/realtime/ws/voice`;
+    }
   };
 
   const downsampleTo16kInt16 = (input: Float32Array, inputRate: number) => {
@@ -397,7 +404,10 @@ const CustomerChatPage: React.FC = () => {
       const processor = ctx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
 
-      const ws = new WebSocket(`${wsUrl}?conversation_id=${encodeURIComponent(conversation.id)}`);
+      // Also pass token in querystring (some infra rejects WS before first message is processed).
+      const wsFullUrl =
+        `${wsUrl}?conversation_id=${encodeURIComponent(conversation.id)}&token=${encodeURIComponent(token)}`;
+      const ws = new WebSocket(wsFullUrl);
       voiceWsRef.current = ws;
 
       ws.onopen = () => {
@@ -422,8 +432,24 @@ const CustomerChatPage: React.FC = () => {
         setVoiceError('Voice connection error.');
         void stopVoice();
       };
-      ws.onclose = () => {
+      ws.onclose = (evt) => {
         setVoiceActive(false);
+        // Surface useful close info (many failures otherwise appear as "failed" only).
+        const code = evt?.code ?? 0;
+        const reason = evt?.reason ? `: ${evt.reason}` : '';
+        if (code && code !== 1000) {
+          setVoiceError(`Voice closed unexpectedly (${code})${reason}`);
+        }
+        if ((import.meta as any).env?.DEV) {
+          // Avoid logging token; derive a token-less URL.
+          try {
+            const u = new URL(ws.url);
+            u.searchParams.delete('token');
+            console.log('Voice WS closed:', { url: u.toString(), code, reason: evt?.reason, wasClean: evt?.wasClean });
+          } catch {
+            console.log('Voice WS closed:', { code, reason: evt?.reason, wasClean: evt?.wasClean });
+          }
+        }
       };
 
       // Mic -> WS
