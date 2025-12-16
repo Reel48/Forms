@@ -1366,14 +1366,17 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             "esignatures": esignatures,
             "summary": {
                 "stage": stage_info.get("stage"),
+                "stage_label": stage_info.get("stage_label"),
                 "next_step": stage_info.get("next_step"),
                 "next_step_owner": stage_info.get("next_step_owner"),
                 "computed_stage": stage_info.get("computed_stage"),
+                "computed_stage_label": stage_info.get("computed_stage_label"),
                 "computed_next_step": stage_info.get("computed_next_step"),
                 "computed_next_step_owner": stage_info.get("computed_next_step_owner"),
                 "progress": progress,
                 "tasks": tasks,
                 "shipping": shipping_summary,
+                "stepper_steps": stage_info.get("stepper_steps", []),
                 "updated_at": folder.get("updated_at"),
             }
         }

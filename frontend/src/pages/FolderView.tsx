@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaCheck } from 'react-icons/fa';
+import { FaCheck, FaChevronRight, FaFolderOpen } from 'react-icons/fa';
 import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent, type FolderNote } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
 import ProgressBar from '../components/ProgressBar';
 import ShipmentTracker from '../components/ShipmentTracker';
 import AddShipmentModal from '../components/AddShipmentModal';
+import OrderStepper, { type StepperStep } from '../components/OrderStepper';
+import EmptyState from '../components/EmptyState';
 import './FolderView.css';
 
 const FolderView: React.FC = () => {
@@ -391,24 +393,39 @@ const FolderView: React.FC = () => {
   const tasksTotal = summary?.progress?.tasks_total ?? 0;
   const tasksCompleted = summary?.progress?.tasks_completed ?? 0;
   const progressPct = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
-  const waitingChip =
-    summary?.next_step_owner === 'customer'
-      ? 'Waiting on you'
-      : summary?.next_step_owner === 'reel48'
-        ? 'Waiting on Reel48'
-        : null;
+  const actionRequired = summary?.next_step_owner === 'customer';
   const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
   const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';
   const tasks = summary?.tasks || [];
   const hasUnreadNote = role !== 'admin' && !!latestNote && latestNote.is_read === false;
+  
+  // Get primary action task (payment) and secondary tasks
+  const primaryTask = tasks.find((t: any) => t.kind === 'quote' && t.status === 'incomplete');
+  const secondaryTasks = tasks.filter((t: any) => t.id !== primaryTask?.id);
+  const completedTasks = tasks.filter((t: any) => t.status === 'complete');
+  
+  // Check if payment is required (locks other tasks)
+  const paymentRequired = primaryTask && primaryTask.status === 'incomplete';
+  
+  // Get stepper steps from summary
+  const stepperSteps: StepperStep[] = (summary?.stepper_steps || []) as StepperStep[];
 
   return (
     <div className="folder-view-container">
       <div className="folder-header">
-        <div className="folder-header-top">
-          <button onClick={() => navigate(role === 'admin' ? '/folders' : '/')} className="btn-back">
-            ← {role === 'admin' ? 'Back' : 'Back to Dashboard'}
+        {/* Breadcrumbs */}
+        <nav className="breadcrumbs" aria-label="Breadcrumb">
+          <button 
+            onClick={() => navigate(role === 'admin' ? '/folders' : '/')} 
+            className="breadcrumb-link"
+          >
+            {role === 'admin' ? 'Folders' : 'Dashboard'}
           </button>
+          <FaChevronRight className="breadcrumb-separator" />
+          <span className="breadcrumb-current">{folder.name}</span>
+        </nav>
+        
+        <div className="folder-header-top">
           <h1>{folder.name}</h1>
         </div>
         {folder.description && (
@@ -469,40 +486,27 @@ const FolderView: React.FC = () => {
                 style={{
                   minWidth: 0,
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: '1rem',
                   border: '1px solid var(--color-border, #e5e7eb)',
                   borderRadius: '10px',
                   background: 'white',
                 }}
               >
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                  {summary.stage && (
-                    <span
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '999px',
-                        background: '#f3f4f6',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                      }}
-                    >
-                      Stage: {summary.stage}
+                {/* Action Required Badge */}
+                {actionRequired && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <span className="action-required-badge">
+                      Action Required
                     </span>
-                  )}
-                  {waitingChip && (
-                    <span
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '999px',
-                        background: '#f3f4f6',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {waitingChip}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Stepper UI */}
+                {stepperSteps.length > 0 && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <OrderStepper steps={stepperSteps} />
+                  </div>
+                )}
 
                 {summary.next_step && (
                   <div style={{ marginTop: '0.5rem' }}>
@@ -510,10 +514,6 @@ const FolderView: React.FC = () => {
                     <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{summary.next_step}</div>
                   </div>
                 )}
-
-                <div style={{ marginTop: '1rem' }}>
-                  <ProgressBar value={progressPct} label={`${progressPct}%`} ariaLabel="Folder progress" />
-                </div>
               </div>
             )}
 
@@ -598,91 +598,120 @@ const FolderView: React.FC = () => {
       <div className="folder-content">
         {role !== 'admin' ? (
           <>
-            {/* Tasks (customer) */}
-            <section className="content-section">
-              <div className="section-header">
-                <h2>Tasks</h2>
-                <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                  {tasksCompleted}/{tasksTotal} completed
-                </span>
-              </div>
-
-              {tasks.length === 0 ? (
-                <div className="empty-content">
-                  <p>No tasks right now.</p>
+            {/* Primary Action Hero Card */}
+            {primaryTask && (
+              <section className="content-section hero-action-card">
+                <div className="hero-action-content">
+                  <h2 className="hero-action-title">Your quote is ready for review.</h2>
+                  <p className="hero-action-subtitle">
+                    Please finalize payment to move your order to production.
+                  </p>
+                  <button
+                    className="btn-hero-primary"
+                    onClick={() => {
+                      const action = (primaryTask.deeplink || '') as string;
+                      if (action) {
+                        navigate(action);
+                      }
+                    }}
+                  >
+                    Review & Pay Quote
+                  </button>
                 </div>
-              ) : (
+              </section>
+            )}
+
+            {/* Secondary Tasks */}
+            {secondaryTasks.length > 0 && (
+              <section className="content-section">
+                <div className="section-header">
+                  <h2>Next Up</h2>
+                </div>
                 <div className="card" style={{ padding: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {tasks.map((t: any) => {
-                      const isComplete = t.status === 'complete';
-                      const action = (t.deeplink || '') as string;
-                      return (
-                        <div
-                          key={t.id}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            gap: '1rem',
-                            padding: '0.75rem',
-                            borderRadius: '10px',
-                            border: '1px solid var(--color-border, #e5e7eb)',
-                            background: isComplete ? '#ecfdf5' : 'white',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                            <div
-                              style={{
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '999px',
-                                border: isComplete ? '1px solid #16a34a' : '1px solid #d1d5db',
-                                background: isComplete ? '#16a34a' : 'transparent',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginTop: '2px',
-                              }}
-                            >
-                              {isComplete && <FaCheck style={{ color: 'white', fontSize: '12px' }} />}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 700 }}>{t.title}</div>
-                              {t.description && (
-                                <div className="text-muted" style={{ fontSize: '0.875rem' }}>{t.description}</div>
-                              )}
-                              <div style={{ marginTop: '0.25rem' }}>
-                                {isComplete ? (
-                                  <span style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>Completed</span>
-                                ) : (
-                                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>Next up</span>
+                    {secondaryTasks
+                      .filter((t: any) => t.status === 'incomplete')
+                      .map((t: any) => {
+                        const isLocked = paymentRequired && t.kind !== 'quote';
+                        const action = (t.deeplink || '') as string;
+                        return (
+                          <div
+                            key={t.id}
+                            className={`task-item ${isLocked ? 'task-locked' : ''}`}
+                          >
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                              <div className="task-checkbox pending">
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700 }}>{t.title}</div>
+                                {t.description && (
+                                  <div className="text-muted" style={{ fontSize: '0.875rem' }}>{t.description}</div>
+                                )}
+                                {isLocked && (
+                                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                                    Complete payment to unlock
+                                  </div>
                                 )}
                               </div>
                             </div>
+                            {action && !isLocked && (
+                              <button
+                                className="btn-secondary-outline btn-sm"
+                                onClick={() => {
+                                  if (action.includes('#project-files')) {
+                                    const el = document.getElementById('project-files');
+                                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    return;
+                                  }
+                                  navigate(action);
+                                }}
+                              >
+                                {t.kind === 'file_review' ? 'Review' : t.kind === 'esignature' ? 'Sign' : 'Open'}
+                              </button>
+                            )}
+                            {isLocked && (
+                              <button className="btn-secondary-outline btn-sm" disabled>
+                                Locked
+                              </button>
+                            )}
                           </div>
-                          {action ? (
-                            <button
-                              className="btn-primary btn-sm"
-                              onClick={() => {
-                                if (action.includes('#project-files')) {
-                                  const el = document.getElementById('project-files');
-                                  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                  return;
-                                }
-                                navigate(action);
-                              }}
-                            >
-                              {t.kind === 'file_review' ? 'Review' : 'Open'}
-                            </button>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </div>
-              )}
-            </section>
+              </section>
+            )}
+
+            {/* Completed Tasks */}
+            {completedTasks.length > 0 && (
+              <section className="content-section">
+                <div className="section-header">
+                  <h2>Completed</h2>
+                </div>
+                <div className="card" style={{ padding: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {completedTasks.map((t: any) => (
+                      <div key={t.id} className="task-item task-completed">
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                          <div className="task-checkbox completed">
+                            <FaCheck style={{ color: 'white', fontSize: '12px' }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#6b7280' }}>{t.title}</div>
+                            {t.description && (
+                              <div className="text-muted" style={{ fontSize: '0.875rem' }}>{t.description}</div>
+                            )}
+                            <div style={{ marginTop: '0.25rem' }}>
+                              <span style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>Completed</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Shipment Tracking (customer; hidden until shipment exists) */}
             {summary?.shipping?.has_shipment && (
@@ -718,9 +747,11 @@ const FolderView: React.FC = () => {
               </div>
 
               {files.length === 0 ? (
-                <div className="empty-content">
-                  <p>No files in this project yet.</p>
-                </div>
+                <EmptyState
+                  icon={<FaFolderOpen />}
+                  title="No files in this project yet"
+                  description="Upload files to share documents, designs, or other project materials."
+                />
               ) : (
                 <div className="card">
                   <table>

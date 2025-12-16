@@ -11,6 +11,92 @@ def _is_quote_accepted_or_approved(quote_status: Optional[str]) -> bool:
     return str(quote_status or "").lower() in ("accepted", "approved")
 
 
+def get_human_readable_stage(stage: Optional[str]) -> str:
+    """
+    Convert technical stage values to human-readable labels.
+    """
+    if not stage:
+        return "Getting Started"
+    
+    stage_lower = str(stage).lower()
+    stage_map = {
+        "quote_sent": "Quote Ready",
+        "design_info_needed": "Design Info Needed",
+        "production": "In Production",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+    }
+    
+    return stage_map.get(stage_lower, stage.replace("_", " ").title())
+
+
+def get_stage_steps(
+    *,
+    current_stage: Optional[str],
+    has_quote: bool,
+    payment_paid: bool,
+    has_shipment: bool,
+    is_delivered: bool,
+) -> List[Dict[str, Any]]:
+    """
+    Get stepper configuration based on current order state.
+    Returns list of step objects with label, status (completed, active, pending), and key.
+    """
+    steps = []
+    
+    # Step 1: Design (always shown, completed when quote exists)
+    steps.append({
+        "key": "design",
+        "label": "Design",
+        "status": "completed" if has_quote else "pending",
+    })
+    
+    # Step 2: Quote & Pay (active when quote_sent or payment pending)
+    quote_pay_status = "pending"
+    if current_stage:
+        stage_lower = str(current_stage).lower()
+        if stage_lower in ("quote_sent", "design_info_needed") or (stage_lower == "production" and not payment_paid):
+            quote_pay_status = "active"
+        elif payment_paid or stage_lower in ("production", "shipped", "delivered"):
+            quote_pay_status = "completed"
+    
+    steps.append({
+        "key": "quote_pay",
+        "label": "Quote & Pay",
+        "status": quote_pay_status,
+    })
+    
+    # Step 3: Production (active when production stage)
+    production_status = "pending"
+    if current_stage:
+        stage_lower = str(current_stage).lower()
+        if stage_lower == "production":
+            production_status = "active"
+        elif stage_lower in ("shipped", "delivered"):
+            production_status = "completed"
+    
+    steps.append({
+        "key": "production",
+        "label": "Production",
+        "status": production_status,
+    })
+    
+    # Step 4: Shipping (active when shipped or delivered)
+    shipping_status = "pending"
+    if is_delivered:
+        shipping_status = "completed"
+    elif has_shipment or (current_stage and str(current_stage).lower() in ("shipped", "delivered")):
+        shipping_status = "active"
+    
+    steps.append({
+        "key": "shipping",
+        "label": "Shipping",
+        "status": shipping_status,
+    })
+    
+    return steps
+
+
 def build_customer_tasks(
     *,
     folder_id: str,
@@ -176,13 +262,28 @@ def compute_stage_and_next_step(
             computed_next = "We’re preparing your quote — we’ll notify you when it’s ready"
             computed_owner = "reel48"
 
+    # Get human-readable stage label
+    human_readable_stage = get_human_readable_stage(stage_override if stage_override else computed_stage)
+    
+    # Get stepper configuration
+    stepper_steps = get_stage_steps(
+        current_stage=stage_override if stage_override else computed_stage,
+        has_quote=has_quote,
+        payment_paid=payment_paid,
+        has_shipment=has_shipment,
+        is_delivered=bool(delivered_at or shipped_status == "delivered"),
+    )
+    
     return {
         "stage": stage_override if stage_override else computed_stage,
+        "stage_label": human_readable_stage,
         "next_step": next_override if next_override else computed_next,
         "next_step_owner": next_owner_override if next_owner_override else computed_owner,
         "computed_stage": computed_stage,
+        "computed_stage_label": get_human_readable_stage(computed_stage),
         "computed_next_step": computed_next,
         "computed_next_step_owner": computed_owner,
         "tasks_progress": progress,
+        "stepper_steps": stepper_steps,
     }
 

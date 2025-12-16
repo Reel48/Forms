@@ -1,0 +1,114 @@
+.order-stepper {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.order-stepper-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+}
+
+.order-stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.order-stepper-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.order-stepper-circle.completed {
+  background-color: #16a34a;
+  border: 2px solid #16a34a;
+  color: white;
+}
+
+.order-stepper-circle.active {
+  background-color: #2563eb;
+  border: 2px solid #2563eb;
+  color: white;
+}
+
+.order-stepper-circle.pending {
+  background-color: #f3f4f6;
+  border: 2px solid #d1d5db;
+  color: #6b7280;
+}
+
+.order-stepper-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.order-stepper-label {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  max-width: 100px;
+  line-height: 1.2;
+}
+
+.order-stepper-label.completed {
+  color: #16a34a;
+}
+
+.order-stepper-label.active {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.order-stepper-label.pending {
+  color: #9ca3af;
+}
+
+.order-stepper-connector {
+  flex: 1;
+  height: 2px;
+  margin: 0 0.5rem;
+  margin-top: -16px;
+  position: relative;
+  z-index: 0;
+}
+
+.order-stepper-connector.completed {
+  background-color: #16a34a;
+}
+
+.order-stepper-connector.pending {
+  background-color: #e5e7eb;
+}
+
+@media (max-width: 768px) {
+  .order-stepper-label {
+    font-size: 0.65rem;
+    max-width: 70px;
+  }
+
+  .order-stepper-circle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .order-stepper-connector {
+    margin-top: -14px;
+  }
+}
+
