@@ -389,8 +389,6 @@ const FolderView: React.FC = () => {
   }
 
   const { folder, quote, files, forms, esignatures, summary } = content;
-  const tasksTotal = summary?.progress?.tasks_total ?? 0;
-  const tasksCompleted = summary?.progress?.tasks_completed ?? 0;
   const actionRequired = summary?.next_step_owner === 'customer';
   const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
   const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';
