@@ -1,0 +1,34 @@
+name: Deploy Vercel Frontend
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: vercel-frontend-main
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VERCEL_DEPLOY_HOOK_URL:-}" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is not set; skipping."
+            exit 0
+          fi
+
+          echo "Triggering Vercel deploy hook..."
+          curl -fsSL -X POST "${VERCEL_DEPLOY_HOOK_URL}"
+
