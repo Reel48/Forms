@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
+import { chatAPI, realtimeAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtimeClient } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft, FaMicrophone, FaStop } from 'react-icons/fa';
 import { ChatMessageBody } from '../components/chat/ChatMessageBody';
 import { useNotifications } from '../components/NotificationSystem';
 import './CustomerChatPage.css';
@@ -21,6 +21,8 @@ const CustomerChatPage: React.FC = () => {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
     return (saved as 'dark' | 'light') || 'light';
@@ -34,6 +36,11 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+  const voiceWsRef = useRef<WebSocket | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const nextPlayTimeRef = useRef<number>(0);
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -125,6 +132,8 @@ const CustomerChatPage: React.FC = () => {
       }
     }
     return () => {
+      // Cleanup voice if user navigates away
+      void stopVoice();
       const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
         realtimeClient.removeChannel(messagesSubscriptionRef.current);
@@ -136,6 +145,192 @@ const CustomerChatPage: React.FC = () => {
       }
     };
   }, []);
+
+  const getRealtimeWsUrl = () => {
+    const base = (import.meta as any).env?.VITE_REALTIME_VOICE_URL as string | undefined;
+    if (!base) return '';
+    const trimmed = base.replace(/\/+$/, '');
+    if (trimmed.startsWith('https://')) return `wss://${trimmed.substring('https://'.length)}/ws/browser-voice`;
+    if (trimmed.startsWith('http://')) return `ws://${trimmed.substring('http://'.length)}/ws/browser-voice`;
+    // If user provided wss/ws already
+    if (trimmed.startsWith('wss://') || trimmed.startsWith('ws://')) return `${trimmed}/ws/browser-voice`;
+    return `wss://${trimmed}/ws/browser-voice`;
+  };
+
+  const downsampleTo16kInt16 = (input: Float32Array, inputRate: number) => {
+    const outputRate = 16000;
+    if (outputRate === inputRate) {
+      const out = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      return out;
+    }
+    const ratio = inputRate / outputRate;
+    const newLen = Math.floor(input.length / ratio);
+    const out = new Int16Array(newLen);
+    let offset = 0;
+    for (let i = 0; i < newLen; i++) {
+      const nextOffset = Math.floor((i + 1) * ratio);
+      let acc = 0;
+      let count = 0;
+      for (let j = offset; j < nextOffset && j < input.length; j++) {
+        acc += input[j];
+        count++;
+      }
+      const avg = count ? acc / count : 0;
+      const s = Math.max(-1, Math.min(1, avg));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      offset = nextOffset;
+    }
+    return out;
+  };
+
+  const playPcm16 = async (pcm16: ArrayBuffer, sampleRate: number) => {
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    const int16 = new Int16Array(pcm16);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / 0x8000;
+    }
+    const buffer = ctx.createBuffer(1, float32.length, sampleRate);
+    buffer.copyToChannel(float32, 0);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    const now = ctx.currentTime;
+    const startAt = Math.max(now + 0.02, nextPlayTimeRef.current || now);
+    src.start(startAt);
+    nextPlayTimeRef.current = startAt + buffer.duration;
+  };
+
+  const stopVoice = async () => {
+    try {
+      setVoiceActive(false);
+      setVoiceError(null);
+      if (voiceWsRef.current && voiceWsRef.current.readyState === WebSocket.OPEN) {
+        voiceWsRef.current.send(JSON.stringify({ type: 'stop' }));
+      }
+      voiceWsRef.current?.close();
+    } catch {
+      // ignore
+    } finally {
+      voiceWsRef.current = null;
+      try {
+        processorRef.current?.disconnect();
+      } catch {}
+      processorRef.current = null;
+      try {
+        micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      } catch {}
+      micStreamRef.current = null;
+      try {
+        await audioCtxRef.current?.close();
+      } catch {}
+      audioCtxRef.current = null;
+      nextPlayTimeRef.current = 0;
+    }
+  };
+
+  const startVoice = async () => {
+    try {
+      setVoiceError(null);
+      const wsUrl = getRealtimeWsUrl();
+      if (!wsUrl) {
+        setVoiceError('Voice service is not configured.');
+        return;
+      }
+      if (!conversation?.id) {
+        setVoiceError('No conversation loaded yet.');
+        return;
+      }
+
+      const tokenResp = await realtimeAPI.mintToken();
+      const token = tokenResp.data?.token;
+      if (!token) {
+        setVoiceError('Failed to get voice token.');
+        return;
+      }
+
+      const ctx = new AudioContext();
+      audioCtxRef.current = ctx;
+      nextPlayTimeRef.current = ctx.currentTime + 0.1;
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      const source = ctx.createMediaStreamSource(stream);
+      const processor = ctx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+
+      const ws = new WebSocket(wsUrl);
+      voiceWsRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'start', token, conversation_id: conversation.id }));
+        setVoiceActive(true);
+      };
+      ws.onmessage = async (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.type === 'audio' && msg.data) {
+            const bin = Uint8Array.from(atob(msg.data), (c) => c.charCodeAt(0)).buffer;
+            await playPcm16(bin, msg.rate || 16000);
+          } else if (msg.type === 'error') {
+            setVoiceError(msg.message || 'Voice error');
+            void stopVoice();
+          }
+        } catch {
+          // ignore
+        }
+      };
+      ws.onerror = () => {
+        setVoiceError('Voice connection error.');
+        void stopVoice();
+      };
+      ws.onclose = () => {
+        setVoiceActive(false);
+      };
+
+      // Mic -> WS
+      let carry: Int16Array | null = null;
+      processor.onaudioprocess = (e) => {
+        const socket = voiceWsRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        const input = e.inputBuffer.getChannelData(0);
+        const pcm16 = downsampleTo16kInt16(input, ctx.sampleRate);
+        const frameSamples = 320; // 20ms @ 16k
+
+        let data: Int16Array;
+        if (carry && carry.length) {
+          data = new Int16Array(carry.length + pcm16.length);
+          data.set(carry, 0);
+          data.set(pcm16, carry.length);
+        } else {
+          data = pcm16;
+        }
+
+        let offset = 0;
+        while (offset + frameSamples <= data.length) {
+          const frame = data.subarray(offset, offset + frameSamples);
+          offset += frameSamples;
+          const bytes = new Uint8Array(frame.buffer, frame.byteOffset, frame.byteLength);
+          let b64 = '';
+          // fast-ish base64
+          for (let i = 0; i < bytes.length; i++) b64 += String.fromCharCode(bytes[i]);
+          socket.send(JSON.stringify({ type: 'audio', data: btoa(b64) }));
+        }
+        carry = offset < data.length ? data.subarray(offset) : null;
+      };
+
+      source.connect(processor);
+      processor.connect(ctx.destination);
+    } catch (e: any) {
+      setVoiceError(e?.message || 'Failed to start voice.');
+      await stopVoice();
+    }
+  };
 
   useEffect(() => {
     if (conversation) {
@@ -632,6 +827,23 @@ const CustomerChatPage: React.FC = () => {
               disabled={sending}
               rows={1}
             />
+
+            <button
+              type="button"
+              className={`send-btn ${voiceActive ? 'active' : ''}`}
+              onClick={() => {
+                if (voiceActive) {
+                  void stopVoice();
+                } else {
+                  void startVoice();
+                }
+              }}
+              disabled={sending || uploading}
+              title={voiceActive ? 'Stop voice' : 'Talk to AI'}
+              style={{ marginRight: '8px' }}
+            >
+              {voiceActive ? <FaStop /> : <FaMicrophone />}
+            </button>
             
             <button
               className={`send-btn ${newMessage.trim() ? 'active' : ''}`}
@@ -641,6 +853,11 @@ const CustomerChatPage: React.FC = () => {
               <FaArrowUp />
             </button>
           </div>
+          {voiceError && (
+            <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.9rem' }}>
+              {voiceError}
+            </div>
+          )}
         </div>
       </div>
     </div>
