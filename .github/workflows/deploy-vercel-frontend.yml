@@ -58,9 +58,12 @@ jobs:
       - name: Deploy to Vercel (CLI)
         if: ${{ env.VERCEL_TOKEN != '' }}
         env:
-          # Non-sensitive identifiers; safe to commit. You can also store these as repo variables if preferred.
-          VERCEL_ORG_ID: team_tdhrsxnmrMJewSl6k9wymlE2
-          VERCEL_PROJECT_ID: prj_70DG1mPL8keJWNs1a4HVt8hDOy8n
+          # Non-sensitive identifiers; safe to commit.
+          #
+          # IMPORTANT: You said the intended team is "Reel48's projects", so these IDs target that team/project.
+          # If you want to deploy to the other team ("Reel48"), swap these back.
+          VERCEL_ORG_ID: team_cmIIKnRearPqjOYXKgrFZ1Bi
+          VERCEL_PROJECT_ID: prj_6h4bhQqgFzleP3bH9HnIqE9jZQN3
         shell: bash
         run: |
           set -euo pipefail
