@@ -35,6 +35,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Vercel credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN is set; will deploy via Vercel CLI."
+            exit 0
+          fi
+          if [ -n "${VERCEL_DEPLOY_HOOK_URL:-}" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is set; will deploy via deploy hook."
+            exit 0
+          fi
+
+          echo "Missing Vercel credentials."
+          echo "Add ONE of these GitHub repo secrets:"
+          echo "  - VERCEL_TOKEN (recommended; deploys via CLI without relying on Git integration)"
+          echo "  - VERCEL_DEPLOY_HOOK_URL (fallback; triggers Vercel deploy hook)"
+          exit 1
+
       # Preferred: deploy via Vercel CLI (does NOT rely on Vercel<->GitHub integration/webhooks).
       - name: Deploy to Vercel (CLI)
         if: ${{ env.VERCEL_TOKEN != '' }}
@@ -53,18 +72,10 @@ jobs:
 
       # Fallback: deploy hook (relies on Vercel Git integration pulling from GitHub).
       - name: Trigger Vercel Deploy Hook
-        if: ${{ env.VERCEL_TOKEN == '' }}
+        if: ${{ env.VERCEL_TOKEN == '' && env.VERCEL_DEPLOY_HOOK_URL != '' }}
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ -z "${VERCEL_DEPLOY_HOOK_URL:-}" ]; then
-            echo "No Vercel deployment credentials found."
-            echo "Set either:"
-            echo "  - VERCEL_TOKEN (recommended), or"
-            echo "  - VERCEL_DEPLOY_HOOK_URL (fallback)."
-            exit 0
-          fi
 
           echo "Triggering Vercel deploy hook..."
           curl -fsSL -X POST "${VERCEL_DEPLOY_HOOK_URL}"
