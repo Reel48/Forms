@@ -9,6 +9,7 @@ from token_utils import is_token_revoked
 from typing import Optional
 import os
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 import json
 import logging
 
@@ -68,25 +69,14 @@ async def get_current_user(
         # Verify both signature and expiration
         try:
             import time
-            # Decode and verify the token
-            # Supabase tokens have an 'aud' (audience) claim that we need to handle
-            # We'll verify signature but allow any audience (Supabase uses 'authenticated' for user tokens)
-            try:
-                # Try decoding with audience verification disabled first
-                payload = jwt.decode(
-                    token, 
-                    JWT_SECRET, 
-                    algorithms=["HS256"],
-                    options={"verify_signature": True, "verify_exp": True, "verify_aud": False}
-                )
-            except jwt.InvalidAudienceError:
-                # If audience verification fails, try without it (Supabase tokens may have different audiences)
-                payload = jwt.decode(
-                    token, 
-                    JWT_SECRET, 
-                    algorithms=["HS256"],
-                    options={"verify_signature": True, "verify_exp": True, "verify_aud": False}
-                )
+            # Decode and verify the token.
+            # Supabase tokens have an 'aud' claim; we intentionally disable audience verification.
+            payload = jwt.decode(
+                token,
+                JWT_SECRET,
+                algorithms=["HS256"],
+                options={"verify_signature": True, "verify_exp": True, "verify_aud": False},
+            )
             
             # Additional expiration check (jwt.decode should handle this, but double-check)
             exp = payload.get("exp")
@@ -97,7 +87,7 @@ async def get_current_user(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             
-        except jwt.ExpiredSignatureError:
+        except ExpiredSignatureError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired",
