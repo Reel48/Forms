@@ -12,6 +12,12 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Make secrets available to `if:` conditions via the `env` context.
+  # GitHub does not allow referencing `secrets.*` directly inside `if:` in workflow syntax validation.
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+
 jobs:
   trigger:
     runs-on: ubuntu-latest
@@ -31,9 +37,8 @@ jobs:
 
       # Preferred: deploy via Vercel CLI (does NOT rely on Vercel<->GitHub integration/webhooks).
       - name: Deploy to Vercel (CLI)
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        if: ${{ env.VERCEL_TOKEN != '' }}
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           # Non-sensitive identifiers; safe to commit. You can also store these as repo variables if preferred.
           VERCEL_ORG_ID: team_tdhrsxnmrMJewSl6k9wymlE2
           VERCEL_PROJECT_ID: prj_70DG1mPL8keJWNs1a4HVt8hDOy8n
@@ -48,9 +53,7 @@ jobs:
 
       # Fallback: deploy hook (relies on Vercel Git integration pulling from GitHub).
       - name: Trigger Vercel Deploy Hook
-        if: ${{ secrets.VERCEL_TOKEN == '' }}
-        env:
-          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        if: ${{ env.VERCEL_TOKEN == '' }}
         shell: bash
         run: |
           set -euo pipefail
