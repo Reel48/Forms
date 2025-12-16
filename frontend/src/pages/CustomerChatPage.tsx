@@ -34,7 +34,7 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
-  const sessionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionCheckIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
   // Setup Realtime subscriptions for messages and conversations
