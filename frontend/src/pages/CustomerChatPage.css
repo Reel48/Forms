@@ -378,6 +378,26 @@
   margin-bottom: 2rem;
 }
 
+.greeting h2 {
+  font-size: 3rem;
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+  color: var(--chat-text);
+}
+
+.greeting p {
+  font-size: 1.1rem;
+  color: var(--chat-text-secondary);
+  margin: 0.5rem 0;
+}
+
+.greeting-subtitle {
+  font-size: 0.95rem !important;
+  color: var(--chat-text-secondary) !important;
+  opacity: 0.8;
+  margin-top: 0.75rem !important;
+}
+
 .suggested-prompts {
   display: grid;
   grid-template-columns: repeat(3, 1fr); /* Three equal columns */
@@ -399,7 +419,13 @@
   line-height: 1.4;
   height: 100%; /* Match height */
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.prompt-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .prompt-chip:hover {
@@ -768,9 +794,21 @@
 .typing-indicator {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   padding: 0 0.5rem;
   height: 24px;
+}
+
+.typing-text {
+  font-size: 0.9rem;
+  color: var(--chat-text-secondary);
+  opacity: 0.7;
+}
+
+.typing-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .typing-dot {
@@ -779,6 +817,7 @@
   background-color: var(--chat-text-secondary);
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out both;
+  opacity: 0.6;
 }
 
 .typing-dot:nth-child(1) { animation-delay: -0.32s; }
@@ -871,4 +910,39 @@
   .input-island {
     border-radius: 1.75rem;
   }
+}
+
+/* Loading States */
+.customer-chat-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 1.1rem;
+  color: var(--chat-text-secondary);
+  gap: 0.75rem;
+  flex-direction: column;
+}
+
+.loading-more-messages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  color: var(--chat-text-secondary);
+  font-size: 0.9rem;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--chat-border);
+  border-top-color: var(--chat-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

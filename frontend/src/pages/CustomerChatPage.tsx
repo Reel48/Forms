@@ -34,6 +34,8 @@ const CustomerChatPage: React.FC = () => {
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
   const conversationsSubscriptionRef = useRef<any>(null);
+  const sessionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
@@ -63,6 +65,9 @@ const CustomerChatPage: React.FC = () => {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
+            
+            // Track activity when receiving messages
+            lastActivityRef.current = Date.now();
             
             setMessages((prev) => {
               if (prev.some((msg) => msg.id === newMessage.id)) {
@@ -134,16 +139,79 @@ const CustomerChatPage: React.FC = () => {
         realtimeClient.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
       }
+      if (sessionCheckIntervalRef.current) {
+        clearInterval(sessionCheckIntervalRef.current);
+        sessionCheckIntervalRef.current = null;
+      }
     };
   }, []);
+
+  // Check session on mount and when conversation loads
+  const checkSession = useCallback(async (conversationId?: string) => {
+    if (!conversationId && !conversation?.id) return;
+    
+    try {
+      const sessionId = conversationId || conversation?.id;
+      const response = await chatAPI.checkSession(sessionId);
+      
+      if (response.data.was_reset) {
+        // Session was reset, reload messages (will be empty)
+        if (conversation?.id) {
+          await loadMessages(conversation.id);
+          showNotification({
+            type: 'info',
+            message: 'Your chat session has expired. Starting fresh conversation.',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check session:', error);
+      // Don't show error to user - session check failures are non-critical
+    }
+  }, [conversation?.id, showNotification]);
 
   useEffect(() => {
     if (conversation) {
       loadMessages(conversation.id);
       setupRealtimeSubscriptions(conversation.id);
       markAllAsRead();
+      // Check session when conversation loads
+      checkSession(conversation.id);
     }
-  }, [conversation?.id, setupRealtimeSubscriptions]);
+  }, [conversation?.id, setupRealtimeSubscriptions, checkSession]);
+
+  // Periodic session check (every 30 seconds)
+  useEffect(() => {
+    if (!conversation?.id) return;
+    
+    // Set up interval for periodic session checks
+    sessionCheckIntervalRef.current = setInterval(() => {
+      checkSession(conversation.id);
+    }, 30000); // 30 seconds
+    
+    return () => {
+      if (sessionCheckIntervalRef.current) {
+        clearInterval(sessionCheckIntervalRef.current);
+        sessionCheckIntervalRef.current = null;
+      }
+    };
+  }, [conversation?.id, checkSession]);
+
+  // Track page visibility changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && conversation?.id) {
+        // User returned to page, check session
+        lastActivityRef.current = Date.now();
+        checkSession(conversation.id);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [conversation?.id, checkSession]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -328,6 +396,9 @@ const CustomerChatPage: React.FC = () => {
         messagePayload.conversation_id = conversation.id;
       }
 
+      // Track activity when sending message
+      lastActivityRef.current = Date.now();
+      
       const messageResponse = await chatAPI.sendMessage(messagePayload);
       
       // If this was a new conversation, set it up
@@ -384,7 +455,15 @@ const CustomerChatPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      showNotification({ type: 'error', message: 'Failed to send message. Please try again.' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message. Please try again.';
+      showNotification({ type: 'error', message: errorMessage });
+      
+      // If it's a session expiration error, check session
+      if (errorMessage.includes('session') || errorMessage.includes('expired')) {
+        if (conversation?.id) {
+          void checkSession(conversation.id);
+        }
+      }
     } finally {
       setSending(false);
     }
@@ -443,7 +522,10 @@ const CustomerChatPage: React.FC = () => {
   if (loading) {
     return (
       <div className="customer-chat-page">
-        <div className="customer-chat-loading">Loading chat...</div>
+        <div className="customer-chat-loading">
+          <div className="loading-spinner"></div>
+          <span>Loading chat...</span>
+        </div>
       </div>
     );
   }
@@ -504,26 +586,31 @@ const CustomerChatPage: React.FC = () => {
             {!conversation || messages.length === 0 ? (
               <div className="empty-state-container">
                 <div className="greeting">
-                  <h2>Hello,</h2>
-                  <p>How can I help you today?</p>
+                  <h2>Hello! 👋</h2>
+                  <p>I'm Reel48's AI Assistant. How can I help you today?</p>
+                  <p className="greeting-subtitle">Ask me about our products, get a quote, or schedule a meeting with our team.</p>
                 </div>
                 <div className="suggested-prompts">
                   <button className="prompt-chip" onClick={() => sendMessage("What does Reel48 do?")}>
-                    What does Reel48 do?
+                    <span className="prompt-icon">ℹ️</span>
+                    <span>What does Reel48 do?</span>
                   </button>
                   <button className="prompt-chip" onClick={() => sendMessage("How long will my hats take to be delivered?")}>
-                    How long will my hats take to be delivered?
+                    <span className="prompt-icon">🚚</span>
+                    <span>How long will my hats take to be delivered?</span>
                   </button>
                   <button className="prompt-chip" onClick={() => sendMessage("Give me a quote for 500 custom hats.")}>
-                    Give me a quote for 500 custom hats.
+                    <span className="prompt-icon">💰</span>
+                    <span>Get a quote for 500 custom hats</span>
                   </button>
                 </div>
               </div>
             ) : (
               <div id="chat-container">
                 {loadingMore && (
-                  <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-muted)' }}>
-                    Loading older messages...
+                  <div className="loading-more-messages">
+                    <div className="loading-spinner"></div>
+                    <span>Loading older messages...</span>
                   </div>
                 )}
                 {messages.map((message) => {
@@ -541,9 +628,12 @@ const CustomerChatPage: React.FC = () => {
                         <div className="message-content">
                           {!isCustomer && message.message_type === 'system' ? (
                             <div className="typing-indicator">
-                              <div className="typing-dot"></div>
-                              <div className="typing-dot"></div>
-                              <div className="typing-dot"></div>
+                              <span className="typing-text">AI is thinking...</span>
+                              <div className="typing-dots">
+                                <div className="typing-dot"></div>
+                                <div className="typing-dot"></div>
+                                <div className="typing-dot"></div>
+                              </div>
                             </div>
                           ) : (
                           <ChatMessageBody message={message} renderAsMarkdown={!isCustomer} />

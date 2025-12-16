@@ -1039,6 +1039,17 @@ export const chatAPI = {
   generateAIResponse: (conversationId: string) => {
     return api.post<ChatMessage>(`/api/chat/conversations/${conversationId}/ai-response`);
   },
+  checkSession: (conversationId?: string) => {
+    const body = conversationId ? { conversation_id: conversationId } : {};
+    return api.post<{
+      is_expired: boolean;
+      was_reset: boolean;
+      session_id: string | null;
+      session_started_at?: string;
+      last_activity_at?: string;
+      message: string;
+    }>('/api/chat/check-session', body);
+  },
 };
 
 export const authAPI = {
