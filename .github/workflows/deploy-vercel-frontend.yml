@@ -78,5 +78,16 @@ jobs:
           set -euo pipefail
 
           echo "Triggering Vercel deploy hook..."
-          curl -fsSL -X POST "${VERCEL_DEPLOY_HOOK_URL}"
+          resp="$(curl -sS -X POST "${VERCEL_DEPLOY_HOOK_URL}" -w '\nHTTP_STATUS:%{http_code}\n' --max-time 60)"
+          echo "${resp}"
+
+          status="$(printf '%s' "${resp}" | awk -F: '/^HTTP_STATUS:/ { print $2 }' | tr -d '\r')"
+          if [[ -z "${status}" ]]; then
+            echo "Failed to read HTTP status from deploy hook response."
+            exit 1
+          fi
+          if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
+            echo "Deploy hook returned non-2xx status: ${status}"
+            exit 1
+          fi
 
