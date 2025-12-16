@@ -24,7 +24,6 @@ export default function OrderStepper({ steps }: OrderStepperProps) {
           const isLast = index === steps.length - 1;
           const isCompleted = step.status === 'completed';
           const isActive = step.status === 'active';
-          const isPending = step.status === 'pending';
 
           return (
             <React.Fragment key={step.key}>

@@ -4,7 +4,6 @@ import { FaCheck, FaChevronRight, FaFolderOpen } from 'react-icons/fa';
 import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent, type FolderNote } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
-import ProgressBar from '../components/ProgressBar';
 import ShipmentTracker from '../components/ShipmentTracker';
 import AddShipmentModal from '../components/AddShipmentModal';
 import OrderStepper, { type StepperStep } from '../components/OrderStepper';
@@ -392,7 +391,6 @@ const FolderView: React.FC = () => {
   const { folder, quote, files, forms, esignatures, summary } = content;
   const tasksTotal = summary?.progress?.tasks_total ?? 0;
   const tasksCompleted = summary?.progress?.tasks_completed ?? 0;
-  const progressPct = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
   const actionRequired = summary?.next_step_owner === 'customer';
   const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
   const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';

@@ -725,9 +725,11 @@ export interface FolderTask {
 
 export interface FolderSummary {
   stage?: string;
+  stage_label?: string;
   next_step?: string;
   next_step_owner?: 'customer' | 'reel48' | string;
   computed_stage?: string;
+  computed_stage_label?: string;
   computed_next_step?: string;
   computed_next_step_owner?: 'customer' | 'reel48' | string;
   progress?: {
@@ -749,6 +751,11 @@ export interface FolderSummary {
     estimated_delivery_date?: string;
     actual_delivery_date?: string;
   };
+  stepper_steps?: Array<{
+    key: string;
+    label: string;
+    status: 'completed' | 'active' | 'pending';
+  }>;
   updated_at?: string;
 }
 
