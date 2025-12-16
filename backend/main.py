@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat, shipments, calcom, realtime, voice_live
+from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat, shipments, calcom
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
@@ -187,8 +187,6 @@ app.include_router(shipments.router)
 app.include_router(chat.router)
 app.include_router(calcom.router)
 app.include_router(email_debug.router)
-app.include_router(realtime.router)
-app.include_router(voice_live.router)
 
 @app.get("/")
 async def root():

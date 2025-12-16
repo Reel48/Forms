@@ -1052,9 +1052,5 @@ export const authAPI = {
   logoutAll: () => api.post<{ message: string; sessions_revoked: number }>('/api/auth/logout-all'),
 };
 
-export const realtimeAPI = {
-  mintToken: () => api.post<{ token: string; expires_at: string }>('/api/realtime/token'),
-};
-
 export default api;
 
