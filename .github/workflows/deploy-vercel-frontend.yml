@@ -78,8 +78,15 @@ jobs:
           set -euo pipefail
 
           echo "Triggering Vercel deploy hook..."
-          resp="$(curl -sS -X POST "${VERCEL_DEPLOY_HOOK_URL}" -w '\nHTTP_STATUS:%{http_code}\n' --max-time 60)"
+          tmp_headers="$(mktemp)"
+          resp="$(curl -sS -D "${tmp_headers}" -X POST "${VERCEL_DEPLOY_HOOK_URL}" -w '\nHTTP_STATUS:%{http_code}\n' --max-time 60)"
           echo "${resp}"
+
+          echo ""
+          echo "----- Response headers -----"
+          # Headers can help identify where the hook is going (trace id / location).
+          sed -n '1,40p' "${tmp_headers}" || true
+          echo "----------------------------"
 
           status="$(printf '%s' "${resp}" | awk -F: '/^HTTP_STATUS:/ { print $2 }' | tr -d '\r')"
           if [[ -z "${status}" ]]; then
