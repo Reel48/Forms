@@ -147,14 +147,13 @@ const CustomerChatPage: React.FC = () => {
   }, []);
 
   const getRealtimeWsUrl = () => {
-    const base = (import.meta as any).env?.VITE_REALTIME_VOICE_URL as string | undefined;
-    if (!base) return '';
-    const trimmed = base.replace(/\/+$/, '');
-    if (trimmed.startsWith('https://')) return `wss://${trimmed.substring('https://'.length)}/ws/browser-voice`;
-    if (trimmed.startsWith('http://')) return `ws://${trimmed.substring('http://'.length)}/ws/browser-voice`;
-    // If user provided wss/ws already
-    if (trimmed.startsWith('wss://') || trimmed.startsWith('ws://')) return `${trimmed}/ws/browser-voice`;
-    return `wss://${trimmed}/ws/browser-voice`;
+    // Use the existing backend API URL and connect to the backend WebSocket endpoint.
+    const apiUrl = (import.meta as any).env?.VITE_API_URL as string | undefined;
+    const base = (apiUrl || window.location.origin).replace(/\/+$/, '');
+    if (base.startsWith('https://')) return `wss://${base.substring('https://'.length)}/api/realtime/ws/voice`;
+    if (base.startsWith('http://')) return `ws://${base.substring('http://'.length)}/api/realtime/ws/voice`;
+    if (base.startsWith('wss://') || base.startsWith('ws://')) return `${base}/api/realtime/ws/voice`;
+    return `wss://${base}/api/realtime/ws/voice`;
   };
 
   const downsampleTo16kInt16 = (input: Float32Array, inputRate: number) => {
@@ -264,11 +263,11 @@ const CustomerChatPage: React.FC = () => {
       const processor = ctx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
 
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(`${wsUrl}?conversation_id=${encodeURIComponent(conversation.id)}`);
       voiceWsRef.current = ws;
 
       ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'start', token, conversation_id: conversation.id }));
+        ws.send(JSON.stringify({ type: 'start', token }));
         setVoiceActive(true);
       };
       ws.onmessage = async (evt) => {

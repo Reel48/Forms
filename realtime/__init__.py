@@ -1,2 +1,0 @@
-# Realtime voice service package
-
