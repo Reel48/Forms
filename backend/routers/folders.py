@@ -1481,48 +1481,30 @@ async def create_folder_note(folder_id: str, payload: FolderNoteCreate, admin_us
         except Exception:
             pass
 
-        # Best-effort customer notification (email or SMS based on preference)
+        # Best-effort customer notification (email only)
         try:
             client = None
             if client_id:
                 client = (
                     supabase_storage
                     .table("clients")
-                    .select("email, phone_e164, phone, preferred_notification_channel, sms_opt_in, sms_verified")
+                    .select("email")
                     .eq("id", client_id)
                     .single()
                     .execute()
                 ).data
 
-            preferred = ((client or {}).get("preferred_notification_channel") or "email").lower()
-            # Prefer dedicated phone_e164, but allow legacy phone field too.
-            phone_candidate = (client or {}).get("phone_e164") or (client or {}).get("phone")
-            sms_ok = bool((client or {}).get("sms_opt_in")) and bool((client or {}).get("sms_verified")) and bool(phone_candidate)
-
-            if preferred == "sms" and sms_ok:
-                from sms_service import send_notification
-                from email_service import FRONTEND_URL
-                folder_link = f"{FRONTEND_URL}/folders/{folder_id}"
-                body_text = f"Reel48 update — {folder_name}\n\n{title}\n{body}\n\nOpen: {folder_link}"
-                # Normalize phone to E.164 on the server side (best-effort).
-                try:
-                    from routers.clients import _normalize_phone_e164  # type: ignore
-                    to_phone = _normalize_phone_e164(str(phone_candidate))
-                except Exception:
-                    to_phone = str(phone_candidate)
-                send_notification(to=to_phone, body=body_text)
-            else:
-                to_email = (client or {}).get("email") or _get_folder_client_email(folder_id)
-                if to_email:
-                    from email_service import email_service
-                    email_service.send_folder_note_added(
-                        to_email=to_email,
-                        folder_id=folder_id,
-                        folder_name=folder_name,
-                        note_title=title,
-                        note_body=body,
-                        created_at=now,
-                    )
+            to_email = (client or {}).get("email") or _get_folder_client_email(folder_id)
+            if to_email:
+                from email_service import email_service
+                email_service.send_folder_note_added(
+                    to_email=to_email,
+                    folder_id=folder_id,
+                    folder_name=folder_name,
+                    note_title=title,
+                    note_body=body,
+                    created_at=now,
+                )
         except Exception:
             pass
 

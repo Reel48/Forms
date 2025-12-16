@@ -85,12 +85,12 @@ class Client(ClientBase):
 
     # Notification preferences (added via migration)
     phone_e164: Optional[str] = None
-    preferred_notification_channel: Optional[str] = "email"  # email | sms
-    sms_opt_in: Optional[bool] = False
-    sms_opt_in_at: Optional[datetime] = None
-    sms_opt_out_at: Optional[datetime] = None
-    sms_verified: Optional[bool] = False
-    sms_verified_at: Optional[datetime] = None
+    preferred_notification_channel: Optional[str] = "email"  # email only (SMS no longer supported)
+    sms_opt_in: Optional[bool] = False  # Deprecated: SMS no longer supported
+    sms_opt_in_at: Optional[datetime] = None  # Deprecated: SMS no longer supported
+    sms_opt_out_at: Optional[datetime] = None  # Deprecated: SMS no longer supported
+    sms_verified: Optional[bool] = False  # Deprecated: SMS no longer supported
+    sms_verified_at: Optional[datetime] = None  # Deprecated: SMS no longer supported
     
     @field_validator('created_at', mode='before')
     @classmethod
