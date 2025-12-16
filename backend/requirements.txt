@@ -1,7 +1,9 @@
-fastapi==0.104.1
+# FastAPI 0.104 pins anyio<4; newer google-genai requires anyio>=4.8.
+fastapi>=0.115.0,<1.0.0
 uvicorn[standard]==0.24.0
 python-dotenv==1.0.0
-supabase==2.0.0
+# supabase 2.0 pins httpx<0.25; google-genai requires httpx>=0.28.1.
+supabase>=2.10.0,<3.0.0
 pydantic==2.5.0
 pydantic[email]==2.5.0
 python-multipart==0.0.6
@@ -17,6 +19,9 @@ slowapi==0.1.9
 pypdf==4.0.1
 google-generativeai>=0.8.3
 google-genai>=0.6.0
+# Explicitly align shared deps to avoid resolver backtracking conflicts.
+httpx>=0.28.1,<1.0.0
+anyio>=4.8.0,<5.0.0
 numpy>=1.26.0
 shippo>=2.0.0
 apscheduler==3.10.4
