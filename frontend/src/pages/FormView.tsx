@@ -171,14 +171,9 @@ function FormView() {
             </button>
           )}
           {role === 'admin' && (
-            <>
-              <button onClick={() => navigate(`/forms/${id}/edit`)} className="btn-primary">
-                Edit
-              </button>
-              <button onClick={handleDelete} className="btn-danger">
-                Delete
-              </button>
-            </>
+            <button onClick={handleDelete} className="btn-danger">
+              Delete
+            </button>
           )}
         </div>
       </div>
@@ -457,11 +452,20 @@ function FormView() {
           Form Fields ({form.fields?.length || 0})
         </h2>
         
-        {!form.fields || form.fields.length === 0 ? (
+        {form.is_typeform_form ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-            <p>No fields in this form yet.</p>
-            <Link to={`/forms/${id}/edit`} className="btn-primary" style={{ marginTop: '1rem' }}>
-              Add Fields
+            <p>This is a Typeform form. Edit it in Typeform.</p>
+            {form.typeform_form_url && (
+              <a href={form.typeform_form_url} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ marginTop: '1rem' }}>
+                Open in Typeform
+              </a>
+            )}
+          </div>
+        ) : !form.fields || form.fields.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+            <p>This is a legacy form with no fields. Forms are now created in Typeform.</p>
+            <Link to="/forms/import-typeform" className="btn-primary" style={{ marginTop: '1rem' }}>
+              Import from Typeform
             </Link>
           </div>
         ) : (

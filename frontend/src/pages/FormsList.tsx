@@ -88,10 +88,16 @@ function FormsList() {
       await Promise.all(
         currentForms.map(async (form) => {
           try {
+            // For Typeform forms, submissions might not be available if token not configured
+            // Silently handle errors to prevent UI breaking
             const response = await formsAPI.getSubmissions(form.id);
             countsMap[form.id] = response.data?.length || 0;
-          } catch (error) {
-            console.error(`Failed to load submission count for form ${form.id}:`, error);
+          } catch (error: any) {
+            // Silently handle errors - Typeform forms may not have token configured yet
+            // or legacy forms may have no submissions
+            if (error?.response?.status !== 500) {
+              console.error(`Failed to load submission count for form ${form.id}:`, error);
+            }
             countsMap[form.id] = 0;
           }
         })
@@ -665,9 +671,6 @@ function FormsList() {
                       </Link>
                       {role === 'admin' && (
                         <>
-                          <Link to={`/forms/${form.id}/edit`} className="btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                            Edit
-                          </Link>
                           <button
                             onClick={() => handleDuplicate(form.id)}
                             className="btn-outline"

