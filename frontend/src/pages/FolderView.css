@@ -116,7 +116,7 @@
 }
 
 .status-completed {
-  background-color: var(--color-primary-light, #dbeafe);
+  background-color: var(--color-primary-light, #a8bba2);
   color: var(--color-primary, #5c795e);
 }
 
@@ -263,7 +263,7 @@
 }
 
 .btn-secondary-outline:hover:not(:disabled) {
-  background-color: #eff6ff;
+  background-color: #E8EBF0;
   border-color: #829f82;
 }
 

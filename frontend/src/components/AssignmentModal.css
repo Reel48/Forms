@@ -127,7 +127,7 @@
 }
 
 .assigned-badge {
-  background-color: var(--color-primary-light, #dbeafe);
+  background-color: var(--color-primary-light, #a8bba2);
   color: var(--color-primary, #5c795e);
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-full, 9999px);

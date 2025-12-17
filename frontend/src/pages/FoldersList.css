@@ -162,7 +162,7 @@
 }
 
 .status-completed {
-  background-color: var(--color-primary-light, #dbeafe);
+  background-color: var(--color-primary-light, #a8bba2);
   color: var(--color-primary, #5c795e);
 }
 

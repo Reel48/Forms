@@ -715,7 +715,7 @@ function QuoteBuilder() {
                           style={{
                             cursor: role === 'admin' ? 'move' : 'default',
                             opacity: draggedIndex === index ? 0.5 : 1,
-                            backgroundColor: selectedLineItems.has(index) ? '#eff6ff' : undefined,
+                            backgroundColor: selectedLineItems.has(index) ? '#E8EBF0' : undefined,
                           }}
                         >
                           {role === 'admin' && (

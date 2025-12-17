@@ -101,7 +101,7 @@
 }
 
 .calendar-day.today {
-  background: #eff6ff;
+  background: #E8EBF0;
   border-color: var(--color-primary, #5c795e);
   border-width: 2px;
 }

@@ -18,12 +18,12 @@
 
 .file-upload-zone:hover {
   border-color: var(--color-primary, #5c795e);
-  background-color: var(--color-primary-light, #dbeafe);
+  background-color: var(--color-primary-light, #a8bba2);
 }
 
 .file-upload-zone.dragging {
   border-color: var(--color-primary, #5c795e);
-  background-color: var(--color-primary-light, #dbeafe);
+  background-color: var(--color-primary-light, #a8bba2);
   transform: scale(1.02);
 }
 

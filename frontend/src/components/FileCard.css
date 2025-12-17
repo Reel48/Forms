@@ -73,7 +73,7 @@
 .file-card-tag {
   font-size: 0.75rem;
   padding: 0.125rem 0.5rem;
-  background-color: var(--color-primary-light, #dbeafe);
+  background-color: var(--color-primary-light, #a8bba2);
   color: var(--color-primary, #5c795e);
   border-radius: var(--radius-full, 9999px);
 }
