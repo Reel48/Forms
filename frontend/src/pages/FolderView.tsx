@@ -4,6 +4,7 @@ import { FaCheck, FaChevronRight, FaFolderOpen } from 'react-icons/fa';
 import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent, type FolderNote } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
+import TypeformImportModal from '../components/TypeformImportModal';
 import ShipmentTracker from '../components/ShipmentTracker';
 import AddShipmentModal from '../components/AddShipmentModal';
 import OrderStepper, { type StepperStep } from '../components/OrderStepper';
@@ -40,6 +41,7 @@ const FolderView: React.FC = () => {
   const [creatingNote, setCreatingNote] = useState(false);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteBody, setNewNoteBody] = useState('');
+  const [showTypeformImportModal, setShowTypeformImportModal] = useState(false);
 
   const isNewFolder = id === 'new';
 
@@ -1391,6 +1393,16 @@ const FolderView: React.FC = () => {
         {/* Content Manager (Admin Only) */}
         {role === 'admin' && (
           <section className="content-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>Manage Folder Content</h2>
+              <button
+                onClick={() => setShowTypeformImportModal(true)}
+                className="btn-primary"
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Import Typeform Form
+              </button>
+            </div>
             <FolderContentManager
               folderId={folder.id}
               onContentAdded={handleContentChange}
@@ -1477,6 +1489,15 @@ const FolderView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showTypeformImportModal && id && id !== 'new' && (
+        <TypeformImportModal
+          folderId={id}
+          isOpen={showTypeformImportModal}
+          onClose={() => setShowTypeformImportModal(false)}
+          onImportComplete={handleContentChange}
+        />
       )}
 
       {showAddShipment && (
