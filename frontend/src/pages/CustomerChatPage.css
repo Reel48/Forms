@@ -407,10 +407,10 @@
 
 .prompt-chip {
   background-color: var(--chat-bg-secondary);
-  border: 1px solid transparent;
+  border: 2px solid var(--color-smoke-green);
   border-radius: 24px;
   padding: 0.75rem 1.25rem;
-  color: var(--chat-text-secondary);
+  color: var(--color-elm-green);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -421,6 +421,13 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  font-weight: 600;
+}
+
+.prompt-chip:hover {
+  border-color: var(--color-aspen-green);
+  background-color: rgba(168, 187, 162, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .prompt-icon {
@@ -670,8 +677,9 @@
 
 .input-island:focus-within {
   background-color: var(--chat-input-bg);
-  box-shadow: var(--chat-shadow);
-  border-color: rgba(0,0,0,0.05);
+  box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
+  border-color: var(--color-aspen-green);
+  border-width: 3px;
   outline: none !important;
 }
 

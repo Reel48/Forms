@@ -495,8 +495,9 @@ nav .nav-tabs li {
 }
 
 .nav-tab:hover {
-  color: var(--color-primary);
-  background-color: var(--color-bg-secondary);
+  color: var(--color-elm-green);
+  background-color: rgba(168, 187, 162, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-tab.active {
@@ -1007,11 +1008,17 @@ a:not([class]) {
 .badge-sent {
   background-color: var(--color-basil);
   color: var(--color-text-light);
+  border: 2px solid var(--color-aspen-green);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-viewed {
-  background-color: var(--color-warning-light);
-  color: #92400e;
+  background-color: var(--color-smoke-green);
+  color: var(--color-elm-green);
+  border: 2px solid var(--color-smoke-green);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-accepted {
@@ -1254,8 +1261,9 @@ a:not([class]) {
 .typeform-question textarea:focus,
 .typeform-question select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-focus);
+  border-color: var(--color-aspen-green);
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), var(--shadow-sm);
 }
 
 .typeform-question textarea {
@@ -1289,13 +1297,16 @@ a:not([class]) {
 }
 
 .typeform-btn-primary {
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-gradient) 100%);
+  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 100%);
   color: white;
+  box-shadow: var(--shadow-colored);
+  border: 2px solid var(--color-elm-green);
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-basil) 0%, var(--color-aspen-green) 100%);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }
 
 .typeform-btn-secondary {
