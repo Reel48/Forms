@@ -357,7 +357,7 @@ function FormsList() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name or description..."
+                placeholder="Search by name..."
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
               />
             </div>
@@ -545,7 +545,6 @@ function FormsList() {
                   </th>
                 )}
                 <th>Form Name</th>
-                <th>Description</th>
                 <th>Fields</th>
                 <th>Submissions</th>
                 <th>Status</th>
