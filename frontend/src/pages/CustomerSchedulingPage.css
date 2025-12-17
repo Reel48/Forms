@@ -14,7 +14,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
 }
 
 .page-header p {
@@ -29,7 +29,7 @@
   display: inline-flex;
   gap: 0.5rem;
   padding: 0.5rem;
-  border: 2px solid var(--color-smoke-green);
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   margin-bottom: 1.5rem;
@@ -52,18 +52,18 @@
 }
 
 .tab:hover {
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
   background: white;
-  border-color: var(--color-smoke-green);
+  border-color: var(--color-border);
   box-shadow: var(--shadow-sm);
 }
 
 .tab-active {
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
   background: #FFFFFF;
-  border-color: var(--color-aspen-green);
+  border-color: var(--color-verdant-pulse);
   border-width: 2px;
-  box-shadow: 0px 4px 16px rgba(92, 121, 94, 0.2);
+  box-shadow: var(--shadow-md);
   font-weight: 600;
 }
 
@@ -82,11 +82,11 @@
   text-align: center;
   padding: 2rem 1.5rem;
   background: #FFFFFF;
-  border: 2px solid var(--color-smoke-green);
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   max-width: 600px;
   margin: 2rem auto;
-  box-shadow: 0px 4px 16px rgba(92, 121, 94, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .empty-state-enhanced h3 {
@@ -132,23 +132,23 @@
 /* Booking Widget Container */
 .booking-widget-container {
   background: #FFFFFF;
-  border: 2px solid var(--color-smoke-green);
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   padding: 1.5rem;
-  box-shadow: 0px 4px 16px rgba(92, 121, 94, 0.2);
+  box-shadow: var(--shadow-md);
   transition: all 0.2s;
 }
 
 .booking-widget-container:hover {
-  border-color: var(--color-aspen-green);
-  box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.3);
+  border-color: var(--color-verdant-pulse);
+  box-shadow: var(--shadow-lg);
 }
 
 .booking-widget-container h2 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
 }
 
 .booking-widget-container > p {
@@ -166,7 +166,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
   margin-bottom: 0.5rem;
 }
 
@@ -252,7 +252,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
   margin-bottom: 0.5rem;
 }
 
@@ -270,8 +270,8 @@
 
 .booking-notes-input:focus {
   outline: none;
-  border-color: var(--color-primary, #5c795e);
-  box-shadow: 0 0 0 3px rgba(92, 121, 94, 0.1);
+  border-color: var(--color-tidewave-blue);
+  box-shadow: 0 0 0 3px var(--color-primary-focus);
 }
 
 /* Reschedule Modal */
@@ -361,7 +361,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0 0 1rem 0;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
 }
 
 .analytics-grid {
@@ -380,7 +380,7 @@
 .analytics-value {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--color-primary, #5c795e);
+  color: var(--color-tidewave-blue);
   margin-bottom: 0.5rem;
 }
 

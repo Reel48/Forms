@@ -382,8 +382,8 @@
 }
 
 .chat-widget-attach:hover:not(:disabled) {
-  background-color: var(--color-primary, #5c795e);
-  border-color: var(--color-primary, #5c795e);
+  background-color: var(--color-tidewave-blue);
+  border-color: var(--color-tidewave-blue);
   color: white;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(92, 121, 94, 0.3);

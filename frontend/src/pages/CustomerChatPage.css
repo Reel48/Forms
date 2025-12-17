@@ -7,9 +7,9 @@
   --chat-text: #2C2C2C;
   --chat-text-secondary: #444746;
   --chat-border: #e3e3e3;
-  --chat-accent: #5c795e; /* Elm Green */
-  --chat-accent-hover: #829f82; /* Basil */
-  --chat-user-bubble: #5c795e; /* Elm Green for customer messages */
+  --chat-accent: var(--color-tidewave-blue);
+  --chat-accent-hover: var(--color-terra-blush);
+  --chat-user-bubble: var(--color-tidewave-blue); /* Tidewave Blue for customer messages */
   --chat-user-text: #ffffff;
   --chat-ai-bubble: #e5e5e7; /* Grey like iMessage */
   --chat-ai-text: #1f1f1f;
@@ -35,7 +35,7 @@
   --chat-border: #444746;
   --chat-accent: #a8c7fa;
   --chat-accent-hover: #8ab4f8;
-  --chat-user-bubble: #5c795e; /* Elm Green for customer messages */
+  --chat-user-bubble: var(--color-tidewave-blue); /* Tidewave Blue for customer messages */
   --chat-user-text: #ffffff;
   --chat-ai-bubble: #3a3a3c; /* Darker grey for AI in dark mode */
   --chat-ai-text: #e3e3e3;
@@ -407,10 +407,10 @@
 
 .prompt-chip {
   background-color: var(--chat-bg-secondary);
-  border: 2px solid var(--color-smoke-green);
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   padding: 0.75rem 1.25rem;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -425,8 +425,8 @@
 }
 
 .prompt-chip:hover {
-  border-color: var(--color-aspen-green);
-  background-color: rgba(168, 187, 162, 0.2);
+  border-color: var(--color-verdant-pulse);
+  background-color: var(--color-primary-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -664,7 +664,7 @@
   max-width: 800px;
   background-color: var(--chat-input-bg);
   border-radius: 24px; /* Rounded shape */
-  border: 2px solid var(--color-smoke-green);
+  border: 1px solid var(--color-border);
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center; /* Center vertically to prevent text cutoff */
@@ -678,7 +678,7 @@
 .input-island:focus-within {
   background-color: var(--chat-input-bg);
   box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
-  border-color: var(--color-aspen-green);
+  border-color: var(--color-verdant-pulse);
   border-width: 3px;
   outline: none !important;
 }

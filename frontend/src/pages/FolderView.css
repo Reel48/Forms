@@ -25,7 +25,7 @@
 .breadcrumb-link {
   background: none;
   border: none;
-  color: var(--color-primary, #5c795e);
+  color: var(--color-tidewave-blue);
   cursor: pointer;
   padding: 0;
   font-size: 0.875rem;
@@ -34,7 +34,7 @@
 }
 
 .breadcrumb-link:hover {
-  color: var(--color-primary-dark, #829f82);
+  color: var(--color-terra-blush);
   text-decoration: underline;
 }
 
@@ -116,8 +116,8 @@
 }
 
 .status-completed {
-  background-color: var(--color-primary-light, #a8bba2);
-  color: var(--color-primary, #5c795e);
+  background-color: var(--color-primary-light);
+  color: var(--color-tidewave-blue);
 }
 
 .status-archived {
@@ -151,8 +151,8 @@
 
 /* Hero Action Card */
 .hero-action-card {
-  background: var(--color-smoke-green);
-  border: 2px solid #5c795e;
+  background: var(--color-bg-secondary);
+  border: 2px solid var(--color-tidewave-blue);
   padding: 2rem;
 }
 
@@ -179,7 +179,7 @@
 
 .btn-hero-primary {
   padding: 0.875rem 2rem;
-  background-color: var(--color-elm-green);
+  background-color: var(--color-sunlit-saffron);
   color: white;
   border: none;
   border-radius: 24px;
@@ -191,7 +191,7 @@
 }
 
 .btn-hero-primary:hover {
-  background-color: var(--color-basil);
+  background-color: #d99a3f;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -253,7 +253,7 @@
 .btn-secondary-outline {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: #5c795e;
+  color: var(--color-tidewave-blue);
   border: 1.5px solid #5c795e;
   border-radius: 6px;
   font-size: 0.875rem;

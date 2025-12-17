@@ -769,7 +769,7 @@ const FolderView: React.FC = () => {
                           onClick={() => navigate(`/files/${file.id}`)}
                         >
                           <td className="mobile-name-column">
-                            <strong style={{ color: 'var(--color-primary, #5c795e)' }}>{file.name}</strong>
+                            <strong style={{ color: 'var(--color-tidewave-blue)' }}>{file.name}</strong>
                           </td>
                           <td>
                             {file.is_completed ? (
@@ -1055,7 +1055,7 @@ const FolderView: React.FC = () => {
                         ) : (
                           <strong
                             style={{
-                              color: 'var(--color-primary, #5c795e)',
+                              color: 'var(--color-tidewave-blue)',
                               cursor: 'pointer'
                             }}
                             onDoubleClick={(e) => {
@@ -1212,13 +1212,13 @@ const FolderView: React.FC = () => {
                       </td>
                       <td className="mobile-name-column">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: 'var(--color-primary, #5c795e)' }}>{form.name}</strong>
+                          <strong style={{ color: 'var(--color-tidewave-blue)' }}>{form.name}</strong>
                           {form.is_template && (
                             <span style={{ 
                               fontSize: '0.75rem', 
                               padding: '0.125rem 0.375rem', 
                               backgroundColor: '#E8EBF0', 
-                              color: '#5c795e', 
+                              color: 'var(--color-tidewave-blue)', 
                               borderRadius: '0.25rem',
                               fontWeight: 500
                             }}>
@@ -1297,13 +1297,13 @@ const FolderView: React.FC = () => {
                       </td>
                       <td className="mobile-name-column">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: 'var(--color-primary, #5c795e)' }}>{esig.name}</strong>
+                          <strong style={{ color: 'var(--color-tidewave-blue)' }}>{esig.name}</strong>
                           {esig.is_template && (
                             <span style={{ 
                               fontSize: '0.75rem', 
                               padding: '0.125rem 0.375rem', 
                               backgroundColor: '#E8EBF0', 
-                              color: '#5c795e', 
+                              color: 'var(--color-tidewave-blue)', 
                               borderRadius: '0.25rem',
                               fontWeight: 500
                             }}>

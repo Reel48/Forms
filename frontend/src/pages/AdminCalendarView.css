@@ -42,13 +42,13 @@
 .view-mode-btn:hover,
 .nav-btn:hover {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
 }
 
 .view-mode-btn.active {
-  background: var(--color-primary, #5c795e);
+  background: var(--color-tidewave-blue);
   color: white;
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
 }
 
 .calendar-content {
@@ -97,12 +97,12 @@
 
 .calendar-day:hover {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
 }
 
 .calendar-day.today {
   background: #E8EBF0;
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
   border-width: 2px;
 }
 
@@ -119,7 +119,7 @@
 }
 
 .calendar-day.today .calendar-day-number {
-  color: var(--color-primary, #5c795e);
+  color: var(--color-tidewave-blue);
 }
 
 .calendar-day-bookings {
@@ -161,7 +161,7 @@
 
 .calendar-list-item:hover {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
 }
 
 .list-item-time {

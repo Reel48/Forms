@@ -229,7 +229,7 @@ function FilesList() {
                     ) : (
                       <strong
                         style={{
-                          color: 'var(--color-primary, #5c795e)',
+                          color: 'var(--color-tidewave-blue)',
                           cursor: 'pointer'
                         }}
                         onDoubleClick={(e) => {

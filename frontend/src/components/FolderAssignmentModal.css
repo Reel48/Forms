@@ -117,7 +117,7 @@
 
 .folder-select-input:focus {
   outline: none;
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 

@@ -20,7 +20,7 @@
 
 .btn-create {
   padding: 0.75rem 1.5rem;
-  background-color: var(--color-primary, #5c795e);
+  background-color: var(--color-tidewave-blue);
   color: var(--brand-white, #ffffff);
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -70,7 +70,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
@@ -93,7 +93,7 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
@@ -127,7 +127,7 @@
 .folder-card:hover {
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
   transform: translateY(-1px);
-  border-color: var(--color-primary, #5c795e);
+  border-color: var(--color-tidewave-blue);
 }
 
 .folder-header {
@@ -162,8 +162,8 @@
 }
 
 .status-completed {
-  background-color: var(--color-primary-light, #a8bba2);
-  color: var(--color-primary, #5c795e);
+  background-color: var(--color-primary-light);
+  color: var(--color-tidewave-blue);
 }
 
 .status-archived {
