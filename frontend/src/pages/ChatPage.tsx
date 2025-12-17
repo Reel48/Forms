@@ -742,13 +742,13 @@ const ChatPage: React.FC = () => {
                     style={{
                       backgroundColor:
                         selectedConversation.status === 'active'
-                          ? 'rgb(224 231 255)'
+                          ? 'rgb(219 234 254)'
                           : selectedConversation.status === 'resolved'
                           ? 'var(--color-success-light)'
                           : 'var(--color-gray-light)',
                       color:
                         selectedConversation.status === 'active'
-                          ? 'rgb(99 102 241)'
+                          ? 'rgb(59 130 246)'
                           : selectedConversation.status === 'resolved'
                           ? 'var(--color-success)'
                           : 'var(--color-gray)',

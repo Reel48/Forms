@@ -25,7 +25,7 @@
 .breadcrumb-link {
   background: none;
   border: none;
-  color: rgb(99 102 241);
+  color: rgb(59 130 246);
   cursor: pointer;
   padding: 0;
   font-size: 0.875rem;
@@ -116,8 +116,8 @@
 }
 
 .status-completed {
-  background-color: rgb(224 231 255);
-  color: rgb(99 102 241);
+  background-color: rgb(219 234 254);
+  color: rgb(59 130 246);
 }
 
 .status-archived {
@@ -152,7 +152,7 @@
 /* Hero Action Card */
 .hero-action-card {
   background: var(--color-bg-secondary);
-  border: 2px solid rgb(99 102 241);
+  border: 2px solid rgb(59 130 246);
   padding: 2rem;
 }
 
@@ -253,7 +253,7 @@
 .btn-secondary-outline {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: rgb(99 102 241);
+  color: rgb(59 130 246);
   border: 1.5px solid #5c795e;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -328,7 +328,7 @@
 
 .content-card:hover {
   background-color: var(--color-bg-tertiary, #f3f4f6);
-  border-color: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(59 130 246); /* indigo-500 */
   transform: translateY(-1px);
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -421,8 +421,8 @@
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: rgb(99 102 241); /* indigo-500 */
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
+  border-color: rgb(59 130 246); /* indigo-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .form-group textarea {

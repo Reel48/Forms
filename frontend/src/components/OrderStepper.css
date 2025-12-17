@@ -41,8 +41,8 @@
 }
 
 .order-stepper-circle.active {
-  background-color: rgb(99 102 241);
-  border: 2px solid rgb(99 102 241);
+  background-color: rgb(59 130 246);
+  border: 2px solid rgb(59 130 246);
   color: white;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .order-stepper-label.active {
-  color: rgb(99 102 241);
+  color: rgb(59 130 246);
   font-weight: 600;
 }
 

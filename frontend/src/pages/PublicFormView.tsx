@@ -1247,7 +1247,7 @@ function PublicFormView() {
             onDragOver={(e) => {
               if (uploading) return;
               e.preventDefault();
-              e.currentTarget.style.borderColor = 'rgb(99 102 241)';
+              e.currentTarget.style.borderColor = 'rgb(59 130 246)';
               e.currentTarget.style.backgroundColor = 'rgb(219 234 254)'; /* blue-100 */
             }}
             onDragLeave={(e) => {
@@ -1281,7 +1281,7 @@ function PublicFormView() {
               />
               {uploading ? (
                 <div>
-                  <p style={{ margin: 0, color: 'rgb(99 102 241)' }}>Uploading...</p>
+                  <p style={{ margin: 0, color: 'rgb(59 130 246)' }}>Uploading...</p>
                 </div>
               ) : value?.file_url ? (
                 <div>
@@ -1613,7 +1613,7 @@ function PublicFormView() {
                       border: 'none',
                       fontSize: '2rem',
                       cursor: 'pointer',
-                      color: star <= (value || 0) ? 'rgb(99 102 241)' : 'var(--color-border-light)',
+                      color: star <= (value || 0) ? 'rgb(59 130 246)' : 'var(--color-border-light)',
                       padding: 0,
                       lineHeight: 1,
                     }}
@@ -1965,7 +1965,7 @@ function PublicFormView() {
                         color: '#ffffff',
                         background: isProcessing || value?.status === 'succeeded' 
                           ? '#9ca3af' 
-                          : 'rgb(99 102 241)',
+                          : 'rgb(59 130 246)',
                         border: 'none',
                         borderRadius: '24px',
                         cursor: isProcessing || value?.status === 'succeeded' ? 'not-allowed' : 'pointer',
@@ -2257,7 +2257,7 @@ function PublicFormView() {
 
   // Apply theme
   const theme = form?.theme || {};
-  const primaryColor = theme.primaryColor || 'rgb(99 102 241)';
+  const primaryColor = theme.primaryColor || 'rgb(59 130 246)';
   const fontFamily = theme.fontFamily || 'Inter, system-ui, sans-serif';
   const logoUrl = theme.logoUrl || '';
   const backgroundColor = theme.backgroundColor || primaryColor;
@@ -2480,14 +2480,14 @@ function PublicFormView() {
                     fontSize: '1rem',
                     fontWeight: '600',
                     color: 'white',
-                    backgroundColor: 'rgb(99 102 241)',
+                    backgroundColor: 'rgb(59 130 246)',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
                     transition: 'background-color 0.2s'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgb(79 70 229)'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgb(99 102 241)'}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgb(37 99 235)'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgb(59 130 246)'}
                 >
                   Back to Dashboard
                 </button>

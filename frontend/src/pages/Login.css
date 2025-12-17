@@ -53,9 +53,9 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(59 130 246); /* indigo-500 */
   border-width: 2px;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .form-group input:disabled {

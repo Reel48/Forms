@@ -49,7 +49,7 @@
 }
 
 .tab-btn.active {
-  background-color: rgb(99 102 241);
+  background-color: rgb(59 130 246);
   color: var(--brand-white, #ffffff);
 }
 
@@ -83,7 +83,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
@@ -119,7 +119,7 @@
 }
 
 .btn-bulk-add {
-  background-color: rgb(99 102 241);
+  background-color: rgb(59 130 246);
   color: var(--brand-white, #ffffff);
 }
 
@@ -191,7 +191,7 @@
 
 .content-item:hover {
   background-color: var(--color-bg-tertiary, #f3f4f6);
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
 }
 
 .content-item.assigned {
@@ -237,7 +237,7 @@
 }
 
 .btn-add {
-  background-color: rgb(99 102 241);
+  background-color: rgb(59 130 246);
   color: var(--brand-white, #ffffff);
 }
 

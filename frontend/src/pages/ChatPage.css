@@ -53,7 +53,7 @@
   top: 0;
   bottom: 0;
   width: 0;
-  background: rgb(99 102 241);
+  background: rgb(59 130 246);
   transition: width 0.2s;
 }
 
@@ -68,7 +68,7 @@
 
 .conversation-item.active {
   background: rgba(92, 121, 94, 0.1);
-  border-left: 4px solid rgb(99 102 241);
+  border-left: 4px solid rgb(59 130 246);
 }
 
 .conversation-item.active::before {
@@ -251,7 +251,7 @@
 }
 
 .message-sent .message-content {
-  background: rgb(99 102 241);
+  background: rgb(59 130 246);
   color: white;
   border-bottom-right-radius: 0.25rem;
 }
@@ -265,7 +265,7 @@
 
 .message-ai .message-content {
   background: rgba(92, 121, 94, 0.1);
-  border-left: 4px solid rgb(99 102 241);
+  border-left: 4px solid rgb(59 130 246);
   border-bottom-left-radius: 0.25rem;
   position: relative;
 }
@@ -400,8 +400,8 @@
 }
 
 .btn-attach:hover:not(:disabled) {
-  background-color: rgb(99 102 241);
-  border-color: rgb(99 102 241);
+  background-color: rgb(59 130 246);
+  border-color: rgb(59 130 246);
   color: white;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(92, 121, 94, 0.3);
@@ -425,7 +425,7 @@
 }
 
 .chat-input:focus {
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
   box-shadow: 0 0 0 3px rgba(92, 121, 94, 0.1);
   outline: none;
 }
@@ -436,7 +436,7 @@
 
 .btn-send {
   padding: 1rem 1.75rem;
-  background: rgb(99 102 241);
+  background: rgb(59 130 246);
   color: white;
   border: none;
   border-radius: 0.75rem;

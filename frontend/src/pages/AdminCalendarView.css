@@ -42,13 +42,13 @@
 .view-mode-btn:hover,
 .nav-btn:hover {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
 }
 
 .view-mode-btn.active {
-  background: rgb(99 102 241);
+  background: rgb(59 130 246);
   color: white;
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
 }
 
 .calendar-content {
@@ -97,12 +97,12 @@
 
 .calendar-day:hover {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
 }
 
 .calendar-day.today {
   background: #E8EBF0;
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
   border-width: 2px;
 }
 
@@ -119,7 +119,7 @@
 }
 
 .calendar-day.today .calendar-day-number {
-  color: rgb(99 102 241);
+  color: rgb(59 130 246);
 }
 
 .calendar-day-bookings {
@@ -161,7 +161,7 @@
 
 .calendar-list-item:hover {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
 }
 
 .list-item-time {
@@ -331,12 +331,12 @@
 }
 
 .btn-primary {
-  background: rgb(99 102 241); /* indigo-500 */
+  background: rgb(59 130 246); /* indigo-500 */
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: rgb(79 70 229); /* indigo-600 */
+  background: rgb(37 99 235); /* indigo-600 */
 }
 
 .btn-danger {

@@ -231,7 +231,7 @@ function FormView() {
                       flex: 1, 
                       fontFamily: 'monospace', 
                       fontSize: '0.875rem',
-                      color: 'rgb(99 102 241)',
+                      color: 'rgb(59 130 246)',
                       textDecoration: 'none',
                       wordBreak: 'break-all'
                     }}

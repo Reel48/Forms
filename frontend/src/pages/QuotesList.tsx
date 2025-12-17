@@ -565,7 +565,7 @@ function QuotesList() {
               width: '40px',
               height: '40px',
               border: '4px solid #f3f3f3',
-              borderTop: '4px solid rgb(99 102 241)',
+              borderTop: '4px solid rgb(59 130 246)',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               marginBottom: '1rem'
@@ -604,8 +604,8 @@ function QuotesList() {
       {/* Bulk Actions Bar */}
       {role === 'admin' && selectedQuotes.size > 0 && (
         <div className="card mb-4" style={{ 
-          backgroundColor: 'rgb(224 231 255)', 
-          borderColor: 'rgb(99 102 241)',
+          backgroundColor: 'rgb(219 234 254)', 
+          borderColor: 'rgb(59 130 246)',
           borderWidth: '2px',
           borderStyle: 'solid',
           padding: '1rem',
@@ -615,7 +615,7 @@ function QuotesList() {
           flexWrap: 'wrap',
           gap: '1rem'
         }}>
-          <div style={{ fontWeight: '600', color: 'rgb(99 102 241)' }}>
+          <div style={{ fontWeight: '600', color: 'rgb(59 130 246)' }}>
             {selectedQuotes.size} quote(s) selected
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -683,7 +683,7 @@ function QuotesList() {
                   padding: '0.5rem 1rem',
                   borderRadius: '0.375rem',
                   border: '1px solid #d1d5db',
-                  backgroundColor: statusFilter === '' ? 'rgb(99 102 241)' : 'white',
+                  backgroundColor: statusFilter === '' ? 'rgb(59 130 246)' : 'white',
                   color: statusFilter === '' ? 'white' : 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -700,7 +700,7 @@ function QuotesList() {
                     padding: '0.5rem 1rem',
                     borderRadius: '0.375rem',
                     border: '1px solid #d1d5db',
-                    backgroundColor: statusFilter === status ? 'rgb(99 102 241)' : 'white',
+                    backgroundColor: statusFilter === status ? 'rgb(59 130 246)' : 'white',
                     color: statusFilter === status ? 'white' : 'var(--color-text-secondary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -1125,7 +1125,7 @@ function QuotesList() {
                       <div style={{ paddingRight: role === 'admin' ? '2.5rem' : '0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                           <div>
-                            <Link to={`/quotes/${quote.id}`} style={{ color: 'rgb(99 102 241)', textDecoration: 'none', fontWeight: '600' }}>
+                            <Link to={`/quotes/${quote.id}`} style={{ color: 'rgb(59 130 246)', textDecoration: 'none', fontWeight: '600' }}>
                               {quote.title}
                             </Link>
                             <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
@@ -1298,7 +1298,7 @@ function QuotesList() {
                             {visibleColumns.quoteNumber && <td>{quote.quote_number}</td>}
                             {visibleColumns.title && (
                               <td className="mobile-name-column">
-                                <Link to={`/quotes/${quote.id}`} style={{ color: 'rgb(99 102 241)', textDecoration: 'none' }}>
+                                <Link to={`/quotes/${quote.id}`} style={{ color: 'rgb(59 130 246)', textDecoration: 'none' }}>
                                   {quote.title}
                                 </Link>
                               </td>

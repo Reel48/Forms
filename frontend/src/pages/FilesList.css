@@ -37,8 +37,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: rgb(99 102 241); /* indigo-500 */
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
+  border-color: rgb(59 130 246); /* indigo-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .filter-select {
@@ -54,8 +54,8 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: rgb(99 102 241); /* indigo-500 */
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
+  border-color: rgb(59 130 246); /* indigo-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .view-toggle {
@@ -83,7 +83,7 @@
 }
 
 .view-toggle-btn.active {
-  background-color: rgb(99 102 241); /* indigo-500 */
+  background-color: rgb(59 130 246); /* indigo-500 */
   color: white;
 }
 

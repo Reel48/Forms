@@ -20,7 +20,7 @@
 
 .btn-create {
   padding: 0.75rem 1.5rem;
-  background-color: rgb(99 102 241); /* indigo-500 */
+  background-color: rgb(59 130 246); /* indigo-500 */
   color: white;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -31,7 +31,7 @@
 }
 
 .btn-create:hover {
-  background-color: rgb(79 70 229); /* indigo-600 */
+  background-color: rgb(37 99 235); /* indigo-600 */
 }
 
 .error-banner {
@@ -70,7 +70,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
@@ -93,7 +93,7 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
@@ -127,7 +127,7 @@
 .folder-card:hover {
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
   transform: translateY(-1px);
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
 }
 
 .folder-header {
@@ -162,8 +162,8 @@
 }
 
 .status-completed {
-  background-color: rgb(224 231 255);
-  color: rgb(99 102 241);
+  background-color: rgb(219 234 254);
+  color: rgb(59 130 246);
 }
 
 .status-archived {

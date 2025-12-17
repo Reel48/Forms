@@ -106,7 +106,7 @@
 
 .chat-widget-header {
   padding: 1rem 1.5rem;
-  background: rgb(99 102 241);
+  background: rgb(59 130 246);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -252,7 +252,7 @@
 }
 
 .message-sent .chat-widget-message-content {
-  background: rgb(99 102 241);
+  background: rgb(59 130 246);
   color: white;
   border-bottom-right-radius: 6px;
 }
@@ -367,12 +367,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgb(99 102 241);
+  color: rgb(59 130 246);
 }
 
 .chat-widget-attach:hover:not(:disabled) {
-  border-color: rgb(99 102 241); /* indigo-500 */
-  background-color: rgb(224 231 255); /* indigo-100 */
+  border-color: rgb(59 130 246); /* indigo-500 */
+  background-color: rgb(219 234 254); /* indigo-100 */
   box-shadow: var(--shadow-sm);
 }
 
@@ -382,8 +382,8 @@
 }
 
 .chat-widget-attach:hover:not(:disabled) {
-  background-color: rgb(99 102 241);
-  border-color: rgb(99 102 241); /* indigo-500 */
+  background-color: rgb(59 130 246);
+  border-color: rgb(59 130 246); /* indigo-500 */
   color: white;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(92, 121, 94, 0.3);
@@ -407,9 +407,9 @@
 }
 
 .chat-widget-input:focus {
-  border-color: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(59 130 246); /* indigo-500 */
   border-width: 3px;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0px 2px 8px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0px 2px 8px rgba(59, 130, 246, 0.15);
   outline: none;
 }
 

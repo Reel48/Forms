@@ -7,9 +7,9 @@
   --chat-text: #2C2C2C;
   --chat-text-secondary: #444746;
   --chat-border: #e3e3e3;
-  --chat-accent: rgb(99 102 241);
-  --chat-accent-hover: var(--color-terra-blush);
-  --chat-user-bubble: rgb(99 102 241); /* Tidewave Blue for customer messages */
+  --chat-accent: rgb(59 130 246); /* blue-500 */
+  --chat-accent-hover: rgb(37 99 235); /* blue-600 */
+  --chat-user-bubble: rgb(59 130 246); /* blue-500 for customer messages */
   --chat-user-text: #ffffff;
   --chat-ai-bubble: #e5e5e7; /* Grey like iMessage */
   --chat-ai-text: #1f1f1f;
@@ -17,7 +17,7 @@
   --chat-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   --sidebar-bg: #f0f4f9;
   --sidebar-item-hover: #e3e3e3;
-  --sidebar-item-active: var(--color-tidewave-blue-light);
+  --sidebar-item-active: rgb(219 234 254); /* blue-100 */
   --sidebar-text: #1f1f1f;
   
   /* Markdown Specifics */
@@ -33,9 +33,9 @@
   --chat-text: #e3e3e3;
   --chat-text-secondary: #c4c7c5;
   --chat-border: #444746;
-  --chat-accent: rgb(99 102 241);
-  --chat-accent-hover: var(--color-tidewave-blue-hover);
-  --chat-user-bubble: rgb(99 102 241); /* Tidewave Blue for customer messages */
+  --chat-accent: rgb(59 130 246); /* blue-500 */
+  --chat-accent-hover: rgb(37 99 235); /* blue-600 */
+  --chat-user-bubble: rgb(59 130 246); /* blue-500 for customer messages */
   --chat-user-text: #ffffff;
   --chat-ai-bubble: #3a3a3c; /* Darker grey for AI in dark mode */
   --chat-ai-text: #e3e3e3;
@@ -43,7 +43,7 @@
   --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   --sidebar-bg: #1e1f20;
   --sidebar-item-hover: #28292a;
-  --sidebar-item-active: var(--color-tidewave-blue-hover);
+  --sidebar-item-active: rgb(37 99 235); /* blue-600 */
   --sidebar-text: #e3e3e3;
   
   /* Markdown Specifics */
@@ -410,7 +410,7 @@
   border: 1px solid var(--color-border);
   border-radius: 24px;
   padding: 0.75rem 1.25rem;
-  color: rgb(99 102 241);
+  color: rgb(59 130 246);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -425,8 +425,8 @@
 }
 
 .prompt-chip:hover {
-  border-color: rgb(99 102 241); /* indigo-500 */
-  background-color: rgb(224 231 255); /* indigo-100 */
+  border-color: rgb(59 130 246); /* indigo-500 */
+  background-color: rgb(219 234 254); /* indigo-100 */
   box-shadow: var(--shadow-sm);
 }
 
@@ -678,7 +678,7 @@
 .input-island:focus-within {
   background-color: var(--chat-input-bg);
   box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
-  border-color: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(59 130 246); /* indigo-500 */
   border-width: 3px;
   outline: none !important;
 }

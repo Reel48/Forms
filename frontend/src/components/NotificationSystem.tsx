@@ -73,18 +73,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 notification.type === 'success' ? 'var(--color-success-light)' :
                 notification.type === 'error' ? 'var(--color-danger-light)' :
                 notification.type === 'warning' ? 'var(--color-warning-light)' :
-                'rgb(224 231 255)',
+                'rgb(219 234 254)',
               border: `1px solid ${
                 notification.type === 'success' ? 'var(--color-success)' :
                 notification.type === 'error' ? 'var(--color-danger)' :
                 notification.type === 'warning' ? 'var(--color-warning)' :
-                'rgb(99 102 241)'
+                'rgb(59 130 246)'
               }`,
               color: 
                 notification.type === 'success' ? 'rgb(16 185 129)' :
                 notification.type === 'error' ? 'rgb(239 68 68)' :
                 notification.type === 'warning' ? 'rgb(245 158 11)' :
-                'rgb(99 102 241)',
+                'rgb(59 130 246)',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',

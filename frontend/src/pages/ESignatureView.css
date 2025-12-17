@@ -294,7 +294,7 @@
 .esignature-form .form-group textarea:focus,
 .esignature-form .form-group select:focus {
   outline: none;
-  border-color: rgb(99 102 241);
+  border-color: rgb(59 130 246);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
