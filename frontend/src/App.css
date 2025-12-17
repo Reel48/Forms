@@ -735,8 +735,8 @@ nav .nav-tabs li {
 }
 
 .logout-button {
-  background-color: var(--color-danger);
-  color: var(--brand-white);
+  background-color: rgb(239 68 68); /* red-500 */
+  color: white;
   padding: 1rem 2rem;
   font-size: 0.875rem;
   border: none;
@@ -747,7 +747,7 @@ nav .nav-tabs li {
 }
 
 .logout-button:hover {
-  background-color: var(--color-danger-hover);
+  background-color: rgb(220 38 38); /* red-600 */
 }
 
 /* Buttons - Unified System */
@@ -787,12 +787,12 @@ button {
 }
 
 .btn-secondary {
-  background-color: var(--color-secondary);
-  color: var(--brand-white);
+  background-color: rgb(99 102 241); /* indigo-500 */
+  color: white;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-secondary-hover);
+  background-color: rgb(79 70 229); /* indigo-600 */
 }
 
 .btn-secondary:disabled {
@@ -801,12 +801,12 @@ button {
 }
 
 .btn-danger {
-  background-color: var(--color-danger);
-  color: var(--brand-white);
+  background-color: rgb(239 68 68); /* red-500 */
+  color: white;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: var(--color-danger-hover);
+  background-color: rgb(220 38 38); /* red-600 */
 }
 
 .btn-danger:disabled {
@@ -816,16 +816,16 @@ button {
 
 .btn-outline {
   background-color: transparent;
-  border: var(--border-width-default) solid var(--color-tidewave-blue);
-  color: var(--color-tidewave-blue);
+  border: var(--border-width-default) solid rgb(99 102 241); /* indigo-500 */
+  color: rgb(99 102 241); /* indigo-500 */
   font-weight: 600;
   border-radius: var(--radius-button);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: var(--color-tidewave-blue);
-  border-color: var(--color-tidewave-blue);
-  color: var(--color-text-light);
+  background-color: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(99 102 241); /* indigo-500 */
+  color: white;
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
@@ -867,7 +867,7 @@ button {
 }
 
 .card:hover {
-  border: 2px solid var(--color-tidewave-blue);
+  border: 2px solid rgb(99 102 241); /* indigo-500 */
   box-shadow: var(--shadow-lg);
 }
 
@@ -880,7 +880,7 @@ button {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: var(--color-tidewave-blue);
+  color: rgb(55 65 81); /* gray-700 - neutral for labels */
 }
 
 .form-group input,
@@ -901,8 +901,8 @@ button {
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-focus);
+  border-color: rgb(99 102 241); /* indigo-500 */
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .form-group input:disabled,

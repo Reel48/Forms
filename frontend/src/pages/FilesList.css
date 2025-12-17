@@ -37,8 +37,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-tidewave-blue);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
+  border-color: rgb(99 102 241); /* indigo-500 */
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .filter-select {
@@ -54,8 +54,8 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: var(--color-tidewave-blue);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
+  border-color: rgb(99 102 241); /* indigo-500 */
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); /* indigo-500 with 10% opacity */
 }
 
 .view-toggle {
@@ -83,8 +83,8 @@
 }
 
 .view-toggle-btn.active {
-  background-color: var(--color-tidewave-blue);
-  color: var(--brand-white, #ffffff);
+  background-color: rgb(99 102 241); /* indigo-500 */
+  color: white;
 }
 
 .files-container {

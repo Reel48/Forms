@@ -20,8 +20,8 @@
 
 .btn-create {
   padding: 0.75rem 1.5rem;
-  background-color: var(--color-tidewave-blue);
-  color: var(--brand-white, #ffffff);
+  background-color: rgb(99 102 241); /* indigo-500 */
+  color: white;
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 1rem;
@@ -31,7 +31,7 @@
 }
 
 .btn-create:hover {
-  background-color: var(--color-primary-hover, #829f82);
+  background-color: rgb(79 70 229); /* indigo-600 */
 }
 
 .error-banner {
