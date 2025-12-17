@@ -51,7 +51,7 @@
   position: absolute;
   top: -4px;
   right: -4px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: var(--color-danger);
   color: white;
   border-radius: 50%;
   min-width: 24px;
@@ -106,7 +106,7 @@
 
 .chat-widget-header {
   padding: 1rem 1.5rem;
-  background: linear-gradient(90deg, var(--color-primary, #5c795e) 0%, var(--color-primary-gradient, #829f82) 100%);
+  background: var(--color-elm-green);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -179,7 +179,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+  background: var(--color-background-white);
   position: relative;
 }
 
@@ -252,7 +252,7 @@
 }
 
 .message-sent .chat-widget-message-content {
-  background: linear-gradient(90deg, var(--color-primary, #5c795e) 0%, var(--color-primary-gradient, #829f82) 100%);
+  background: var(--color-elm-green);
   color: white;
   border-bottom-right-radius: 6px;
 }

@@ -655,7 +655,7 @@
   left: 0;
   right: 0;
   height: 20px;
-  background: linear-gradient(to bottom, transparent, var(--chat-bg));
+  background: var(--chat-bg);
   pointer-events: none;
 }
 

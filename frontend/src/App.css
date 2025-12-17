@@ -994,7 +994,7 @@ a:not([class]) {
 /* Badges */
 .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.375rem 0.875rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
@@ -1025,14 +1025,14 @@ a:not([class]) {
 
 .badge-accepted {
   background-color: var(--color-success-light);
-  color: #065f46;
+  color: var(--color-success);
   border: 2px solid var(--color-success);
   box-shadow: var(--shadow-sm);
 }
 
 .badge-declined {
   background-color: var(--color-danger-light);
-  color: #991b1b;
+  color: var(--color-danger);
   border: 2px solid var(--color-danger);
   box-shadow: var(--shadow-sm);
 }
@@ -1046,7 +1046,7 @@ a:not([class]) {
 
 .badge-paid {
   background-color: var(--color-success-light);
-  color: #065f46;
+  color: var(--color-success);
   border: 2px solid var(--color-success);
   box-shadow: var(--shadow-sm);
 }
@@ -1067,7 +1067,7 @@ a:not([class]) {
 
 .badge-failed {
   background-color: var(--color-danger-light);
-  color: #991b1b;
+  color: var(--color-danger);
   border: 2px solid var(--color-danger);
   box-shadow: var(--shadow-sm);
 }
@@ -1081,7 +1081,7 @@ a:not([class]) {
 
 .badge-uncollectible {
   background-color: var(--color-danger-light);
-  color: #991b1b;
+  color: var(--color-danger);
   border: 2px solid var(--color-danger);
   box-shadow: var(--shadow-sm);
 }
@@ -1317,14 +1317,14 @@ a:not([class]) {
 }
 
 .typeform-btn-primary {
-  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 100%);
+  background: var(--color-elm-green);
   color: white;
   box-shadow: var(--shadow-colored);
   border: 2px solid var(--color-elm-green);
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-basil) 0%, var(--color-aspen-green) 100%);
+  background: var(--color-basil);
   transform: translateY(-2px);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }

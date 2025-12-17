@@ -179,10 +179,10 @@
 
 .btn-hero-primary {
   padding: 0.875rem 2rem;
-  background-color: #5c795e;
+  background-color: var(--color-elm-green);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 24px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -191,9 +191,9 @@
 }
 
 .btn-hero-primary:hover {
-  background-color: #829f82;
+  background-color: var(--color-basil);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(92, 121, 94, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-hero-primary:active {

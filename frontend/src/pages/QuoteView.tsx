@@ -643,7 +643,7 @@ function QuoteView() {
                 {quote.payment_status && paymentStatusDetails && (
                   <div>
                     <strong>Payment Status:</strong>{' '}
-                    <span className={`badge badge-${quote.payment_status}`} style={{ fontSize: '0.875rem' }}>
+                    <span className={`badge badge-${quote.payment_status}`}>
                       {paymentStatusDetails.icon} {paymentStatusDetails.label}
                     </span>
                   </div>
@@ -1071,7 +1071,7 @@ function QuoteView() {
                                 >
                                   {historyQuote.title}
                                 </Link>
-                                <span className={`badge badge-${historyQuote.status}`} style={{ fontSize: '0.75rem' }}>
+                                <span className={`badge badge-${historyQuote.status}`}>
                                   {historyQuote.status}
                                 </span>
                               </div>

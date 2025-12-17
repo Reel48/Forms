@@ -2269,11 +2269,8 @@ function PublicFormView() {
     fontFamily: fontFamily,
   };
 
-  if (backgroundType === 'gradient') {
-    containerStyle.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
-  } else {
-    containerStyle.background = backgroundColor;
-  }
+  // Always use solid color, no gradients
+  containerStyle.background = backgroundColor;
 
   // Password protection check
   const passwordRequired = form?.settings?.password_required;
@@ -2344,9 +2341,7 @@ function PublicFormView() {
                 style={{
                   width: '100%',
                   marginTop: '1rem',
-                  background: backgroundType === 'gradient' 
-                    ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                    : primaryColor,
+                  background: primaryColor,
                 }}
               >
                 Access Form
@@ -2713,9 +2708,7 @@ function PublicFormView() {
                     className="typeform-btn typeform-btn-primary"
                     disabled={currentField.required && !formValues[currentField.id || ''] || !!fieldErrors[currentField.id || '']}
                     style={{
-                      background: backgroundType === 'gradient' 
-                        ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                        : primaryColor,
+                      background: primaryColor,
                     }}
                     aria-label={isLastQuestionInPage && !isLastPage ? 'Go to next page' : 'Go to next question'}
                   >
@@ -2735,9 +2728,7 @@ function PublicFormView() {
                       className="typeform-btn typeform-btn-primary"
                       disabled={submitting || (currentField.required && !formValues[currentField.id || '']) || (form.settings?.captcha_enabled && !captchaToken) || !!fieldErrors[currentField.id || '']}
                       style={{
-                        background: backgroundType === 'gradient' 
-                          ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                          : primaryColor,
+                        background: primaryColor,
                       }}
                     >
                       {submitting ? 'Submitting...' : (form.thank_you_screen?.submit_button_text || 'Submit')}
