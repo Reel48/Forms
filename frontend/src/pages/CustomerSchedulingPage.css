@@ -140,7 +140,6 @@
 }
 
 .booking-widget-container:hover {
-  border-color: rgb(59 130 246);
   box-shadow: var(--shadow-lg);
 }
 

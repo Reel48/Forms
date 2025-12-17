@@ -328,7 +328,6 @@
 
 .content-card:hover {
   background-color: var(--color-bg-tertiary, #f3f4f6);
-  border-color: rgb(59 130 246); /* indigo-500 */
   transform: translateY(-1px);
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
 }

@@ -868,7 +868,6 @@ button {
 }
 
 .card:hover {
-  border: 2px solid rgb(59 130 246); /* blue-500 */
   box-shadow: var(--shadow-lg);
 }
 
