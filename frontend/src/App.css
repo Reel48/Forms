@@ -199,7 +199,7 @@ select:focus-visible {
   padding-right: 0.75rem;
   background-color: var(--utility-bar-color);
   border-radius: 6px; /* Curved all corners, including where it meshes with thin bar */
-  z-index: 1;
+  z-index: 1001;
 }
 
 .role-badge-wrapper {
@@ -1071,6 +1071,8 @@ table tbody tr:hover {
   background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-gradient) 100%);
   padding: 0;
   margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .typeform-progress {
@@ -1080,7 +1082,7 @@ table tbody tr:hover {
   right: 0;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  z-index: 100;
+  z-index: 999;
   padding: 2rem 4rem;
 }
 
