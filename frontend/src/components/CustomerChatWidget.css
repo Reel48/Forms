@@ -419,23 +419,23 @@
 
 .chat-widget-send {
   padding: 0.75rem 1.5rem;
-  background: var(--color-sunlit-saffron);
+  background: var(--color-cta-primary);
   color: var(--color-cta-primary-text);
-  border: 2px solid var(--color-sunlit-saffron);
+  border: 2px solid var(--color-cta-primary);
   border-radius: var(--radius-button);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.4);
+  box-shadow: var(--shadow-md);
   position: relative;
   overflow: hidden;
 }
 
 .chat-widget-send:hover:not(:disabled) {
-  background: var(--color-sunlit-saffron-hover);
-  box-shadow: 0px 6px 20px rgba(228, 168, 76, 0.4);
+  background: var(--color-tidewave-blue-hover);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 

@@ -425,7 +425,7 @@
 }
 
 .prompt-chip:hover {
-  border-color: var(--color-verdant-pulse);
+  border-color: var(--color-tidewave-blue);
   background-color: var(--color-primary-light);
   box-shadow: var(--shadow-sm);
 }
@@ -678,7 +678,7 @@
 .input-island:focus-within {
   background-color: var(--chat-input-bg);
   box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
-  border-color: var(--color-verdant-pulse);
+  border-color: var(--color-tidewave-blue);
   border-width: 3px;
   outline: none !important;
 }

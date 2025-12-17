@@ -434,9 +434,9 @@ function QuoteView() {
     const status = quote.payment_status.toLowerCase();
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
       'paid': { label: 'Paid', color: 'var(--color-verdant-pulse)', icon: '' },
-      'unpaid': { label: 'Unpaid', color: 'var(--color-terra-blush)', icon: '' },
-      'partially_paid': { label: 'Partially Paid', color: 'var(--color-sunlit-saffron)', icon: '' },
-      'refunded': { label: 'Refunded', color: 'var(--color-sunlit-saffron)', icon: '' },
+      'unpaid': { label: 'Unpaid', color: 'var(--color-tidewave-blue)', icon: '' },
+      'partially_paid': { label: 'Partially Paid', color: 'var(--color-tidewave-blue)', icon: '' },
+      'refunded': { label: 'Refunded', color: 'var(--color-tidewave-blue)', icon: '' },
       'failed': { label: 'Payment Failed', color: 'var(--color-terra-blush)', icon: '' },
       'voided': { label: 'Voided', color: 'var(--color-text-muted)', icon: '' },
       'uncollectible': { label: 'Uncollectible', color: 'var(--color-terra-blush)', icon: '' },
@@ -681,7 +681,7 @@ function QuoteView() {
               {/* Invoice Status - Enhanced */}
               {quote.stripe_invoice_id && (
                 <div className="mb-4 p-3" style={{ 
-                  backgroundColor: paymentStatusDetails?.color === 'var(--color-verdant-pulse)' ? 'var(--color-verdant-pulse-light)' : 'var(--color-tidewave-blue-light)', 
+                  backgroundColor: paymentStatusDetails?.color === 'var(--color-verdant-pulse)' ? 'var(--color-verdant-pulse-light)' : paymentStatusDetails?.color === 'var(--color-terra-blush)' ? 'var(--color-terra-blush-light)' : 'var(--color-tidewave-blue-light)', 
                   borderRadius: '24px',
                   border: `2px solid ${paymentStatusDetails?.color || 'var(--color-primary)'}` 
                 }}>

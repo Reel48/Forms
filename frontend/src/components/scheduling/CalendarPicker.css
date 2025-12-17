@@ -16,7 +16,7 @@
 }
 
 .calendar-picker:hover {
-  border-color: var(--color-verdant-pulse);
+  border-color: var(--color-tidewave-blue);
   box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.3);
 }
 

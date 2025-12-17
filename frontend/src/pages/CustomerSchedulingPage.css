@@ -61,7 +61,7 @@
 .tab-active {
   color: var(--color-tidewave-blue);
   background: #FFFFFF;
-  border-color: var(--color-verdant-pulse);
+  border-color: var(--color-tidewave-blue);
   border-width: 2px;
   box-shadow: var(--shadow-md);
   font-weight: 600;
@@ -140,7 +140,7 @@
 }
 
 .booking-widget-container:hover {
-  border-color: var(--color-verdant-pulse);
+  border-color: var(--color-tidewave-blue);
   box-shadow: var(--shadow-lg);
 }
 

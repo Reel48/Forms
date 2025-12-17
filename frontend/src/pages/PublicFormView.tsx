@@ -1613,7 +1613,7 @@ function PublicFormView() {
                       border: 'none',
                       fontSize: '2rem',
                       cursor: 'pointer',
-                      color: star <= (value || 0) ? 'var(--color-sunlit-saffron)' : 'var(--color-border-light)',
+                      color: star <= (value || 0) ? 'var(--color-tidewave-blue)' : 'var(--color-border-light)',
                       padding: 0,
                       lineHeight: 1,
                     }}
