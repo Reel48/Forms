@@ -200,16 +200,6 @@ function FormView() {
               </span>
             </p>
           </div>
-          {form.description && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
-                Description
-              </div>
-              <p style={{ margin: 0, padding: '0.625rem', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
-                {form.description}
-              </p>
-            </div>
-          )}
           <div>
             <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#6b7280' }}>
               Created

@@ -594,11 +594,6 @@ function FormsList() {
                     </div>
                   </td>
                   <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {form.description || '-'}
-                    </span>
-                  </td>
-                  <td>
                     <span className="text-muted">
                       {form.fields?.length || 0} {form.fields?.length === 1 ? 'field' : 'fields'}
                     </span>
