@@ -504,7 +504,7 @@ function FormsList() {
 
       {forms.length === 0 ? (
         <div className="card">
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
             <h2 style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
               {(statusFilter || searchQuery || dateFrom || dateTo) ? 'No forms found' : 'No forms yet'}
             </h2>

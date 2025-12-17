@@ -135,7 +135,7 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.5rem;
   border-radius: 24px;
   cursor: pointer;
   color: var(--sidebar-text);
@@ -657,7 +657,7 @@
   max-width: 800px;
   background-color: var(--chat-input-bg);
   border-radius: 24px; /* Rounded shape */
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.5rem;
   display: flex;
   align-items: center; /* Center vertically to prevent text cutoff */
   gap: 1.5rem;

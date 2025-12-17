@@ -469,7 +469,7 @@ function FormSubmissions() {
 
       {submissions.length === 0 ? (
         <div className="card">
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
             <h2 style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>No submissions yet</h2>
             <p className="text-muted" style={{ marginBottom: '2rem' }}>
               When people submit this form, their responses will appear here.

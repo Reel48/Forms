@@ -2166,7 +2166,7 @@ function PublicFormView() {
 
   if (loading) {
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
+      <div className="container" style={{ textAlign: 'center', padding: '2rem' }}>
         <p>Loading form...</p>
       </div>
     );
@@ -2174,7 +2174,7 @@ function PublicFormView() {
 
   if (error) {
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
+      <div className="container" style={{ textAlign: 'center', padding: '2rem' }}>
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h2 style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>Form Not Available</h2>
           <p className="text-muted">{error}</p>
@@ -2189,7 +2189,7 @@ function PublicFormView() {
     const redirectUrl = form?.thank_you_screen?.redirect_url;
 
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
+      <div className="container" style={{ textAlign: 'center', padding: '2rem' }}>
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h1 style={{ color: 'var(--color-success)', marginBottom: '1rem' }}>{thankYouMessage}</h1>
           <p className="text-muted" style={{ marginBottom: '2rem' }}>{thankYouDescription}</p>
@@ -2223,7 +2223,7 @@ function PublicFormView() {
 
   if (showWelcome) {
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
+      <div className="container" style={{ textAlign: 'center', padding: '2rem' }}>
         <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ marginBottom: '1rem' }}>{welcomeTitle}</h1>
           {welcomeDescription && (

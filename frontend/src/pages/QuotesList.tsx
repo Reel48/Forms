@@ -1075,7 +1075,7 @@ function QuotesList() {
         <>
           {quotes.length === 0 ? (
             <div className="card">
-              <div style={{ textAlign: 'center', padding: '3rem' }}>
+              <div style={{ textAlign: 'center', padding: '1.5rem' }}>
                 <h2 style={{ marginBottom: '0.5rem' }}>
                   {hasActiveFilters ? 'No quotes found' : 'No quotes yet'}
                 </h2>
