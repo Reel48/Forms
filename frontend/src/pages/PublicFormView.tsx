@@ -1252,7 +1252,7 @@ function PublicFormView() {
             }}
             onDragLeave={(e) => {
               e.currentTarget.style.borderColor = '#d1d5db';
-              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))';
             }}
             onDrop={(e) => {
               e.preventDefault();
@@ -2469,7 +2469,7 @@ function PublicFormView() {
                   </label>
                   <div style={{ 
                     padding: '0.75rem', 
-                    backgroundColor: '#f9fafb', 
+                    backgroundColor: 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))', 
                     borderRadius: '6px',
                     color: '#1f2937',
                     whiteSpace: 'pre-wrap',
