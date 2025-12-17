@@ -179,7 +179,7 @@
 
 .btn-hero-primary {
   padding: 0.875rem 2rem;
-  background-color: var(--color-tidewave-blue);
+  background-color: rgb(59 130 246); /* blue-500 */
   color: white;
   border: none;
   border-radius: 24px;
@@ -191,7 +191,7 @@
 }
 
 .btn-hero-primary:hover {
-  background-color: var(--color-tidewave-blue-hover);
+  background-color: rgb(37 99 235); /* blue-600 */
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }

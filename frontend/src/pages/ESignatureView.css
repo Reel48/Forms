@@ -161,9 +161,9 @@
 }
 
 .method-btn.active {
-  background-color: var(--color-tidewave-blue);
-  color: var(--brand-white, #ffffff);
-  border-color: var(--color-tidewave-blue);
+  background-color: rgb(59 130 246); /* blue-500 */
+  color: white;
+  border-color: rgb(59 130 246); /* blue-500 */
 }
 
 .signature-input-area {
@@ -192,8 +192,8 @@
 
 .signature-upload-label {
   padding: 0.75rem 1.5rem;
-  background-color: var(--color-tidewave-blue);
-  color: var(--brand-white, #ffffff);
+  background-color: rgb(59 130 246); /* blue-500 */
+  color: white;
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
   font-size: 0.875rem;

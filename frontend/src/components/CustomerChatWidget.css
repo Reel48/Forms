@@ -8,7 +8,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--color-tidewave-blue);
+  background: rgb(59 130 246); /* blue-500 */
   color: white;
   border: none;
   font-size: 1.5rem;
@@ -419,9 +419,9 @@
 
 .chat-widget-send {
   padding: 0.75rem 1.5rem;
-  background: var(--color-cta-primary);
-  color: var(--color-cta-primary-text);
-  border: 2px solid var(--color-cta-primary);
+  background: rgb(59 130 246); /* blue-500 */
+  color: white;
+  border: 2px solid rgb(59 130 246); /* blue-500 */
   border-radius: var(--radius-button);
   font-weight: 600;
   font-size: 0.875rem;
@@ -434,7 +434,8 @@
 }
 
 .chat-widget-send:hover:not(:disabled) {
-  background: var(--color-tidewave-blue-hover);
+  background: rgb(37 99 235); /* blue-600 */
+  border-color: rgb(37 99 235); /* blue-600 */
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
@@ -459,7 +460,7 @@
 
 .chat-widget-send:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0px 6px 20px rgba(228, 168, 76, 0.4);
+  box-shadow: 0px 6px 20px rgba(59, 130, 246, 0.4); /* blue-500 with 40% opacity */
 }
 
 .chat-widget-send:active:not(:disabled) {

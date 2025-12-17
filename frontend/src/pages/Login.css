@@ -108,9 +108,9 @@
 .submit-button {
   width: 100%;
   padding: var(--padding-button);
-  background: var(--color-cta-primary);
-  color: var(--color-cta-primary-text);
-  border: var(--border-width-default) solid var(--color-cta-primary);
+  background: rgb(59 130 246); /* blue-500 */
+  color: white;
+  border: var(--border-width-default) solid rgb(59 130 246); /* blue-500 */
   border-radius: var(--radius-button);
   font-size: 16px;
   font-weight: 600;
@@ -121,7 +121,8 @@
 }
 
 .submit-button:hover:not(:disabled) {
-  background: var(--color-tidewave-blue-hover);
+  background: rgb(37 99 235); /* blue-600 */
+  border-color: rgb(37 99 235); /* blue-600 */
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
