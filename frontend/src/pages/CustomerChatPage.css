@@ -7,11 +7,11 @@
   --chat-text: #1f1f1f;
   --chat-text-secondary: #444746;
   --chat-border: #e3e3e3;
-  --chat-accent: #0b57d0; /* Google Blue-ish */
-  --chat-accent-hover: #0842a0;
-  --chat-user-bubble: #f0f4f9;
-  --chat-user-text: #1f1f1f;
-  --chat-ai-bubble: #ffffff;
+  --chat-accent: #2F80ED; /* Main blue */
+  --chat-accent-hover: #2563eb;
+  --chat-user-bubble: #2F80ED; /* Blue for customer messages */
+  --chat-user-text: #ffffff;
+  --chat-ai-bubble: #e5e5e7; /* Grey like iMessage */
   --chat-ai-text: #1f1f1f;
   --chat-input-bg: #f0f4f9;
   --chat-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
@@ -35,9 +35,9 @@
   --chat-border: #444746;
   --chat-accent: #a8c7fa;
   --chat-accent-hover: #8ab4f8;
-  --chat-user-bubble: #28292a; /* Darker grey for user */
-  --chat-user-text: #e3e3e3;
-  --chat-ai-bubble: #1e1f20;
+  --chat-user-bubble: #2F80ED; /* Blue for customer messages */
+  --chat-user-text: #ffffff;
+  --chat-ai-bubble: #3a3a3c; /* Darker grey for AI in dark mode */
   --chat-ai-text: #e3e3e3;
   --chat-input-bg: #1e1f20;
   --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
