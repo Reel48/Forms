@@ -1634,3 +1634,81 @@ a:not([class]) {
     white-space: nowrap;
   }
 }
+
+/* ========================================
+   TAILWIND UTILITY CLASSES - Brand Colors
+   ======================================== */
+
+/* These classes bridge CSS variables with Tailwind utilities */
+/* Use Tailwind classes (bg-tidewave, text-verdant, etc.) when possible */
+/* These are provided for cases where CSS variables are needed */
+
+@layer utilities {
+  /* Brand color backgrounds using CSS variables */
+  .bg-tidewave-var {
+    background-color: var(--color-tidewave-blue);
+  }
+  
+  .bg-verdant-var {
+    background-color: var(--color-verdant-pulse);
+  }
+  
+  .bg-saffron-var {
+    background-color: var(--color-sunlit-saffron);
+  }
+  
+  .bg-blush-var {
+    background-color: var(--color-terra-blush);
+  }
+  
+  /* Brand color text using CSS variables */
+  .text-tidewave-var {
+    color: var(--color-tidewave-blue);
+  }
+  
+  .text-verdant-var {
+    color: var(--color-verdant-pulse);
+  }
+  
+  .text-saffron-var {
+    color: var(--color-sunlit-saffron);
+  }
+  
+  .text-blush-var {
+    color: var(--color-terra-blush);
+  }
+  
+  /* Light variant backgrounds */
+  .bg-tidewave-light {
+    background-color: var(--color-tidewave-blue-light);
+  }
+  
+  .bg-verdant-light {
+    background-color: var(--color-verdant-pulse-light);
+  }
+  
+  .bg-saffron-light {
+    background-color: var(--color-sunlit-saffron-light);
+  }
+  
+  .bg-blush-light {
+    background-color: var(--color-terra-blush-light);
+  }
+  
+  /* Border colors */
+  .border-tidewave {
+    border-color: var(--color-tidewave-blue);
+  }
+  
+  .border-verdant {
+    border-color: var(--color-verdant-pulse);
+  }
+  
+  .border-saffron {
+    border-color: var(--color-sunlit-saffron);
+  }
+  
+  .border-blush {
+    border-color: var(--color-terra-blush);
+  }
+}
