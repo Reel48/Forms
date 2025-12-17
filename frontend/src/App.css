@@ -3,12 +3,18 @@
    ======================================== */
 
 :root {
-  /* Brand Colors - Used Subtly */
+  /* Brand Colors - Reel48 Palette */
   --brand-dark: #292c2f;
   --brand-white: #ffffff;
   
+  /* Reel48 Brand Palette */
+  --color-elm-green: #5c795e;
+  --color-basil: #829f82;
+  --color-aspen-green: #7e9b76;
+  --color-smoke-green: #a8bba2;
+  
   /* Color Palette - Main Colors */
-  --color-blue: #748CAB;
+  --color-blue: #5c795e;
   --color-green: #4baa7d;
   --color-red: #dc2626;
   --color-orange: #f97316;
@@ -18,7 +24,7 @@
   --color-gray: #6b7280;
   
   /* Color Palette - Light/Badge Colors */
-  --color-blue-light: #E8EBF0;
+  --color-blue-light: #a8bba2;
   --color-green-light: #dcfff0;
   --color-red-light: #fee2e2;
   --color-orange-light: #fff4ed;
@@ -27,47 +33,55 @@
   --color-pink-light: #fce7f3;
   --color-gray-light: #f3f4f6;
   
-  /* Primary Colors (ethereal - wellness, calming) */
-  --color-primary: #748CAB;
-  --color-primary-hover: #5f7290;
-  --color-primary-light: #E8EBF0;
-  --color-primary-focus: rgba(116, 140, 171, 0.1);
-  --color-primary-gradient: #D4C1EC;
-  --color-primary-subtle: rgba(116, 140, 171, 0.1);
+  /* Primary Colors (Reel48 Brand) */
+  --color-primary: var(--color-elm-green);
+  --color-primary-hover: var(--color-basil);
+  --color-primary-light: var(--color-smoke-green);
+  --color-primary-focus: rgba(92, 121, 94, 0.1);
+  --color-primary-gradient: var(--color-basil);
+  --color-primary-subtle: rgba(92, 121, 94, 0.1);
   
   /* Secondary Colors */
   --color-secondary: #6b7280;
   --color-secondary-hover: #4b5563;
   
-  /* Danger Colors (using new red) */
+  /* Danger Colors */
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-danger-light: #fee2e2;
   
-  /* Success Colors (using new green) */
+  /* Success Colors */
   --color-success: #4baa7d;
   --color-success-hover: #3d8a6a;
   --color-success-light: #dcfff0;
   
-  /* Warning Colors (using new orange) */
+  /* Warning Colors */
   --color-warning: #f97316;
   --color-warning-light: #fff4ed;
   
-  /* Utility Bar Color (fixed blue) */
-  --utility-bar-color: #748CAB;
+  /* Utility Bar Color */
+  --utility-bar-color: var(--color-elm-green);
   
-  /* Neutral Colors */
-  --color-text-primary: #1f2937;
-  --color-text-secondary: #374151;
+  /* Neutral Colors - Text */
+  --color-text-main: #2C2C2C;
+  --color-text-primary: #2C2C2C;
+  --color-text-secondary: #2C2C2C;
   --color-text-muted: #6b7280;
-  --color-text-light: #9ca3af;
+  --color-text-light: #FFFFFF;
   
   /* Background Colors */
+  --color-background-white: #FFFFFF;
+  --color-background-offwhite: #F9F9F7;
   --color-bg-primary: #ffffff;
   --color-bg-card: #FFFFFF;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
-  --color-bg-page: #F5F5F7;
+  --color-bg-secondary: #F9F9F7;
+  --color-bg-tertiary: var(--color-smoke-green);
+  --color-bg-page: #F9F9F7;
+  --color-bg-section: var(--color-smoke-green);
+  
+  /* Links */
+  --color-link: var(--color-basil);
+  --color-link-hover: var(--color-elm-green);
   
   /* Border Colors */
   --color-border: #e5e7eb;
@@ -465,7 +479,7 @@ nav .nav-tabs li {
 
 .nav-tab {
   text-decoration: none;
-  color: var(--color-text-muted);
+  color: var(--color-text-main);
   font-weight: 500;
   padding: 1rem 1.5rem;
   display: block;
@@ -504,7 +518,7 @@ nav .nav-tabs li {
   font-family: inherit;
   font-size: inherit;
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: var(--color-text-main);
   padding: 1rem 1.5rem;
   border-bottom: 3px solid transparent;
   transition: all var(--transition-base);
@@ -557,7 +571,7 @@ nav .nav-tabs li {
 .nav-dropdown-item {
   display: block;
   padding: 0.75rem 1.5rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-main);
   text-decoration: none;
   font-weight: 500;
   transition: all var(--transition-base);
@@ -796,13 +810,13 @@ button {
 
 .btn-outline {
   background-color: transparent;
-  border: 1px solid var(--color-border-light);
-  color: var(--color-text-secondary);
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: var(--color-bg-secondary);
-  border-color: var(--color-border);
+  background-color: rgba(168, 187, 162, 0.15);
+  border-color: var(--color-primary);
 }
 
 .btn-outline:disabled {
@@ -925,6 +939,42 @@ table tbody tr:hover {
   background-color: var(--color-bg-secondary);
 }
 
+/* Typography - Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+/* Links */
+a {
+  color: var(--color-link);
+  text-decoration: underline;
+  transition: color var(--transition-base);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+}
+
+a:not([class]) {
+  text-decoration: underline;
+}
+
 /* Badges */
 .badge {
   display: inline-block;
@@ -940,8 +990,8 @@ table tbody tr:hover {
 }
 
 .badge-sent {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
+  background-color: var(--color-basil);
+  color: var(--color-text-light);
 }
 
 .badge-viewed {
@@ -970,8 +1020,8 @@ table tbody tr:hover {
 }
 
 .badge-partially_paid {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
+  background-color: var(--color-basil);
+  color: var(--color-text-light);
 }
 
 .badge-refunded {
@@ -1089,7 +1139,7 @@ table tbody tr:hover {
 .typeform-progress-bar {
   width: 100%;
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-smoke-green);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -1097,7 +1147,7 @@ table tbody tr:hover {
 
 .typeform-progress-fill {
   height: 100%;
-  background: white;
+  background: var(--color-primary);
   border-radius: 2px;
   transition: width 0.3s ease;
 }

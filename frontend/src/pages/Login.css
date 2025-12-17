@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #F5F5F7;
+  background-color: #F9F9F7;
   padding: 40px;
   position: relative;
 }
@@ -22,7 +22,7 @@
 .login-card h1 {
   margin: 0 0 60px 0;
   text-align: center;
-  color: #1f2937;
+  color: #2C2C2C;
   font-size: 28px;
   font-weight: 600;
 }
@@ -47,7 +47,7 @@
   transition: all 0.2s;
   box-sizing: border-box;
   background-color: #FFFFFF;
-  color: #1f2937;
+  color: #2C2C2C;
 }
 
 .form-group input:focus {
@@ -57,7 +57,7 @@
 }
 
 .form-group input:disabled {
-  background-color: #F5F5F7;
+  background-color: #F9F9F7;
   cursor: not-allowed;
 }
 

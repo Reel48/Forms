@@ -161,9 +161,9 @@
 }
 
 .method-btn.active {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .signature-input-area {
@@ -192,7 +192,7 @@
 
 .signature-upload-label {
   padding: 0.75rem 1.5rem;
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
@@ -202,7 +202,7 @@
 }
 
 .signature-upload-label:hover {
-  background-color: var(--color-primary-hover, #1d4ed8);
+  background-color: var(--color-primary-hover, #829f82);
 }
 
 .uploaded-signature-preview {
@@ -294,8 +294,8 @@
 .esignature-form .form-group textarea:focus,
 .esignature-form .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #5c795e);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
 .esignature-form .form-group textarea {

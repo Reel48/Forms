@@ -34,7 +34,7 @@
 
 .calendar-nav-btn:hover:not(:disabled) {
   background: var(--color-bg-secondary, #F5F5F7);
-  border-color: var(--color-primary, #748CAB);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .calendar-nav-btn:disabled {
@@ -103,25 +103,25 @@
 
 .calendar-day.clickable:hover:not(:disabled) {
   background: var(--color-bg-secondary, #f9fafb);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
   transform: scale(1.05);
   z-index: 1;
 }
 
 .calendar-day.today {
   background: #eff6ff;
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
   border-width: 2px;
 }
 
 .calendar-day.today .calendar-day-number {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #5c795e);
   font-weight: 700;
 }
 
 .calendar-day.selected {
-  background: var(--color-primary, #2563eb);
-  border-color: var(--color-primary, #2563eb);
+  background: var(--color-primary, #5c795e);
+  border-color: var(--color-primary, #5c795e);
   color: white;
 }
 

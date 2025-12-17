@@ -49,7 +49,7 @@
 }
 
 .tab-btn.active {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
 }
 
@@ -83,8 +83,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #5c795e);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
 .bulk-actions {
@@ -119,12 +119,12 @@
 }
 
 .btn-bulk-add {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
 }
 
 .btn-bulk-add:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, #1d4ed8);
+  background-color: var(--color-primary-hover, #829f82);
 }
 
 .btn-bulk-remove {
@@ -191,7 +191,7 @@
 
 .content-item:hover {
   background-color: var(--color-bg-tertiary, #f3f4f6);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .content-item.assigned {
@@ -237,12 +237,12 @@
 }
 
 .btn-add {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
 }
 
 .btn-add:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, #1d4ed8);
+  background-color: var(--color-primary-hover, #829f82);
 }
 
 .btn-remove {

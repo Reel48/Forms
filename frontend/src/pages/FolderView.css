@@ -25,7 +25,7 @@
 .breadcrumb-link {
   background: none;
   border: none;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #5c795e);
   cursor: pointer;
   padding: 0;
   font-size: 0.875rem;
@@ -34,7 +34,7 @@
 }
 
 .breadcrumb-link:hover {
-  color: var(--color-primary-dark, #1d4ed8);
+  color: var(--color-primary-dark, #829f82);
   text-decoration: underline;
 }
 
@@ -117,7 +117,7 @@
 
 .status-completed {
   background-color: var(--color-primary-light, #dbeafe);
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #5c795e);
 }
 
 .status-archived {
@@ -152,7 +152,7 @@
 /* Hero Action Card */
 .hero-action-card {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border: 2px solid #2563eb;
+  border: 2px solid #5c795e;
   padding: 2rem;
 }
 
@@ -179,7 +179,7 @@
 
 .btn-hero-primary {
   padding: 0.875rem 2rem;
-  background-color: #2563eb;
+  background-color: #5c795e;
   color: white;
   border: none;
   border-radius: 8px;
@@ -191,9 +191,9 @@
 }
 
 .btn-hero-primary:hover {
-  background-color: #1d4ed8;
+  background-color: #829f82;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(92, 121, 94, 0.3);
 }
 
 .btn-hero-primary:active {
@@ -253,8 +253,8 @@
 .btn-secondary-outline {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: #2563eb;
-  border: 1.5px solid #2563eb;
+  color: #5c795e;
+  border: 1.5px solid #5c795e;
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -264,7 +264,7 @@
 
 .btn-secondary-outline:hover:not(:disabled) {
   background-color: #eff6ff;
-  border-color: #1d4ed8;
+  border-color: #829f82;
 }
 
 .btn-secondary-outline:disabled {
@@ -328,7 +328,7 @@
 
 .content-card:hover {
   background-color: var(--color-bg-tertiary, #f3f4f6);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -421,8 +421,8 @@
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #5c795e);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
 .form-group textarea {

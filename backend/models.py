@@ -48,6 +48,9 @@ class ChatConversationList(BaseModel):
     conversations: List[ChatConversation]
     total: int
 
+class CheckSessionRequest(BaseModel):
+    conversation_id: Optional[str] = None
+
 # Client Models
 class ClientBase(BaseModel):
     name: str

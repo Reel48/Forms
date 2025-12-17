@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import ChatMessage, ChatMessageCreate, ChatConversation
+from models import ChatMessage, ChatMessageCreate, ChatConversation, CheckSessionRequest
 from database import supabase_storage, supabase_service_role_key, supabase_url
 from auth import get_current_user, get_current_admin
 from ai_service import get_ai_service
@@ -686,10 +686,18 @@ async def get_ai_actions(
 
 @router.post("/check-session", response_model=Dict[str, Any])
 async def check_session(
-    conversation_id: Optional[str] = None,
+    request: CheckSessionRequest,
     user = Depends(get_current_user)
 ):
     """Check if current session is expired and reset if needed. Returns session status."""
+    conversation_id = request.conversation_id
+    # #region agent log
+    import json
+    try:
+        with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+            f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:693","message":"check_session entry","data":{"conversation_id":conversation_id,"user_id":user.get("id") if user else None,"user_role":user.get("role") if user else None},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
+    except: pass
+    # #endregion
     try:
         is_admin = user.get("role") == "admin"
         
@@ -702,10 +710,28 @@ async def check_session(
                 "message": "Admins do not have session timeouts"
             }
         
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:706","message":"before conversation lookup","data":{"conversation_id":conversation_id,"has_conversation_id":bool(conversation_id)},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
+        except: pass
+        # #endregion
         # Get or find conversation
         if not conversation_id:
+            # #region agent log
+            try:
+                with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:708","message":"finding conversation by customer_id","data":{"customer_id":user["id"]},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+            except: pass
+            # #endregion
             # Find customer's conversation
             conv_response = supabase_storage.table("chat_conversations").select("*").eq("customer_id", user["id"]).execute()
+            # #region agent log
+            try:
+                with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:709","message":"after customer conversation query","data":{"has_data":bool(conv_response.data),"data_length":len(conv_response.data) if conv_response.data else 0},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+            except: pass
+            # #endregion
             if not conv_response.data or len(conv_response.data) == 0:
                 return {
                     "is_expired": False,
@@ -715,8 +741,20 @@ async def check_session(
                 }
             conversation_id = conv_response.data[0]["id"]
         
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:719","message":"verifying conversation","data":{"conversation_id":conversation_id},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+        except: pass
+        # #endregion
         # Verify conversation belongs to user
         conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:720","message":"after conversation verification query","data":{"has_data":bool(conv_response.data)},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+        except: pass
+        # #endregion
         if not conv_response.data:
             raise HTTPException(status_code=404, detail="Conversation not found")
         
@@ -724,16 +762,46 @@ async def check_session(
         if conv["customer_id"] != user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:728","message":"before session check/reset","data":{"conversation_id":conversation_id},"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+        except: pass
+        # #endregion
         # Check and reset session if expired
         was_reset = _check_and_reset_session_if_expired(conversation_id, user["id"])
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:729","message":"after session check/reset","data":{"was_reset":was_reset},"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+        except: pass
+        # #endregion
         
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:731","message":"before final query","data":{"conversation_id":conversation_id},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+        except: pass
+        # #endregion
         # Get updated conversation data
         updated_conv_response = supabase_storage.table("chat_conversations").select(
             "session_id, session_started_at, last_activity_at, is_active_session"
         ).eq("id", conversation_id).single().execute()
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:735","message":"after final query","data":{"has_data":bool(updated_conv_response.data)},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+        except: pass
+        # #endregion
         
         session_data = updated_conv_response.data if updated_conv_response.data else {}
         
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:744","message":"check_session success","data":{"was_reset":was_reset},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
+        except: pass
+        # #endregion
         return {
             "is_expired": was_reset,
             "was_reset": was_reset,
@@ -742,9 +810,21 @@ async def check_session(
             "last_activity_at": session_data.get("last_activity_at"),
             "message": "Session was reset" if was_reset else "Session is active"
         }
-    except HTTPException:
+    except HTTPException as he:
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:746","message":"HTTPException raised","data":{"status_code":he.status_code,"detail":str(he.detail)},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + '\n')
+        except: pass
+        # #endregion
         raise
     except Exception as e:
+        # #region agent log
+        try:
+            with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"id":f"log_{int(__import__('time').time()*1000)}","timestamp":int(__import__('time').time()*1000),"location":"chat.py:748","message":"Exception in check_session","data":{"error_type":type(e).__name__,"error_message":str(e)[:200]},"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+        except: pass
+        # #endregion
         logger.error(f"Error checking session: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to check session: {str(e)}")
 

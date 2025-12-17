@@ -20,8 +20,8 @@
 
 .signature-input:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #5c795e);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
 .signature-input::placeholder {

@@ -173,9 +173,18 @@ const CustomerChatPage: React.FC = () => {
   const checkSession = useCallback(async (conversationId?: string) => {
     if (!conversationId && !conversation?.id) return;
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:176',message:'checkSession entry',data:{conversationId,conversationIdFromConversation:conversation?.id,hasConversation:!!conversation},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     try {
       const sessionId = conversationId || conversation?.id;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:178',message:'before API call',data:{sessionId,requestBody:sessionId?{conversation_id:sessionId}:{}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       const response = await chatAPI.checkSession(sessionId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:179',message:'after API call success',data:{status:response.status,hasData:!!response.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       if (response.data.was_reset) {
         // Session was reset, clear messages and reload (will be empty)
@@ -190,7 +199,10 @@ const CustomerChatPage: React.FC = () => {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:194',message:'checkSession error',data:{errorType:error?.constructor?.name,errorMessage:error?.message||String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status,fullError:JSON.stringify(error,Object.getOwnPropertyNames(error)).substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       console.error('Failed to check session:', error);
       // Don't show error to user - session check failures are non-critical
     }

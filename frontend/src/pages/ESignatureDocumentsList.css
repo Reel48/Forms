@@ -20,7 +20,7 @@
 
 .btn-create {
   padding: 0.75rem 1.5rem;
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -31,7 +31,7 @@
 }
 
 .btn-create:hover {
-  background-color: var(--color-primary-hover, #1d4ed8);
+  background-color: var(--color-primary-hover, #829f82);
 }
 
 .error-banner {
@@ -70,8 +70,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #5c795e);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
 .filter-controls {
@@ -93,8 +93,8 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #5c795e);
+  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
 .view-mode-toggle {
@@ -122,7 +122,7 @@
 }
 
 .view-btn.active {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary, #5c795e);
   color: var(--brand-white, #ffffff);
 }
 
@@ -162,7 +162,7 @@
 .document-card:hover {
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
   transform: translateY(-1px);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .documents-list .document-card {

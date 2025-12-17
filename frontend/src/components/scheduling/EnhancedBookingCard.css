@@ -176,22 +176,22 @@
 }
 
 .btn-primary {
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary, #5c795e);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-dark, #1d4ed8);
+  background: var(--color-primary-dark, #829f82);
 }
 
 .btn-outline {
   background: white;
-  color: var(--color-primary, #2563eb);
-  border-color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #5c795e);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary, #5c795e);
   color: white;
 }
 

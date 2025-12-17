@@ -42,13 +42,13 @@
 .view-mode-btn:hover,
 .nav-btn:hover {
   background: var(--color-bg-secondary, #f9fafb);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .view-mode-btn.active {
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary, #5c795e);
   color: white;
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .calendar-content {
@@ -97,12 +97,12 @@
 
 .calendar-day:hover {
   background: var(--color-bg-secondary, #f9fafb);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .calendar-day.today {
   background: #eff6ff;
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
   border-width: 2px;
 }
 
@@ -119,7 +119,7 @@
 }
 
 .calendar-day.today .calendar-day-number {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #5c795e);
 }
 
 .calendar-day-bookings {
@@ -161,7 +161,7 @@
 
 .calendar-list-item:hover {
   background: var(--color-bg-secondary, #f9fafb);
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #5c795e);
 }
 
 .list-item-time {
@@ -331,12 +331,12 @@
 }
 
 .btn-primary {
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary, #5c795e);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-dark, #1d4ed8);
+  background: var(--color-primary-dark, #829f82);
 }
 
 .btn-danger {
