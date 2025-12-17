@@ -81,10 +81,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 'rgb(99 102 241)'
               }`,
               color: 
-                notification.type === 'success' ? 'var(--color-verdant-pulse)' :
-                notification.type === 'error' ? 'var(--color-terra-blush)' :
-                notification.type === 'warning' ? 'var(--color-sunlit-saffron)' :
-                'rgb(99 102 241)',
+                notification.type === 'success' ? 'rgb(16 185 129)' : /* emerald-500 */
+                notification.type === 'error' ? 'rgb(239 68 68)' : /* red-500 */
+                notification.type === 'warning' ? 'rgb(245 158 11)' : /* amber-500 */
+                'rgb(99 102 241)', /* indigo-500 */
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',

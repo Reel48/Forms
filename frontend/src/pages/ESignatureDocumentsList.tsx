@@ -221,7 +221,7 @@ const ESignatureDocumentsList: React.FC = () => {
                             handleAssignToFolder(doc);
                           }}
                           title="Use this template in a folder"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-verdant-pulse)', borderColor: 'var(--color-verdant-pulse)' }}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'rgb(16 185 129)', borderColor: 'rgb(16 185 129)' }} {/* emerald-500 */}
                         >
                           Use Template
                         </button>

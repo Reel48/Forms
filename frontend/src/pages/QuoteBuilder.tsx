@@ -534,7 +534,7 @@ function QuoteBuilder() {
               <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Saving...</span>
             )}
             {autoSaveStatus === 'saved' && (
-              <span style={{ fontSize: '0.875rem', color: 'var(--color-verdant-pulse)' }}>Saved</span>
+              <span style={{ fontSize: '0.875rem', color: 'rgb(16 185 129)' }}>Saved</span> {/* emerald-500 */}
             )}
             {role === 'admin' && isEdit && (
               <button

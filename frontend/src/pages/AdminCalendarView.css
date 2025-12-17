@@ -331,12 +331,12 @@
 }
 
 .btn-primary {
-  background: var(--color-primary, #5c795e);
+  background: rgb(99 102 241); /* indigo-500 */
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-dark, #829f82);
+  background: rgb(79 70 229); /* indigo-600 */
 }
 
 .btn-danger {
