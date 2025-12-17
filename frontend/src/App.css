@@ -284,7 +284,7 @@ select:focus-visible {
 
 .dropdown-divider {
   height: 1px;
-  background-color: var(--color-border, var(--color-smoke-green));
+  background-color: var(--color-border);
   margin: 4px 0;
 }
 
@@ -488,8 +488,8 @@ nav .nav-tabs li {
 }
 
 .nav-tab:hover {
-  color: var(--color-elm-green);
-  background-color: rgba(168, 187, 162, 0.15);
+  color: var(--color-tidewave-blue);
+  background-color: var(--color-tidewave-blue-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -1171,7 +1171,7 @@ a:not([class]) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-elm-green);
+  background: var(--color-tidewave-blue);
   padding: 0;
   margin: 0;
   position: relative;
@@ -1192,7 +1192,7 @@ a:not([class]) {
 .typeform-progress-bar {
   width: 100%;
   height: 4px;
-  background: var(--color-smoke-green);
+  background: var(--color-bg-secondary);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -1280,7 +1280,7 @@ a:not([class]) {
   width: 100%;
   padding: 1rem 1.25rem;
   font-size: 1.125rem;
-  border: 2px solid var(--color-smoke-green);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-input);
   transition: all var(--transition-base);
   font-family: inherit;
@@ -1292,7 +1292,7 @@ a:not([class]) {
 .typeform-question textarea:focus,
 .typeform-question select:focus {
   outline: none;
-  border-color: var(--color-aspen-green);
+  border-color: var(--color-tidewave-blue);
   border-width: 3px;
   box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), var(--shadow-sm);
 }
@@ -1328,14 +1328,14 @@ a:not([class]) {
 }
 
 .typeform-btn-primary {
-  background: var(--color-elm-green);
+  background: var(--color-tidewave-blue);
   color: white;
   box-shadow: var(--shadow-colored);
-  border: 2px solid var(--color-elm-green);
+  border: 2px solid var(--color-tidewave-blue);
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
-  background: var(--color-basil);
+  background: var(--color-tidewave-blue-hover);
   transform: translateY(-2px);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }

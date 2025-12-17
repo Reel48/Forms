@@ -357,7 +357,7 @@
 
 .chat-widget-attach {
   background: white;
-  border: 2px solid var(--color-smoke-green);
+  border: 2px solid var(--color-border);
   border-radius: 0.625rem;
   padding: 0.5rem;
   cursor: pointer;
@@ -367,12 +367,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
 }
 
 .chat-widget-attach:hover:not(:disabled) {
-  border-color: var(--color-aspen-green);
-  background-color: rgba(168, 187, 162, 0.1);
+  border-color: var(--color-tidewave-blue);
+  background-color: var(--color-tidewave-blue-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -397,7 +397,7 @@
 .chat-widget-input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 2px solid var(--color-smoke-green);
+  border: 2px solid var(--color-border);
   border-radius: 24px;
   font-size: 0.875rem;
   outline: none;
@@ -407,7 +407,7 @@
 }
 
 .chat-widget-input:focus {
-  border-color: var(--color-aspen-green);
+  border-color: var(--color-tidewave-blue);
   border-width: 3px;
   box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
   outline: none;

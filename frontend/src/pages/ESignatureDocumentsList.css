@@ -202,9 +202,9 @@
 }
 
 .status-pending {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border-color: var(--color-smoke-green);
+  background-color: var(--color-bg-secondary);
+  color: var(--color-tidewave-blue);
+  border-color: var(--color-border);
 }
 
 .status-signed {
@@ -220,9 +220,9 @@
 }
 
 .status-expired {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border-color: var(--color-smoke-green);
+  background-color: var(--color-bg-secondary);
+  color: var(--color-tidewave-blue);
+  border-color: var(--color-border);
 }
 
 .document-description {
