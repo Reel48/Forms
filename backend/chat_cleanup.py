@@ -1,11 +1,13 @@
 """
 Chat History Cleanup Service
 Automatically deletes chat messages and conversations older than the retention period
+Also handles session expiration cleanup
 """
 import os
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import uuid
 from database import supabase_storage
 
 logger = logging.getLogger(__name__)
@@ -106,6 +108,116 @@ def cleanup_old_chat_history(retention_hours: Optional[int] = None) -> dict:
         
     except Exception as e:
         error_msg = f"Error in chat cleanup: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        stats["errors"].append(error_msg)
+    
+    return stats
+
+def cleanup_expired_sessions() -> dict:
+    """
+    Clean up expired chat sessions by deleting messages and resetting session fields.
+    This runs periodically to ensure inactive sessions are cleaned up even if users don't send messages.
+    
+    Returns:
+        dict with cleanup statistics
+    """
+    stats = {
+        "sessions_reset": 0,
+        "messages_deleted": 0,
+        "errors": []
+    }
+    
+    try:
+        # Get session timeout from environment (default: 10 minutes)
+        timeout_minutes = int(os.getenv("CHAT_SESSION_TIMEOUT_MINUTES", "10"))
+        timeout_delta = timedelta(minutes=timeout_minutes)
+        cutoff_time = datetime.utcnow() - timeout_delta
+        
+        # Find all active conversations with expired last_activity_at
+        # Only check customer conversations (not admin views)
+        expired_conversations_response = supabase_storage.table("chat_conversations").select(
+            "id, customer_id, last_activity_at, session_id"
+        ).lt("last_activity_at", cutoff_time.isoformat()).execute()
+        
+        if not expired_conversations_response.data:
+            logger.info("No expired sessions to clean up")
+            return stats
+        
+        expired_convs = expired_conversations_response.data
+        logger.info(f"Found {len(expired_convs)} expired sessions to clean up")
+        
+        for conv in expired_convs:
+            try:
+                conversation_id = conv["id"]
+                customer_id = conv.get("customer_id")
+                
+                # Double-check the session is actually expired (handle timezone issues)
+                last_activity_str = conv.get("last_activity_at")
+                if not last_activity_str:
+                    continue
+                
+                try:
+                    last_activity = datetime.fromisoformat(last_activity_str.replace("Z", "+00:00"))
+                    if not last_activity.tzinfo:
+                        from zoneinfo import ZoneInfo
+                        last_activity = last_activity.replace(tzinfo=ZoneInfo("UTC"))
+                except Exception:
+                    logger.warning(f"Failed to parse last_activity_at for conversation {conversation_id}")
+                    continue
+                
+                now = datetime.now(last_activity.tzinfo)
+                if now - last_activity <= timeout_delta:
+                    # Not actually expired, skip
+                    continue
+                
+                # Delete all messages in the conversation
+                try:
+                    messages_response = supabase_storage.table("chat_messages").select("id").eq("conversation_id", conversation_id).execute()
+                    if messages_response.data:
+                        message_ids = [msg["id"] for msg in messages_response.data]
+                        # Delete in batches
+                        batch_size = 100
+                        for i in range(0, len(message_ids), batch_size):
+                            batch = message_ids[i:i + batch_size]
+                            supabase_storage.table("chat_messages").delete().in_("id", batch).execute()
+                        stats["messages_deleted"] += len(message_ids)
+                        logger.info(f"Deleted {len(message_ids)} messages for expired session in conversation {conversation_id}")
+                except Exception as e:
+                    error_msg = f"Failed to delete messages for conversation {conversation_id}: {str(e)}"
+                    logger.error(error_msg)
+                    stats["errors"].append(error_msg)
+                    # Continue with reset even if message deletion fails
+                
+                # Reset session fields
+                now_iso = datetime.now().isoformat()
+                new_session_id = str(uuid.uuid4())
+                
+                try:
+                    supabase_storage.table("chat_conversations").update({
+                        "session_id": new_session_id,
+                        "session_started_at": now_iso,
+                        "last_activity_at": now_iso,
+                        "is_active_session": True,
+                        "last_message_at": None,
+                        "updated_at": now_iso
+                    }).eq("id", conversation_id).execute()
+                    
+                    stats["sessions_reset"] += 1
+                    logger.info(f"Reset session for conversation {conversation_id}. New session_id: {new_session_id}")
+                except Exception as e:
+                    error_msg = f"Failed to reset session for conversation {conversation_id}: {str(e)}"
+                    logger.error(error_msg)
+                    stats["errors"].append(error_msg)
+                    
+            except Exception as e:
+                error_msg = f"Error processing expired session for conversation {conv.get('id', 'unknown')}: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                stats["errors"].append(error_msg)
+        
+        logger.info(f"Session cleanup completed: {stats['sessions_reset']} sessions reset, {stats['messages_deleted']} messages deleted")
+        
+    except Exception as e:
+        error_msg = f"Error in session cleanup: {str(e)}"
         logger.error(error_msg, exc_info=True)
         stats["errors"].append(error_msg)
     

@@ -13,7 +13,7 @@ import logging
 import traceback
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from chat_cleanup import cleanup_old_chat_history
+from chat_cleanup import cleanup_old_chat_history, cleanup_expired_sessions
 from auth import get_current_admin
 from database import supabase_storage
 
@@ -274,8 +274,17 @@ def setup_schedulers():
         replace_existing=True
     )
     
+    # Run expired session cleanup every 5 minutes
+    scheduler.add_job(
+        cleanup_expired_sessions,
+        trigger=CronTrigger(minute='*/5'),  # Every 5 minutes
+        id='session_cleanup',
+        name='Expired session cleanup (every 5 minutes)',
+        replace_existing=True
+    )
+    
     scheduler.start()
-    logger.info("Schedulers started (chat cleanup + security maintenance)")
+    logger.info("Schedulers started (chat cleanup + security maintenance + session cleanup)")
     return scheduler
 
 # Start scheduler when app starts

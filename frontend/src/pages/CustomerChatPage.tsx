@@ -82,7 +82,19 @@ const CustomerChatPage: React.FC = () => {
             );
           } else if (payload.eventType === 'DELETE') {
             const deletedMessage = payload.old as ChatMessage;
-            setMessages((prev) => prev.filter((msg) => msg.id !== deletedMessage.id));
+            setMessages((prev) => {
+              const filtered = prev.filter((msg) => msg.id !== deletedMessage.id);
+              // If all messages were deleted (likely session reset), clear the list
+              if (filtered.length === 0 && prev.length > 0) {
+                // This might be a bulk delete, reload messages to be sure
+                setTimeout(() => {
+                  if (conversation?.id) {
+                    void loadMessages(conversation.id);
+                  }
+                }, 100);
+              }
+              return filtered;
+            });
           }
         }
       )
@@ -155,8 +167,11 @@ const CustomerChatPage: React.FC = () => {
       const response = await chatAPI.checkSession(sessionId);
       
       if (response.data.was_reset) {
-        // Session was reset, reload messages (will be empty)
+        // Session was reset, clear messages and reload (will be empty)
+        setMessages([]);
         if (conversation?.id) {
+          // Small delay to ensure backend has finished deleting
+          await new Promise(resolve => setTimeout(resolve, 200));
           await loadMessages(conversation.id);
           showNotification({
             type: 'info',
@@ -168,7 +183,7 @@ const CustomerChatPage: React.FC = () => {
       console.error('Failed to check session:', error);
       // Don't show error to user - session check failures are non-critical
     }
-  }, [conversation?.id, showNotification]);
+  }, [conversation?.id, showNotification, loadMessages]);
 
   useEffect(() => {
     if (conversation) {
@@ -352,7 +367,7 @@ const CustomerChatPage: React.FC = () => {
     }
   };
 
-  const loadMessages = async (conversationId: string, limit: number = 50) => {
+  const loadMessages = useCallback(async (conversationId: string, limit: number = 50) => {
     try {
       const response = await chatAPI.getMessages(conversationId, limit);
       setMessages(response.data);
@@ -360,7 +375,7 @@ const CustomerChatPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
-  };
+  }, []);
 
   const markAllAsRead = async () => {
     if (!conversation || markingAsReadRef.current) return;
