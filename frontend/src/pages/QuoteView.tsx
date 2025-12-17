@@ -433,16 +433,16 @@ function QuoteView() {
     
     const status = quote.payment_status.toLowerCase();
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
-      'paid': { label: 'Paid', color: 'var(--color-verdant-pulse)', icon: '' },
-      'unpaid': { label: 'Unpaid', color: 'var(--color-tidewave-blue)', icon: '' },
-      'partially_paid': { label: 'Partially Paid', color: 'var(--color-tidewave-blue)', icon: '' },
-      'refunded': { label: 'Refunded', color: 'var(--color-tidewave-blue)', icon: '' },
-      'failed': { label: 'Payment Failed', color: 'var(--color-terra-blush)', icon: '' },
-      'voided': { label: 'Voided', color: 'var(--color-text-muted)', icon: '' },
-      'uncollectible': { label: 'Uncollectible', color: 'var(--color-terra-blush)', icon: '' },
+      'paid': { label: 'Paid', color: 'rgb(16 185 129)', icon: '' }, /* emerald-500 */
+      'unpaid': { label: 'Unpaid', color: 'rgb(245 158 11)', icon: '' }, /* amber-500 */
+      'partially_paid': { label: 'Partially Paid', color: 'rgb(251 191 36)', icon: '' }, /* yellow-400 */
+      'refunded': { label: 'Refunded', color: 'rgb(168 85 247)', icon: '' }, /* purple-500 */
+      'failed': { label: 'Payment Failed', color: 'rgb(239 68 68)', icon: '' }, /* red-500 */
+      'voided': { label: 'Voided', color: 'rgb(107 114 128)', icon: '' }, /* gray-500 */
+      'uncollectible': { label: 'Uncollectible', color: 'rgb(220 38 38)', icon: '' }, /* red-600 */
     };
     
-    return statusMap[status] || { label: status, color: 'var(--color-text-muted)', icon: '' };
+    return statusMap[status] || { label: status, color: 'rgb(107 114 128)', icon: '' }; /* gray-500 */
   };
 
   const paymentStatusDetails = getPaymentStatusDetails();
@@ -681,7 +681,7 @@ function QuoteView() {
               {/* Invoice Status - Enhanced */}
               {quote.stripe_invoice_id && (
                 <div className="mb-4 p-3" style={{ 
-                  backgroundColor: paymentStatusDetails?.color === 'var(--color-verdant-pulse)' ? 'var(--color-verdant-pulse-light)' : paymentStatusDetails?.color === 'var(--color-terra-blush)' ? 'var(--color-terra-blush-light)' : 'var(--color-tidewave-blue-light)', 
+                  backgroundColor: paymentStatusDetails?.color === 'rgb(16 185 129)' ? 'rgb(209 250 229)' : paymentStatusDetails?.color === 'rgb(239 68 68)' || paymentStatusDetails?.color === 'rgb(220 38 38)' ? 'rgb(254 226 226)' : paymentStatusDetails?.color === 'rgb(245 158 11)' || paymentStatusDetails?.color === 'rgb(251 191 36)' ? 'rgb(254 243 199)' : 'rgb(219 234 254)', /* emerald-100, red-100, yellow-100, blue-100 */ 
                   borderRadius: '24px',
                   border: `2px solid ${paymentStatusDetails?.color || 'var(--color-primary)'}` 
                 }}>

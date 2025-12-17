@@ -1240,7 +1240,7 @@ function PublicFormView() {
               textAlign: 'center',
               cursor: uploading ? 'wait' : 'pointer',
               transition: 'all 0.2s',
-              backgroundColor: value?.file_url ? 'var(--color-verdant-pulse-light)' : 'var(--color-bg-secondary)',
+              backgroundColor: value?.file_url ? 'rgb(209 250 229)' : 'var(--color-bg-secondary)', /* emerald-100 for success */
               opacity: uploading ? 0.6 : 1
             }}
             onClick={() => !uploading && document.getElementById(`${fieldId}-file`)?.click()}
@@ -1248,7 +1248,7 @@ function PublicFormView() {
               if (uploading) return;
               e.preventDefault();
               e.currentTarget.style.borderColor = 'var(--color-primary)';
-              e.currentTarget.style.backgroundColor = 'var(--color-tidewave-blue-light)';
+              e.currentTarget.style.backgroundColor = 'rgb(219 234 254)'; /* blue-100 */
             }}
             onDragLeave={(e) => {
               e.currentTarget.style.borderColor = 'var(--color-border-light)';

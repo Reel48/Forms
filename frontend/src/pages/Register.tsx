@@ -95,7 +95,7 @@ export default function Register() {
                   <div style={{
                     width: `${(passwordStrength / 10) * 100}%`,
                     height: '100%',
-                    backgroundColor: passwordStrength <= 3 ? 'var(--color-terra-blush)' : passwordStrength <= 6 ? 'var(--color-tidewave-blue)' : passwordStrength <= 8 ? 'var(--color-tidewave-blue)' : 'var(--color-verdant-pulse)',
+                    backgroundColor: passwordStrength <= 3 ? 'rgb(239 68 68)' : passwordStrength <= 6 ? 'rgb(245 158 11)' : passwordStrength <= 8 ? 'rgb(59 130 246)' : 'rgb(16 185 129)', /* red-500, amber-500, blue-500, emerald-500 */
                     transition: 'width 0.3s ease'
                   }} />
                 </div>
