@@ -1217,7 +1217,7 @@ const FolderView: React.FC = () => {
                             <span style={{ 
                               fontSize: '0.75rem', 
                               padding: '0.125rem 0.375rem', 
-                              backgroundColor: '#dbeafe', 
+                              backgroundColor: '#E8EBF0', 
                               color: '#5c795e', 
                               borderRadius: '0.25rem',
                               fontWeight: 500
@@ -1302,7 +1302,7 @@ const FolderView: React.FC = () => {
                             <span style={{ 
                               fontSize: '0.75rem', 
                               padding: '0.125rem 0.375rem', 
-                              backgroundColor: '#dbeafe', 
+                              backgroundColor: '#E8EBF0', 
                               color: '#5c795e', 
                               borderRadius: '0.25rem',
                               fontWeight: 500
