@@ -16,8 +16,8 @@
 }
 
 .calendar-picker:hover {
-  border-color: var(--color-tidewave-blue);
-  box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.3);
+  border-color: rgb(99 102 241); /* indigo-500 */
+  box-shadow: 0px 8px 24px rgba(99, 102, 241, 0.3);
 }
 
 .calendar-header {
@@ -40,7 +40,7 @@
 
 .calendar-nav-btn:hover:not(:disabled) {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241); /* indigo-500 */
 }
 
 .calendar-nav-btn:disabled {
@@ -109,14 +109,14 @@
 
 .calendar-day.clickable:hover:not(:disabled) {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241); /* indigo-500 */
   transform: scale(1.05);
   z-index: 1;
 }
 
 .calendar-day.today {
   background: #E8EBF0;
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241); /* indigo-500 */
   border-width: 2px;
 }
 
@@ -127,7 +127,7 @@
 
 .calendar-day.selected {
   background: var(--color-tidewave-blue);
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241); /* indigo-500 */
   color: white;
 }
 

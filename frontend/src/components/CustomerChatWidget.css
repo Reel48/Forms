@@ -371,8 +371,8 @@
 }
 
 .chat-widget-attach:hover:not(:disabled) {
-  border-color: var(--color-tidewave-blue);
-  background-color: var(--color-tidewave-blue-light);
+  border-color: rgb(99 102 241); /* indigo-500 */
+  background-color: rgb(224 231 255); /* indigo-100 */
   box-shadow: var(--shadow-sm);
 }
 
@@ -383,7 +383,7 @@
 
 .chat-widget-attach:hover:not(:disabled) {
   background-color: var(--color-tidewave-blue);
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241); /* indigo-500 */
   color: white;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(92, 121, 94, 0.3);
@@ -407,9 +407,9 @@
 }
 
 .chat-widget-input:focus {
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241); /* indigo-500 */
   border-width: 3px;
-  box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0px 2px 8px rgba(99, 102, 241, 0.15);
   outline: none;
 }
 
