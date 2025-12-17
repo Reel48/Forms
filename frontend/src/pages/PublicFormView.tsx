@@ -2258,10 +2258,8 @@ function PublicFormView() {
   // Apply theme
   const theme = form?.theme || {};
   const primaryColor = theme.primaryColor || 'var(--color-primary)';
-  const secondaryColor = theme.secondaryColor || '#764ba2';
   const fontFamily = theme.fontFamily || 'Inter, system-ui, sans-serif';
   const logoUrl = theme.logoUrl || '';
-  const backgroundType = theme.backgroundType || 'gradient';
   const backgroundColor = theme.backgroundColor || primaryColor;
 
   // Calculate background style
