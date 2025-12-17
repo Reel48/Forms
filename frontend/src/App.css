@@ -8,7 +8,7 @@
   --brand-white: #ffffff;
   
   /* Color Palette - Main Colors */
-  --color-blue: #2F80ED;
+  --color-blue: #6C92F4;
   --color-green: #4baa7d;
   --color-red: #dc2626;
   --color-orange: #f97316;
@@ -18,7 +18,7 @@
   --color-gray: #6b7280;
   
   /* Color Palette - Light/Badge Colors */
-  --color-blue-light: #EAF2FD;
+  --color-blue-light: #E8EDFC;
   --color-green-light: #dcfff0;
   --color-red-light: #fee2e2;
   --color-orange-light: #fff4ed;
@@ -27,13 +27,13 @@
   --color-pink-light: #fce7f3;
   --color-gray-light: #f3f4f6;
   
-  /* Primary Colors (using new blue) */
-  --color-primary: #2F80ED;
-  --color-primary-hover: #2563eb;
-  --color-primary-light: #EAF2FD;
-  --color-primary-focus: rgba(47, 128, 237, 0.1);
-  --color-primary-gradient: #56CCF2;
-  --color-primary-subtle: rgba(47, 128, 237, 0.1);
+  /* Primary Colors (warm minimalism) */
+  --color-primary: #6C92F4;
+  --color-primary-hover: #5a7de8;
+  --color-primary-light: #E8EDFC;
+  --color-primary-focus: rgba(108, 146, 244, 0.1);
+  --color-primary-gradient: #FFCDB2;
+  --color-primary-subtle: rgba(108, 146, 244, 0.1);
   
   /* Secondary Colors */
   --color-secondary: #6b7280;
@@ -54,7 +54,7 @@
   --color-warning-light: #fff4ed;
   
   /* Utility Bar Color (fixed blue) */
-  --utility-bar-color: #2F80ED;
+  --utility-bar-color: #6C92F4;
   
   /* Neutral Colors */
   --color-text-primary: #1f2937;

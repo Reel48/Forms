@@ -34,7 +34,7 @@
 
 .calendar-nav-btn:hover:not(:disabled) {
   background: var(--color-bg-secondary, #F5F5F7);
-  border-color: var(--color-primary, #2F80ED);
+  border-color: var(--color-primary, #6C92F4);
 }
 
 .calendar-nav-btn:disabled {
