@@ -370,7 +370,7 @@
 .analytics-value {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--color-primary, #6C92F4);
+  color: var(--color-primary, #748CAB);
   margin-bottom: 0.5rem;
 }
 
@@ -395,7 +395,7 @@
 }
 
 .btn-primary {
-  background: var(--color-primary, #6C92F4);
+  background: var(--color-primary, #748CAB);
   color: white;
 }
 
@@ -405,8 +405,8 @@
 
 .btn-outline {
   background: #FFFFFF;
-  color: var(--color-primary, #6C92F4);
-  border-color: var(--color-primary, #6C92F4);
+  color: var(--color-primary, #748CAB);
+  border-color: var(--color-primary, #748CAB);
 }
 
 .btn-outline:hover:not(:disabled) {

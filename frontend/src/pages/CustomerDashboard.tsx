@@ -392,7 +392,7 @@ function CustomerDashboard() {
                     </span>
                   </td>
                   <td className="mobile-name-column">
-                    <strong style={{ color: 'var(--color-primary, #6C92F4)' }}>{item.title}</strong>
+                    <strong style={{ color: 'var(--color-primary, #748CAB)' }}>{item.title}</strong>
                   </td>
                   <td className="mobile-status-column">
                     {getStatusBadge(item.status, item.type)}
@@ -539,7 +539,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #6C92F4)' }}>{item.title}</strong>
+                        <strong style={{ color: 'var(--color-primary, #748CAB)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -632,7 +632,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #6C92F4)' }}>{item.title}</strong>
+                        <strong style={{ color: 'var(--color-primary, #748CAB)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -725,7 +725,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #6C92F4)' }}>{item.title}</strong>
+                        <strong style={{ color: 'var(--color-primary, #748CAB)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
