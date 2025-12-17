@@ -236,7 +236,7 @@ const FoldersList: React.FC = () => {
                   onClick={() => navigate(`/folders/${folder.id}`)}
                 >
                   <td className="mobile-name-column">
-                    <strong style={{ color: 'rgb(59 130 246)' }}>{folder.name}</strong>
+                    <strong style={{ color: 'rgb(16 185 129)' }}>{folder.name}</strong>
                   </td>
                   {role === 'admin' ? (
                     <>

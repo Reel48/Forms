@@ -218,18 +218,18 @@ function FilesList() {
                           style={{
                             flex: 1,
                             padding: '0.25rem 0.5rem',
-                            border: '1px solid rgb(59 130 246)',
+                            border: '1px solid rgb(16 185 129)',
                             borderRadius: '4px',
                             fontSize: '1rem',
                             fontWeight: '600',
-                            color: 'rgb(59 130 246)'
+                            color: 'rgb(16 185 129)'
                           }}
                         />
                       </div>
                     ) : (
                       <strong
                         style={{
-                          color: 'rgb(59 130 246)',
+                          color: 'rgb(16 185 129)',
                           cursor: 'pointer'
                         }}
                         onDoubleClick={(e) => {
