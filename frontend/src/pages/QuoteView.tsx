@@ -474,7 +474,7 @@ function QuoteView() {
         </div>
 
         {loading && (
-          <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
+          <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
             <p>Loading quote...</p>
           </div>
         )}
@@ -488,7 +488,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('details')}
                     style={{
-                      padding: '2rem 3rem',
+                      padding: '1rem 1.5rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -502,7 +502,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('activities')}
                     style={{
-                      padding: '2rem 3rem',
+                      padding: '1rem 1.5rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -516,7 +516,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('comments')}
                     style={{
-                      padding: '2rem 3rem',
+                      padding: '1rem 1.5rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -530,7 +530,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('versions')}
                     style={{
-                      padding: '2rem 3rem',
+                      padding: '1rem 1.5rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',

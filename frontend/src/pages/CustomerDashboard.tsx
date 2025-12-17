@@ -311,7 +311,7 @@ function CustomerDashboard() {
       <CustomerChatWidget />
       
       {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
           <p>Loading...</p>
         </div>
       )}

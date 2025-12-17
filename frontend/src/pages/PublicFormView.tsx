@@ -1920,7 +1920,7 @@ function PublicFormView() {
               <div style={{
                 border: '2px solid #e5e7eb',
                 borderRadius: '24px',
-                padding: '4rem',
+                padding: '1.5rem',
                 backgroundColor: '#FFFFFF',
                 textAlign: 'center',
                 boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)'
@@ -1963,7 +1963,7 @@ function PublicFormView() {
                       }}
                       disabled={isProcessing || value?.status === 'succeeded'}
                       style={{
-                        padding: '1.5rem 4rem',
+                        padding: '0.75rem 1.5rem',
                         fontSize: '1rem',
                         fontWeight: '500',
                         color: '#ffffff',
@@ -2023,7 +2023,7 @@ function PublicFormView() {
             
             {/* CUSTOM COLOR INPUT SECTION */}
             <div style={{
-              padding: '3rem',
+              padding: '1.5rem',
               backgroundColor: '#FFFFFF',
               borderRadius: '24px',
               border: '2px solid #e5e7eb',

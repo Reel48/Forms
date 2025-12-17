@@ -76,12 +76,12 @@
 /* Enhanced Empty States */
 .empty-state-enhanced {
   text-align: center;
-  padding: 6rem 4rem;
+  padding: 3rem 2rem;
   background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;
   max-width: 600px;
-  margin: 4rem auto;
+  margin: 2rem auto;
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
@@ -130,7 +130,7 @@
   background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;
-  padding: 4rem;
+  padding: 1.5rem;
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
@@ -202,7 +202,7 @@
   /* ADDED: Border to match the calendar visually */
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;
-  padding: 4rem; /* More breathing room inside */
+  padding: 1.5rem;
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   /* OPTIONAL: This helps center the "No times" message vertically if you want */
   display: flex;
@@ -249,13 +249,13 @@
 .booking-notes-input {
   width: 100%;
   max-width: 600px;
-  padding: 1.5rem;
+  padding: 0.875rem 1rem;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;
   font-size: 0.875rem;
   font-family: inherit;
   resize: vertical;
-  min-height: 160px;
+  min-height: 120px;
 }
 
 .booking-notes-input:focus {
@@ -282,7 +282,7 @@
 .reschedule-modal-content {
   background: #FFFFFF;
   border-radius: 24px;
-  padding: 4rem;
+  padding: 1.5rem;
   max-width: 800px;
   width: 100%;
   max-height: 90vh;
@@ -340,7 +340,7 @@
 /* Analytics Section */
 .analytics-section {
   margin-bottom: 4rem;
-  padding: 3rem;
+  padding: 1.5rem;
   background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;

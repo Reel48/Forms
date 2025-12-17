@@ -105,10 +105,10 @@
   --shadow-xl: 0px 8px 24px rgba(0, 0, 0, 0.05);
   --shadow-soft: 0px 4px 20px rgba(0, 0, 0, 0.05);
   
-  /* Padding - Doubled */
-  --padding-card: 3rem;
-  --padding-button: 1.25rem 2.5rem;
-  --padding-input: 1.25rem 1.5rem;
+  /* Padding - Optimized */
+  --padding-card: 1.5rem;
+  --padding-button: 0.75rem 1.5rem;
+  --padding-input: 0.875rem 1rem;
   
   /* Transitions */
   --transition-fast: 0.15s;
@@ -836,12 +836,12 @@ button {
 
 /* Button Sizes */
 .btn-sm {
-  padding: 1rem 2rem;
+  padding: 0.5rem 1rem;
   font-size: 0.8125rem;
 }
 
 .btn-lg {
-  padding: 1.5rem 3rem;
+  padding: 1rem 2rem;
   font-size: 1rem;
 }
 
@@ -856,12 +856,12 @@ button {
 
 /* Forms */
 .form-group {
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -930,7 +930,7 @@ table th {
 }
 
 table td {
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 1rem;
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-primary);
 }
@@ -1133,7 +1133,7 @@ a:not([class]) {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   z-index: 999;
-  padding: 2rem 4rem;
+  padding: 1rem 2rem;
 }
 
 .typeform-progress-bar {
@@ -1165,7 +1165,7 @@ a:not([class]) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8rem 4rem;
+  padding: 3rem 2rem;
   min-height: calc(100vh - 80px);
 }
 
@@ -1174,12 +1174,12 @@ a:not([class]) {
   max-width: 700px;
   background: var(--color-bg-card);
   border-radius: var(--radius-card);
-  padding: 6rem;
+  padding: 2rem;
   box-shadow: var(--shadow-soft);
 }
 
 .typeform-question .form-group {
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
 }
 
 .typeform-question .component-color-selector {
@@ -1225,7 +1225,7 @@ a:not([class]) {
 .typeform-question textarea,
 .typeform-question select {
   width: 100%;
-  padding: 2rem 2.5rem;
+  padding: 1rem 1.25rem;
   font-size: 1.125rem;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-input);
