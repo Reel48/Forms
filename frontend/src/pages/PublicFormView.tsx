@@ -1867,7 +1867,7 @@ function PublicFormView() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '2rem',
-                        padding: '2rem',
+                        padding: '1.5rem',
                         border: '2px solid #e5e7eb',
                         borderRadius: '24px',
                         backgroundColor: dragState.draggedIndex === displayIndex ? '#f3f4f6' : '#FFFFFF',
@@ -2232,7 +2232,7 @@ function PublicFormView() {
           <button
             onClick={() => setFormValues((prev) => ({ ...prev, _started: true }))}
             className="btn-primary"
-            style={{ fontSize: '1.125rem', padding: '0.75rem 2rem' }}
+            style={{ fontSize: '1.125rem', padding: '0.75rem 1.5rem' }}
           >
             {form.welcome_screen?.button_text || 'Start'}
           </button>
@@ -2306,7 +2306,7 @@ function PublicFormView() {
     return (
       <div className="typeform-container" style={containerStyle}>
         <div className="typeform-content">
-          <div style={{ maxWidth: '400px', margin: '0 auto', padding: '2rem' }}>
+          <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1.5rem' }}>
             <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'white' }}>
               {form?.name || 'Protected Form'}
             </h2>
@@ -2392,7 +2392,7 @@ function PublicFormView() {
     return (
       <div className="typeform-container" style={containerStyle}>
         <div className="typeform-content">
-          <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '1rem' }}>
             This form has no fields.
           </p>
         </div>
@@ -2404,11 +2404,11 @@ function PublicFormView() {
   if (viewMode === 'view' && previousSubmission && !loadingPreviousSubmission) {
     return (
       <div className="typeform-container" style={containerStyle}>
-        <div className="typeform-content" style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
+        <div className="typeform-content" style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem' }}>
           <div style={{ 
             backgroundColor: 'rgba(255, 255, 255, 0.95)', 
             borderRadius: '12px', 
-            padding: '2rem',
+            padding: '1.5rem',
             marginBottom: '2rem',
             border: '2px solid var(--color-success)'
           }}>

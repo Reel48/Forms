@@ -7,7 +7,7 @@
 }
 
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .page-header h1 {
@@ -143,11 +143,11 @@
 
 .booking-widget-container > p {
   color: var(--color-text-muted, #6b7280);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .event-type-selector {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   padding-bottom: 2rem;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
 }
@@ -339,7 +339,7 @@
 
 /* Analytics Section */
 .analytics-section {
-  margin-bottom: 4rem;
+  margin-bottom: 1.5rem;
   padding: 1.5rem;
   background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
@@ -384,7 +384,7 @@
 .btn-outline,
 .btn-danger,
 .btn-sm {
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 24px;
   font-size: 0.875rem;
   font-weight: 500;
