@@ -1262,7 +1262,7 @@ function PublicFormView() {
                 handleFileUpload(files[0]);
               }
               e.currentTarget.style.borderColor = '#d1d5db';
-              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))';
             }}
             >
               <input
