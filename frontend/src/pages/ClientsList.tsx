@@ -276,8 +276,8 @@ function ClientsList() {
                       padding: '0.25rem 0.5rem',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
-                      backgroundColor: client.registration_source === 'self_registered' ? '#E8EBF0' : '#f3f4f6',
-                      color: client.registration_source === 'self_registered' ? 'var(--color-tidewave-blue)' : '#374151'
+                      backgroundColor: client.registration_source === 'self_registered' ? 'var(--color-bg-secondary)' : 'var(--color-bg-secondary)',
+                      color: client.registration_source === 'self_registered' ? 'var(--color-tidewave-blue)' : 'var(--color-text-secondary)'
                     }}>
                       {client.registration_source === 'self_registered' ? 'Self Registered' : 'Admin Created'}
                     </span>

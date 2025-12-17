@@ -133,8 +133,8 @@ function FormView() {
   if (error && !loading) {
     return (
       <div className="container">
-        <div className="card mb-4" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', padding: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>{error}</p>
+        <div className="card mb-4" style={{ backgroundColor: 'var(--color-terra-blush-light)', borderColor: 'var(--color-terra-blush)', padding: '1rem' }}>
+          <p style={{ color: 'var(--color-terra-blush)', margin: 0 }}>{error}</p>
           <button onClick={() => navigate('/forms')} className="btn-secondary" style={{ marginTop: '1rem' }}>
             Back to Forms
           </button>
@@ -420,14 +420,14 @@ function FormView() {
                 </div>
               )}
               {showEmbedCode && form.status !== 'published' && (
-                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
-                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#dc2626' }}>
+                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-terra-blush-light)', borderRadius: '8px', border: '1px solid var(--color-terra-blush)' }}>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-terra-blush)' }}>
                     Form must be published to generate embed code
                   </p>
                 </div>
               )}
               {form.status !== 'published' && (
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#dc2626' }}>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: 'var(--color-terra-blush)' }}>
                   Warning: Form must be published for the public URL to work
                 </p>
               )}
@@ -473,7 +473,7 @@ function FormView() {
                         {FIELD_TYPE_LABELS[field.field_type] || field.field_type}
                       </span>
                       {field.required && (
-                        <span style={{ color: '#dc2626', fontSize: '0.75rem', fontWeight: '500' }}>* Required</span>
+                        <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.75rem', fontWeight: '500' }}>* Required</span>
                       )}
                       <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                         Order: {field.order_index + 1}

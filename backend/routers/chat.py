@@ -184,9 +184,18 @@ def _check_and_reset_session_if_expired(conversation_id: str, customer_id: str) 
     """
     try:
         # Get conversation with session fields
-        conv_response = supabase_storage.table("chat_conversations").select(
-            "id, last_activity_at, session_id, session_started_at, is_active_session"
-        ).eq("id", conversation_id).single().execute()
+        # Handle case where session columns don't exist yet (migration not run)
+        try:
+            conv_response = supabase_storage.table("chat_conversations").select(
+                "id, last_activity_at, session_id, session_started_at, is_active_session"
+            ).eq("id", conversation_id).single().execute()
+        except Exception as col_error:
+            error_str = str(col_error)
+            if "does not exist" in error_str or "42703" in error_str:
+                # Session columns don't exist - migration hasn't been run
+                logger.warning(f"Session tracking columns not found for conversation {conversation_id}. Migration required.")
+                return False
+            raise
         
         if not conv_response.data:
             return False
@@ -784,9 +793,27 @@ async def check_session(
         except: pass
         # #endregion
         # Get updated conversation data
-        updated_conv_response = supabase_storage.table("chat_conversations").select(
-            "session_id, session_started_at, last_activity_at, is_active_session"
-        ).eq("id", conversation_id).single().execute()
+        # Try to select session fields, but handle case where columns don't exist yet
+        try:
+            updated_conv_response = supabase_storage.table("chat_conversations").select(
+                "session_id, session_started_at, last_activity_at, is_active_session"
+            ).eq("id", conversation_id).single().execute()
+        except Exception as col_error:
+            error_str = str(col_error)
+            # Check if it's a missing column error
+            if "does not exist" in error_str or "42703" in error_str:
+                # Session columns don't exist - migration hasn't been run
+                logger.error("Session tracking columns not found. Please run database/chat_session_tracking_migration.sql")
+                # Return response without session data
+                return {
+                    "is_expired": False,
+                    "was_reset": False,
+                    "session_id": None,
+                    "session_started_at": None,
+                    "last_activity_at": None,
+                    "message": "Session tracking not available - database migration required"
+                }
+            raise
         # #region agent log
         try:
             with open('/Users/brayden/Forms/Forms/.cursor/debug.log', 'a') as f:

@@ -37,18 +37,18 @@
 }
 
 .status-pending {
-  background-color: var(--color-warning-light, #fef3c7);
-  color: var(--color-warning, #f59e0b);
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 .status-signed {
-  background-color: var(--color-success-light, #d1fae5);
-  color: var(--color-success, #10b981);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .status-declined {
-  background-color: var(--color-danger-light, #fee2e2);
-  color: var(--color-danger, #dc2626);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
 }
 
 .status-expired {
@@ -62,12 +62,12 @@
 }
 
 .error-banner {
-  background-color: var(--color-danger-light, #fee2e2);
-  color: var(--color-danger, #dc2626);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
   padding: 1rem;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
-  border: 1px solid var(--color-danger, #dc2626);
+  border: 1px solid var(--color-danger);
 }
 
 .signed-document-view {
@@ -77,7 +77,7 @@
 
 .success-message h2 {
   font-size: 1.75rem;
-  color: var(--color-success, #10b981);
+  color: var(--color-success);
   margin-bottom: 1rem;
 }
 

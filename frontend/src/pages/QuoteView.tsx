@@ -433,13 +433,13 @@ function QuoteView() {
     
     const status = quote.payment_status.toLowerCase();
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
-      'paid': { label: 'Paid', color: '#065f46', icon: '' },
-      'unpaid': { label: 'Unpaid', color: '#991b1b', icon: '' },
-      'partially_paid': { label: 'Partially Paid', color: '#92400e', icon: '' },
-      'refunded': { label: 'Refunded', color: '#7c2d12', icon: '' },
-      'failed': { label: 'Payment Failed', color: '#991b1b', icon: '' },
+      'paid': { label: 'Paid', color: 'var(--color-verdant-pulse)', icon: '' },
+      'unpaid': { label: 'Unpaid', color: 'var(--color-terra-blush)', icon: '' },
+      'partially_paid': { label: 'Partially Paid', color: 'var(--color-sunlit-saffron)', icon: '' },
+      'refunded': { label: 'Refunded', color: 'var(--color-sunlit-saffron)', icon: '' },
+      'failed': { label: 'Payment Failed', color: 'var(--color-terra-blush)', icon: '' },
       'voided': { label: 'Voided', color: 'var(--color-text-muted)', icon: '' },
-      'uncollectible': { label: 'Uncollectible', color: '#991b1b', icon: '' },
+      'uncollectible': { label: 'Uncollectible', color: 'var(--color-terra-blush)', icon: '' },
     };
     
     return statusMap[status] || { label: status, color: 'var(--color-text-muted)', icon: '' };
@@ -681,7 +681,7 @@ function QuoteView() {
               {/* Invoice Status - Enhanced */}
               {quote.stripe_invoice_id && (
                 <div className="mb-4 p-3" style={{ 
-                  backgroundColor: paymentStatusDetails?.color === '#065f46' ? '#d1fae5' : '#EAF2FD', 
+                  backgroundColor: paymentStatusDetails?.color === 'var(--color-verdant-pulse)' ? 'var(--color-verdant-pulse-light)' : 'var(--color-tidewave-blue-light)', 
                   borderRadius: '24px',
                   border: `2px solid ${paymentStatusDetails?.color || 'var(--color-primary)'}` 
                 }}>
@@ -727,7 +727,7 @@ function QuoteView() {
                 <>
                   {/* Payment Actions */}
                   {quote.status === 'draft' || quote.status === 'sent' || quote.status === 'viewed' ? (
-                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: '#F5F5F7', borderRadius: '24px', padding: '1.5rem' }}>
+                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: 'var(--color-bg-secondary)', borderRadius: '24px', padding: '1.5rem' }}>
                       <h3>Quote Actions</h3>
                       <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                         <button onClick={handleAcceptQuote} className="btn-primary">
@@ -748,7 +748,7 @@ function QuoteView() {
                   ) : null}
 
                   {quote.status === 'accepted' && !quote.stripe_invoice_id && quote.clients && role === 'admin' ? (
-                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: '#e8f5e9', borderRadius: '8px' }}>
+                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: 'var(--color-verdant-pulse-light)', borderRadius: '8px' }}>
                       <h3>Create Invoice</h3>
                       <p>This quote has been accepted. Create a Stripe invoice to collect payment.</p>
                       <button 

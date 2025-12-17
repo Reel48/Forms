@@ -864,7 +864,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -903,7 +903,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -935,7 +935,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -968,7 +968,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1000,7 +1000,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1033,7 +1033,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1066,7 +1066,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1091,7 +1091,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1116,7 +1116,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1145,13 +1145,13 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label htmlFor={startDateId} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#6b7280' }}>
+                <label htmlFor={startDateId} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--color-text-muted)' }}>
                   Start Date
                 </label>
                 <input
@@ -1165,7 +1165,7 @@ function PublicFormView() {
                 />
               </div>
               <div>
-                <label htmlFor={endDateId} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#6b7280' }}>
+                <label htmlFor={endDateId} style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--color-text-muted)' }}>
                   End Date
                 </label>
                 <input
@@ -1229,18 +1229,18 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
             <div style={{ 
-              border: '2px dashed #d1d5db', 
+              border: '2px dashed var(--color-border-light)', 
               borderRadius: '24px', 
               padding: '1.5rem', 
               textAlign: 'center',
               cursor: uploading ? 'wait' : 'pointer',
               transition: 'all 0.2s',
-              backgroundColor: value?.file_url ? '#f0fdf4' : 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))',
+              backgroundColor: value?.file_url ? 'var(--color-verdant-pulse-light)' : 'var(--color-bg-secondary)',
               opacity: uploading ? 0.6 : 1
             }}
             onClick={() => !uploading && document.getElementById(`${fieldId}-file`)?.click()}
@@ -1248,11 +1248,11 @@ function PublicFormView() {
               if (uploading) return;
               e.preventDefault();
               e.currentTarget.style.borderColor = 'var(--color-primary)';
-              e.currentTarget.style.backgroundColor = '#f8f9ff';
+              e.currentTarget.style.backgroundColor = 'var(--color-tidewave-blue-light)';
             }}
             onDragLeave={(e) => {
-              e.currentTarget.style.borderColor = '#d1d5db';
-              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))';
+              e.currentTarget.style.borderColor = 'var(--color-border-light)';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
             }}
             onDrop={(e) => {
               e.preventDefault();
@@ -1261,8 +1261,8 @@ function PublicFormView() {
               if (files.length > 0) {
                 handleFileUpload(files[0]);
               }
-              e.currentTarget.style.borderColor = '#d1d5db';
-              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))';
+              e.currentTarget.style.borderColor = 'var(--color-border-light)';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
             }}
             >
               <input
@@ -1286,7 +1286,7 @@ function PublicFormView() {
               ) : value?.file_url ? (
                 <div>
                   <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: '500' }}>{value.file_name}</p>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                     {(value.file_size / 1024).toFixed(2)} KB
                   </p>
                   <button
@@ -1314,10 +1314,10 @@ function PublicFormView() {
               ) : value?.upload_error ? (
                 <div>
                   <p style={{ margin: 0, color: 'var(--color-danger)', fontWeight: '500' }}>Upload failed: {value.upload_error}</p>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                     File: {value.file_name} ({(value.file_size / 1024).toFixed(2)} KB)
                   </p>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                     You can still submit the form, but the file won't be attached.
                   </p>
                   <button
@@ -1344,8 +1344,8 @@ function PublicFormView() {
                 </div>
               ) : (
                 <div>
-                  <p style={{ margin: 0, color: '#6b7280' }}>Click or drag file here</p>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                  <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Click or drag file here</p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                     Max file size: 10MB
                   </p>
                 </div>
@@ -1363,7 +1363,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1394,7 +1394,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1449,7 +1449,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1497,7 +1497,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1584,7 +1584,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1613,7 +1613,7 @@ function PublicFormView() {
                       border: 'none',
                       fontSize: '2rem',
                       cursor: 'pointer',
-                      color: star <= (value || 0) ? '#fbbf24' : '#d1d5db',
+                      color: star <= (value || 0) ? 'var(--color-sunlit-saffron)' : 'var(--color-border-light)',
                       padding: 0,
                       lineHeight: 1,
                     }}
@@ -1624,7 +1624,7 @@ function PublicFormView() {
                   </button>
                 ))}
                 {value && (
-                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                     ({value} / {maxRating})
                   </span>
                 )}
@@ -1645,7 +1645,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1653,7 +1653,7 @@ function PublicFormView() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                   {scaleLabels[0] && (
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280', minWidth: '100px', textAlign: 'left' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', minWidth: '100px', textAlign: 'left' }}>
                       {scaleLabels[0].label || scaleLabels[0].value}
                     </span>
                   )}
@@ -1692,12 +1692,12 @@ function PublicFormView() {
                           required={field.required}
                           style={{ margin: 0 }}
                         />
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{num}</span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{num}</span>
                       </label>
                     ))}
                   </div>
                   {scaleLabels[1] && (
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280', minWidth: '100px', textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', minWidth: '100px', textAlign: 'right' }}>
                       {scaleLabels[1].label || scaleLabels[1].value}
                     </span>
                   )}
@@ -1719,7 +1719,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1843,7 +1843,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -1908,7 +1908,7 @@ function PublicFormView() {
               {field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
             </label>
             {field.description && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
                 {field.description}
               </p>
             )}
@@ -2053,7 +2053,7 @@ function PublicFormView() {
                     style={{
                       width: '100%',
                       padding: '1.5rem',
-                      border: '2px solid #d1d5db',
+                      border: '2px solid var(--color-border-light)',
                       borderRadius: '24px',
                       backgroundColor: '#FFFFFF',
                     }}
@@ -2085,9 +2085,9 @@ function PublicFormView() {
                         padding: '0.75rem',
                         fontFamily: 'monospace',
                         fontSize: '0.875rem',
-                        border: '2px solid #d1d5db',
+                        border: '2px solid var(--color-border-light)',
                         borderRadius: '8px',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--color-background-white)',
                       }}
                     />
                     <input

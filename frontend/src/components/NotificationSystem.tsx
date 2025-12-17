@@ -81,9 +81,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 'var(--color-primary)'
               }`,
               color: 
-                notification.type === 'success' ? '#065f46' :
-                notification.type === 'error' ? '#991b1b' :
-                notification.type === 'warning' ? '#92400e' :
+                notification.type === 'success' ? 'var(--color-verdant-pulse)' :
+                notification.type === 'error' ? 'var(--color-terra-blush)' :
+                notification.type === 'warning' ? 'var(--color-sunlit-saffron)' :
                 'var(--color-primary)',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               display: 'flex',

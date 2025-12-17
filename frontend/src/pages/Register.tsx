@@ -88,14 +88,14 @@ export default function Register() {
                 <div style={{ 
                   width: '100%', 
                   height: '4px', 
-                  backgroundColor: '#e0e0e0', 
+                  backgroundColor: 'var(--color-bg-secondary)', 
                   borderRadius: '2px',
                   overflow: 'hidden'
                 }}>
                   <div style={{
                     width: `${(passwordStrength / 10) * 100}%`,
                     height: '100%',
-                    backgroundColor: passwordStrength <= 3 ? '#f44336' : passwordStrength <= 6 ? '#ff9800' : passwordStrength <= 8 ? '#2196f3' : '#4caf50',
+                    backgroundColor: passwordStrength <= 3 ? 'var(--color-terra-blush)' : passwordStrength <= 6 ? 'var(--color-sunlit-saffron)' : passwordStrength <= 8 ? 'var(--color-tidewave-blue)' : 'var(--color-verdant-pulse)',
                     transition: 'width 0.3s ease'
                   }} />
                 </div>

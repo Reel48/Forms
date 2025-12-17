@@ -184,7 +184,7 @@ export default function VerifyEmail() {
           <div className="error-message">
             {error}
             <div style={{ marginTop: '15px' }}>
-              <Link to="/resend-verification" style={{ color: '#667eea', textDecoration: 'none' }}>
+              <Link to="/resend-verification" style={{ color: 'var(--color-tidewave-blue)', textDecoration: 'none' }}>
                 Request a new verification link
               </Link>
             </div>

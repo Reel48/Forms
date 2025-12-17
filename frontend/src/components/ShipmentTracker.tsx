@@ -65,10 +65,10 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ folderId }) => {
 
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
-    if (statusLower === 'delivered') return '#28a745';
-    if (statusLower === 'in_transit' || statusLower === 'transit') return '#007bff';
-    if (statusLower === 'exception' || statusLower === 'error') return '#dc3545';
-    return '#6c757d';
+    if (statusLower === 'delivered') return 'var(--color-verdant-pulse)';
+    if (statusLower === 'in_transit' || statusLower === 'transit') return 'var(--color-tidewave-blue)';
+    if (statusLower === 'exception' || statusLower === 'error') return 'var(--color-terra-blush)';
+    return 'var(--color-text-muted)'; /* Neutral grey */
   };
 
   const getStatusLabel = (status: string) => {

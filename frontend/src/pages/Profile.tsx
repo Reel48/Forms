@@ -206,7 +206,7 @@ function Profile() {
           display: 'flex', 
           gap: '10px', 
           marginBottom: '2rem',
-          borderBottom: '2px solid #e0e0e0',
+          borderBottom: '2px solid var(--color-border-light)',
           paddingBottom: '10px'
         }}>
           <button
@@ -215,7 +215,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'profile' ? '#007bff' : 'transparent',
+              background: activeTab === 'profile' ? 'var(--color-tidewave-blue)' : 'transparent',
               color: activeTab === 'profile' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -230,7 +230,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'security' ? '#007bff' : 'transparent',
+              background: activeTab === 'security' ? 'var(--color-tidewave-blue)' : 'transparent',
               color: activeTab === 'security' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -245,7 +245,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'sessions' ? '#007bff' : 'transparent',
+              background: activeTab === 'sessions' ? 'var(--color-tidewave-blue)' : 'transparent',
               color: activeTab === 'sessions' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -260,7 +260,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'login_activity' ? '#007bff' : 'transparent',
+              background: activeTab === 'login_activity' ? 'var(--color-tidewave-blue)' : 'transparent',
               color: activeTab === 'login_activity' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -430,7 +430,7 @@ function Profile() {
               </p>
               <div style={{ 
                 padding: '1rem', 
-                backgroundColor: '#f8f9fa', 
+                backgroundColor: 'var(--color-bg-secondary)', 
                 borderRadius: '8px',
                 marginBottom: '1rem'
               }}>
@@ -458,8 +458,8 @@ function Profile() {
                   padding: '0.75rem 1.5rem',
                   fontSize: '1rem',
                   fontWeight: '600',
-                  backgroundColor: '#0f172a',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--brand-dark)',
+                  color: 'var(--color-text-light)',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
@@ -468,7 +468,7 @@ function Profile() {
                 Log Out All Devices
               </button>
             </div>
-            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #e0e0e0' }}>
+            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border-light)' }}>
               <h3 style={{ marginBottom: '0.5rem' }}>Logout</h3>
               <p style={{ color: '#666', marginBottom: '1rem' }}>
                 Sign out of your account. You will need to log in again to access your account.

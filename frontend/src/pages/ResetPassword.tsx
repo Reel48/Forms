@@ -101,7 +101,7 @@ export default function ResetPassword() {
               <div className="error-message">
                 {error}
                 <div style={{ marginTop: '15px' }}>
-                  <Link to="/forgot-password" style={{ color: '#667eea', textDecoration: 'none' }}>
+                  <Link to="/forgot-password" style={{ color: 'var(--color-tidewave-blue)', textDecoration: 'none' }}>
                     Request a new reset link
                   </Link>
                 </div>

@@ -7,40 +7,52 @@
   --brand-dark: #292c2f;
   --brand-white: #ffffff;
   
-  /* Reel48 Brand Palette - New Colors */
+  /* Reel48 Brand Palette - Four Core Colors */
   --color-tidewave-blue: #2C699A;      /* Primary navbar, headings, secondary buttons, links */
   --color-verdant-pulse: #4C7C59;      /* Utility bar, footer, New Arrival badges, hover borders */
   --color-sunlit-saffron: #E4A84C;     /* Primary CTA buttons, Customizable badges */
   --color-terra-blush: #C96D60;        /* Link hover, Sale badges, icons, accents */
   
+  /* Light Variants (10% opacity backgrounds) */
+  --color-tidewave-blue-light: rgba(44, 105, 154, 0.1);
+  --color-verdant-pulse-light: rgba(76, 124, 89, 0.1);
+  --color-sunlit-saffron-light: rgba(228, 168, 76, 0.1);
+  --color-terra-blush-light: rgba(201, 109, 96, 0.1);
+  
+  /* Hover Variants (darker shades) */
+  --color-tidewave-blue-hover: #235a7a;
+  --color-verdant-pulse-hover: #3d6347;
+  --color-sunlit-saffron-hover: #d99a3f;
+  --color-terra-blush-hover: #b85a4d;
+  
   /* Primary Colors (Reel48 Brand) */
   --color-primary: var(--color-tidewave-blue);
-  --color-primary-hover: var(--color-verdant-pulse);
-  --color-primary-light: rgba(44, 105, 154, 0.1); /* 10% Tidewave Blue tint */
-  --color-primary-focus: rgba(44, 105, 154, 0.1);
-  --color-primary-subtle: rgba(44, 105, 154, 0.1);
+  --color-primary-hover: var(--color-tidewave-blue-hover);
+  --color-primary-light: var(--color-tidewave-blue-light);
+  --color-primary-focus: var(--color-tidewave-blue-light);
+  --color-primary-subtle: var(--color-tidewave-blue-light);
   
-  /* Secondary Colors */
-  --color-secondary: #6b7280;
-  --color-secondary-hover: #4b5563;
+  /* Secondary Colors (Neutral Greys) */
+  --color-secondary: #6b7280; /* Neutral grey */
+  --color-secondary-hover: #4b5563; /* Neutral grey */
   
   /* CTA/Button Colors */
   --color-cta-primary: var(--color-sunlit-saffron);
-  --color-cta-primary-text: #333333; /* Dark text for accessibility */
+  --color-cta-primary-text: #333333; /* Neutral dark grey for accessibility */
   
-  /* Danger Colors */
+  /* Danger Colors (Terra Blush) */
   --color-danger: var(--color-terra-blush);
-  --color-danger-hover: #b85a4d;
-  --color-danger-light: rgba(201, 109, 96, 0.1);
+  --color-danger-hover: var(--color-terra-blush-hover);
+  --color-danger-light: var(--color-terra-blush-light);
   
-  /* Success Colors */
+  /* Success Colors (Verdant Pulse) */
   --color-success: var(--color-verdant-pulse);
-  --color-success-hover: #3d6347;
-  --color-success-light: rgba(76, 124, 89, 0.1);
+  --color-success-hover: var(--color-verdant-pulse-hover);
+  --color-success-light: var(--color-verdant-pulse-light);
   
-  /* Warning Colors */
+  /* Warning Colors (Sunlit Saffron) */
   --color-warning: var(--color-sunlit-saffron);
-  --color-warning-light: rgba(228, 168, 76, 0.1);
+  --color-warning-light: var(--color-sunlit-saffron-light);
   
   /* Utility Bar Color */
   --utility-bar-color: var(--color-verdant-pulse);

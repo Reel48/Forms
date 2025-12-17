@@ -154,7 +154,7 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
               border: 'none',
               fontSize: '1.5rem',
               cursor: 'pointer',
-              color: '#6b7280',
+              color: 'var(--color-text-muted)',
               padding: '0.25rem 0.5rem',
             }}
           >
@@ -165,15 +165,15 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
         {error && (
           <div
             style={{
-              backgroundColor: '#fee2e2',
-              borderColor: '#ef4444',
+              backgroundColor: 'var(--color-terra-blush-light)',
+              borderColor: 'var(--color-terra-blush)',
               border: '1px solid',
               borderRadius: '0.375rem',
               padding: '1rem',
               marginBottom: '1rem',
             }}
           >
-            <p style={{ color: '#dc2626', margin: 0 }}>{error}</p>
+            <p style={{ color: 'var(--color-terra-blush)', margin: 0 }}>{error}</p>
           </div>
         )}
 
@@ -189,7 +189,7 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
                 onChange={(e) => setSelectedWorkspaceId(e.target.value)}
                 style={{
                   padding: '0.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.375rem',
                   minWidth: '200px',
                 }}
@@ -214,7 +214,7 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
           {loading ? (
             <p>Loading forms...</p>
           ) : forms.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>
+            <p style={{ color: 'var(--color-text-muted)' }}>
               {selectedWorkspaceId ? 'No forms found in this workspace.' : 'No forms found. Make sure you have forms in your Typeform account.'}
             </p>
           ) : (
@@ -224,7 +224,7 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
                   key={form.id}
                   style={{
                     padding: '1rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '0.375rem',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -235,11 +235,11 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
                 >
                   <div style={{ flex: 1, minWidth: '200px' }}>
                     <h4 style={{ margin: 0, marginBottom: '0.5rem' }}>{form.title}</h4>
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>
+                    <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                       ID: {form.id}
                     </p>
                     {form.workspace?.name && (
-                      <p style={{ margin: '0.25rem 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                         Workspace: {form.workspace.name}
                       </p>
                     )}
@@ -252,7 +252,7 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
                       onChange={(e) => setImportName({ ...importName, [form.id]: e.target.value })}
                       style={{
                         padding: '0.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--color-border-light)',
                         borderRadius: '0.375rem',
                         minWidth: '200px',
                       }}
