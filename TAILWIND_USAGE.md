@@ -4,9 +4,16 @@
 
 Tailwind CSS has been integrated with the Reel48 brand color palette. This document provides guidelines on when and how to use Tailwind utilities alongside our existing CSS variable system.
 
+## Color System Overview
+
+We use **two color systems** working together:
+
+1. **Brand Colors** - For primary elements, navigation, and brand consistency
+2. **Tailwind Default Colors** - For tags, buttons, UI elements, and variety
+
 ## Brand Colors in Tailwind
 
-Our four brand colors are available as Tailwind utilities:
+Our four brand colors are available as Tailwind utilities (use for primary/brand elements):
 
 - **Tidewave Blue** (Primary): `bg-tidewave`, `text-tidewave`, `border-tidewave`
 - **Verdant Pulse** (Success): `bg-verdant`, `text-verdant`, `border-verdant`
@@ -20,13 +27,77 @@ Our four brand colors are available as Tailwind utilities:
 - `bg-warning`, `text-warning` → Sunlit Saffron
 - `bg-danger`, `text-danger` → Terra Blush
 
-### Color Shades
+### Brand Color Shades
 
 Each brand color has shade variants (50-900) available:
 - `bg-tidewave-500` (default)
 - `bg-tidewave-100` (light)
 - `bg-tidewave-600` (hover/dark)
 - etc.
+
+## Tailwind Default Colors
+
+**Use Tailwind's default colors for tags, buttons, and UI elements** throughout the site. All default Tailwind colors are available:
+
+### Available Color Palettes
+
+- **Primary Colors**: `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`
+- **Neutral Colors**: `slate`, `gray`, `zinc`, `neutral`, `stone`
+
+### Color Shades
+
+Each color has 11 shades (50-950):
+- `bg-blue-50` (lightest)
+- `bg-blue-100`
+- `bg-blue-200`
+- ...
+- `bg-blue-500` (default/middle)
+- ...
+- `bg-blue-900`
+- `bg-blue-950` (darkest)
+
+### Examples
+
+```tsx
+// Tags with Tailwind colors
+<span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">Tag</span>
+<span className="bg-green-100 text-green-800 px-2 py-1 rounded">Success</span>
+<span className="bg-red-100 text-red-800 px-2 py-1 rounded">Error</span>
+<span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">Category</span>
+
+// Buttons with Tailwind colors
+<button className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">
+  Action
+</button>
+<button className="bg-emerald-500 text-white px-4 py-2 rounded hover:bg-emerald-600">
+  Confirm
+</button>
+
+// Status indicators
+<div className="bg-yellow-50 border border-yellow-200 text-yellow-800">
+  Pending
+</div>
+<div className="bg-teal-50 border border-teal-200 text-teal-800">
+  Active
+</div>
+```
+
+### When to Use Which Colors
+
+**Use Brand Colors For:**
+- Primary navigation
+- Main CTAs (Call-to-Action buttons)
+- Brand-specific elements
+- Headings and primary text
+- Footer and utility bars
+
+**Use Tailwind Default Colors For:**
+- Tags and badges
+- Secondary buttons
+- Status indicators
+- UI elements that need variety
+- Categorization and organization
+- Non-brand-specific components
 
 ## When to Use Tailwind
 
@@ -92,48 +163,87 @@ Each brand color has shade variants (50-900) available:
 
 ## Color Usage Guidelines
 
-### Primary Actions (Tidewave Blue)
+### Primary Actions (Use Brand Colors)
 ```tsx
-// Tailwind
+// Main CTA - Use Tidewave Blue
 <button className="bg-tidewave text-white hover:bg-tidewave-600">
-  Click Me
+  Primary Action
 </button>
 
-// CSS Variable
+// Or use CSS Variable
 <button className="btn-primary">
-  Click Me
+  Primary Action
 </button>
 ```
 
-### Success States (Verdant Pulse)
+### Tags and Badges (Use Tailwind Default Colors)
 ```tsx
-// Tailwind
+// Category tags
+<span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+  Technology
+</span>
+<span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
+  Design
+</span>
+<span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+  Marketing
+</span>
+
+// Status badges
+<span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">
+  Pending
+</span>
+<span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs font-semibold">
+  Active
+</span>
+<span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">
+  Inactive
+</span>
+```
+
+### Buttons (Use Tailwind Default Colors for Variety)
+```tsx
+// Secondary buttons with Tailwind colors
+<button className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">
+  Secondary Action
+</button>
+<button className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600">
+  Confirm
+</button>
+<button className="bg-violet-500 text-white px-4 py-2 rounded hover:bg-violet-600">
+  Special Action
+</button>
+```
+
+### Success States (Brand Color for Brand Consistency)
+```tsx
+// Brand success - Use Verdant Pulse
 <div className="bg-verdant-light text-verdant border border-verdant">
   Success message
 </div>
 
-// CSS Variable
+// Or use CSS Variable
 <div className="badge-paid">
   Paid
 </div>
 ```
 
-### Warning States (Sunlit Saffron)
+### Warning States (Brand Color for Brand Consistency)
 ```tsx
-// Tailwind
+// Brand warning - Use Sunlit Saffron
 <div className="bg-saffron-light text-saffron">
   Warning message
 </div>
 ```
 
-### Error/Danger States (Terra Blush)
+### Error/Danger States (Brand Color for Brand Consistency)
 ```tsx
-// Tailwind
+// Brand error - Use Terra Blush
 <div className="bg-blush-light text-blush border border-blush">
   Error message
 </div>
 
-// CSS Variable
+// Or use CSS Variable
 <div className="badge-declined">
   Declined
 </div>
@@ -214,9 +324,20 @@ Each brand color has shade variants (50-900) available:
 
 ### Status Badge
 ```tsx
-// Tailwind approach
+// Tailwind default colors for variety
+<span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+  Active
+</span>
+<span className="bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+  Pending
+</span>
+<span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+  Inactive
+</span>
+
+// Brand colors for brand-specific statuses
 <span className="bg-verdant text-white px-3 py-1 rounded-full text-sm font-semibold">
-  Success
+  Paid (Brand Success)
 </span>
 
 // CSS Variable approach (existing)
