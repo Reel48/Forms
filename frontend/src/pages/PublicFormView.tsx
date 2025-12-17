@@ -1989,7 +1989,7 @@ function PublicFormView() {
               </div>
             ) : (
               <p style={{ fontSize: '0.875rem', color: '#9ca3af', fontStyle: 'italic' }}>
-                Please configure the payment amount in the form builder
+                Please configure the payment amount in Typeform
               </p>
             )}
           </div>

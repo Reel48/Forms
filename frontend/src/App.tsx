@@ -14,7 +14,6 @@ const QuotesList = lazy(() => import('./pages/QuotesList'));
 const QuoteBuilder = lazy(() => import('./pages/QuoteBuilder'));
 const QuoteView = lazy(() => import('./pages/QuoteView'));
 const FormsList = lazy(() => import('./pages/FormsList'));
-const FormBuilder = lazy(() => import('./pages/FormBuilder'));
 const TypeformImport = lazy(() => import('./pages/TypeformImport'));
 const FormView = lazy(() => import('./pages/FormView'));
 const FormSubmissions = lazy(() => import('./pages/FormSubmissions'));
@@ -550,8 +549,6 @@ function AppContent() {
           {/* Admin-only routes */}
           <Route path="/quotes/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />
           <Route path="/quotes/:id/edit" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteBuilder /></Suspense></ProtectedRoute>} />
-          <Route path="/forms/new" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><FormBuilder /></Suspense></ProtectedRoute>} />
-          <Route path="/forms/:id/edit" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><FormBuilder /></Suspense></ProtectedRoute>} />
           <Route path="/forms/:id/submissions" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><FormSubmissions /></Suspense></ProtectedRoute>} />
           <Route path="/clients" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><ClientsList /></Suspense></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><CompanySettingsPage /></Suspense></ProtectedRoute>} />

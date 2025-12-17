@@ -6,7 +6,7 @@ from io import BytesIO
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormFieldUpdate, FormSubmissionCreate, FormSubmission
+from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormSubmissionCreate, FormSubmission
 from pydantic import ValidationError, BaseModel
 from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin, get_optional_user
@@ -850,116 +850,6 @@ async def delete_form(form_id: str, current_admin: dict = Depends(get_current_ad
         supabase_storage.table("forms").delete().eq("id", form_id).execute()
         
         return {"message": "Form deleted successfully"}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Field management endpoints
-@router.post("/{form_id}/fields", response_model=FormField)
-async def create_field(form_id: str, field: FormFieldCreate, current_admin: dict = Depends(get_current_admin)):
-    """Add a field to a form (admin only)"""
-    try:
-        # Check if form exists
-        existing = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
-        if not existing.data:
-            raise HTTPException(status_code=404, detail="Form not found")
-        
-        # Get current max order_index
-        fields_response = supabase_storage.table("form_fields").select("order_index").eq("form_id", form_id).order("order_index", desc=True).limit(1).execute()
-        max_order = fields_response.data[0]["order_index"] if fields_response.data else -1
-        
-        # Create field
-        field_data = {
-            "id": str(uuid.uuid4()),
-            "form_id": form_id,
-            "field_type": field.field_type,
-            "label": field.label,
-            "description": field.description,
-            "placeholder": field.placeholder,
-            "required": field.required,
-            "validation_rules": field.validation_rules or {},
-            "options": field.options or [],
-            "order_index": field.order_index if field.order_index > 0 else max_order + 1,
-            "conditional_logic": field.conditional_logic or {},
-            "created_at": datetime.now().isoformat()
-        }
-        
-        response = supabase_storage.table("form_fields").insert(field_data).execute()
-        
-        if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to create field")
-        
-        return response.data[0]
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{form_id}/fields/{field_id}", response_model=FormField)
-async def update_field(form_id: str, field_id: str, field_update: FormFieldUpdate, current_admin: dict = Depends(get_current_admin)):
-    """Update a form field (admin only)"""
-    try:
-        # Check if field exists and belongs to form
-        existing = supabase_storage.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
-        if not existing.data:
-            raise HTTPException(status_code=404, detail="Field not found")
-        
-        # Prepare update data (only include provided fields)
-        update_data = field_update.model_dump(exclude_unset=True)
-        
-        # Update field
-        response = supabase_storage.table("form_fields").update(update_data).eq("id", field_id).execute()
-        
-        if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to update field")
-        
-        return response.data[0]
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.delete("/{form_id}/fields/{field_id}")
-async def delete_field(form_id: str, field_id: str, current_admin: dict = Depends(get_current_admin)):
-    """Delete a form field (admin only)"""
-    try:
-        # Check if field exists and belongs to form
-        existing = supabase_storage.table("form_fields").select("id").eq("id", field_id).eq("form_id", form_id).execute()
-        if not existing.data:
-            raise HTTPException(status_code=404, detail="Field not found")
-        
-        # Delete field
-        supabase_storage.table("form_fields").delete().eq("id", field_id).execute()
-        
-        return {"message": "Field deleted successfully"}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{form_id}/fields/reorder")
-async def reorder_fields(form_id: str, field_orders: List[dict], current_admin: dict = Depends(get_current_admin)):
-    """Reorder form fields (admin only)"""
-    try:
-        # Check if form exists
-        existing = supabase_storage.table("forms").select("id").eq("id", form_id).execute()
-        if not existing.data:
-            raise HTTPException(status_code=404, detail="Form not found")
-        
-        # Update order_index for each field
-        for field_order in field_orders:
-            field_id = field_order.get("field_id")
-            order_index = field_order.get("order_index")
-            
-            if field_id and order_index is not None:
-                supabase_storage.table("form_fields").update({"order_index": order_index}).eq("id", field_id).eq("form_id", form_id).execute()
-        
-        return {"message": "Fields reordered successfully"}
         
     except HTTPException:
         raise

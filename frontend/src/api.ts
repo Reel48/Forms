@@ -457,11 +457,6 @@ export const formsAPI = {
     
     return formsAPI.create(duplicatedForm);
   },
-  // Field management
-  createField: (formId: string, field: FormField) => api.post<FormField>(`/api/forms/${formId}/fields`, field),
-  updateField: (formId: string, fieldId: string, field: Partial<FormField>) => api.put<FormField>(`/api/forms/${formId}/fields/${fieldId}`, field),
-  deleteField: (formId: string, fieldId: string) => api.delete(`/api/forms/${formId}/fields/${fieldId}`),
-  reorderFields: (formId: string, fieldOrders: Array<{ field_id: string; order_index: number }>) => api.put(`/api/forms/${formId}/fields/reorder`, fieldOrders),
   // Form submission
   submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
   getSubmissions: (formId: string) => api.get<FormSubmission[]>(`/api/forms/${formId}/submissions`),
