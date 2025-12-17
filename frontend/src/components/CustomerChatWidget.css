@@ -8,12 +8,12 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--color-elm-green);
+  background: var(--color-tidewave-blue);
   color: white;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(92, 121, 94, 0.4);
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -39,7 +39,7 @@
 
 .chat-widget-button:hover {
   transform: scale(1.1) translateY(-2px);
-  box-shadow: 0 12px 32px rgba(92, 121, 94, 0.5);
+  box-shadow: var(--shadow-xl);
   animation: none;
 }
 
@@ -106,7 +106,7 @@
 
 .chat-widget-header {
   padding: 1rem 1.5rem;
-  background: var(--color-elm-green);
+  background: var(--color-tidewave-blue);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -252,7 +252,7 @@
 }
 
 .message-sent .chat-widget-message-content {
-  background: var(--color-elm-green);
+  background: var(--color-tidewave-blue);
   color: white;
   border-bottom-right-radius: 6px;
 }
@@ -419,10 +419,10 @@
 
 .chat-widget-send {
   padding: 0.75rem 1.5rem;
-  background: var(--color-elm-green);
-  color: white;
-  border: 2px solid var(--color-elm-green);
-  border-radius: 24px;
+  background: var(--color-sunlit-saffron);
+  color: var(--color-cta-primary-text);
+  border: 2px solid var(--color-sunlit-saffron);
+  border-radius: var(--radius-button);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -434,8 +434,8 @@
 }
 
 .chat-widget-send:hover:not(:disabled) {
-  background: var(--color-basil);
-  box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
+  background: #d99a3f;
+  box-shadow: 0px 6px 20px rgba(228, 168, 76, 0.4);
   transform: translateY(-2px);
 }
 
@@ -459,7 +459,7 @@
 
 .chat-widget-send:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(92, 121, 94, 0.4);
+  box-shadow: 0px 6px 20px rgba(228, 168, 76, 0.4);
 }
 
 .chat-widget-send:active:not(:disabled) {

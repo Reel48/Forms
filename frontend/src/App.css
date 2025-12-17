@@ -3,113 +3,96 @@
    ======================================== */
 
 :root {
-  /* Brand Colors - Reel48 Palette */
+  /* Brand Colors - Reel48 New Palette */
   --brand-dark: #292c2f;
   --brand-white: #ffffff;
   
-  /* Reel48 Brand Palette */
-  --color-elm-green: #5c795e;
-  --color-basil: #829f82;
-  --color-aspen-green: #7e9b76;
-  --color-smoke-green: #a8bba2;
-  
-  /* Color Palette - Main Colors */
-  --color-blue: #5c795e;
-  --color-green: #4baa7d;
-  --color-red: #dc2626;
-  --color-orange: #f97316;
-  --color-yellow: #fbbf24;
-  --color-purple: #8b5cf6;
-  --color-pink: #ec4899;
-  --color-gray: #6b7280;
-  
-  /* Color Palette - Light/Badge Colors */
-  --color-blue-light: #a8bba2;
-  --color-green-light: #dcfff0;
-  --color-red-light: #fee2e2;
-  --color-orange-light: #fff4ed;
-  --color-yellow-light: #fef3c7;
-  --color-purple-light: #ede9fe;
-  --color-pink-light: #fce7f3;
-  --color-gray-light: #f3f4f6;
+  /* Reel48 Brand Palette - New Colors */
+  --color-tidewave-blue: #2C699A;      /* Primary navbar, headings, secondary buttons, links */
+  --color-verdant-pulse: #4C7C59;      /* Utility bar, footer, New Arrival badges, hover borders */
+  --color-sunlit-saffron: #E4A84C;     /* Primary CTA buttons, Customizable badges */
+  --color-terra-blush: #C96D60;        /* Link hover, Sale badges, icons, accents */
   
   /* Primary Colors (Reel48 Brand) */
-  --color-primary: var(--color-elm-green);
-  --color-primary-hover: var(--color-basil);
-  --color-primary-light: var(--color-smoke-green);
-  --color-primary-focus: rgba(92, 121, 94, 0.1);
-  --color-primary-gradient: var(--color-basil);
-  --color-primary-subtle: rgba(92, 121, 94, 0.1);
+  --color-primary: var(--color-tidewave-blue);
+  --color-primary-hover: var(--color-verdant-pulse);
+  --color-primary-light: rgba(44, 105, 154, 0.1); /* 10% Tidewave Blue tint */
+  --color-primary-focus: rgba(44, 105, 154, 0.1);
+  --color-primary-subtle: rgba(44, 105, 154, 0.1);
   
   /* Secondary Colors */
   --color-secondary: #6b7280;
   --color-secondary-hover: #4b5563;
   
+  /* CTA/Button Colors */
+  --color-cta-primary: var(--color-sunlit-saffron);
+  --color-cta-primary-text: #333333; /* Dark text for accessibility */
+  
   /* Danger Colors */
-  --color-danger: #dc2626;
-  --color-danger-hover: #b91c1c;
-  --color-danger-light: #fee2e2;
+  --color-danger: var(--color-terra-blush);
+  --color-danger-hover: #b85a4d;
+  --color-danger-light: rgba(201, 109, 96, 0.1);
   
   /* Success Colors */
-  --color-success: #4baa7d;
-  --color-success-hover: #3d8a6a;
-  --color-success-light: #dcfff0;
+  --color-success: var(--color-verdant-pulse);
+  --color-success-hover: #3d6347;
+  --color-success-light: rgba(76, 124, 89, 0.1);
   
   /* Warning Colors */
-  --color-warning: #f97316;
-  --color-warning-light: #fff4ed;
+  --color-warning: var(--color-sunlit-saffron);
+  --color-warning-light: rgba(228, 168, 76, 0.1);
   
   /* Utility Bar Color */
-  --utility-bar-color: var(--color-elm-green);
+  --utility-bar-color: var(--color-verdant-pulse);
   
   /* Neutral Colors - Text */
-  --color-text-main: #2C2C2C;
-  --color-text-primary: #2C2C2C;
-  --color-text-secondary: #2C2C2C;
+  --color-text-main: #333333;
+  --color-text-primary: #333333;
+  --color-text-secondary: #333333;
   --color-text-muted: #6b7280;
   --color-text-light: #FFFFFF;
   
-  /* Background Colors - Bold & Colorful */
+  /* Background Colors */
   --color-background-white: #FFFFFF;
-  --color-background-offwhite: #F9F9F7;
+  --color-background-offwhite: #F8F9FA;
   --color-bg-primary: #ffffff;
   --color-bg-card: #FFFFFF;
-  --color-bg-secondary: rgba(168, 187, 162, 0.15); /* Smoke Green tint */
-  --color-bg-tertiary: var(--color-smoke-green);
-  --color-bg-page: rgba(168, 187, 162, 0.15); /* Smoke Green tint */
-  --color-bg-section: var(--color-smoke-green);
-  --color-bg-accent: var(--color-aspen-green); /* For highlights */
+  --color-bg-secondary: #F8F9FA; /* Light grey for cards */
+  --color-bg-tertiary: rgba(44, 105, 154, 0.1); /* 10% Tidewave Blue tint */
+  --color-bg-page: #FFFFFF;
+  --color-bg-section: rgba(44, 105, 154, 0.1);
+  --color-bg-accent: var(--color-terra-blush);
   
   /* Links */
-  --color-link: var(--color-basil);
-  --color-link-hover: var(--color-elm-green);
+  --color-link: var(--color-tidewave-blue);
+  --color-link-hover: var(--color-terra-blush);
   
-  /* Border Colors - Bold Green */
-  --color-border: var(--color-smoke-green); /* Green borders */
-  --color-border-light: rgba(168, 187, 162, 0.5); /* Lighter green */
-  --color-border-dark: var(--color-aspen-green); /* Stronger green */
-  --color-border-bold: var(--color-aspen-green); /* Stronger green */
-  --color-border-accent: var(--color-elm-green); /* Darkest green */
-  --border-width-default: 2px; /* Thicker borders */
+  /* Border Colors */
+  --color-border: rgba(0, 0, 0, 0.1); /* Light default border */
+  --color-border-light: rgba(0, 0, 0, 0.05);
+  --color-border-dark: var(--color-verdant-pulse); /* Hover border for products */
+  --color-border-bold: var(--color-verdant-pulse);
+  --color-border-accent: var(--color-tidewave-blue);
+  --border-width-default: 2px;
   --border-width-bold: 3px;
   
   /* Spacing */
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
-  --radius-card: 24px;
-  --radius-button: 24px;
-  --radius-input: 24px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-card: 8px;
+  --radius-button: 6px; /* 4-8px as specified */
+  --radius-input: 8px;
   --radius-full: 9999px;
   
-  /* Shadows - Bold with Green Tints */
-  --shadow-sm: 0px 2px 8px rgba(92, 121, 94, 0.15);
-  --shadow-md: 0px 4px 16px rgba(92, 121, 94, 0.2);
-  --shadow-lg: 0px 8px 24px rgba(92, 121, 94, 0.25);
-  --shadow-xl: 0px 12px 32px rgba(92, 121, 94, 0.3);
-  --shadow-soft: 0px 4px 20px rgba(92, 121, 94, 0.2);
-  --shadow-colored: 0px 8px 24px rgba(92, 121, 94, 0.4);
+  /* Shadows - Neutral for cards */
+  --shadow-sm: 0px 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0px 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0px 12px 32px rgba(0, 0, 0, 0.15);
+  --shadow-soft: 0px 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow-colored: 0px 8px 24px rgba(0, 0, 0, 0.15);
   
   /* Padding - Optimized */
   --padding-card: 1.5rem;
@@ -175,9 +158,8 @@ select:focus-visible {
 
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-tidewave-blue);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
@@ -230,7 +212,7 @@ select:focus-visible {
 
 .role-badge {
   background-color: transparent;
-  color: #131A22;
+  color: #FFFFFF;
   font-size: 12px;
   font-weight: bold;
   text-transform: uppercase;
@@ -330,9 +312,8 @@ select:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem 0;
-  background: rgba(41, 44, 47, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(58, 61, 65, 0.5);
+  background: var(--color-tidewave-blue);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   min-height: 70px;
   gap: 1.5rem;
   position: relative;
@@ -774,17 +755,18 @@ button {
 }
 
 .btn-primary {
-  background: var(--color-elm-green);
-  color: var(--brand-white);
-  box-shadow: var(--shadow-colored);
-  border: var(--border-width-default) solid var(--color-elm-green);
+  background: var(--color-sunlit-saffron);
+  color: var(--color-cta-primary-text);
+  box-shadow: var(--shadow-md);
+  border: var(--border-width-default) solid var(--color-sunlit-saffron);
   font-weight: 600;
+  border-radius: var(--radius-button);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-basil);
-  box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
-  transform: translateY(-2px);
+  background: #d99a3f;
+  box-shadow: 0px 6px 20px rgba(228, 168, 76, 0.4);
+  transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
@@ -822,15 +804,16 @@ button {
 
 .btn-outline {
   background-color: transparent;
-  border: var(--border-width-bold) solid var(--color-elm-green);
-  color: var(--color-elm-green);
+  border: var(--border-width-default) solid var(--color-tidewave-blue);
+  color: var(--color-tidewave-blue);
   font-weight: 600;
+  border-radius: var(--radius-button);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: rgba(92, 121, 94, 0.1);
-  border-color: var(--color-aspen-green);
-  color: var(--color-aspen-green);
+  background-color: var(--color-tidewave-blue);
+  border-color: var(--color-tidewave-blue);
+  color: var(--color-text-light);
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
@@ -866,8 +849,14 @@ button {
   background-color: var(--color-bg-card);
   border-radius: var(--radius-card);
   padding: var(--padding-card);
-  box-shadow: var(--shadow-soft);
-  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  border: none;
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  border: 2px solid var(--color-verdant-pulse);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Forms */
@@ -879,7 +868,7 @@ button {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: var(--color-elm-green);
+  color: var(--color-tidewave-blue);
 }
 
 .form-group input,
@@ -957,7 +946,7 @@ table tbody tr:hover {
 
 /* Typography - Headings */
 h1, h2, h3, h4, h5, h6 {
-  color: var(--color-primary);
+  color: var(--color-tidewave-blue);
   font-weight: 600;
 }
 
@@ -1001,89 +990,99 @@ a:not([class]) {
 }
 
 .badge-draft {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border: 2px solid var(--color-smoke-green);
+  background-color: var(--color-verdant-pulse);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-verdant-pulse);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-sent {
-  background-color: var(--color-basil);
+  background-color: var(--color-verdant-pulse);
   color: var(--color-text-light);
-  border: 2px solid var(--color-aspen-green);
+  border: 2px solid var(--color-verdant-pulse);
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
 
 .badge-viewed {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border: 2px solid var(--color-smoke-green);
+  background-color: var(--color-verdant-pulse);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-verdant-pulse);
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
 
 .badge-accepted {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-  border: 2px solid var(--color-success);
+  background-color: var(--color-verdant-pulse);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-verdant-pulse);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-declined {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
-  border: 2px solid var(--color-danger);
+  background-color: var(--color-terra-blush);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-terra-blush);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-unpaid {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border: 2px solid var(--color-smoke-green);
+  background-color: var(--color-sunlit-saffron);
+  color: var(--color-cta-primary-text);
+  border: 2px solid var(--color-sunlit-saffron);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-paid {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-  border: 2px solid var(--color-success);
+  background-color: var(--color-verdant-pulse);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-verdant-pulse);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-partially_paid {
-  background-color: var(--color-basil);
+  background-color: var(--color-verdant-pulse);
   color: var(--color-text-light);
-  border: 2px solid var(--color-aspen-green);
+  border: 2px solid var(--color-verdant-pulse);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-refunded {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border: 2px solid var(--color-smoke-green);
+  background-color: var(--color-sunlit-saffron);
+  color: var(--color-cta-primary-text);
+  border: 2px solid var(--color-sunlit-saffron);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-failed {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
-  border: 2px solid var(--color-danger);
+  background-color: var(--color-terra-blush);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-terra-blush);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-voided {
-  background-color: var(--color-smoke-green);
-  color: var(--color-elm-green);
-  border: 2px solid var(--color-smoke-green);
+  background-color: var(--color-sunlit-saffron);
+  color: var(--color-cta-primary-text);
+  border: 2px solid var(--color-sunlit-saffron);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .badge-uncollectible {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger);
-  border: 2px solid var(--color-danger);
+  background-color: var(--color-terra-blush);
+  color: var(--color-text-light);
+  border: 2px solid var(--color-terra-blush);
   box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 /* Utilities */

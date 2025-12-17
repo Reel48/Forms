@@ -16,8 +16,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-bg-page, rgba(168, 187, 162, 0.15));
-  color: #2C2C2C;
+  background-color: var(--color-bg-page);
+  color: #333333;
   margin: 0;
   padding: 0;
 }

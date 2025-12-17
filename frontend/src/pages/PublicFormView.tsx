@@ -1965,7 +1965,7 @@ function PublicFormView() {
                         color: '#ffffff',
                         background: isProcessing || value?.status === 'succeeded' 
                           ? '#9ca3af' 
-                          : 'var(--color-elm-green)',
+                          : 'var(--color-tidewave-blue)',
                         border: 'none',
                         borderRadius: '24px',
                         cursor: isProcessing || value?.status === 'succeeded' ? 'not-allowed' : 'pointer',
