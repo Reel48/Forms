@@ -657,9 +657,11 @@
   max-width: 800px;
   background-color: var(--chat-input-bg);
   border-radius: 24px; /* Rounded shape */
+  border: 2px solid var(--color-smoke-green);
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center; /* Center vertically to prevent text cutoff */
+  transition: all 0.2s;
   gap: 1.5rem;
   transition: background-color 0.2s, box-shadow 0.2s;
   border: 1px solid transparent;

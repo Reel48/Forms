@@ -128,10 +128,16 @@
 /* Booking Widget Container */
 .booking-widget-container {
   background: #FFFFFF;
-  border: 1px solid var(--color-border, #e5e7eb);
+  border: 2px solid var(--color-smoke-green);
   border-radius: 24px;
   padding: 1.5rem;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0px 4px 16px rgba(92, 121, 94, 0.2);
+  transition: all 0.2s;
+}
+
+.booking-widget-container:hover {
+  border-color: var(--color-aspen-green);
+  box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.3);
 }
 
 .booking-widget-container h2 {

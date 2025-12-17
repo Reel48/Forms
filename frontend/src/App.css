@@ -69,24 +69,29 @@
   --color-text-muted: #6b7280;
   --color-text-light: #FFFFFF;
   
-  /* Background Colors */
+  /* Background Colors - Bold & Colorful */
   --color-background-white: #FFFFFF;
   --color-background-offwhite: #F9F9F7;
   --color-bg-primary: #ffffff;
   --color-bg-card: #FFFFFF;
-  --color-bg-secondary: #F9F9F7;
+  --color-bg-secondary: rgba(168, 187, 162, 0.15); /* Smoke Green tint */
   --color-bg-tertiary: var(--color-smoke-green);
-  --color-bg-page: #F9F9F7;
+  --color-bg-page: rgba(168, 187, 162, 0.15); /* Smoke Green tint */
   --color-bg-section: var(--color-smoke-green);
+  --color-bg-accent: var(--color-aspen-green); /* For highlights */
   
   /* Links */
   --color-link: var(--color-basil);
   --color-link-hover: var(--color-elm-green);
   
-  /* Border Colors */
-  --color-border: #e5e7eb;
-  --color-border-light: #d1d5db;
-  --color-border-dark: #e0e0e0;
+  /* Border Colors - Bold Green */
+  --color-border: var(--color-smoke-green); /* Green borders */
+  --color-border-light: rgba(168, 187, 162, 0.5); /* Lighter green */
+  --color-border-dark: var(--color-aspen-green); /* Stronger green */
+  --color-border-bold: var(--color-aspen-green); /* Stronger green */
+  --color-border-accent: var(--color-elm-green); /* Darkest green */
+  --border-width-default: 2px; /* Thicker borders */
+  --border-width-bold: 3px;
   
   /* Spacing */
   --radius-sm: 12px;
@@ -98,12 +103,13 @@
   --radius-input: 24px;
   --radius-full: 9999px;
   
-  /* Shadows - Soft */
-  --shadow-sm: 0px 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0px 4px 16px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0px 4px 20px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0px 8px 24px rgba(0, 0, 0, 0.05);
-  --shadow-soft: 0px 4px 20px rgba(0, 0, 0, 0.05);
+  /* Shadows - Bold with Green Tints */
+  --shadow-sm: 0px 2px 8px rgba(92, 121, 94, 0.15);
+  --shadow-md: 0px 4px 16px rgba(92, 121, 94, 0.2);
+  --shadow-lg: 0px 8px 24px rgba(92, 121, 94, 0.25);
+  --shadow-xl: 0px 12px 32px rgba(92, 121, 94, 0.3);
+  --shadow-soft: 0px 4px 20px rgba(92, 121, 94, 0.2);
+  --shadow-colored: 0px 8px 24px rgba(92, 121, 94, 0.4);
   
   /* Padding - Optimized */
   --padding-card: 1.5rem;
@@ -767,12 +773,17 @@ button {
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 100%);
   color: var(--brand-white);
+  box-shadow: var(--shadow-colored);
+  border: var(--border-width-default) solid var(--color-elm-green);
+  font-weight: 600;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
+  background: linear-gradient(135deg, var(--color-basil) 0%, var(--color-aspen-green) 100%);
+  box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
+  transform: translateY(-2px);
 }
 
 .btn-primary:disabled {
@@ -810,13 +821,17 @@ button {
 
 .btn-outline {
   background-color: transparent;
-  border: 2px solid var(--color-primary);
-  color: var(--color-primary);
+  border: var(--border-width-bold) solid var(--color-elm-green);
+  color: var(--color-elm-green);
+  font-weight: 600;
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: rgba(168, 187, 162, 0.15);
-  border-color: var(--color-primary);
+  background-color: rgba(92, 121, 94, 0.1);
+  border-color: var(--color-aspen-green);
+  color: var(--color-aspen-green);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .btn-outline:disabled {
@@ -862,8 +877,8 @@ button {
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  font-weight: 600;
+  color: var(--color-elm-green);
 }
 
 .form-group input,
@@ -1118,7 +1133,7 @@ a:not([class]) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-gradient) 100%);
+  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 50%, var(--color-aspen-green) 100%);
   padding: 0;
   margin: 0;
   position: relative;
@@ -1227,7 +1242,7 @@ a:not([class]) {
   width: 100%;
   padding: 1rem 1.25rem;
   font-size: 1.125rem;
-  border: 2px solid var(--color-border);
+  border: 2px solid var(--color-smoke-green);
   border-radius: var(--radius-input);
   transition: all var(--transition-base);
   font-family: inherit;

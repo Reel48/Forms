@@ -358,7 +358,7 @@
 
 .chat-widget-attach {
   background: white;
-  border: 2px solid var(--color-border, #e5e7eb);
+  border: 2px solid var(--color-smoke-green);
   border-radius: 0.625rem;
   padding: 0.5rem;
   cursor: pointer;
@@ -368,7 +368,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-elm-green);
+}
+
+.chat-widget-attach:hover:not(:disabled) {
+  border-color: var(--color-aspen-green);
+  background-color: rgba(168, 187, 162, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .chat-widget-attach svg {
@@ -392,7 +398,7 @@
 .chat-widget-input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 2px solid var(--color-border, #e5e7eb);
+  border: 2px solid var(--color-smoke-green);
   border-radius: 24px;
   font-size: 0.875rem;
   outline: none;
@@ -402,8 +408,9 @@
 }
 
 .chat-widget-input:focus {
-  border-color: var(--color-primary, #5c795e);
-  box-shadow: 0 0 0 3px rgba(92, 121, 94, 0.1);
+  border-color: var(--color-aspen-green);
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), 0px 2px 8px rgba(92, 121, 94, 0.15);
   outline: none;
 }
 
@@ -413,18 +420,24 @@
 
 .chat-widget-send {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(90deg, var(--color-primary, #5c795e) 0%, var(--color-primary-gradient, #829f82) 100%);
+  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 100%);
   color: white;
-  border: none;
+  border: 2px solid var(--color-elm-green);
   border-radius: 24px;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.4);
   position: relative;
   overflow: hidden;
+}
+
+.chat-widget-send:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-basil) 0%, var(--color-aspen-green) 100%);
+  box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
+  transform: translateY(-2px);
 }
 
 .chat-widget-send::before {
