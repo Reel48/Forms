@@ -55,7 +55,7 @@
   --color-warning-light: var(--color-sunlit-saffron-light);
   
   /* Utility Bar Color */
-  --utility-bar-color: rgb(99 102 241);
+  --utility-bar-color: var(--color-tidewave-blue);
   
   /* Neutral Colors - Text */
   --color-text-main: #333333;
@@ -170,7 +170,7 @@ select:focus-visible {
 
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
-  background: rgb(99 102 241);
+  background: var(--color-tidewave-blue);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: var(--shadow-soft);
   display: flex;
