@@ -319,6 +319,12 @@ class FormBase(BaseModel):
     settings: Dict[str, Any] = {}
     welcome_screen: Dict[str, Any] = {}
     thank_you_screen: Dict[str, Any] = {}
+    # Typeform integration fields
+    typeform_form_id: Optional[str] = None
+    typeform_form_url: Optional[str] = None
+    typeform_workspace_id: Optional[str] = None
+    is_typeform_form: bool = False
+    typeform_settings: Dict[str, Any] = {}
 
 class FormCreate(FormBase):
     fields: List[FormFieldCreate] = []

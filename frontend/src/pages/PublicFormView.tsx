@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Widget } from '@typeform/embed-react';
 import { formsAPI } from '../api';
 import type { Form, FormField } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -2354,6 +2355,32 @@ function PublicFormView() {
             </form>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Check if this is a Typeform form and render embed
+  if (form?.is_typeform_form && form?.typeform_form_id) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        backgroundColor: '#292c2f'
+      }}>
+        <Widget
+          id={form.typeform_form_id}
+          style={{ width: '100%', height: '100%', flex: 1 }}
+          onSubmit={() => {
+            // Handle form completion
+            console.log('Typeform submission completed');
+            // Optionally redirect or show thank you message
+            if (form.thank_you_screen?.redirect_url) {
+              window.location.href = form.thank_you_screen.redirect_url;
+            }
+          }}
+        />
       </div>
     );
   }

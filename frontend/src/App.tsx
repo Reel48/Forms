@@ -15,6 +15,7 @@ const QuoteBuilder = lazy(() => import('./pages/QuoteBuilder'));
 const QuoteView = lazy(() => import('./pages/QuoteView'));
 const FormsList = lazy(() => import('./pages/FormsList'));
 const FormBuilder = lazy(() => import('./pages/FormBuilder'));
+const TypeformImport = lazy(() => import('./pages/TypeformImport'));
 const FormView = lazy(() => import('./pages/FormView'));
 const FormSubmissions = lazy(() => import('./pages/FormSubmissions'));
 const PublicFormView = lazy(() => import('./pages/PublicFormView'));
@@ -536,6 +537,7 @@ function AppContent() {
           <Route path="/scheduling" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerSchedulingPage /></Suspense></ProtectedRoute>} />
           <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteView /></Suspense></ProtectedRoute>} />
           <Route path="/forms" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormsList /></Suspense></ProtectedRoute>} />
+          <Route path="/forms/import-typeform" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><TypeformImport /></Suspense></ProtectedRoute>} />
           <Route path="/forms/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FormView /></Suspense></ProtectedRoute>} />
           <Route path="/files" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FilesList /></Suspense></ProtectedRoute>} />
           <Route path="/files/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><FileView /></Suspense></ProtectedRoute>} />

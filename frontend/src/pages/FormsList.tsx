@@ -328,9 +328,11 @@ function FormsList() {
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {role === 'admin' && (
-            <button onClick={() => navigate('/forms/new')} className="btn-primary">
-              Create Template
-            </button>
+            <>
+              <button onClick={() => navigate('/forms/import-typeform')} className="btn-primary">
+                Import from Typeform
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -564,9 +566,27 @@ function FormsList() {
                     </td>
                   )}
                   <td className="mobile-name-column">
-                    <Link to={`/forms/${form.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '500' }}>
-                      {form.name || 'Untitled Form'}
-                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Link to={`/forms/${form.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '500' }}>
+                        {form.name || 'Untitled Form'}
+                      </Link>
+                      {form.is_typeform_form && (
+                        <span
+                          className="badge"
+                          style={{
+                            backgroundColor: '#6366f1',
+                            color: 'white',
+                            padding: '0.125rem 0.5rem',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                          }}
+                          title="Typeform form"
+                        >
+                          Typeform
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <span className="text-muted" style={{ fontSize: '0.875rem' }}>

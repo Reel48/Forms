@@ -237,6 +237,12 @@ export interface Form {
   created_at: string;
   updated_at: string;
   fields?: FormField[]; // Backend returns 'fields', not 'form_fields'
+  // Typeform integration fields
+  typeform_form_id?: string;
+  typeform_form_url?: string;
+  typeform_workspace_id?: string;
+  is_typeform_form?: boolean;
+  typeform_settings?: Record<string, any>;
 }
 
 export interface FormCreate {
@@ -511,6 +517,11 @@ export const formsAPI = {
   },
   // Payment intent
   createPaymentIntent: (formId: string, amount: number, currency?: string, metadata?: Record<string, any>) => api.post<{client_secret: string; payment_intent_id: string}>(`/api/forms/${formId}/create-payment-intent`, { amount, currency: currency || 'usd', metadata }),
+  // Typeform integration
+  listTypeformForms: (workspaceId?: string) => api.get<Array<{id: string; title: string; [key: string]: any}>>(`/api/forms/typeform/list${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
+  listTypeformWorkspaces: () => api.get<Array<{id: string; name: string; [key: string]: any}>>('/api/forms/typeform/workspaces'),
+  getTypeformFormDetails: (formId: string) => api.get<{id: string; title: string; [key: string]: any}>(`/api/forms/typeform/${formId}/details`),
+  importTypeformForm: (typeformFormId: string, name?: string, workspaceId?: string) => api.post<Form>('/api/forms/typeform/import', { typeform_form_id: typeformFormId, name, workspace_id: workspaceId }),
 };
 
 // Files API

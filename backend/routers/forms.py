@@ -7,12 +7,13 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormFieldUpdate, FormSubmissionCreate, FormSubmission
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from database import supabase, supabase_storage
 from auth import get_current_user, get_current_admin, get_optional_user
 from email_service import email_service
 from email_utils import get_admin_emails
 from webhook_service import webhook_service
+from services.typeform_service import TypeformService
 import uuid
 import secrets
 import string
@@ -232,6 +233,147 @@ async def get_template_variables(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Typeform Integration Endpoints
+class TypeformImportRequest(BaseModel):
+    typeform_form_id: str
+    name: Optional[str] = None  # Optional name override
+    workspace_id: Optional[str] = None
+
+@router.get("/typeform/list", response_model=List[Dict[str, Any]])
+async def list_typeform_forms(
+    workspace_id: Optional[str] = Query(None),
+    current_admin: dict = Depends(get_current_admin)
+):
+    """List available Typeform forms that can be imported (admin only)"""
+    try:
+        typeform_service = TypeformService()
+        forms = typeform_service.get_forms(workspace_id=workspace_id)
+        return forms
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to list Typeform forms: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list Typeform forms: {str(e)}")
+
+@router.get("/typeform/workspaces", response_model=List[Dict[str, Any]])
+async def list_typeform_workspaces(
+    current_admin: dict = Depends(get_current_admin)
+):
+    """List available Typeform workspaces (admin only)"""
+    try:
+        typeform_service = TypeformService()
+        workspaces = typeform_service.get_workspaces()
+        return workspaces
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to list Typeform workspaces: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list Typeform workspaces: {str(e)}")
+
+@router.get("/typeform/{form_id}/details", response_model=Dict[str, Any])
+async def get_typeform_form_details(
+    form_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Get detailed information about a Typeform form (admin only)"""
+    try:
+        typeform_service = TypeformService()
+        form_details = typeform_service.get_form(form_id)
+        return form_details
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to get Typeform form details: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get Typeform form details: {str(e)}")
+
+@router.post("/typeform/import", response_model=Form)
+async def import_typeform_form(
+    import_request: TypeformImportRequest,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Import a form from Typeform (admin only)"""
+    try:
+        typeform_service = TypeformService()
+        
+        # Get form details from Typeform
+        typeform_form = typeform_service.get_form(import_request.typeform_form_id)
+        
+        # Extract form information
+        form_name = import_request.name or typeform_form.get("title", "Imported Typeform")
+        form_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        
+        # Generate public URL slug
+        public_url_slug = generate_url_slug()
+        
+        # Get Typeform form URL
+        # Typeform forms are accessible at: https://{workspace}.typeform.com/to/{form_id}
+        # Or we can use the _links.self.href from the API response
+        typeform_form_url = typeform_form.get("_links", {}).get("display", "")
+        if not typeform_form_url:
+            # Fallback: construct URL from form ID
+            workspace_id = import_request.workspace_id or typeform_form.get("workspace", {}).get("href", "").split("/")[-1]
+            if workspace_id:
+                typeform_form_url = f"https://{workspace_id}.typeform.com/to/{import_request.typeform_form_id}"
+            else:
+                typeform_form_url = f"https://form.typeform.com/to/{import_request.typeform_form_id}"
+        
+        # Prepare form data
+        form_data = {
+            "id": form_id,
+            "name": form_name,
+            "description": typeform_form.get("settings", {}).get("language", ""),
+            "status": "published",  # Typeform forms are typically published
+            "public_url_slug": public_url_slug,
+            "theme": {},
+            "settings": {},
+            "welcome_screen": {},
+            "thank_you_screen": {},
+            "is_template": True,
+            "is_typeform_form": True,
+            "typeform_form_id": import_request.typeform_form_id,
+            "typeform_form_url": typeform_form_url,
+            "typeform_workspace_id": import_request.workspace_id or typeform_form.get("workspace", {}).get("href", "").split("/")[-1] if typeform_form.get("workspace") else None,
+            "typeform_settings": {
+                "typeform_data": {
+                    "id": typeform_form.get("id"),
+                    "title": typeform_form.get("title"),
+                    "settings": typeform_form.get("settings", {}),
+                }
+            },
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        # Create form in database
+        form_response = supabase_storage.table("forms").insert(form_data).execute()
+        
+        if not form_response.data:
+            raise HTTPException(status_code=500, detail="Failed to create form")
+        
+        created_form = form_response.data[0]
+        
+        # Fetch complete form with fields (empty for Typeform forms)
+        response = supabase_storage.table("forms").select("*, form_fields(*)").eq("id", form_id).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to retrieve created form")
+        
+        form = response.data
+        form["fields"] = []  # Typeform forms don't have local fields
+        if "form_fields" in form:
+            del form["form_fields"]
+        
+        return form
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to import Typeform form: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to import Typeform form: {str(e)}")
 
 @router.get("", response_model=List[Form])
 async def get_forms(
@@ -478,7 +620,11 @@ async def get_form(form_id: str, current_user: Optional[dict] = Depends(get_opti
 
 @router.post("", response_model=Form)
 async def create_form(form: FormCreate, current_admin: dict = Depends(get_current_admin)):
-    """Create a new form with fields (admin only)"""
+    """Create a new form with fields (admin only)
+    
+    DEPRECATED: This endpoint is deprecated. New forms should be created in Typeform and imported via /api/forms/typeform/import.
+    This endpoint is kept for backward compatibility with legacy forms only.
+    """
     try:
         # Log incoming request for debugging
         print(f"Creating form: {form.name}")
@@ -825,12 +971,73 @@ async def reorder_fields(form_id: str, field_orders: List[dict], current_admin: 
 async def get_form_submissions(form_id: str, current_admin: dict = Depends(get_current_admin)):
     """Get all submissions for a form (admin only)"""
     try:
-        # Check if form exists
-        form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
+        # Check if form exists and get Typeform status
+        form_response = supabase_storage.table("forms").select("id, is_typeform_form, typeform_form_id").eq("id", form_id).single().execute()
         
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
+        form = form_response.data
+        
+        # If this is a Typeform form, fetch submissions from Typeform API
+        if form.get("is_typeform_form"):
+            try:
+                typeform_service = TypeformService()
+                typeform_form_id = form.get("typeform_form_id")
+                if not typeform_form_id:
+                    return []  # No Typeform form ID, return empty list
+                
+                responses = typeform_service.get_form_responses(typeform_form_id)
+                
+                # Transform Typeform responses to our submission format
+                submissions = []
+                for idx, response in enumerate(responses):
+                    # Extract answers from Typeform response
+                    answers = []
+                    for answer in response.get("answers", []):
+                        field_id = answer.get("field", {}).get("id", "")
+                        answer_value = answer.get(answer.get("type", ""), "")
+                        
+                        # Convert answer to text
+                        if isinstance(answer_value, dict):
+                            answer_text = str(answer_value)
+                        elif isinstance(answer_value, list):
+                            answer_text = ", ".join(str(v) for v in answer_value)
+                        else:
+                            answer_text = str(answer_value) if answer_value else ""
+                        
+                        answers.append({
+                            "field_id": field_id,
+                            "answer_text": answer_text,
+                            "answer_value": answer_value if isinstance(answer_value, (dict, list)) else {"value": answer_value}
+                        })
+                    
+                    # Extract metadata
+                    metadata = response.get("metadata", {})
+                    submitter_email = metadata.get("email", "")
+                    submitter_name = metadata.get("name", "")
+                    
+                    submission = {
+                        "id": response.get("token", f"typeform_{idx}"),
+                        "form_id": form_id,
+                        "submitter_email": submitter_email,
+                        "submitter_name": submitter_name,
+                        "ip_address": metadata.get("ip", ""),
+                        "user_agent": metadata.get("user_agent", ""),
+                        "started_at": response.get("landed_at", ""),
+                        "submitted_at": response.get("submitted_at", ""),
+                        "time_spent_seconds": None,  # Typeform doesn't provide this directly
+                        "status": "completed",
+                        "answers": answers
+                    }
+                    submissions.append(submission)
+                
+                return submissions
+            except Exception as e:
+                logger.error(f"Failed to fetch Typeform submissions: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to fetch Typeform submissions: {str(e)}")
+        
+        # For legacy forms, fetch from database
         # Fetch submissions with answers
         response = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
         
@@ -2026,12 +2233,19 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
         import requests as http_requests
         
         # Check if form exists and is published
-        form_response = supabase_storage.table("forms").select("id, status, settings").eq("id", form_id).single().execute()
+        form_response = supabase_storage.table("forms").select("id, status, settings, is_typeform_form").eq("id", form_id).single().execute()
         
         if not form_response.data:
             raise HTTPException(status_code=404, detail="Form not found")
         
         form = form_response.data
+        
+        # If this is a Typeform form, reject local submissions
+        if form.get("is_typeform_form"):
+            raise HTTPException(
+                status_code=400, 
+                detail="This form is managed by Typeform. Submissions must be made through the Typeform interface."
+            )
         
         if form.get("status") != "published":
             raise HTTPException(status_code=400, detail="Form is not published")

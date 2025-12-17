@@ -16,6 +16,7 @@
     "@stripe/react-stripe-js": "^5.3.0",
     "@stripe/stripe-js": "^8.3.0",
     "@supabase/supabase-js": "^2.80.0",
+    "@typeform/embed-react": "^2.31.0",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
