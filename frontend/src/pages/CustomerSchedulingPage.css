@@ -76,7 +76,7 @@
 /* Enhanced Empty States */
 .empty-state-enhanced {
   text-align: center;
-  padding: 3rem 2rem;
+  padding: 2rem 1.5rem;
   background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;
@@ -148,7 +148,7 @@
 
 .event-type-selector {
   margin-bottom: 1.5rem;
-  padding-bottom: 2rem;
+  padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
 }
 
@@ -233,8 +233,8 @@
 }
 
 .booking-notes-section {
-  margin-top: 2rem;
-  padding-top: 2rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
@@ -362,7 +362,7 @@
 
 .analytics-card {
   text-align: center;
-  padding: 2rem;
+  padding: 1rem;
   background: var(--color-bg-secondary, #F5F5F7);
   border-radius: 24px;
 }
@@ -509,7 +509,7 @@ button:disabled {
   }
 
   .empty-state-enhanced {
-    padding: 2rem 1rem;
+    padding: 1.5rem 1rem;
     width: 100%;
     max-width: 100%;
     margin: 1rem 0.5rem;

@@ -5,7 +5,7 @@
 .file-upload-zone {
   border: 2px dashed var(--color-border-light, #d1d5db);
   border-radius: var(--radius-md, 8px);
-  padding: 3rem 2rem;
+  padding: 1.5rem;
   text-align: center;
   cursor: pointer;
   transition: all var(--transition-base, 0.2s);
