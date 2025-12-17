@@ -26,7 +26,7 @@
   --color-terra-blush-hover: #b85a4d;
   
   /* Primary Colors (Reel48 Brand) */
-  --color-primary: var(--color-tidewave-blue);
+  --color-primary: rgb(99 102 241);
   --color-primary-hover: var(--color-tidewave-blue-hover);
   --color-primary-light: var(--color-tidewave-blue-light);
   --color-primary-focus: var(--color-tidewave-blue-light);
@@ -37,7 +37,7 @@
   --color-secondary-hover: #4b5563; /* Neutral grey */
   
   /* CTA/Button Colors */
-  --color-cta-primary: var(--color-tidewave-blue);
+  --color-cta-primary: rgb(99 102 241);
   --color-cta-primary-text: #FFFFFF; /* White text for accessibility */
   
   /* Danger Colors (Terra Blush) */
@@ -55,7 +55,7 @@
   --color-warning-light: var(--color-sunlit-saffron-light);
   
   /* Utility Bar Color */
-  --utility-bar-color: var(--color-tidewave-blue);
+  --utility-bar-color: rgb(99 102 241);
   
   /* Neutral Colors - Text */
   --color-text-main: #333333;
@@ -70,21 +70,21 @@
   --color-bg-primary: #ffffff;
   --color-bg-card: #FFFFFF;
   --color-bg-secondary: #F8F9FA; /* Light grey for cards */
-  --color-bg-tertiary: rgba(44, 105, 154, 0.1); /* 10% Tidewave Blue tint */
+  --color-bg-tertiary: rgb(224 231 255); /* indigo-100 - Light tint */
   --color-bg-page: #FFFFFF;
-  --color-bg-section: rgba(44, 105, 154, 0.1);
-  --color-bg-accent: var(--color-tidewave-blue);
+  --color-bg-section: rgb(224 231 255); /* indigo-100 */
+  --color-bg-accent: rgb(99 102 241); /* indigo-500 */
   
   /* Links */
-  --color-link: var(--color-tidewave-blue);
-  --color-link-hover: var(--color-tidewave-blue-hover);
+  --color-link: rgb(59 130 246); /* blue-500 */
+  --color-link-hover: rgb(37 99 235); /* blue-600 */
   
   /* Border Colors */
   --color-border: rgba(0, 0, 0, 0.1); /* Light default border */
   --color-border-light: rgba(0, 0, 0, 0.05);
-  --color-border-dark: var(--color-tidewave-blue); /* Hover border for products */
-  --color-border-bold: var(--color-tidewave-blue);
-  --color-border-accent: var(--color-tidewave-blue);
+  --color-border-dark: rgb(99 102 241); /* indigo-500 - Hover border for products */
+  --color-border-bold: rgb(99 102 241); /* indigo-500 */
+  --color-border-accent: rgb(99 102 241); /* indigo-500 */
   --border-width-default: 2px;
   --border-width-bold: 3px;
   
@@ -147,7 +147,7 @@
 
 /* Focus styles for better accessibility */
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid rgb(99 102 241);
   outline-offset: 2px;
 }
 
@@ -156,7 +156,7 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid rgb(99 102 241);
   outline-offset: 2px;
 }
 
@@ -170,7 +170,7 @@ select:focus-visible {
 
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: var(--shadow-soft);
   display: flex;
@@ -324,7 +324,7 @@ select:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem 0;
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   min-height: 70px;
   gap: 1.5rem;
@@ -488,14 +488,14 @@ nav .nav-tabs li {
 }
 
 .nav-tab:hover {
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
   background-color: var(--color-tidewave-blue-light);
   box-shadow: var(--shadow-sm);
 }
 
 .nav-tab.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: rgb(99 102 241);
+  border-bottom-color: rgb(99 102 241);
   background-color: transparent;
 }
 
@@ -528,13 +528,13 @@ nav .nav-tabs li {
 }
 
 .nav-tab-dropdown:hover {
-  color: var(--color-primary);
+  color: rgb(99 102 241);
   background-color: var(--color-bg-secondary);
 }
 
 .nav-tab-dropdown.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: rgb(99 102 241);
+  border-bottom-color: rgb(99 102 241);
   background-color: transparent;
 }
 
@@ -580,14 +580,14 @@ nav .nav-tabs li {
 
 .nav-dropdown-item:hover {
   background-color: var(--color-bg-secondary);
-  color: var(--color-primary);
-  border-left-color: var(--color-primary);
+  color: rgb(99 102 241);
+  border-left-color: rgb(99 102 241);
 }
 
 .nav-dropdown-item.active {
-  color: var(--color-primary);
-  background-color: var(--color-primary-light);
-  border-left-color: var(--color-primary);
+  color: rgb(99 102 241);
+  background-color: rgb(224 231 255);
+  border-left-color: rgb(99 102 241);
 }
 
 /* Mobile Navigation */
@@ -959,7 +959,7 @@ table tbody tr:hover {
 
 /* Typography - Headings */
 h1, h2, h3, h4, h5, h6 {
-  color: var(--color-tidewave-blue);
+  color: rgb(31 41 55); /* gray-800 - neutral for headings */
   font-weight: 600;
 }
 
@@ -1173,7 +1173,7 @@ a:not([class]) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   padding: 0;
   margin: 0;
   position: relative;
@@ -1202,7 +1202,7 @@ a:not([class]) {
 
 .typeform-progress-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: rgb(99 102 241);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -1294,7 +1294,7 @@ a:not([class]) {
 .typeform-question textarea:focus,
 .typeform-question select:focus {
   outline: none;
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241);
   border-width: 3px;
   box-shadow: 0 0 0 3px rgba(126, 155, 118, 0.2), var(--shadow-sm);
 }
@@ -1330,10 +1330,10 @@ a:not([class]) {
 }
 
 .typeform-btn-primary {
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   color: white;
   box-shadow: var(--shadow-colored);
-  border: 2px solid var(--color-tidewave-blue);
+  border: 2px solid rgb(99 102 241);
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
@@ -1383,13 +1383,13 @@ a:not([class]) {
 }
 
 .typeform-option:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
+  border-color: rgb(99 102 241);
+  background: rgb(224 231 255);
   transform: translateX(4px);
 }
 
 .typeform-option-selected {
-  border-color: var(--color-primary);
+  border-color: rgb(99 102 241);
   background: var(--color-primary-subtle);
   box-shadow: var(--shadow-soft);
 }
@@ -1433,15 +1433,15 @@ a:not([class]) {
 }
 
 .typeform-yesno-option:hover {
-  border-color: var(--color-primary);
+  border-color: rgb(99 102 241);
   background: var(--color-primary-subtle);
   transform: translateY(-2px);
   box-shadow: var(--shadow-soft);
 }
 
 .typeform-yesno-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: rgb(99 102 241);
+  background: rgb(99 102 241);
   color: var(--brand-white);
   box-shadow: var(--shadow-soft);
 }
@@ -1620,7 +1620,7 @@ a:not([class]) {
   table tbody td.mobile-name-column a {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--color-primary);
+    color: rgb(99 102 241);
     display: block;
   }
   
@@ -1648,7 +1648,7 @@ a:not([class]) {
 @layer utilities {
   /* Brand color backgrounds using CSS variables */
   .bg-tidewave-var {
-    background-color: var(--color-tidewave-blue);
+    background-color: rgb(99 102 241);
   }
   
   .bg-verdant-var {
@@ -1665,7 +1665,7 @@ a:not([class]) {
   
   /* Brand color text using CSS variables */
   .text-tidewave-var {
-    color: var(--color-tidewave-blue);
+    color: rgb(99 102 241);
   }
   
   .text-verdant-var {
@@ -1699,7 +1699,7 @@ a:not([class]) {
   
   /* Border colors */
   .border-tidewave {
-    border-color: var(--color-tidewave-blue);
+    border-color: rgb(99 102 241);
   }
   
   .border-verdant {

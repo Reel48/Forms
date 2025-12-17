@@ -86,7 +86,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241);
   box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
 }
 
@@ -128,7 +128,7 @@
 
 .assigned-badge {
   background-color: var(--color-primary-light, #a8bba2);
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-full, 9999px);
   font-size: 0.875rem;

@@ -450,10 +450,10 @@ function FormsList() {
 
       {/* Bulk Actions Toolbar */}
       {role === 'admin' && selectedForms.size > 0 && (
-        <div className="card mb-4" style={{ backgroundColor: 'var(--color-primary-light)', borderColor: 'var(--color-primary)', padding: '1rem' }}>
+        <div className="card mb-4" style={{ backgroundColor: 'rgb(224 231 255)', borderColor: 'rgb(99 102 241)', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
+              <span style={{ fontWeight: '500', color: 'rgb(99 102 241)' }}>
                 {selectedForms.size} form{selectedForms.size > 1 ? 's' : ''} selected
               </span>
               <button
@@ -477,7 +477,7 @@ function FormsList() {
                 disabled={bulkActionLoading}
                 style={{
                   padding: '0.5rem',
-                  border: '1px solid var(--color-primary)',
+                  border: '1px solid rgb(99 102 241)',
                   borderRadius: '0.375rem',
                   backgroundColor: 'white',
                   cursor: bulkActionLoading ? 'not-allowed' : 'pointer',
@@ -572,7 +572,7 @@ function FormsList() {
                   )}
                   <td className="mobile-name-column">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Link to={`/forms/${form.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '500' }}>
+                      <Link to={`/forms/${form.id}`} style={{ color: 'rgb(99 102 241)', textDecoration: 'none', fontWeight: '500' }}>
                         {form.name || 'Untitled Form'}
                       </Link>
                       {form.is_typeform_form && (

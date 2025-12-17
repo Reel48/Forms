@@ -44,15 +44,15 @@
 /* Hover State - Matches calendar */
 .time-slot-btn:hover {
   background: var(--color-bg-secondary, #f9fafb);
-  border-color: var(--color-tidewave-blue);
-  color: var(--color-tidewave-blue);
+  border-color: rgb(99 102 241);
+  color: rgb(99 102 241);
   transform: scale(1.02); /* Subtle pop */
 }
 
 /* Active/Selected State */
 .time-slot-btn.selected {
-  background: var(--color-tidewave-blue);
-  border-color: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
+  border-color: rgb(99 102 241);
   color: white;
 }
 

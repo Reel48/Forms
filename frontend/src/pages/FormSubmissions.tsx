@@ -20,7 +20,7 @@ function FormSubmissions() {
   const [editingNoteText, setEditingNoteText] = useState('');
   const [tags, setTags] = useState<Array<{id: string; tag_name: string; color: string; created_at: string}>>([]);
   const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('var(--color-primary)');
+  const [newTagColor, setNewTagColor] = useState('rgb(99 102 241)');
   const [, setLoadingTags] = useState(false);
   const [availableTags, setAvailableTags] = useState<Array<{tag_name: string; color: string}>>([]);
 
@@ -201,7 +201,7 @@ function FormSubmissions() {
       });
       setTags(prev => [...prev, { ...response.data, created_at: new Date().toISOString() }]);
       setNewTagName('');
-      setNewTagColor('var(--color-primary)');
+      setNewTagColor('rgb(99 102 241)');
       loadAvailableTags();
     } catch (error: any) {
       console.error('Failed to add tag:', error);
@@ -506,7 +506,7 @@ function FormSubmissions() {
                     <tr
                       key={submission.id}
                       style={{
-                        backgroundColor: selectedSubmission?.id === submission.id ? 'var(--color-primary-light)' : undefined,
+                        backgroundColor: selectedSubmission?.id === submission.id ? 'rgb(224 231 255)' : undefined,
                         cursor: 'pointer',
                       }}
                       onClick={() => setSelectedSubmission(submission)}
@@ -529,7 +529,7 @@ function FormSubmissions() {
                             'badge-info'
                           }`}
                           style={{ 
-                            backgroundColor: submission.review_status === 'new' ? 'var(--color-primary)' : undefined,
+                            backgroundColor: submission.review_status === 'new' ? 'rgb(99 102 241)' : undefined,
                             color: submission.review_status === 'new' ? 'white' : undefined
                           }}
                         >

@@ -215,7 +215,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'profile' ? 'var(--color-tidewave-blue)' : 'transparent',
+              background: activeTab === 'profile' ? 'rgb(99 102 241)' : 'transparent',
               color: activeTab === 'profile' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -230,7 +230,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'security' ? 'var(--color-tidewave-blue)' : 'transparent',
+              background: activeTab === 'security' ? 'rgb(99 102 241)' : 'transparent',
               color: activeTab === 'security' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -245,7 +245,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'sessions' ? 'var(--color-tidewave-blue)' : 'transparent',
+              background: activeTab === 'sessions' ? 'rgb(99 102 241)' : 'transparent',
               color: activeTab === 'sessions' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -260,7 +260,7 @@ function Profile() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'login_activity' ? 'var(--color-tidewave-blue)' : 'transparent',
+              background: activeTab === 'login_activity' ? 'rgb(99 102 241)' : 'transparent',
               color: activeTab === 'login_activity' ? 'white' : '#666',
               cursor: 'pointer',
               borderRadius: '4px 4px 0 0',
@@ -319,7 +319,7 @@ function Profile() {
                   htmlFor="profile-picture-upload"
                   style={{
                     padding: '0.5rem 1rem',
-                    backgroundColor: 'var(--color-primary)',
+                    backgroundColor: 'rgb(99 102 241)',
                     color: 'white',
                     borderRadius: 'var(--radius-md)',
                     cursor: uploadingPicture ? 'not-allowed' : 'pointer',

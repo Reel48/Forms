@@ -17,13 +17,13 @@
 }
 
 .file-upload-zone:hover {
-  border-color: var(--color-tidewave-blue);
-  background-color: var(--color-primary-light);
+  border-color: rgb(99 102 241);
+  background-color: rgb(224 231 255);
 }
 
 .file-upload-zone.dragging {
-  border-color: var(--color-tidewave-blue);
-  background-color: var(--color-primary-light);
+  border-color: rgb(99 102 241);
+  background-color: rgb(224 231 255);
   transform: scale(1.02);
 }
 
@@ -78,7 +78,7 @@
 
 .upload-progress-fill {
   height: 100%;
-  background-color: var(--color-tidewave-blue);
+  background-color: rgb(99 102 241);
   transition: width var(--transition-base, 0.2s);
 }
 

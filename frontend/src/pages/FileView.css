@@ -69,8 +69,8 @@
 .file-tag {
   font-size: 0.875rem;
   padding: 0.25rem 0.75rem;
-  background-color: var(--color-primary-light);
-  color: var(--color-tidewave-blue);
+  background-color: rgb(224 231 255);
+  color: rgb(99 102 241);
   border-radius: var(--radius-full, 9999px);
 }
 

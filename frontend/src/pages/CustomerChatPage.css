@@ -7,9 +7,9 @@
   --chat-text: #2C2C2C;
   --chat-text-secondary: #444746;
   --chat-border: #e3e3e3;
-  --chat-accent: var(--color-tidewave-blue);
+  --chat-accent: rgb(99 102 241);
   --chat-accent-hover: var(--color-terra-blush);
-  --chat-user-bubble: var(--color-tidewave-blue); /* Tidewave Blue for customer messages */
+  --chat-user-bubble: rgb(99 102 241); /* Tidewave Blue for customer messages */
   --chat-user-text: #ffffff;
   --chat-ai-bubble: #e5e5e7; /* Grey like iMessage */
   --chat-ai-text: #1f1f1f;
@@ -33,9 +33,9 @@
   --chat-text: #e3e3e3;
   --chat-text-secondary: #c4c7c5;
   --chat-border: #444746;
-  --chat-accent: var(--color-tidewave-blue);
+  --chat-accent: rgb(99 102 241);
   --chat-accent-hover: var(--color-tidewave-blue-hover);
-  --chat-user-bubble: var(--color-tidewave-blue); /* Tidewave Blue for customer messages */
+  --chat-user-bubble: rgb(99 102 241); /* Tidewave Blue for customer messages */
   --chat-user-text: #ffffff;
   --chat-ai-bubble: #3a3a3c; /* Darker grey for AI in dark mode */
   --chat-ai-text: #e3e3e3;
@@ -410,7 +410,7 @@
   border: 1px solid var(--color-border);
   border-radius: 24px;
   padding: 0.75rem 1.25rem;
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;

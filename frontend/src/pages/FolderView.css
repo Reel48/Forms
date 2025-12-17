@@ -25,7 +25,7 @@
 .breadcrumb-link {
   background: none;
   border: none;
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
   cursor: pointer;
   padding: 0;
   font-size: 0.875rem;
@@ -116,8 +116,8 @@
 }
 
 .status-completed {
-  background-color: var(--color-primary-light);
-  color: var(--color-tidewave-blue);
+  background-color: rgb(224 231 255);
+  color: rgb(99 102 241);
 }
 
 .status-archived {
@@ -152,7 +152,7 @@
 /* Hero Action Card */
 .hero-action-card {
   background: var(--color-bg-secondary);
-  border: 2px solid var(--color-tidewave-blue);
+  border: 2px solid rgb(99 102 241);
   padding: 2rem;
 }
 
@@ -253,7 +253,7 @@
 .btn-secondary-outline {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
   border: 1.5px solid #5c795e;
   border-radius: 6px;
   font-size: 0.875rem;

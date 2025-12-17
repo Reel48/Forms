@@ -121,12 +121,12 @@
 }
 
 .calendar-day.today .calendar-day-number {
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
   font-weight: 700;
 }
 
 .calendar-day.selected {
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   border-color: rgb(99 102 241); /* indigo-500 */
   color: white;
 }

@@ -106,7 +106,7 @@
 
 .chat-widget-header {
   padding: 1rem 1.5rem;
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -252,7 +252,7 @@
 }
 
 .message-sent .chat-widget-message-content {
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   color: white;
   border-bottom-right-radius: 6px;
 }
@@ -367,7 +367,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-tidewave-blue);
+  color: rgb(99 102 241);
 }
 
 .chat-widget-attach:hover:not(:disabled) {
@@ -382,7 +382,7 @@
 }
 
 .chat-widget-attach:hover:not(:disabled) {
-  background-color: var(--color-tidewave-blue);
+  background-color: rgb(99 102 241);
   border-color: rgb(99 102 241); /* indigo-500 */
   color: white;
   transform: scale(1.05);

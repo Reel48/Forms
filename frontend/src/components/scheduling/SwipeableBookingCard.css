@@ -39,7 +39,7 @@
 }
 
 .swipe-action-reschedule {
-  background: var(--color-tidewave-blue);
+  background: rgb(99 102 241);
   color: white;
 }
 

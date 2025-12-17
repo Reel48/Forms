@@ -492,8 +492,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'details' ? '2px solid var(--color-primary)' : '2px solid transparent',
-                      color: activeTab === 'details' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                      borderBottom: activeTab === 'details' ? '2px solid rgb(99 102 241)' : '2px solid transparent',
+                      color: activeTab === 'details' ? 'rgb(99 102 241)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'details' ? '600' : '400',
                     }}
                   >
@@ -506,8 +506,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'activities' ? '2px solid var(--color-primary)' : '2px solid transparent',
-                      color: activeTab === 'activities' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                      borderBottom: activeTab === 'activities' ? '2px solid rgb(99 102 241)' : '2px solid transparent',
+                      color: activeTab === 'activities' ? 'rgb(99 102 241)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'activities' ? '600' : '400',
                     }}
                   >
@@ -520,8 +520,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'comments' ? '2px solid var(--color-primary)' : '2px solid transparent',
-                      color: activeTab === 'comments' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                      borderBottom: activeTab === 'comments' ? '2px solid rgb(99 102 241)' : '2px solid transparent',
+                      color: activeTab === 'comments' ? 'rgb(99 102 241)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'comments' ? '600' : '400',
                     }}
                   >
@@ -534,8 +534,8 @@ function QuoteView() {
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
-                      borderBottom: activeTab === 'versions' ? '2px solid var(--color-primary)' : '2px solid transparent',
-                      color: activeTab === 'versions' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                      borderBottom: activeTab === 'versions' ? '2px solid rgb(99 102 241)' : '2px solid transparent',
+                      color: activeTab === 'versions' ? 'rgb(99 102 241)' : 'var(--color-text-muted)',
                       fontWeight: activeTab === 'versions' ? '600' : '400',
                     }}
                   >
@@ -549,8 +549,8 @@ function QuoteView() {
                         border: 'none',
                         background: 'none',
                         cursor: 'pointer',
-                        borderBottom: activeTab === 'client-history' ? '2px solid var(--color-primary)' : '2px solid transparent',
-                        color: activeTab === 'client-history' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                        borderBottom: activeTab === 'client-history' ? '2px solid rgb(99 102 241)' : '2px solid transparent',
+                        color: activeTab === 'client-history' ? 'rgb(99 102 241)' : 'var(--color-text-muted)',
                         fontWeight: activeTab === 'client-history' ? '600' : '400',
                       }}
                     >
@@ -683,7 +683,7 @@ function QuoteView() {
                 <div className="mb-4 p-3" style={{ 
                   backgroundColor: paymentStatusDetails?.color === 'rgb(16 185 129)' ? 'rgb(209 250 229)' : paymentStatusDetails?.color === 'rgb(239 68 68)' || paymentStatusDetails?.color === 'rgb(220 38 38)' ? 'rgb(254 226 226)' : paymentStatusDetails?.color === 'rgb(245 158 11)' || paymentStatusDetails?.color === 'rgb(251 191 36)' ? 'rgb(254 243 199)' : 'rgb(219 234 254)', /* emerald-100, red-100, yellow-100, blue-100 */ 
                   borderRadius: '24px',
-                  border: `2px solid ${paymentStatusDetails?.color || 'var(--color-primary)'}` 
+                  border: `2px solid ${paymentStatusDetails?.color || 'rgb(99 102 241)'}` 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
@@ -893,7 +893,7 @@ function QuoteView() {
                           key={activity.id} 
                           style={{
                             padding: '1rem',
-                            borderLeft: '4px solid var(--color-primary)',
+                            borderLeft: '4px solid rgb(99 102 241)',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem'
                           }}
@@ -965,7 +965,7 @@ function QuoteView() {
                             padding: '1rem',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem',
-                            borderLeft: '4px solid var(--color-primary)'
+                            borderLeft: '4px solid rgb(99 102 241)'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -976,8 +976,8 @@ function QuoteView() {
                                   marginLeft: '0.5rem',
                                   padding: '0.125rem 0.5rem',
                                   fontSize: '0.75rem',
-                                  backgroundColor: 'var(--color-primary-light)',
-                                  color: 'var(--color-primary)',
+                                  backgroundColor: 'rgb(224 231 255)',
+                                  color: 'rgb(99 102 241)',
                                   borderRadius: '0.25rem'
                                 }}>
                                   Internal
@@ -1054,7 +1054,7 @@ function QuoteView() {
                             padding: '1rem',
                             backgroundColor: '#f9fafb',
                             borderRadius: '0.375rem',
-                            borderLeft: '4px solid var(--color-primary)',
+                            borderLeft: '4px solid rgb(99 102 241)',
                             cursor: 'pointer'
                           }}
                           onClick={() => navigate(`/quotes/${historyQuote.id}`)}
@@ -1066,7 +1066,7 @@ function QuoteView() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <Link 
                                   to={`/quotes/${historyQuote.id}`}
-                                  style={{ fontWeight: '600', color: 'var(--color-primary)', textDecoration: 'none' }}
+                                  style={{ fontWeight: '600', color: 'rgb(99 102 241)', textDecoration: 'none' }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {historyQuote.title}
