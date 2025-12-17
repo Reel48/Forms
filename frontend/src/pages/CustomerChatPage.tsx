@@ -37,6 +37,17 @@ const CustomerChatPage: React.FC = () => {
   const sessionCheckIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
+  // Load messages function - defined early so it can be used in other callbacks
+  const loadMessages = useCallback(async (conversationId: string, limit: number = 50) => {
+    try {
+      const response = await chatAPI.getMessages(conversationId, limit);
+      setMessages(response.data);
+      setHasMoreMessages(response.data.length === limit);
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+    }
+  }, []);
+
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
     const realtimeClient = getRealtimeClient();
@@ -127,7 +138,7 @@ const CustomerChatPage: React.FC = () => {
       .subscribe();
 
     conversationsSubscriptionRef.current = conversationsChannel;
-  }, [user?.id]);
+  }, [user?.id, loadMessages, conversation?.id]);
 
   useEffect(() => {
     loadConversation();
@@ -366,16 +377,6 @@ const CustomerChatPage: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const loadMessages = useCallback(async (conversationId: string, limit: number = 50) => {
-    try {
-      const response = await chatAPI.getMessages(conversationId, limit);
-      setMessages(response.data);
-      setHasMoreMessages(response.data.length === limit);
-    } catch (error) {
-      console.error('Failed to load messages:', error);
-    }
-  }, []);
 
   const markAllAsRead = async () => {
     if (!conversation || markingAsReadRef.current) return;
