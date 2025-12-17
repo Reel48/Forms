@@ -59,7 +59,7 @@
 }
 
 .form-group input:disabled {
-  background-color: #F9F9F7;
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   cursor: not-allowed;
 }
 

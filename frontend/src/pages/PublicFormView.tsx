@@ -1240,7 +1240,7 @@ function PublicFormView() {
               textAlign: 'center',
               cursor: uploading ? 'wait' : 'pointer',
               transition: 'all 0.2s',
-              backgroundColor: value?.file_url ? '#f0fdf4' : '#F5F5F7',
+              backgroundColor: value?.file_url ? '#f0fdf4' : 'var(--color-bg-secondary, rgba(168, 187, 162, 0.15))',
               opacity: uploading ? 0.6 : 1
             }}
             onClick={() => !uploading && document.getElementById(`${fieldId}-file`)?.click()}

@@ -41,7 +41,7 @@
 
 .view-mode-btn:hover,
 .nav-btn:hover {
-  background: var(--color-bg-secondary, #f9fafb);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-color: var(--color-primary, #5c795e);
 }
 
@@ -96,7 +96,7 @@
 }
 
 .calendar-day:hover {
-  background: var(--color-bg-secondary, #f9fafb);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-color: var(--color-primary, #5c795e);
 }
 
@@ -107,7 +107,7 @@
 }
 
 .calendar-day.empty {
-  background: var(--color-bg-secondary, #f9fafb);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   cursor: default;
 }
 
@@ -160,7 +160,7 @@
 }
 
 .calendar-list-item:hover {
-  background: var(--color-bg-secondary, #f9fafb);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-color: var(--color-primary, #5c795e);
 }
 
@@ -287,7 +287,7 @@
 }
 
 .modal-close:hover {
-  background: var(--color-bg-secondary, #f9fafb);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   color: var(--color-text, #1f2937);
 }
 

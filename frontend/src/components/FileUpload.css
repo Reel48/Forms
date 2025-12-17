@@ -9,7 +9,7 @@
   text-align: center;
   cursor: pointer;
   transition: all var(--transition-base, 0.2s);
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   min-height: 200px;
   display: flex;
   align-items: center;
