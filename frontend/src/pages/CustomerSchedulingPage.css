@@ -12,9 +12,9 @@
 
 .page-header h1 {
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--color-text, #1f2937);
+  color: var(--color-elm-green);
 }
 
 .page-header p {
@@ -82,11 +82,11 @@
   text-align: center;
   padding: 2rem 1.5rem;
   background: #FFFFFF;
-  border: 1px solid var(--color-border, #e5e7eb);
+  border: 2px solid var(--color-smoke-green);
   border-radius: 24px;
   max-width: 600px;
   margin: 2rem auto;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0px 4px 16px rgba(92, 121, 94, 0.2);
 }
 
 .empty-state-enhanced h3 {
@@ -146,9 +146,9 @@
 
 .booking-widget-container h2 {
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--color-text, #1f2937);
+  color: var(--color-elm-green);
 }
 
 .booking-widget-container > p {
@@ -165,8 +165,8 @@
 .event-type-selector label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text, #1f2937);
+  font-weight: 600;
+  color: var(--color-elm-green);
   margin-bottom: 0.5rem;
 }
 
@@ -251,8 +251,8 @@
 .booking-notes-section label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text, #1f2937);
+  font-weight: 600;
+  color: var(--color-elm-green);
   margin-bottom: 0.5rem;
 }
 
@@ -359,9 +359,9 @@
 
 .analytics-section h3 {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 1rem 0;
-  color: var(--color-text, #1f2937);
+  color: var(--color-elm-green);
 }
 
 .analytics-grid {
