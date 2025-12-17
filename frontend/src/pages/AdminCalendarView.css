@@ -309,7 +309,7 @@
 
 .empty-state {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 1.5rem 1rem;
   color: var(--color-text-muted, #6b7280);
 }
 

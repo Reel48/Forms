@@ -1236,7 +1236,7 @@ function PublicFormView() {
             <div style={{ 
               border: '2px dashed #d1d5db', 
               borderRadius: '24px', 
-              padding: '4rem', 
+              padding: '1.5rem', 
               textAlign: 'center',
               cursor: uploading ? 'wait' : 'pointer',
               transition: 'all 0.2s',

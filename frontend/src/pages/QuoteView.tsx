@@ -734,7 +734,7 @@ function QuoteView() {
                 <>
                   {/* Payment Actions */}
                   {quote.status === 'draft' || quote.status === 'sent' || quote.status === 'viewed' ? (
-                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: '#F5F5F7', borderRadius: '24px', padding: '3rem' }}>
+                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: '#F5F5F7', borderRadius: '24px', padding: '1.5rem' }}>
                       <h3>Quote Actions</h3>
                       <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                         <button onClick={handleAcceptQuote} className="btn-primary">

@@ -128,7 +128,7 @@
 
 .empty-state {
   text-align: center;
-  padding: 4rem 1.5rem;
+  padding: 2rem 1.5rem;
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -266,7 +266,7 @@
 
 .loading {
   text-align: center;
-  padding: 3rem;
+  padding: 1.5rem;
   font-size: 1rem;
   color: var(--color-text-muted, #6b7280);
 }
