@@ -643,14 +643,7 @@ function QuoteView() {
                 {quote.payment_status && paymentStatusDetails && (
                   <div>
                     <strong>Payment Status:</strong>{' '}
-                    <span style={{ 
-                      padding: '0.5rem 1.5rem',
-                      borderRadius: '24px',
-                      backgroundColor: `${paymentStatusDetails.color}20`,
-                      color: paymentStatusDetails.color,
-                      fontWeight: '600',
-                      fontSize: '0.875rem'
-                    }}>
+                    <span className={`badge badge-${quote.payment_status}`} style={{ fontSize: '0.875rem' }}>
                       {paymentStatusDetails.icon} {paymentStatusDetails.label}
                     </span>
                   </div>

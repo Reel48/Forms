@@ -1508,9 +1508,7 @@ function PublicFormView() {
                   className={`typeform-yesno-option ${value === 'yes' ? 'typeform-yesno-selected' : ''}`}
                   style={value === 'yes' ? {
                     borderColor: primaryColor,
-                    background: backgroundType === 'gradient' 
-                      ? `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                      : primaryColor,
+                    background: primaryColor,
                     color: 'white',
                     boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)',
                   } : {}}
@@ -1543,9 +1541,7 @@ function PublicFormView() {
                   className={`typeform-yesno-option ${value === 'no' ? 'typeform-yesno-selected' : ''}`}
                   style={value === 'no' ? {
                     borderColor: primaryColor,
-                    background: backgroundType === 'gradient' 
-                      ? `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                      : primaryColor,
+                    background: primaryColor,
                     color: 'white',
                     boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)',
                   } : {}}
@@ -1969,7 +1965,7 @@ function PublicFormView() {
                         color: '#ffffff',
                         background: isProcessing || value?.status === 'succeeded' 
                           ? '#9ca3af' 
-                          : 'linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-gradient) 100%)',
+                          : 'var(--color-elm-green)',
                         border: 'none',
                         borderRadius: '24px',
                         cursor: isProcessing || value?.status === 'succeeded' ? 'not-allowed' : 'pointer',
