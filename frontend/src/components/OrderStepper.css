@@ -93,7 +93,7 @@
 }
 
 .order-stepper-connector.pending {
-  background-color: #e5e7eb;
+  background-color: var(--color-border, var(--color-smoke-green));
 }
 
 @media (max-width: 768px) {

@@ -59,7 +59,7 @@
 }
 
 .modal-close:hover {
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
 }
 
 .modal-body {
@@ -111,7 +111,7 @@
 }
 
 .user-item:hover {
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
 }
 
 .user-item input[type="checkbox"] {

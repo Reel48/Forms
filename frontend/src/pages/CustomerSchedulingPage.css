@@ -31,7 +31,7 @@
   padding: 0.5rem;
   border: 2px solid var(--color-smoke-green);
   border-radius: 24px;
-  background: var(--color-bg-secondary, #F5F5F7);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   box-shadow: var(--shadow-sm);
@@ -373,7 +373,7 @@
 .analytics-card {
   text-align: center;
   padding: 1rem;
-  background: var(--color-bg-secondary, #F5F5F7);
+  background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-radius: 24px;
 }
 

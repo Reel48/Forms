@@ -165,7 +165,7 @@
   font-size: 0.75rem;
   color: var(--color-text-muted, #6b7280);
   padding: 0.375rem 0.75rem;
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-radius: 0.5rem;
   font-weight: 500;
   text-transform: capitalize;

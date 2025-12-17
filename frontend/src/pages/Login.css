@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #F9F9F7;
+  background-color: var(--color-bg-page, rgba(168, 187, 162, 0.15));
   padding: 1.5rem;
   position: relative;
 }

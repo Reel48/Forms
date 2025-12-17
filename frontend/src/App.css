@@ -285,12 +285,12 @@ select:focus-visible {
 }
 
 .role-dropdown-content a:hover {
-  background-color: #f5f5f5;
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: #e5e7eb;
+  background-color: var(--color-border, var(--color-smoke-green));
   margin: 4px 0;
 }
 
@@ -303,7 +303,7 @@ select:focus-visible {
 }
 
 .dropdown-link:hover {
-  background-color: #f5f5f5;
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
 }
 
 .dropdown-button-logout {

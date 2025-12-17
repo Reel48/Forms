@@ -1,7 +1,7 @@
 .assignments-list {
   margin-top: 2rem;
   padding: 1.5rem;
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-radius: var(--radius-md, 8px);
   border: 1px solid var(--color-border-dark, #e0e0e0);
 }
@@ -63,7 +63,7 @@
   padding: 2rem;
   text-align: center;
   color: var(--color-text-muted, #6b7280);
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
   border-radius: var(--radius-md, 8px);
   border: 1px solid var(--color-border-dark, #e0e0e0);
   margin-top: 2rem;
