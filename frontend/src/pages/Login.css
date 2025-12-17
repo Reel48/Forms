@@ -3,24 +3,24 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #292c2f;
-  padding: 20px;
+  background-color: #F5F5F7;
+  padding: 40px;
   position: relative;
 }
 
 .login-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 40px;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 80px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   position: relative;
   z-index: 1;
 }
 
 .login-card h1 {
-  margin: 0 0 30px 0;
+  margin: 0 0 60px 0;
   text-align: center;
   color: #1f2937;
   font-size: 28px;
@@ -28,36 +28,36 @@
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 40px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   color: #374151;
   font-weight: 500;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px;
+  padding: 24px;
   border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 24px;
   font-size: 16px;
   transition: all 0.2s;
   box-sizing: border-box;
-  background-color: #ffffff;
+  background-color: #FFFFFF;
   color: #1f2937;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
 }
 
 .form-group input:disabled {
-  background-color: #f5f5f5;
+  background-color: #F5F5F7;
   cursor: not-allowed;
 }
 
@@ -105,22 +105,22 @@
 
 .submit-button {
   width: 100%;
-  padding: 12px;
+  padding: 24px;
   background-color: var(--color-primary);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 24px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .submit-button:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .submit-button:disabled {
@@ -131,15 +131,15 @@
 .error-message {
   background-color: #fee2e2;
   color: #dc2626;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  padding: 24px;
+  border-radius: 24px;
+  margin-bottom: 40px;
   border: 1px solid #dc2626;
 }
 
 .signup-link {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 40px;
   color: #6b7280;
 }
 
@@ -156,9 +156,9 @@
 .success-message {
   background-color: #d1fae5;
   color: #065f46;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  padding: 24px;
+  border-radius: 24px;
+  margin-bottom: 40px;
   border: 1px solid var(--color-success);
   text-align: center;
 }

@@ -27,27 +27,27 @@
 
 .tabs {
   display: inline-flex;
-  gap: 0.25rem;
-  padding: 0.25rem;
+  gap: 0.5rem;
+  padding: 0.5rem;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 10px;
-  background: var(--color-bg-secondary, #f9fafb);
-  margin-bottom: 1.5rem;
+  border-radius: 24px;
+  background: var(--color-bg-secondary, #F5F5F7);
+  margin-bottom: 3rem;
   flex-wrap: wrap;
 }
 
 .tab,
 .tab-active {
-  padding: 0.65rem 1rem;
+  padding: 1.3rem 2rem;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 24px;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-muted, #6b7280);
   transition: all 0.2s;
-  min-height: 44px; /* Touch-friendly */
+  min-height: 88px; /* Touch-friendly */
 }
 
 .tab:hover {
@@ -58,9 +58,9 @@
 
 .tab-active {
   color: var(--color-text, #1f2937);
-  background: white;
+  background: #FFFFFF;
   border-color: var(--color-border, #e5e7eb);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .tab-content {
@@ -76,12 +76,13 @@
 /* Enhanced Empty States */
 .empty-state-enhanced {
   text-align: center;
-  padding: 3rem 2rem;
-  background: white;
+  padding: 6rem 4rem;
+  background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 24px;
   max-width: 600px;
-  margin: 2rem auto;
+  margin: 4rem auto;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .empty-state-enhanced h3 {
@@ -126,10 +127,11 @@
 
 /* Booking Widget Container */
 .booking-widget-container {
-  background: white;
+  background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  padding: 2rem;
+  border-radius: 24px;
+  padding: 4rem;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .booking-widget-container h2 {
@@ -161,11 +163,11 @@
 .event-type-select {
   width: 100%;
   max-width: 400px;
-  padding: 0.75rem;
+  padding: 1.5rem;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
+  border-radius: 24px;
   font-size: 0.875rem;
-  background: white;
+  background: #FFFFFF;
   color: var(--color-text, #1f2937);
   cursor: pointer;
 }
@@ -196,11 +198,12 @@
   width: 100%; /* Forces them to fill their half */
   /* Remove the small max-width we set earlier */
   max-width: none;
-  background: white;
+  background: #FFFFFF;
   /* ADDED: Border to match the calendar visually */
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  padding: 2rem; /* More breathing room inside */
+  border-radius: 24px;
+  padding: 4rem; /* More breathing room inside */
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   /* OPTIONAL: This helps center the "No times" message vertically if you want */
   display: flex;
   flex-direction: column;
@@ -246,13 +249,13 @@
 .booking-notes-input {
   width: 100%;
   max-width: 600px;
-  padding: 0.75rem;
+  padding: 1.5rem;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
+  border-radius: 24px;
   font-size: 0.875rem;
   font-family: inherit;
   resize: vertical;
-  min-height: 80px;
+  min-height: 160px;
 }
 
 .booking-notes-input:focus {
@@ -277,13 +280,14 @@
 }
 
 .reschedule-modal-content {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 4rem;
   max-width: 800px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .reschedule-modal-content h3 {
@@ -335,11 +339,12 @@
 
 /* Analytics Section */
 .analytics-section {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: white;
+  margin-bottom: 4rem;
+  padding: 3rem;
+  background: #FFFFFF;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 24px;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .analytics-section h3 {
@@ -357,16 +362,16 @@
 
 .analytics-card {
   text-align: center;
-  padding: 1rem;
-  background: var(--color-bg-secondary, #f9fafb);
-  border-radius: 6px;
+  padding: 2rem;
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: 24px;
 }
 
 .analytics-value {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--color-primary, #2563eb);
-  margin-bottom: 0.25rem;
+  color: var(--color-primary, #2F80ED);
+  margin-bottom: 0.5rem;
 }
 
 .analytics-label {
@@ -379,18 +384,18 @@
 .btn-outline,
 .btn-danger,
 .btn-sm {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 1rem 2rem;
+  border-radius: 24px;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
-  min-height: 44px; /* Touch-friendly */
+  min-height: 88px; /* Touch-friendly */
 }
 
 .btn-primary {
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary, #2F80ED);
   color: white;
 }
 
@@ -399,9 +404,9 @@
 }
 
 .btn-outline {
-  background: white;
-  color: var(--color-primary, #2563eb);
-  border-color: var(--color-primary, #2563eb);
+  background: #FFFFFF;
+  color: var(--color-primary, #2F80ED);
+  border-color: var(--color-primary, #2F80ED);
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -419,7 +424,7 @@
 }
 
 .btn-sm {
-  padding: 0.375rem 0.75rem;
+  padding: 0.75rem 1.5rem;
   font-size: 0.8125rem;
 }
 

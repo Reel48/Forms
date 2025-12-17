@@ -82,9 +82,9 @@
   width: 400px;
   height: 650px;
   max-height: calc(100vh - 4rem);
-  background-color: white;
-  border-radius: 1.25rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background-color: #FFFFFF;
+  border-radius: 24px;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   z-index: 1000;
@@ -105,14 +105,14 @@
 }
 
 .chat-widget-header {
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, var(--color-primary, #292c2f) 0%, #292c2f 100%);
+  padding: 2.5rem 3rem;
+  background: linear-gradient(90deg, var(--color-primary, #2F80ED) 0%, var(--color-primary-gradient, #56CCF2) 100%);
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 1.25rem 1.25rem 0 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .chat-widget-header > div:first-child {
@@ -240,10 +240,10 @@
 
 .chat-widget-message-content {
   max-width: 80%;
-  padding: 0.875rem 1rem;
-  border-radius: 1.125rem;
+  padding: 1.75rem 2rem;
+  border-radius: 24px;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -253,9 +253,9 @@
 }
 
 .message-sent .chat-widget-message-content {
-  background: linear-gradient(135deg, var(--color-primary, #292c2f) 0%, #292c2f 100%);
+  background: linear-gradient(90deg, var(--color-primary, #2F80ED) 0%, var(--color-primary-gradient, #56CCF2) 100%);
   color: white;
-  border-bottom-right-radius: 0.25rem;
+  border-bottom-right-radius: 6px;
 }
 
 .message-received .chat-widget-message-content {
@@ -391,9 +391,9 @@
 
 .chat-widget-input {
   flex: 1;
-  padding: 0.875rem 1rem;
+  padding: 1.75rem 2rem;
   border: 2px solid var(--color-border, #e5e7eb);
-  border-radius: 0.625rem;
+  border-radius: 24px;
   font-size: 0.875rem;
   outline: none;
   background: white;
@@ -412,17 +412,17 @@
 }
 
 .chat-widget-send {
-  padding: 0.875rem 1.25rem;
-  background: linear-gradient(135deg, var(--color-primary, #292c2f) 0%, #292c2f 100%);
+  padding: 1.75rem 2.5rem;
+  background: linear-gradient(90deg, var(--color-primary, #2F80ED) 0%, var(--color-primary-gradient, #56CCF2) 100%);
   color: white;
   border: none;
-  border-radius: 0.625rem;
+  border-radius: 24px;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(41, 44, 47, 0.3);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
 }

@@ -311,7 +311,7 @@ function CustomerDashboard() {
       <CustomerChatWidget />
       
       {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
           <p>Loading...</p>
         </div>
       )}
@@ -320,15 +320,14 @@ function CustomerDashboard() {
         <>
       {/* Customer Header */}
       {customerProfile && (
-        <div style={{ marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '4rem' }}>
           <h1 className="customer-company-name" style={{
             fontSize: '2.5rem',
             fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            margin: '0 0 0.5rem 0',
-            color: 'var(--color-text-primary)',
-            fontFamily: '"Rubik", sans-serif'
+            margin: '0 0 1rem 0',
+            color: 'var(--color-text-primary)'
           }}>
             {customerProfile.company || 'Company Name'}
           </h1>
@@ -346,7 +345,7 @@ function CustomerDashboard() {
       {/* Folders Grouped by Status */}
       {filteredFoldersByStatus.active.length === 0 && filteredFoldersByStatus.completed.length === 0 && filteredFoldersByStatus.archived.length === 0 && filteredFoldersByStatus.cancelled.length === 0 ? (
         <div className="card">
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ textAlign: 'center', padding: '6rem' }}>
             <h2 style={{ marginBottom: '1rem' }}>
               {searchTerm ? 'No results found' : 'No assignments yet'}
             </h2>
@@ -361,7 +360,7 @@ function CustomerDashboard() {
         <>
           {/* Active Folders */}
           {filteredFoldersByStatus.active.length > 0 && (
-            <div className="card" style={{ marginBottom: '2rem' }}>
+            <div className="card" style={{ marginBottom: '4rem' }}>
               <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Active Orders</h2>
           <table>
             <thead>
@@ -393,7 +392,7 @@ function CustomerDashboard() {
                     </span>
                   </td>
                   <td className="mobile-name-column">
-                    <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                    <strong style={{ color: 'var(--color-primary, #2F80ED)' }}>{item.title}</strong>
                   </td>
                   <td className="mobile-status-column">
                     {getStatusBadge(item.status, item.type)}
@@ -401,8 +400,8 @@ function CustomerDashboard() {
                   <td>
                     {item.priority === 'high' ? (
                       <span style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '24px',
                         fontSize: '0.75rem',
                         fontWeight: 600,
                         backgroundColor: '#fee2e2',
@@ -430,7 +429,7 @@ function CustomerDashboard() {
                       <button
                         onClick={() => handleItemClick(item)}
                         className="btn-outline btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                       >
                         View
                       </button>
@@ -438,7 +437,7 @@ function CustomerDashboard() {
                         <button
                           onClick={() => handleItemClick(item)}
                           className="btn-primary btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                         >
                           Open
                         </button>
@@ -448,7 +447,7 @@ function CustomerDashboard() {
                           <button
                             onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
                             className="btn-outline btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
                             PDF
                           </button>
@@ -492,7 +491,7 @@ function CustomerDashboard() {
                         <button
                           onClick={(e) => handleCompleteForm(item.data as Form, e)}
                           className="btn-primary btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                         >
                           Complete
                         </button>
@@ -508,7 +507,7 @@ function CustomerDashboard() {
 
           {/* Completed Folders */}
           {filteredFoldersByStatus.completed.length > 0 && (
-            <div className="card" style={{ marginBottom: '2rem' }}>
+            <div className="card" style={{ marginBottom: '4rem' }}>
               <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Completed Orders</h2>
               <table>
                 <thead>
@@ -540,7 +539,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                        <strong style={{ color: 'var(--color-primary, #2F80ED)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -577,7 +576,7 @@ function CustomerDashboard() {
                           <button
                             onClick={() => handleItemClick(item)}
                             className="btn-outline btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
                             View
                           </button>
@@ -585,7 +584,7 @@ function CustomerDashboard() {
                             <button
                               onClick={() => handleItemClick(item)}
                               className="btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                             >
                               Open
                             </button>
@@ -601,7 +600,7 @@ function CustomerDashboard() {
 
           {/* Archived Folders */}
           {filteredFoldersByStatus.archived.length > 0 && (
-            <div className="card" style={{ marginBottom: '2rem' }}>
+            <div className="card" style={{ marginBottom: '4rem' }}>
               <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Archived Orders</h2>
               <table>
                 <thead>
@@ -633,7 +632,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                        <strong style={{ color: 'var(--color-primary, #2F80ED)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -670,7 +669,7 @@ function CustomerDashboard() {
                           <button
                             onClick={() => handleItemClick(item)}
                             className="btn-outline btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
                             View
                           </button>
@@ -678,7 +677,7 @@ function CustomerDashboard() {
                             <button
                               onClick={() => handleItemClick(item)}
                               className="btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                             >
                               Open
                             </button>
@@ -694,7 +693,7 @@ function CustomerDashboard() {
 
           {/* Cancelled Folders */}
           {filteredFoldersByStatus.cancelled.length > 0 && (
-            <div className="card" style={{ marginBottom: '2rem' }}>
+            <div className="card" style={{ marginBottom: '4rem' }}>
               <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Cancelled Orders</h2>
               <table>
                 <thead>
@@ -726,7 +725,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'var(--color-primary, #2563eb)' }}>{item.title}</strong>
+                        <strong style={{ color: 'var(--color-primary, #2F80ED)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -763,7 +762,7 @@ function CustomerDashboard() {
                           <button
                             onClick={() => handleItemClick(item)}
                             className="btn-outline btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
                             View
                           </button>
@@ -771,7 +770,7 @@ function CustomerDashboard() {
                             <button
                               onClick={() => handleItemClick(item)}
                               className="btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                             >
                               Open
                             </button>

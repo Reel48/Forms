@@ -813,8 +813,8 @@ function PublicFormView() {
             style={{ 
               maxWidth: '100%', 
               maxHeight: '400px', 
-              borderRadius: '12px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+              borderRadius: '24px',
+              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)'
             }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
@@ -831,8 +831,8 @@ function PublicFormView() {
             style={{ 
               maxWidth: '100%', 
               maxHeight: '400px', 
-              borderRadius: '12px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+              borderRadius: '24px',
+              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)'
             }}
           />
         </div>
@@ -1235,12 +1235,12 @@ function PublicFormView() {
             )}
             <div style={{ 
               border: '2px dashed #d1d5db', 
-              borderRadius: '8px', 
-              padding: '2rem', 
+              borderRadius: '24px', 
+              padding: '4rem', 
               textAlign: 'center',
               cursor: uploading ? 'wait' : 'pointer',
               transition: 'all 0.2s',
-              backgroundColor: value?.file_url ? '#f0fdf4' : '#f9fafb',
+              backgroundColor: value?.file_url ? '#f0fdf4' : '#F5F5F7',
               opacity: uploading ? 0.6 : 1
             }}
             onClick={() => !uploading && document.getElementById(`${fieldId}-file`)?.click()}
@@ -1298,13 +1298,13 @@ function PublicFormView() {
                       if (input) input.value = '';
                     }}
                     style={{ 
-                      marginTop: '0.5rem', 
-                      padding: '0.5rem 1rem', 
+                      marginTop: '1rem', 
+                      padding: '1rem 2rem', 
                       fontSize: '0.875rem',
                       background: 'var(--color-danger-light)',
                       color: 'var(--color-danger)',
                       border: 'none',
-                      borderRadius: '6px',
+                      borderRadius: '24px',
                       cursor: 'pointer'
                     }}
                   >
@@ -1329,13 +1329,13 @@ function PublicFormView() {
                       if (input) input.value = '';
                     }}
                     style={{ 
-                      marginTop: '0.5rem', 
-                      padding: '0.5rem 1rem', 
+                      marginTop: '1rem', 
+                      padding: '1rem 2rem', 
                       fontSize: '0.875rem',
                       background: 'var(--color-danger-light)',
                       color: 'var(--color-danger)',
                       border: 'none',
-                      borderRadius: '6px',
+                      borderRadius: '24px',
                       cursor: 'pointer'
                     }}
                   >
@@ -1509,10 +1509,10 @@ function PublicFormView() {
                   style={value === 'yes' ? {
                     borderColor: primaryColor,
                     background: backgroundType === 'gradient' 
-                      ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                      ? `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
                       : primaryColor,
                     color: 'white',
-                    boxShadow: `0 4px 12px ${primaryColor}40`,
+                    boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)',
                   } : {}}
                 >
                   <input
@@ -1544,10 +1544,10 @@ function PublicFormView() {
                   style={value === 'no' ? {
                     borderColor: primaryColor,
                     background: backgroundType === 'gradient' 
-                      ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                      ? `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
                       : primaryColor,
                     color: 'white',
-                    boxShadow: `0 4px 12px ${primaryColor}40`,
+                    boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)',
                   } : {}}
                 >
                   <input
@@ -1866,11 +1866,11 @@ function PublicFormView() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '1rem',
-                        padding: '1rem',
+                        gap: '2rem',
+                        padding: '2rem',
                         border: '2px solid #e5e7eb',
-                        borderRadius: '8px',
-                        backgroundColor: dragState.draggedIndex === displayIndex ? '#f3f4f6' : '#ffffff',
+                        borderRadius: '24px',
+                        backgroundColor: dragState.draggedIndex === displayIndex ? '#f3f4f6' : '#FFFFFF',
                         cursor: 'grab',
                         transition: 'all 0.2s',
                       }}
@@ -1919,10 +1919,11 @@ function PublicFormView() {
             {paymentAmount > 0 ? (
               <div style={{
                 border: '2px solid #e5e7eb',
-                borderRadius: '12px',
-                padding: '2rem',
-                backgroundColor: '#ffffff',
-                textAlign: 'center'
+                borderRadius: '24px',
+                padding: '4rem',
+                backgroundColor: '#FFFFFF',
+                textAlign: 'center',
+                boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)'
               }}>
                 <div style={{ marginBottom: '1.5rem' }}>
                   <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
@@ -1962,17 +1963,18 @@ function PublicFormView() {
                       }}
                       disabled={isProcessing || value?.status === 'succeeded'}
                       style={{
-                        padding: '0.75rem 2rem',
+                        padding: '1.5rem 4rem',
                         fontSize: '1rem',
                         fontWeight: '500',
                         color: '#ffffff',
                         background: isProcessing || value?.status === 'succeeded' 
                           ? '#9ca3af' 
-                          : 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%)',
+                          : 'linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-gradient) 100%)',
                         border: 'none',
-                        borderRadius: '8px',
+                        borderRadius: '24px',
                         cursor: isProcessing || value?.status === 'succeeded' ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)'
                       }}
                     >
                       {isProcessing ? 'Processing...' : value?.status === 'succeeded' ? 'Payment Complete' : 'Pay Now'}
@@ -2021,10 +2023,11 @@ function PublicFormView() {
             
             {/* CUSTOM COLOR INPUT SECTION */}
             <div style={{
-              padding: '1.5rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: '12px',
+              padding: '3rem',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
               border: '2px solid #e5e7eb',
+              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)'
             }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
                 Enter Custom Color
@@ -2053,10 +2056,10 @@ function PublicFormView() {
                     required={field.required}
                     style={{
                       width: '100%',
-                      padding: '0.75rem',
+                      padding: '1.5rem',
                       border: '2px solid #d1d5db',
-                      borderRadius: '8px',
-                      backgroundColor: '#ffffff',
+                      borderRadius: '24px',
+                      backgroundColor: '#FFFFFF',
                     }}
                   />
                 </div>
@@ -2103,7 +2106,7 @@ function PublicFormView() {
                           is_custom: true,
                         });
                       }}
-                      style={{ width: '60px', height: '48px', cursor: 'pointer', border: 'none', borderRadius: '8px' }}
+                      style={{ width: '60px', height: '48px', cursor: 'pointer', border: 'none', borderRadius: '24px' }}
                     />
                   </div>
                 </div>

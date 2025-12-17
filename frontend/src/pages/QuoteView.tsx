@@ -458,7 +458,7 @@ function QuoteView() {
             page-break-after: always;
           }
           body {
-            background: white;
+            background: #FFFFFF;
           }
           .card {
             box-shadow: none;
@@ -474,7 +474,7 @@ function QuoteView() {
         </div>
 
         {loading && (
-          <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
             <p>Loading quote...</p>
           </div>
         )}
@@ -488,7 +488,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('details')}
                     style={{
-                      padding: '1rem 1.5rem',
+                      padding: '2rem 3rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -502,7 +502,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('activities')}
                     style={{
-                      padding: '1rem 1.5rem',
+                      padding: '2rem 3rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -516,7 +516,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('comments')}
                     style={{
-                      padding: '1rem 1.5rem',
+                      padding: '2rem 3rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -530,7 +530,7 @@ function QuoteView() {
                   <button
                     onClick={() => setActiveTab('versions')}
                     style={{
-                      padding: '1rem 1.5rem',
+                      padding: '2rem 3rem',
                       border: 'none',
                       background: 'none',
                       cursor: 'pointer',
@@ -644,8 +644,8 @@ function QuoteView() {
                   <div>
                     <strong>Payment Status:</strong>{' '}
                     <span style={{ 
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '0.375rem',
+                      padding: '0.5rem 1.5rem',
+                      borderRadius: '24px',
                       backgroundColor: `${paymentStatusDetails.color}20`,
                       color: paymentStatusDetails.color,
                       fontWeight: '600',
@@ -670,12 +670,12 @@ function QuoteView() {
                       onClick={handleDeleteReminder}
                       style={{ 
                         marginLeft: '0.5rem',
-                        padding: '0.25rem 0.5rem',
+                        padding: '0.5rem 1rem',
                         fontSize: '0.75rem',
                         border: 'none',
                         background: 'var(--color-danger)',
                         color: 'white',
-                        borderRadius: '0.25rem',
+                        borderRadius: '24px',
                         cursor: 'pointer'
                       }}
                     >
@@ -688,8 +688,8 @@ function QuoteView() {
               {/* Invoice Status - Enhanced */}
               {quote.stripe_invoice_id && (
                 <div className="mb-4 p-3" style={{ 
-                  backgroundColor: paymentStatusDetails?.color === '#065f46' ? '#d1fae5' : '#e3f2fd', 
-                  borderRadius: '8px',
+                  backgroundColor: paymentStatusDetails?.color === '#065f46' ? '#d1fae5' : '#EAF2FD', 
+                  borderRadius: '24px',
                   border: `2px solid ${paymentStatusDetails?.color || 'var(--color-primary)'}` 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
@@ -734,7 +734,7 @@ function QuoteView() {
                 <>
                   {/* Payment Actions */}
                   {quote.status === 'draft' || quote.status === 'sent' || quote.status === 'viewed' ? (
-                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: '#F5F5F7', borderRadius: '24px', padding: '3rem' }}>
                       <h3>Quote Actions</h3>
                       <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                         <button onClick={handleAcceptQuote} className="btn-primary">

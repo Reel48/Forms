@@ -2,8 +2,8 @@
 
 :root {
   /* Light Mode Colors */
-  --chat-bg: #ffffff;
-  --chat-bg-secondary: #f0f4f9;
+  --chat-bg: #FFFFFF;
+  --chat-bg-secondary: #F5F5F7;
   --chat-text: #1f1f1f;
   --chat-text-secondary: #444746;
   --chat-border: #e3e3e3;
@@ -14,7 +14,7 @@
   --chat-ai-bubble: #ffffff;
   --chat-ai-text: #1f1f1f;
   --chat-input-bg: #f0f4f9;
-  --chat-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --chat-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   --sidebar-bg: #f0f4f9;
   --sidebar-item-hover: #e3e3e3;
   --sidebar-item-active: #d3e3fd;
@@ -102,11 +102,11 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
   background-color: var(--chat-bg); /* Contrast with sidebar bg */
   border: 1px solid var(--chat-border);
-  border-radius: 2rem; /* Pill shape */
+  border-radius: 24px; /* Rounded shape */
   color: var(--chat-text);
   font-size: 0.9rem;
   font-weight: 500;
@@ -134,9 +134,9 @@
 .conversation-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 1.5rem;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  border-radius: 24px;
   cursor: pointer;
   color: var(--sidebar-text);
   transition: background-color 0.2s;
@@ -408,8 +408,8 @@
 .prompt-chip {
   background-color: var(--chat-bg-secondary);
   border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 0.85rem 1.25rem;
+  border-radius: 24px;
+  padding: 1.7rem 2.5rem;
   color: var(--chat-text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
@@ -420,7 +420,7 @@
   height: 100%; /* Match height */
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
 .prompt-icon {
@@ -463,8 +463,8 @@
 }
 
 .message-content {
-  padding: 12px 18px;
-  border-radius: 20px;
+  padding: 24px 36px;
+  border-radius: 24px;
   line-height: 1.6;
   font-size: 1.05rem;
   word-wrap: break-word;
@@ -656,14 +656,14 @@
   width: 100%;
   max-width: 800px;
   background-color: var(--chat-input-bg);
-  border-radius: 2rem; /* Pill shape */
-  padding: 0.75rem 1rem;
+  border-radius: 24px; /* Rounded shape */
+  padding: 1.5rem 2rem;
   display: flex;
   align-items: center; /* Center vertically to prevent text cutoff */
-  gap: 0.75rem;
+  gap: 1.5rem;
   transition: background-color 0.2s, box-shadow 0.2s;
   border: 1px solid transparent;
-  min-height: 56px; /* Ensure container has enough height */
+  min-height: 112px; /* Ensure container has enough height */
 }
 
 .input-island:focus-within {
