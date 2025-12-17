@@ -8,7 +8,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(90deg, #5c795e 0%, #829f82 100%);
+  background: var(--color-elm-green);
   color: white;
   border: none;
   font-size: 1.5rem;
@@ -420,7 +420,7 @@
 
 .chat-widget-send {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 100%);
+  background: var(--color-elm-green);
   color: white;
   border: 2px solid var(--color-elm-green);
   border-radius: 24px;
@@ -435,7 +435,7 @@
 }
 
 .chat-widget-send:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-basil) 0%, var(--color-aspen-green) 100%);
+  background: var(--color-basil);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
   transform: translateY(-2px);
 }

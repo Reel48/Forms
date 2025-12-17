@@ -107,21 +107,21 @@
 
 .submit-button {
   width: 100%;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, var(--color-elm-green) 0%, var(--color-basil) 100%);
+  padding: var(--padding-button);
+  background: var(--color-elm-green);
   color: #ffffff;
-  border: 2px solid var(--color-elm-green);
-  border-radius: 24px;
+  border: var(--border-width-default) solid var(--color-elm-green);
+  border-radius: var(--radius-button);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   margin-top: 1rem;
-  box-shadow: 0px 8px 24px rgba(92, 121, 94, 0.4);
+  box-shadow: var(--shadow-colored);
 }
 
 .submit-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-basil) 0%, var(--color-aspen-green) 100%);
+  background: var(--color-basil);
   transform: translateY(-2px);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }

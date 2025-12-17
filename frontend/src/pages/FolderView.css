@@ -151,7 +151,7 @@
 
 /* Hero Action Card */
 .hero-action-card {
-  background: linear-gradient(135deg, #E8EBF0 0%, #a8bba2 100%);
+  background: var(--color-smoke-green);
   border: 2px solid #5c795e;
   padding: 2rem;
 }

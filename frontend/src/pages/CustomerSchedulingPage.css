@@ -389,59 +389,8 @@
   color: var(--color-text-muted, #6b7280);
 }
 
-/* Button styles */
-.btn-primary,
-.btn-outline,
-.btn-danger,
-.btn-sm {
-  padding: 0.75rem 1.5rem;
-  border-radius: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-  min-height: 88px; /* Touch-friendly */
-}
-
-.btn-primary {
-  background: var(--color-primary, #5c795e);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover, #829f82);
-}
-
-.btn-outline {
-  background: #FFFFFF;
-  color: var(--color-primary, #5c795e);
-  border-color: var(--color-primary, #5c795e);
-}
-
-.btn-outline:hover:not(:disabled) {
-  background: rgba(168, 187, 162, 0.15);
-  color: var(--color-primary, #5c795e);
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.btn-sm {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.8125rem;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* Button styles - Use global App.css button system */
+/* Removed duplicate definitions - buttons inherit from App.css */
 
 /* Mobile responsive */
 @media (max-width: 768px) {
