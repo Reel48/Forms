@@ -72,7 +72,7 @@ function processTextWithMarkdown(text: string): (string | React.ReactElement)[] 
             href: matchItem.data.url,
             target: '_blank',
             rel: 'noopener noreferrer',
-            style: { color: 'var(--color-tidewave-blue)', textDecoration: 'underline' },
+            style: { color: 'rgb(59 130 246)', textDecoration: 'underline' }, /* blue-500 */
           },
           matchItem.data.linkText
         )

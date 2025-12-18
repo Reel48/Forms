@@ -133,12 +133,12 @@
 }
 
 .error-message {
-  background-color: var(--color-terra-blush-light);
-  color: var(--color-terra-blush);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
   padding: 1rem;
   border-radius: var(--radius-input);
   margin-bottom: 1.5rem;
-  border: 1px solid var(--color-terra-blush);
+  border: 1px solid var(--color-danger);
 }
 
 .signup-link {

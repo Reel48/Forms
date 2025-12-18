@@ -748,7 +748,7 @@ function QuoteView() {
                   ) : null}
 
                   {quote.status === 'accepted' && !quote.stripe_invoice_id && quote.clients && role === 'admin' ? (
-                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: 'var(--color-verdant-pulse-light)', borderRadius: '8px' }}>
+                    <div className="mb-4 p-3 no-print" style={{ backgroundColor: 'var(--color-success-light)', borderRadius: '8px' }}>
                       <h3>Create Invoice</h3>
                       <p>This quote has been accepted. Create a Stripe invoice to collect payment.</p>
                       <button 

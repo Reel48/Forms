@@ -165,15 +165,15 @@ function TypeformImportModal({ folderId, isOpen, onClose, onImportComplete }: Ty
         {error && (
           <div
             style={{
-              backgroundColor: 'var(--color-terra-blush-light)',
-              borderColor: 'var(--color-terra-blush)',
+              backgroundColor: 'var(--color-danger-light)',
+              borderColor: 'var(--color-danger)',
               border: '1px solid',
               borderRadius: '0.375rem',
               padding: '1rem',
               marginBottom: '1rem',
             }}
           >
-            <p style={{ color: 'var(--color-terra-blush)', margin: 0 }}>{error}</p>
+            <p style={{ color: 'var(--color-danger)', margin: 0 }}>{error}</p>
           </div>
         )}
 

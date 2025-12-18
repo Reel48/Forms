@@ -13,26 +13,19 @@ We use **two color systems** working together:
 
 ## Brand Colors in Tailwind
 
-Our four brand colors are available as Tailwind utilities (use for primary/brand elements):
+Reel48 uses a single brand color for primary elements:
 
-- **Tidewave Blue** (Primary): `bg-tidewave`, `text-tidewave`, `border-tidewave`
-- **Verdant Pulse** (Success): `bg-verdant`, `text-verdant`, `border-verdant`
-- **Sunlit Saffron** (Warning): `bg-saffron`, `text-saffron`, `border-saffron`
-- **Terra Blush** (Danger/Error): `bg-blush`, `text-blush`, `border-blush`
-
-### Semantic Aliases
-
-- `bg-primary`, `text-primary` → Tidewave Blue
-- `bg-success`, `text-success` → Verdant Pulse
-- `bg-warning`, `text-warning` → Sunlit Saffron
-- `bg-danger`, `text-danger` → Terra Blush
+- **Reel48 Blue** (Primary): `bg-reel48-blue`, `text-reel48-blue`, `border-reel48-blue`
+  - Default: `#1D2134`
+  - Light: `bg-reel48-blue-light` (10% opacity)
+  - Hover: `bg-reel48-blue-hover` (`#151822`)
 
 ### Brand Color Shades
 
-Each brand color has shade variants (50-900) available:
-- `bg-tidewave-500` (default)
-- `bg-tidewave-100` (light)
-- `bg-tidewave-600` (hover/dark)
+Reel48 Blue has shade variants (50-900) available:
+- `bg-reel48-blue-500` (default: #1D2134)
+- `bg-reel48-blue-100` (light)
+- `bg-reel48-blue-600` (hover/dark)
 - etc.
 
 ## Tailwind Default Colors
@@ -165,8 +158,8 @@ Each color has 11 shades (50-950):
 
 ### Primary Actions (Use Brand Colors)
 ```tsx
-// Main CTA - Use Tidewave Blue
-<button className="bg-tidewave text-white hover:bg-tidewave-600">
+// Main CTA - Use Reel48 Blue
+<button className="bg-reel48-blue text-white hover:bg-reel48-blue-600">
   Primary Action
 </button>
 
@@ -352,7 +345,8 @@ Each color has 11 shades (50-950):
 - CSS variables remain available for JavaScript access
 - Both systems can coexist - use what makes sense
 - Tailwind's JIT mode only includes used classes in the final build
-- Brand colors are prioritized: Tidewave Blue for primary, Verdant Pulse for success, Sunlit Saffron for warnings, Terra Blush for errors
+- Reel48 Blue (#1D2134) is used for the navbar and primary brand elements
+- Utility bar uses Tailwind blue-500 (rgb(59 130 246))
 
 ## Resources
 

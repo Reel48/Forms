@@ -3,27 +3,14 @@
    ======================================== */
 
 :root {
-  /* Brand Colors - Reel48 New Palette */
+  /* Brand Colors - Reel48 */
   --brand-dark: #292c2f;
   --brand-white: #ffffff;
   
-  /* Reel48 Brand Palette - Four Core Colors */
-  --color-tidewave-blue: #2C699A;      /* Primary navbar, headings, secondary buttons, links */
-  --color-verdant-pulse: #4C7C59;      /* Utility bar, footer, New Arrival badges, hover borders */
-  --color-sunlit-saffron: #E4A84C;     /* Primary CTA buttons, Customizable badges */
-  --color-terra-blush: #C96D60;        /* Link hover, Sale badges, icons, accents */
-  
-  /* Light Variants (10% opacity backgrounds) */
-  --color-tidewave-blue-light: rgba(44, 105, 154, 0.1);
-  --color-verdant-pulse-light: rgba(76, 124, 89, 0.1);
-  --color-sunlit-saffron-light: rgba(228, 168, 76, 0.1);
-  --color-terra-blush-light: rgba(201, 109, 96, 0.1);
-  
-  /* Hover Variants (darker shades) */
-  --color-tidewave-blue-hover: #235a7a;
-  --color-verdant-pulse-hover: #3d6347;
-  --color-sunlit-saffron-hover: #d99a3f;
-  --color-terra-blush-hover: #b85a4d;
+  /* Reel48 Brand Color - Single Primary Color */
+  --color-reel48-blue: #1D2134;      /* Primary navbar, brand elements */
+  --color-reel48-blue-light: rgba(29, 33, 52, 0.1);  /* Light variant (10% opacity) */
+  --color-reel48-blue-hover: #151822;  /* Hover variant (darker) */
   
   /* Primary Colors (Blue - Tailwind Default) */
   --color-primary: rgb(59 130 246); /* blue-500 */
@@ -55,7 +42,7 @@
   --color-warning-light: rgb(254 243 199); /* amber-100 */
   
   /* Utility Bar Color */
-  --utility-bar-color: var(--color-tidewave-blue);
+  --utility-bar-color: rgb(59 130 246); /* blue-500 */
   
   /* Neutral Colors - Text */
   --color-text-main: #333333;
@@ -170,7 +157,7 @@ select:focus-visible {
 
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
-  background: var(--color-tidewave-blue);
+  background: var(--color-reel48-blue); /* #1D2134 */
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: var(--shadow-soft);
   display: flex;
@@ -320,6 +307,7 @@ select:focus-visible {
 
 /* Row 1: Top Bar (Hamburger, Search, Logo, User Info) */
 .navbar-top-row {
+  background: var(--color-reel48-blue); /* #1D2134 */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1324,7 +1312,7 @@ a:not([class]) {
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
-  background: var(--color-tidewave-blue-hover);
+  background: var(--color-reel48-blue-hover); /* #151822 */
   transform: translateY(-2px);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }
@@ -1629,75 +1617,24 @@ a:not([class]) {
    ======================================== */
 
 /* These classes bridge CSS variables with Tailwind utilities */
-/* Use Tailwind classes (bg-tidewave, text-verdant, etc.) when possible */
+/* Use Tailwind classes (bg-reel48-blue, etc.) when possible */
 /* These are provided for cases where CSS variables are needed */
 
 @layer utilities {
-  /* Brand color backgrounds using CSS variables */
-  .bg-tidewave-var {
-    background-color: rgb(59 130 246);
+  /* Reel48 Blue brand color utilities */
+  .bg-reel48-blue {
+    background-color: var(--color-reel48-blue);
   }
   
-  .bg-verdant-var {
-    background-color: var(--color-verdant-pulse);
+  .text-reel48-blue {
+    color: var(--color-reel48-blue);
   }
   
-  .bg-saffron-var {
-    background-color: var(--color-sunlit-saffron);
+  .border-reel48-blue {
+    border-color: var(--color-reel48-blue);
   }
   
-  .bg-blush-var {
-    background-color: var(--color-terra-blush);
-  }
-  
-  /* Brand color text using CSS variables */
-  .text-tidewave-var {
-    color: rgb(59 130 246);
-  }
-  
-  .text-verdant-var {
-    color: var(--color-verdant-pulse);
-  }
-  
-  .text-saffron-var {
-    color: var(--color-sunlit-saffron);
-  }
-  
-  .text-blush-var {
-    color: var(--color-terra-blush);
-  }
-  
-  /* Light variant backgrounds */
-  .bg-tidewave-light {
-    background-color: var(--color-tidewave-blue-light);
-  }
-  
-  .bg-verdant-light {
-    background-color: var(--color-verdant-pulse-light);
-  }
-  
-  .bg-saffron-light {
-    background-color: var(--color-sunlit-saffron-light);
-  }
-  
-  .bg-blush-light {
-    background-color: var(--color-terra-blush-light);
-  }
-  
-  /* Border colors */
-  .border-tidewave {
-    border-color: rgb(59 130 246);
-  }
-  
-  .border-verdant {
-    border-color: var(--color-verdant-pulse);
-  }
-  
-  .border-saffron {
-    border-color: var(--color-sunlit-saffron);
-  }
-  
-  .border-blush {
-    border-color: var(--color-terra-blush);
+  .bg-reel48-blue-light {
+    background-color: var(--color-reel48-blue-light);
   }
 }

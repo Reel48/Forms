@@ -586,11 +586,11 @@ function QuoteBuilder() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
                 style={{
-                  borderColor: validationErrors.title ? 'var(--color-terra-blush)' : undefined
+                  borderColor: validationErrors.title ? 'var(--color-danger)' : undefined
                 }}
               />
               {validationErrors.title && (
-                <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                <span style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
                   {validationErrors.title}
                 </span>
               )}
@@ -624,11 +624,11 @@ function QuoteBuilder() {
                   value={formData.tax_rate}
                   onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
                   style={{
-                    borderColor: validationErrors.tax_rate ? 'var(--color-terra-blush)' : undefined
+                    borderColor: validationErrors.tax_rate ? 'var(--color-danger)' : undefined
                   }}
                 />
                 {validationErrors.tax_rate && (
-                  <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  <span style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
                     {validationErrors.tax_rate}
                   </span>
                 )}
@@ -742,11 +742,11 @@ function QuoteBuilder() {
                               required
                               style={{
                                 width: '100%',
-                                borderColor: validationErrors[`line_item_${index}_description`] ? 'var(--color-terra-blush)' : undefined
+                                borderColor: validationErrors[`line_item_${index}_description`] ? 'var(--color-danger)' : undefined
                               }}
                             />
                             {validationErrors[`line_item_${index}_description`] && (
-                              <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                              <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
                                 {validationErrors[`line_item_${index}_description`]}
                               </span>
                             )}
@@ -762,11 +762,11 @@ function QuoteBuilder() {
                               required
                               style={{
                                 width: '100%',
-                                borderColor: validationErrors[`line_item_${index}_quantity`] ? 'var(--color-terra-blush)' : undefined
+                                borderColor: validationErrors[`line_item_${index}_quantity`] ? 'var(--color-danger)' : undefined
                               }}
                             />
                             {validationErrors[`line_item_${index}_quantity`] && (
-                              <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                              <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
                                 {validationErrors[`line_item_${index}_quantity`]}
                               </span>
                             )}
@@ -784,12 +784,12 @@ function QuoteBuilder() {
                                 required
                                 style={{
                                   flex: 1,
-                                  borderColor: validationErrors[`line_item_${index}_unit_price`] ? 'var(--color-terra-blush)' : undefined
+                                  borderColor: validationErrors[`line_item_${index}_unit_price`] ? 'var(--color-danger)' : undefined
                                 }}
                               />
                             </div>
                             {validationErrors[`line_item_${index}_unit_price`] && (
-                              <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                              <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
                                 {validationErrors[`line_item_${index}_unit_price`]}
                               </span>
                             )}
@@ -804,11 +804,11 @@ function QuoteBuilder() {
                               onChange={(e) => updateLineItem(index, 'discount_percent', e.target.value)}
                               style={{
                                 width: '100%',
-                                borderColor: validationErrors[`line_item_${index}_discount`] ? 'var(--color-terra-blush)' : undefined
+                                borderColor: validationErrors[`line_item_${index}_discount`] ? 'var(--color-danger)' : undefined
                               }}
                             />
                             {validationErrors[`line_item_${index}_discount`] && (
-                              <span style={{ color: 'var(--color-terra-blush)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                              <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
                                 {validationErrors[`line_item_${index}_discount`]}
                               </span>
                             )}
