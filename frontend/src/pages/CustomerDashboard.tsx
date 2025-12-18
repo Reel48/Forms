@@ -428,20 +428,11 @@ function CustomerDashboard() {
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => handleItemClick(item)}
-                        className="btn-outline btn-sm"
+                        className="btn-primary btn-sm"
                         style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                       >
-                        View
+                        Open
                       </button>
-                      {item.type === 'folder' && (
-                        <button
-                          onClick={() => handleItemClick(item)}
-                          className="btn-primary btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                        >
-                          Open
-                        </button>
-                      )}
                       {item.type === 'quote' && (
                         <>
                           <button
@@ -575,20 +566,11 @@ function CustomerDashboard() {
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <button
                             onClick={() => handleItemClick(item)}
-                            className="btn-outline btn-sm"
+                            className="btn-primary btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
-                            View
+                            Open
                           </button>
-                          {item.type === 'folder' && (
-                            <button
-                              onClick={() => handleItemClick(item)}
-                              className="btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                            >
-                              Open
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -668,20 +650,11 @@ function CustomerDashboard() {
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <button
                             onClick={() => handleItemClick(item)}
-                            className="btn-outline btn-sm"
+                            className="btn-primary btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
-                            View
+                            Open
                           </button>
-                          {item.type === 'folder' && (
-                            <button
-                              onClick={() => handleItemClick(item)}
-                              className="btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                            >
-                              Open
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -761,20 +734,11 @@ function CustomerDashboard() {
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <button
                             onClick={() => handleItemClick(item)}
-                            className="btn-outline btn-sm"
+                            className="btn-primary btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
                           >
-                            View
+                            Open
                           </button>
-                          {item.type === 'folder' && (
-                            <button
-                              onClick={() => handleItemClick(item)}
-                              className="btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                            >
-                              Open
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
