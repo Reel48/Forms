@@ -1685,24 +1685,15 @@ async def generate_ai_response(
                         "error": result.get("error")
                     })
                     
-                    # If we just fetched availability, immediately follow up with a 2nd message containing times.
-                    # This prevents the chat from stalling on "Let me check..." without showing options.
+                    # If we just fetched availability, use the redirect message from the result
                     if func_name == "get_availability" and result.get("success"):
-                        try:
-                            raw = result.get("result") or {}
-                            tz = _infer_timezone_from_text(user_message_for_validation or "")
-                            duration = _event_duration_minutes(func_params.get("event_type_id"))
-                            slots = _extract_slots_from_availability(raw, duration)[:15]
-                            _set_pending_action(conversation_id, {
-                                "type": "scheduling",
-                                "step": "choose_time",
-                                "event_type_id": func_params.get("event_type_id"),
-                                "timezone": tz,
-                                "availability": slots,
-                            })
-                            _insert_ai_message(conversation_id, _render_availability_message(slots, tz, limit=10))
-                        except Exception as e:
-                            logger.warning(f"Failed to post availability follow-up: {str(e)}", exc_info=True)
+                        # The _get_availability function returns a redirect message with link to scheduling page
+                        result_data = result.get("result", {})
+                        if result_data.get("message"):
+                            # Use the message directly in the AI response
+                            ai_response = result_data.get("message")
+                            # Break out of function call loop since we have the response
+                            break
 
                     # Persist audit log for AI actions (optional; requires DB migration)
                     try:
@@ -2250,23 +2241,15 @@ async def _generate_ai_response_async(
                     # Get user message for validation
                     result = action_executor.execute_function(func_name, func_params, user_message=user_query)
 
-                    # If we just fetched availability, immediately follow up with a 2nd message containing times.
+                    # If we just fetched availability, use the redirect message from the result
                     if func_name == "get_availability" and result.get("success"):
-                        try:
-                            raw = result.get("result") or {}
-                            tz = _infer_timezone_from_text(user_query or "")
-                            duration = _event_duration_minutes(func_params.get("event_type_id"))
-                            slots = _extract_slots_from_availability(raw, duration)[:15]
-                            _set_pending_action(conversation_id, {
-                                "type": "scheduling",
-                                "step": "choose_time",
-                                "event_type_id": func_params.get("event_type_id"),
-                                "timezone": tz,
-                                "availability": slots,
-                            })
-                            _insert_ai_message(conversation_id, _render_availability_message(slots, tz, limit=10))
-                        except Exception as e:
-                            logger.warning(f"Failed to post availability follow-up: {str(e)}", exc_info=True)
+                        # The _get_availability function returns a redirect message with link to scheduling page
+                        result_data = result.get("result", {})
+                        if result_data.get("message"):
+                            # Use the message directly in the AI response
+                            ai_response = result_data.get("message")
+                            # Break out of function call loop since we have the response
+                            break
 
                     # Persist audit log for AI actions (optional; requires DB migration)
                     try:

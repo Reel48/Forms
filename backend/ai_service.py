@@ -305,53 +305,10 @@ class AIService:
             },
             {
                 "name": "get_availability",
-                "description": "🚨 USE THIS FOR SCHEDULING MEETINGS ONLY! Get available time slots for scheduling a meeting with the Reel48 team. Use this IMMEDIATELY when a customer says ANY of these: 'schedule a meeting', 'book a meeting', 'meet with the team', 'talk to someone', 'set up a call', 'schedule a call', 'meet with Reel48', 'schedule time', 'book time', 'help me schedule', 'I want to schedule', 'meet with somebody', 'schedule with somebody'. DO NOT use create_quote when customer asks to schedule - use this function instead!",
+                "description": "🚨 USE THIS FOR SCHEDULING MEETINGS ONLY! When a customer wants to schedule a meeting, use this function to redirect them to the scheduling page. Use this IMMEDIATELY when a customer says ANY of these: 'schedule a meeting', 'book a meeting', 'meet with the team', 'talk to someone', 'set up a call', 'schedule a call', 'meet with Reel48', 'schedule time', 'book time', 'help me schedule', 'I want to schedule', 'meet with somebody', 'schedule with somebody'. This function will provide a message directing them to the scheduling page at https://reel48.app/scheduling. DO NOT use create_quote when customer asks to schedule - use this function instead!",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "date_from": {
-                            "type": "string",
-                            "description": "Optional: Start date in YYYY-MM-DD format (defaults to today)"
-                        },
-                        "date_to": {
-                            "type": "string",
-                            "description": "Optional: End date in YYYY-MM-DD format (defaults to 30 days from now)"
-                        },
-                        "event_type_id": {
-                            "type": "number",
-                            "description": "Optional: Event type ID to filter by specific meeting type"
-                        }
-                    }
-                }
-            },
-            {
-                "name": "schedule_meeting",
-                "description": "🚨 USE THIS FOR SCHEDULING MEETINGS ONLY! Schedule a meeting with the Reel48 team. Use this when a customer wants to book a meeting and has selected a specific time. Always use get_availability first to show available times, then use this function to book their preferred time. DO NOT use create_quote when customer asks to schedule - use get_availability and schedule_meeting instead!",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "event_type_id": {
-                            "type": "number",
-                            "description": "REQUIRED: The event type ID from Cal.com (usually 1 for standard meetings)"
-                        },
-                        "start_time": {
-                            "type": "string",
-                            "description": "REQUIRED: Start time in ISO format (YYYY-MM-DDTHH:MM:SS) or (YYYY-MM-DDTHH:MM:SSZ)"
-                        },
-                        "customer_email": {
-                            "type": "string",
-                            "description": "REQUIRED: Customer's email address"
-                        },
-                        "customer_name": {
-                            "type": "string",
-                            "description": "REQUIRED: Customer's name"
-                        },
-                        "notes": {
-                            "type": "string",
-                            "description": "Optional: Additional notes or questions for the meeting"
-                        }
-                    },
-                    "required": ["event_type_id", "start_time", "customer_email", "customer_name"]
+                    "properties": {}
                 }
             },
             {
@@ -692,7 +649,8 @@ class AIService:
                 if first_name == "get_availability":
                     response_text = "I can help with that. Let me check available meeting times for you."
                 elif first_name == "schedule_meeting":
-                    response_text = "Perfect — I’ll go ahead and book that time for you."
+                    # schedule_meeting is deprecated - redirect to scheduling page
+                    response_text = "I'd be happy to help you schedule a meeting! Please visit our scheduling page to book your preferred time."
                 elif first_name == "get_folder_shipments":
                     response_text = "I can help with that. Let me check the latest shipping status for you."
                 elif first_name == "get_delivery_status":
@@ -802,7 +760,7 @@ YOUR RESPONSIBILITIES:
 - Help customers understand our ordering process
 - Answer questions about quotes, forms, and orders
 - Provide general information about our services
-- **Help customers schedule meetings with the Reel48 team** - Use get_availability to show available times, then schedule_meeting to book
+- **Help customers schedule meetings with the Reel48 team** - Use get_availability to redirect them to the scheduling page at https://reel48.app/scheduling
 - Be helpful, friendly, and professional at all times
 - **IMPORTANT: You CAN modify/update quotes after they are created** - If you make a mistake or need to add items to an existing quote, use the update_quote function
 
@@ -815,9 +773,10 @@ YOUR RESPONSIBILITIES:
 **SCHEDULING A MEETING:**
 - Customer says: "schedule a meeting", "book a meeting", "meet with the team", "talk to someone", "set up a call", "schedule a call", "meet with Reel48", "schedule time", "book time", "help me schedule a meeting", "can I schedule", "I want to schedule", "I need to schedule", "schedule with somebody", "meet with somebody"
 - Customer wants: To have a conversation/meeting with a team member
-- What to do: IMMEDIATELY use get_availability → show times → use schedule_meeting
+- What to do: IMMEDIATELY use get_availability function which will redirect them to https://reel48.app/scheduling with a helpful message about how the scheduling page works
 - ❌❌❌ NEVER create a quote for this! ❌❌❌
 - ❌❌❌ NEVER say "I'll create a quote" when customer asks to schedule! ❌❌❌
+- ❌❌❌ NEVER try to schedule meetings directly - always redirect to the scheduling page! ❌❌❌
 
 **CREATING A QUOTE:**
 - Customer says: "place an order", "create a quote", "get a quote", "I want to order", "quote for [product]", "price for [quantity]", "I want to buy", "I need to purchase"
@@ -873,12 +832,12 @@ QUOTE/ORDER KEYWORDS (use create_quote):
 - NEVER schedule a meeting when customer asks for a quote
 
 SCHEDULING MEETINGS WORKFLOW:
-1. Customer asks to schedule a meeting → Use get_availability to show available time slots
-2. Present the available times in a clear, user-friendly format
-3. Once the customer selects a time, use schedule_meeting to book it
-4. Always confirm the booking details after scheduling (date, time, Google Meet link)
-5. You can also direct customers to the scheduling page at /scheduling for more options
-6. NEVER create a quote when scheduling a meeting
+1. Customer asks to schedule a meeting → Use get_availability function to redirect them to the scheduling page
+2. The get_availability function will provide a message with a link to https://reel48.app/scheduling
+3. Tell the customer that they can view all available times and book directly on the scheduling page
+4. Explain that once they select a time, they'll receive a confirmation email with meeting details
+5. NEVER create a quote when customer asks to schedule a meeting
+6. NEVER try to schedule meetings directly - always redirect to the scheduling page
 
 COMMUNICATION STYLE:
 - **BE CONCISE**: Keep your answers short (1-3 sentences) unless the customer explicitly asks for more detail
@@ -913,7 +872,7 @@ FUNCTION CALLING RULES
 │  └─ YES → Continue
 │     ├─ 🚨🚨🚨 FIRST CHECK: Is this about scheduling a meeting? 🚨🚨🚨
 │     │  ├─ Does customer say: "schedule", "meeting", "meet", "call", "talk", "speak", "book time"?
-│     │  │  ├─ YES → ❌ STOP! DO NOT CALL create_quote! Use get_availability and schedule_meeting instead!
+│     │  │  ├─ YES → ❌ STOP! DO NOT CALL create_quote! Use get_availability to redirect to scheduling page instead!
 │     │  │  └─ NO → Continue
 │     │  └─ NO → Continue
 │     ├─ Product details provided? (description, quantity, price)
@@ -939,7 +898,7 @@ FUNCTION CALLING RULES
 
 **WHEN TO USE FUNCTIONS:**
 
-**FOR SCHEDULING MEETINGS (get_availability, schedule_meeting):**
+**FOR SCHEDULING MEETINGS (get_availability):**
 ✅ Use when customer says:
    - "schedule a meeting"
    - "book a meeting"
@@ -968,12 +927,12 @@ FUNCTION CALLING RULES
    - "How do I...?" → Just explain the process
 
 ❌❌❌ CRITICAL - DO NOT USE create_quote FOR THESE:
-   - "Schedule a meeting" → Use get_availability and schedule_meeting, NOT create_quote!
-   - "Meet with the team" → Use get_availability and schedule_meeting, NOT create_quote!
-   - "Help me schedule" → Use get_availability and schedule_meeting, NOT create_quote!
-   - "I want to schedule" → Use get_availability and schedule_meeting, NOT create_quote!
-   - "Can you help me schedule" → Use get_availability and schedule_meeting, NOT create_quote!
-   - ANY request with "schedule", "meeting", "meet", "call", "talk", "speak" → Use scheduling functions, NOT create_quote!
+   - "Schedule a meeting" → Use get_availability to redirect to scheduling page, NOT create_quote!
+   - "Meet with the team" → Use get_availability to redirect to scheduling page, NOT create_quote!
+   - "Help me schedule" → Use get_availability to redirect to scheduling page, NOT create_quote!
+   - "I want to schedule" → Use get_availability to redirect to scheduling page, NOT create_quote!
+   - "Can you help me schedule" → Use get_availability to redirect to scheduling page, NOT create_quote!
+   - ANY request with "schedule", "meeting", "meet", "call", "talk", "speak" → Use get_availability to redirect to scheduling page, NOT create_quote!
 
 **🚨 CRITICAL FOR HAT QUOTES:**
 - **BEFORE calling create_quote for ANY hat order**, you MUST ask: "Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost."
