@@ -392,7 +392,7 @@ function CustomerDashboard() {
                     </span>
                   </td>
                   <td className="mobile-name-column">
-                    <strong style={{ color: 'rgb(16 185 129)' }}>{item.title}</strong>
+                    <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
                   </td>
                   <td className="mobile-status-column">
                     {getStatusBadge(item.status, item.type)}
@@ -530,7 +530,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'rgb(16 185 129)' }}>{item.title}</strong>
+                        <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -614,7 +614,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'rgb(16 185 129)' }}>{item.title}</strong>
+                        <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
@@ -698,7 +698,7 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="mobile-name-column">
-                        <strong style={{ color: 'rgb(16 185 129)' }}>{item.title}</strong>
+                        <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
                       </td>
                       <td>
                         {getStatusBadge(item.status, item.type)}
