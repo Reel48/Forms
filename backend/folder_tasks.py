@@ -108,27 +108,50 @@ def build_customer_tasks(
 ) -> List[Dict[str, Any]]:
     """
     Build the customer-facing tasks list for a folder/order.
+    
+    Order of operations:
+    1. Forms (Before Delivery) - priority 5
+    2. E-signatures - priority 20
+    3. Quotes - priority 30
+    4. Forms (After Delivery) - priority 40
+    5. Files - priority 50
 
     NOTE: This is intentionally deterministic and used across backend summary + chat tool
     to keep customer messaging consistent.
     """
     tasks: List[Dict[str, Any]] = []
 
-    # Quote task (review/pay)
-    if quote and quote.get("id"):
-        unpaid = not _is_paid(quote.get("payment_status"))
+    # Split forms by delivery_timing
+    forms_before_delivery = []
+    forms_after_delivery = []
+    
+    for form in forms or []:
+        delivery_timing = form.get("delivery_timing", "before_delivery")
+        if delivery_timing == "after_delivery":
+            forms_after_delivery.append(form)
+        else:
+            # Default to before_delivery if not specified
+            forms_before_delivery.append(form)
+
+    # 1. Forms (Before Delivery) - priority 5
+    for form in forms_before_delivery:
+        form_id = form.get("id")
+        if not form_id:
+            continue
+        name = form.get("name") or "Form"
         tasks.append({
-            "id": "task_quote_payment",
-            "kind": "quote",
-            "priority": 10,
-            "title": "Review and pay your quote" if unpaid else "Quote paid",
-            "description": f"Quote {quote.get('quote_number')}" if quote.get("quote_number") else None,
-            "status": "incomplete" if unpaid else "complete",
+            "id": f"task_form_{form_id}",
+            "kind": "form",
+            "priority": 5,
+            "title": f"Complete form: {name}",
+            "description": None,
+            "status": "complete" if form.get("is_completed") else "incomplete",
             "owner": "customer",
-            "deeplink": f"/quotes/{quote.get('id')}",
+            "deeplink": f"/forms/{form_id}",
+            "delivery_timing": "before_delivery",
         })
 
-    # E-signature tasks
+    # 2. E-signature tasks - priority 20
     for esig in esignatures or []:
         esig_id = esig.get("id")
         if not esig_id:
@@ -145,8 +168,22 @@ def build_customer_tasks(
             "deeplink": f"/esignature/{esig_id}",
         })
 
-    # Form tasks
-    for form in forms or []:
+    # 3. Quote task (review/pay) - priority 30
+    if quote and quote.get("id"):
+        unpaid = not _is_paid(quote.get("payment_status"))
+        tasks.append({
+            "id": "task_quote_payment",
+            "kind": "quote",
+            "priority": 30,
+            "title": "Review and pay your quote" if unpaid else "Quote paid",
+            "description": f"Quote {quote.get('quote_number')}" if quote.get("quote_number") else None,
+            "status": "incomplete" if unpaid else "complete",
+            "owner": "customer",
+            "deeplink": f"/quotes/{quote.get('id')}",
+        })
+
+    # 4. Forms (After Delivery) - priority 40
+    for form in forms_after_delivery:
         form_id = form.get("id")
         if not form_id:
             continue
@@ -154,21 +191,22 @@ def build_customer_tasks(
         tasks.append({
             "id": f"task_form_{form_id}",
             "kind": "form",
-            "priority": 30,
+            "priority": 40,
             "title": f"Complete form: {name}",
             "description": None,
             "status": "complete" if form.get("is_completed") else "incomplete",
             "owner": "customer",
             "deeplink": f"/forms/{form_id}",
+            "delivery_timing": "after_delivery",
         })
 
-    # File review task (aggregate)
+    # 5. File review task (aggregate) - priority 50
     if int(files_total or 0) > 0:
         complete = int(files_viewed or 0) >= int(files_total or 0)
         tasks.append({
             "id": "task_files_review",
             "kind": "file_review",
-            "priority": 40,
+            "priority": 50,
             "title": "Review files",
             "description": f"Viewed {int(files_viewed or 0)} of {int(files_total or 0)}",
             "status": "complete" if complete else "incomplete",

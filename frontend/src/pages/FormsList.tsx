@@ -549,6 +549,7 @@ function FormsList() {
                 <th>Submissions</th>
                 <th>Status</th>
                 {role === 'admin' && <th>Priority</th>}
+                {role === 'admin' && <th>Delivery Timing</th>}
                 {role === 'admin' && <th>Assigned To</th>}
                 <th>Created</th>
                 <th>Actions</th>
@@ -647,6 +648,34 @@ function FormsList() {
                       >
                         <option value="normal">Normal</option>
                         <option value="high">High</option>
+                      </select>
+                    </td>
+                  )}
+                  {role === 'admin' && (
+                    <td>
+                      <select
+                        id={`form-delivery-timing-${form.id}`}
+                        name={`form-delivery-timing-${form.id}`}
+                        value={form.delivery_timing || 'before_delivery'}
+                        onChange={async (e) => {
+                          try {
+                            await formsAPI.update(form.id, { delivery_timing: e.target.value as 'before_delivery' | 'after_delivery' });
+                            loadForms();
+                          } catch (error) {
+                            console.error('Failed to update delivery timing:', error);
+                            alert('Failed to update delivery timing. Please try again.');
+                          }
+                        }}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.875rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="before_delivery">Before Delivery</option>
+                        <option value="after_delivery">After Delivery</option>
                       </select>
                     </td>
                   )}

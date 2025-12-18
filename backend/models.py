@@ -317,6 +317,7 @@ class FormBase(BaseModel):
     status: str = "draft"  # draft, published, archived
     priority: Optional[str] = "normal"  # normal, high
     is_template: bool = True  # True for reusable templates, False for project-specific instances
+    delivery_timing: Optional[str] = "before_delivery"  # before_delivery, after_delivery
     public_url_slug: Optional[str] = None
     theme: Dict[str, Any] = {}
     settings: Dict[str, Any] = {}
@@ -337,6 +338,7 @@ class FormUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
+    delivery_timing: Optional[str] = None
     theme: Optional[Dict[str, Any]] = None
     settings: Optional[Dict[str, Any]] = None
     welcome_screen: Optional[Dict[str, Any]] = None

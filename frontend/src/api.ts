@@ -229,6 +229,7 @@ export interface Form {
   status: string; // draft, published, archived
   priority?: string;
   is_template?: boolean; // True for reusable templates, False for project-specific instances
+  delivery_timing?: 'before_delivery' | 'after_delivery'; // When the form should be completed
   public_url_slug?: string;
   theme?: Record<string, any>;
   settings?: Record<string, any>;
@@ -249,6 +250,7 @@ export interface FormCreate {
   name: string;
   description?: string;
   status?: string;
+  delivery_timing?: 'before_delivery' | 'after_delivery';
   public_url_slug?: string;
   theme?: Record<string, any>;
   settings?: Record<string, any>;
@@ -262,6 +264,7 @@ export interface FormUpdate {
   description?: string;
   status?: string;
   priority?: string;
+  delivery_timing?: 'before_delivery' | 'after_delivery';
   theme?: Record<string, any>;
   settings?: Record<string, any>;
   welcome_screen?: Record<string, any>;
