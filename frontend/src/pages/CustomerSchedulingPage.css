@@ -174,13 +174,20 @@
 .event-type-select {
   width: 100%;
   max-width: 400px;
-  padding: 1.5rem;
+  padding: 0.625rem 0.75rem;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 24px;
+  border-radius: 8px;
   font-size: 0.875rem;
   background: #FFFFFF;
   color: var(--color-text, #1f2937);
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.event-type-select:focus {
+  outline: none;
+  border-color: rgb(59 130 246);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* Scheduler wrapper for side-by-side layout */
