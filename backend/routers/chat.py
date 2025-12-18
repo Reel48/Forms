@@ -1752,6 +1752,7 @@ async def generate_ai_response(
                         quote_info = result.get("result", {})
                         quote_id = quote_info.get("quote_id", "")
                         folder_id = quote_info.get("folder_id", "")
+                        quote_response = None  # Initialize for use in form assignment
                         
                         # Fetch full quote details for detailed message
                         try:
@@ -1843,12 +1844,30 @@ async def generate_ai_response(
                             pass
                         
                         # Auto-assign appropriate design form based on order type
-                        if folder_id and "line_items" in func_params:
+                        # Use line_items from the quote response (already fetched above) or fallback to func_params
+                        if folder_id:
                             try:
-                                line_items = func_params.get("line_items", [])
-                                if isinstance(line_items, list) and len(line_items) > 0:
+                                # Try to get line_items from quote response first (more reliable)
+                                quote_line_items = []
+                                if quote_response and quote_response.data:
+                                    quote_line_items = quote_response.data.get("line_items", [])
+                                
+                                # Fallback to func_params if quote line_items not available
+                                if not quote_line_items and "line_items" in func_params:
+                                    quote_line_items = func_params.get("line_items", [])
+                                
+                                # Convert quote line_items format to list of dicts with description
+                                line_items_for_detection = []
+                                if quote_line_items:
+                                    for item in quote_line_items:
+                                        if isinstance(item, dict):
+                                            line_items_for_detection.append({
+                                                "description": item.get("description", "")
+                                            })
+                                
+                                if line_items_for_detection:
                                     # Determine order type from line items
-                                    order_type = _detect_order_type(line_items)
+                                    order_type = _detect_order_type(line_items_for_detection)
                                     form_slug = None
                                     
                                     if order_type == "hat":
@@ -1861,10 +1880,14 @@ async def generate_ai_response(
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
                                         }, user_message=None)
-                                        # Form is automatically added to folder - no need to mention it in response
-                                        logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
+                                        if assign_result.get("success"):
+                                            logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
+                                        else:
+                                            logger.error(f"Failed to auto-assign {form_slug} to folder {folder_id}: {assign_result.get('error')}")
+                                else:
+                                    logger.warning(f"No line items found to determine order type for folder {folder_id}")
                             except Exception as e:
-                                logger.warning(f"Could not auto-assign form: {str(e)}")
+                                logger.error(f"Could not auto-assign form to folder {folder_id}: {str(e)}", exc_info=True)
                     
                     # If function failed, update response with error info
                     elif not result.get("success"):
@@ -2307,6 +2330,7 @@ async def _generate_ai_response_async(
                         quote_info = result.get("result", {})
                         quote_id = quote_info.get("quote_id", "")
                         folder_id = quote_info.get("folder_id", "")
+                        quote_response = None  # Initialize for use in form assignment
                         
                         # Fetch full quote details for detailed message
                         try:
@@ -2398,12 +2422,30 @@ async def _generate_ai_response_async(
                             pass
                         
                         # Auto-assign appropriate design form based on order type
-                        if folder_id and "line_items" in func_params:
+                        # Use line_items from the quote response (already fetched above) or fallback to func_params
+                        if folder_id:
                             try:
-                                line_items = func_params.get("line_items", [])
-                                if isinstance(line_items, list) and len(line_items) > 0:
+                                # Try to get line_items from quote response first (more reliable)
+                                quote_line_items = []
+                                if quote_response and quote_response.data:
+                                    quote_line_items = quote_response.data.get("line_items", [])
+                                
+                                # Fallback to func_params if quote line_items not available
+                                if not quote_line_items and "line_items" in func_params:
+                                    quote_line_items = func_params.get("line_items", [])
+                                
+                                # Convert quote line_items format to list of dicts with description
+                                line_items_for_detection = []
+                                if quote_line_items:
+                                    for item in quote_line_items:
+                                        if isinstance(item, dict):
+                                            line_items_for_detection.append({
+                                                "description": item.get("description", "")
+                                            })
+                                
+                                if line_items_for_detection:
                                     # Determine order type from line items
-                                    order_type = _detect_order_type(line_items)
+                                    order_type = _detect_order_type(line_items_for_detection)
                                     form_slug = None
                                     
                                     if order_type == "hat":
@@ -2416,10 +2458,14 @@ async def _generate_ai_response_async(
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
                                         }, user_message=None)
-                                        # Form is automatically added to folder - no need to mention it in response
-                                        logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
+                                        if assign_result.get("success"):
+                                            logger.info(f"Auto-assigned {form_slug} to folder {folder_id} for {order_type} order")
+                                        else:
+                                            logger.error(f"Failed to auto-assign {form_slug} to folder {folder_id}: {assign_result.get('error')}")
+                                else:
+                                    logger.warning(f"No line items found to determine order type for folder {folder_id}")
                             except Exception as e:
-                                logger.warning(f"Could not auto-assign form: {str(e)}")
+                                logger.error(f"Could not auto-assign form to folder {folder_id}: {str(e)}", exc_info=True)
                     
                     # If function failed, update response with error info
                     elif not result.get("success"):
