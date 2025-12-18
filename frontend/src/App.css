@@ -158,7 +158,6 @@ select:focus-visible {
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
   background: var(--color-reel48-blue); /* #1D2134 */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
@@ -307,13 +306,11 @@ select:focus-visible {
 
 /* Row 1: Top Bar (Hamburger, Search, Logo, User Info) */
 .navbar-top-row {
-  background: var(--color-reel48-blue); /* #1D2134 */
+  background: var(--color-reel48-blue) !important; /* #1D2134 */
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem 0;
-  background: rgb(59 130 246);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   min-height: 70px;
   gap: 1.5rem;
   position: relative;
