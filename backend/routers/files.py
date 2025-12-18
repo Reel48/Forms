@@ -5,6 +5,9 @@ import sys
 import os
 import uuid
 import hashlib
+import zipfile
+import io
+from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import File, FileCreate, FileUpdate, FileFolderAssignment, FileFolderAssignmentCreate
 from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
@@ -194,6 +197,86 @@ async def get_file(file_id: str, user = Depends(get_current_user)):
         print(f"Error getting file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get file: {str(e)}")
 
+async def _upload_single_file(
+    file_content: bytes,
+    filename: str,
+    content_type: Optional[str],
+    folder_id: Optional[str],
+    quote_id: Optional[str],
+    form_id: Optional[str],
+    description: Optional[str],
+    is_reusable: bool,
+    user_id: str
+) -> dict:
+    """Helper function to upload a single file to storage and database."""
+    # Generate unique filename
+    file_hash = hashlib.md5(file_content).hexdigest()[:8]
+    file_extension = filename.split('.')[-1] if '.' in filename else ''
+    file_id = str(uuid.uuid4())
+    unique_filename = f"{file_id}/{file_hash}_{uuid.uuid4().hex[:8]}.{file_extension}" if file_extension else f"{file_id}/{file_hash}_{uuid.uuid4().hex[:8]}"
+    
+    # Upload to Supabase Storage (bucket: project-files)
+    try:
+        supabase_storage.storage.from_("project-files").upload(
+            unique_filename,
+            file_content,
+            file_options={
+                "content-type": content_type or "application/octet-stream",
+                "upsert": "false"
+            }
+        )
+        print(f"File uploaded successfully: {unique_filename}")
+    except Exception as storage_error:
+        error_msg = str(storage_error)
+        print(f"Storage upload error: {error_msg}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload file to storage: {error_msg}"
+        )
+    
+    # Get signed URL (temporary, expires in 1 hour)
+    try:
+        signed_url_result = supabase_storage.storage.from_("project-files").create_signed_url(unique_filename, 3600)
+        if isinstance(signed_url_result, dict):
+            signed_url = signed_url_result.get("signedURL") or signed_url_result.get("signed_url") or signed_url_result.get("url")
+        elif isinstance(signed_url_result, str):
+            signed_url = signed_url_result
+        else:
+            signed_url = getattr(signed_url_result, "signedURL", None) or getattr(signed_url_result, "signed_url", None) or getattr(signed_url_result, "url", None)
+    except Exception as url_error:
+        print(f"Warning: Could not get signed URL: {str(url_error)}")
+        signed_url = None
+    
+    # Create file record in database
+    file_data = {
+        "id": file_id,
+        "name": filename or "Untitled",
+        "original_filename": filename or "Untitled",
+        "file_type": content_type or "application/octet-stream",
+        "file_size": len(file_content),
+        "storage_path": unique_filename,
+        "storage_url": signed_url,
+        "folder_id": folder_id,
+        "quote_id": quote_id,
+        "form_id": form_id,
+        "description": description,
+        "is_reusable": is_reusable,
+        "uploaded_by": user_id
+    }
+    
+    # Use service role client to bypass RLS (user is already authenticated)
+    response = supabase_storage.table("files").insert(file_data).execute()
+    
+    if not response.data:
+        # Try to delete uploaded file if database insert fails
+        try:
+            supabase_storage.storage.from_("project-files").remove([unique_filename])
+        except:
+            pass
+        raise HTTPException(status_code=500, detail="Failed to create file record")
+    
+    return response.data[0]
+
 @router.post("/upload", response_model=File)
 async def upload_file(
     file: UploadFile = FastAPIFile(...),
@@ -205,6 +288,11 @@ async def upload_file(
     user = Depends(get_current_user)
 ):
     """Upload a file to Supabase Storage.
+    
+    Supports:
+    - Individual files (images, documents, etc.)
+    - ZIP files (extracts and uploads all files inside)
+    - Folders (when uploading multiple files)
     
     If folder_id is provided:
     - File is folder-specific (is_reusable=False)
@@ -247,84 +335,122 @@ async def upload_file(
             # Default to reusable if not specified
             if is_reusable is None:
                 is_reusable = True
-        # Validate file size
+        
+        # Read file content
         file_content = await file.read()
         if len(file_content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail=f"File size exceeds {MAX_FILE_SIZE / (1024*1024)}MB limit")
         
-        # Generate unique filename
-        file_hash = hashlib.md5(file_content).hexdigest()[:8]
-        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
-        file_id = str(uuid.uuid4())
-        unique_filename = f"{file_id}/{file_hash}_{uuid.uuid4().hex[:8]}.{file_extension}" if file_extension else f"{file_id}/{file_hash}_{uuid.uuid4().hex[:8]}"
+        # Check if file is a ZIP file
+        filename_lower = (file.filename or "").lower()
+        is_zip = filename_lower.endswith('.zip') or file.content_type in ['application/zip', 'application/x-zip-compressed']
         
-        # Upload to Supabase Storage (bucket: project-files)
-        try:
-            response = supabase_storage.storage.from_("project-files").upload(
-                unique_filename,
-                file_content,
-                file_options={
-                    "content-type": file.content_type or "application/octet-stream",
-                    "upsert": "false"
-                }
-            )
-            print(f"File uploaded successfully: {unique_filename}")
-        except Exception as storage_error:
-            error_msg = str(storage_error)
-            print(f"Storage upload error: {error_msg}")
-            if "bucket" in error_msg.lower() or "not found" in error_msg.lower():
-                raise HTTPException(
-                    status_code=500, 
-                    detail="Storage bucket 'project-files' not configured. Please create it in Supabase Storage dashboard."
-                )
-            elif "permission" in error_msg.lower() or "policy" in error_msg.lower():
-                raise HTTPException(
-                    status_code=500,
-                    detail="Storage permissions not configured. Please check Supabase Storage policies for 'project-files' bucket."
-                )
-            else:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to upload file to storage: {error_msg}"
-                )
-        
-        # Get signed URL (temporary, expires in 1 hour)
-        try:
-            signed_url = supabase_storage.storage.from_("project-files").create_signed_url(unique_filename, 3600)
-        except Exception as url_error:
-            print(f"Warning: Could not get signed URL: {str(url_error)}")
-            signed_url = None
-        
-        # Create file record in database
-        # Use supabase_storage (service role) to bypass RLS since we've already verified the user
-        file_data = {
-            "id": file_id,
-            "name": file.filename or "Untitled",
-            "original_filename": file.filename or "Untitled",
-            "file_type": file.content_type or "application/octet-stream",
-            "file_size": len(file_content),
-            "storage_path": unique_filename,
-            "storage_url": signed_url,
-            "folder_id": folder_id,
-            "quote_id": quote_id,
-            "form_id": form_id,
-            "description": description,
-            "is_reusable": is_reusable,  # Use the provided value (defaults to True)
-            "uploaded_by": user["id"]
-        }
-        
-        # Use service role client to bypass RLS (user is already authenticated)
-        response = supabase_storage.table("files").insert(file_data).execute()
-        
-        if not response.data:
-            # Try to delete uploaded file if database insert fails
+        if is_zip:
+            # Extract and upload all files from ZIP
             try:
-                supabase_storage.storage.from_("project-files").remove([unique_filename])
-            except:
+                zip_file = zipfile.ZipFile(io.BytesIO(file_content))
+                extracted_files = []
+                errors = []
+                
+                for zip_info in zip_file.namelist():
+                    # Skip directories
+                    if zip_info.endswith('/'):
+                        continue
+                    
+                    try:
+                        # Read file from ZIP
+                        extracted_content = zip_file.read(zip_info)
+                        
+                        # Skip empty files
+                        if len(extracted_content) == 0:
+                            continue
+                        
+                        # Validate extracted file size
+                        if len(extracted_content) > MAX_FILE_SIZE:
+                            errors.append(f"{zip_info}: File size exceeds {MAX_FILE_SIZE / (1024*1024)}MB limit")
+                            continue
+                        
+                        # Determine content type from extension
+                        ext = zip_info.split('.')[-1] if '.' in zip_info else ''
+                        content_type_map = {
+                            'jpg': 'image/jpeg',
+                            'jpeg': 'image/jpeg',
+                            'png': 'image/png',
+                            'gif': 'image/gif',
+                            'pdf': 'application/pdf',
+                            'txt': 'text/plain',
+                            'doc': 'application/msword',
+                            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        }
+                        extracted_content_type = content_type_map.get(ext.lower(), 'application/octet-stream')
+                        
+                        # Upload extracted file
+                        uploaded_file = await _upload_single_file(
+                            file_content=extracted_content,
+                            filename=zip_info.split('/')[-1],  # Get just the filename, not the path
+                            content_type=extracted_content_type,
+                            folder_id=folder_id,
+                            quote_id=quote_id,
+                            form_id=form_id,
+                            description=description,
+                            is_reusable=is_reusable,
+                            user_id=user["id"]
+                        )
+                        extracted_files.append(uploaded_file)
+                        
+                        # Create folder event for each extracted file
+                        if folder_id:
+                            try:
+                                supabase_storage.table("folder_events").insert({
+                                    "id": str(uuid.uuid4()),
+                                    "folder_id": folder_id,
+                                    "event_type": "file_uploaded",
+                                    "title": f"File uploaded: {uploaded_file.get('name') or 'File'}",
+                                    "details": {"file_id": uploaded_file.get("id"), "name": uploaded_file.get("name"), "storage_path": uploaded_file.get("storage_path")},
+                                    "created_by": user.get("id"),
+                                    "created_at": datetime.now().isoformat(),
+                                }).execute()
+                            except Exception:
+                                pass
+                    except Exception as e:
+                        errors.append(f"{zip_info}: {str(e)}")
+                        continue
+                
+                zip_file.close()
+                
+                if not extracted_files:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="ZIP file is empty or contains no valid files" + (f". Errors: {'; '.join(errors)}" if errors else "")
+                    )
+                
+                # Return the first uploaded file (or could return a list)
+                # For now, return the first file to maintain compatibility
+                result = extracted_files[0]
+                if len(extracted_files) > 1:
+                    # Log that multiple files were extracted
+                    print(f"Extracted {len(extracted_files)} files from ZIP. Returning first file.")
+                
+                return result
+                
+            except zipfile.BadZipFile:
+                # Not a valid ZIP file, treat as regular file
                 pass
-            raise HTTPException(status_code=500, detail="Failed to create file record")
-
-        created_file = response.data[0]
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to extract ZIP file: {str(e)}")
+        
+        # Regular file upload (not a ZIP or ZIP extraction failed)
+        uploaded_file = await _upload_single_file(
+            file_content=file_content,
+            filename=file.filename or "Untitled",
+            content_type=file.content_type,
+            folder_id=folder_id,
+            quote_id=quote_id,
+            form_id=form_id,
+            description=description,
+            is_reusable=is_reusable,
+            user_id=user["id"]
+        )
 
         # Best-effort folder event (only for folder uploads, not templates)
         if folder_id:
@@ -333,15 +459,15 @@ async def upload_file(
                     "id": str(uuid.uuid4()),
                     "folder_id": folder_id,
                     "event_type": "file_uploaded",
-                    "title": f"File uploaded: {created_file.get('name') or 'File'}",
-                    "details": {"file_id": created_file.get("id"), "name": created_file.get("name"), "storage_path": created_file.get("storage_path")},
+                    "title": f"File uploaded: {uploaded_file.get('name') or 'File'}",
+                    "details": {"file_id": uploaded_file.get("id"), "name": uploaded_file.get("name"), "storage_path": uploaded_file.get("storage_path")},
                     "created_by": user.get("id"),
                     "created_at": datetime.now().isoformat(),
                 }).execute()
             except Exception:
                 pass
 
-        return created_file
+        return uploaded_file
     except HTTPException:
         raise
     except Exception as e:
