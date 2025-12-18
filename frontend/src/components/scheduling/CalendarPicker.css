@@ -6,7 +6,7 @@
   /* Remove the small max-width we set earlier */
   max-width: none;
   background: #FFFFFF;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 24px;
   padding: 1.5rem;
   box-shadow: 0px 4px 16px rgba(92, 121, 94, 0.2);
@@ -16,8 +16,8 @@
 }
 
 .calendar-picker:hover {
-  border-color: rgb(59 130 246); /* indigo-500 */
-  box-shadow: 0px 8px 24px rgba(59, 130, 246, 0.3);
+  border-color: var(--color-border, #e5e7eb);
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-header {
@@ -40,7 +40,7 @@
 
 .calendar-nav-btn:hover:not(:disabled) {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: rgb(59 130 246); /* indigo-500 */
+  border-color: var(--color-border, #e5e7eb);
 }
 
 .calendar-nav-btn:disabled {
@@ -109,25 +109,25 @@
 
 .calendar-day.clickable:hover:not(:disabled) {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: rgb(59 130 246); /* indigo-500 */
+  border-color: var(--color-border, #9ca3af);
   transform: scale(1.05);
   z-index: 1;
 }
 
 .calendar-day.today {
   background: #E8EBF0;
-  border-color: rgb(59 130 246); /* indigo-500 */
+  border-color: var(--color-text-muted, #6b7280);
   border-width: 2px;
 }
 
 .calendar-day.today .calendar-day-number {
-  color: rgb(59 130 246);
+  color: var(--color-text, #1f2937);
   font-weight: 700;
 }
 
 .calendar-day.selected {
-  background: rgb(59 130 246);
-  border-color: rgb(59 130 246); /* indigo-500 */
+  background: var(--color-text, #1f2937);
+  border-color: var(--color-text, #1f2937);
   color: white;
 }
 

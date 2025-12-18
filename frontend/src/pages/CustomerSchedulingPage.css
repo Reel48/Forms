@@ -1,6 +1,6 @@
 .scheduling-page {
   width: 100%;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 1.5rem;
   box-sizing: border-box;
@@ -14,7 +14,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: rgb(59 130 246);
+  color: var(--color-text, #1f2937);
 }
 
 .page-header p {
@@ -147,7 +147,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: rgb(59 130 246);
+  color: var(--color-text, #1f2937);
 }
 
 .booking-widget-container > p {
@@ -165,7 +165,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgb(59 130 246);
+  color: var(--color-text, #1f2937);
   margin-bottom: 0.5rem;
 }
 
