@@ -205,7 +205,7 @@
 }
 
 .empty-messages::before {
-  content: '💬';
+  content: '';
   font-size: 3rem;
   opacity: 0.3;
 }
@@ -271,7 +271,7 @@
 }
 
 .message-ai .message-content::before {
-  content: '🤖';
+  content: '';
   position: absolute;
   left: -2rem;
   top: 50%;
@@ -493,7 +493,7 @@
 }
 
 .no-conversation-selected::before {
-  content: '💬';
+  content: '';
   font-size: 3rem;
   opacity: 0.3;
 }

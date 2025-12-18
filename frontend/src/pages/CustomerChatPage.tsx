@@ -429,20 +429,22 @@ const CustomerChatPage: React.FC = () => {
       
       const messageResponse = await chatAPI.sendMessage(messagePayload);
       
-      // If this was a new conversation, set it up
-      if (!conversation?.id) {
-        const newConvId = messageResponse.data?.conversation_id;
-        if (newConvId) {
+      // Get the conversation_id from the response
+      const responseConvId = messageResponse.data?.conversation_id;
+      
+      // If this was a new conversation, or if the conversation_id changed (conversation was deleted and recreated), set it up
+      if (!conversation?.id || (responseConvId && responseConvId !== conversation.id)) {
+        if (responseConvId) {
           try {
             const convsResponse = await chatAPI.getConversations();
             if (convsResponse.data) {
-              const newConv = convsResponse.data.find(c => c.id === newConvId);
+              const newConv = convsResponse.data.find(c => c.id === responseConvId);
               if (newConv) {
                 setConversation(newConv);
-                await loadMessages(newConvId);
-                setupRealtimeSubscriptions(newConvId);
+                await loadMessages(responseConvId);
+                setupRealtimeSubscriptions(responseConvId);
               } else {
-                console.warn('Conversation not found after creation:', newConvId);
+                console.warn('Conversation not found after creation:', responseConvId);
                 // Reload conversations to get the new one
                 const updatedConvsResponse = await chatAPI.getConversations();
                 if (updatedConvsResponse.data && updatedConvsResponse.data.length > 0) {
@@ -620,15 +622,15 @@ const CustomerChatPage: React.FC = () => {
                 </div>
                 <div className="suggested-prompts">
                   <button className="prompt-chip" onClick={() => sendMessage("What does Reel48 do?")}>
-                    <span className="prompt-icon">ℹ️</span>
+                    <span className="prompt-icon"></span>
                     <span>What does Reel48 do?</span>
                   </button>
                   <button className="prompt-chip" onClick={() => sendMessage("How long will my hats take to be delivered?")}>
-                    <span className="prompt-icon">🚚</span>
+                    <span className="prompt-icon"></span>
                     <span>How long will my hats take to be delivered?</span>
                   </button>
                   <button className="prompt-chip" onClick={() => sendMessage("Give me a quote for 500 custom hats.")}>
-                    <span className="prompt-icon">💰</span>
+                    <span className="prompt-icon"></span>
                     <span>Get a quote for 500 custom hats</span>
                   </button>
                 </div>

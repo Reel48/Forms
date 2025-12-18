@@ -115,16 +115,16 @@ const ChatPage: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📨 Messages subscription status:', status);
+        console.log('Messages subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to chat messages via Realtime');
+          console.log('Successfully subscribed to chat messages via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to chat messages:', status);
-          console.error('💡 Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
+          console.error('Error subscribing to chat messages:', status);
+          console.error('Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
         } else if (status === 'TIMED_OUT') {
-          console.warn('⏱️ Realtime subscription timed out, will retry');
+          console.warn('Realtime subscription timed out, will retry');
         } else if (status === 'CLOSED') {
-          console.warn('🔌 Realtime subscription closed');
+          console.warn('Realtime subscription closed');
         }
       });
 
@@ -148,16 +148,16 @@ const ChatPage: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('💬 Conversations subscription status:', status);
+        console.log('Conversations subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to chat conversations via Realtime');
+          console.log('Successfully subscribed to chat conversations via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to chat conversations:', status);
-          console.error('💡 Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
+          console.error('Error subscribing to chat conversations:', status);
+          console.error('Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
         } else if (status === 'TIMED_OUT') {
-          console.warn('⏱️ Realtime subscription timed out, will retry');
+          console.warn('Realtime subscription timed out, will retry');
         } else if (status === 'CLOSED') {
-          console.warn('🔌 Realtime subscription closed');
+          console.warn('Realtime subscription closed');
         }
       });
 
@@ -181,7 +181,7 @@ const ChatPage: React.FC = () => {
     
     if ('Notification' in window && Notification.permission === 'granted') {
       const messagePreview = message.message_type === 'file' || message.message_type === 'image'
-        ? `📎 ${message.file_name || 'File'}`
+        ? `${message.file_name || 'File'}`
         : message.message.length > 50
         ? message.message.substring(0, 50) + '...'
         : message.message;
@@ -248,7 +248,7 @@ const ChatPage: React.FC = () => {
       .subscribe((status) => {
         console.log('Admin: Global conversations subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Admin successfully subscribed to all conversations via Realtime');
+          console.log('Admin successfully subscribed to all conversations via Realtime');
         }
       });
 

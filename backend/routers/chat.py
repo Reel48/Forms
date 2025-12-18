@@ -866,18 +866,33 @@ async def send_message(
         is_admin = user.get("role") == "admin"
         
         # Get or create conversation
+        conversation_id = None
+        
         if message.conversation_id:
             # Verify conversation exists and user has access
-            conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", message.conversation_id).single().execute()
-            if not conv_response.data:
-                raise HTTPException(status_code=404, detail="Conversation not found")
+            # Use execute() instead of single() to avoid exceptions when conversation doesn't exist
+            conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", message.conversation_id).execute()
             
-            conv = conv_response.data
-            if not is_admin and conv["customer_id"] != user["id"]:
-                raise HTTPException(status_code=403, detail="Access denied")
-            
-            conversation_id = message.conversation_id
-        else:
+            if not conv_response.data or len(conv_response.data) == 0:
+                # Conversation doesn't exist (likely deleted)
+                if is_admin:
+                    # Admins must specify a valid conversation_id
+                    raise HTTPException(status_code=404, detail="Conversation not found")
+                else:
+                    # For customers, if their conversation was deleted, create a new one
+                    logger.warning(f"Conversation {message.conversation_id} not found for customer {user['id']}, creating new conversation")
+                    # Fall through to create new conversation logic below
+                    conversation_id = None  # Will be set in the else block
+            else:
+                # Conversation exists, verify access
+                conv = conv_response.data[0]
+                if not is_admin and conv["customer_id"] != user["id"]:
+                    raise HTTPException(status_code=403, detail="Access denied")
+                
+                conversation_id = message.conversation_id
+        
+        # Handle case where conversation_id was not found (conversation was deleted) or not provided
+        if not conversation_id:
             # Customer creating new conversation or getting existing one
             if is_admin:
                 raise HTTPException(status_code=400, detail="Admins must specify conversation_id")
@@ -1080,7 +1095,7 @@ async def send_message(
 
                         # Trigger AI response asynchronously using BackgroundTasks.
                         # This ensures the task completes even after the request returns.
-                        logger.info(f"🔵 Triggering AI response for conversation {conversation_id}, customer {user['id']}")
+                        logger.info(f"Triggering AI response for conversation {conversation_id}, customer {user['id']}")
                         try:
                             background_tasks.add_task(
                                 _generate_ai_response_async,
@@ -1089,10 +1104,10 @@ async def send_message(
                                 placeholder_id,
                                 message_data["id"],
                             )
-                            logger.info("✅ AI response task added to background tasks")
+                            logger.info("AI response task added to background tasks")
                         except Exception as task_error:
                             logger.error(
-                                f"❌ Failed to add AI response to background tasks: {str(task_error)}",
+                                f"Failed to add AI response to background tasks: {str(task_error)}",
                                 exc_info=True,
                             )
             except Exception as e:
@@ -1649,7 +1664,7 @@ async def generate_ai_response(
                     if "line_items" in func_params:
                         logger.info(f"line_items type: {type(func_params['line_items'])}, length: {len(func_params['line_items']) if isinstance(func_params['line_items'], list) else 'N/A'}, value: {func_params['line_items']}")
                     else:
-                        logger.warning(f"⚠️ line_items MISSING from function params! Available keys: {list(func_params.keys())}")
+                        logger.warning(f"line_items MISSING from function params! Available keys: {list(func_params.keys())}")
                     logger.info(f"Full params (sanitized): { {k: v for k, v in func_params.items() if k != 'client_id'} }")
                     
                     # Get user message for validation (get from most recent customer message)
@@ -1827,7 +1842,7 @@ async def generate_ai_response(
                                 folder_link = f"{frontend_url}/folders/{folder_id}"
                                 quote_link = f"{frontend_url}/quotes/{quote_id}" if quote_id else ""
                                 ai_response = (
-                                    "✅ **Quote created**\n\n"
+                                    "**Quote created**\n\n"
                                     f"- [View folder]({folder_link})\n"
                                     + (f"- [View quote]({quote_link})\n" if quote_link else "")
                                     + "\n"
@@ -1866,7 +1881,7 @@ async def generate_ai_response(
                         if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
                             ai_response = f"I encountered an issue while trying to create your quote: {error_msg}. Please try again or contact support."
                         else:
-                            ai_response += f"\n\n⚠️ Note: There was an issue: {error_msg}"
+                            ai_response += f"\n\nNote: There was an issue: {error_msg}"
             
             except Exception as e:
                 logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
@@ -1939,7 +1954,7 @@ async def _generate_ai_response_async(
         try:
             supabase_storage.table("chat_messages").delete().eq("id", placeholder_message_id).execute()
         except Exception as e:
-            logger.warning(f"⚠️ [AI TASK] Failed to delete placeholder message {placeholder_message_id}: {str(e)}")
+            logger.warning(f"[AI TASK] Failed to delete placeholder message {placeholder_message_id}: {str(e)}")
 
     def _update_placeholder_to_error(error_text: str) -> None:
         if not placeholder_message_id:
@@ -1950,11 +1965,11 @@ async def _generate_ai_response_async(
                 "message_type": "text"
             }).eq("id", placeholder_message_id).execute()
         except Exception as e:
-            logger.warning(f"⚠️ [AI TASK] Failed to update placeholder message {placeholder_message_id}: {str(e)}")
+            logger.warning(f"[AI TASK] Failed to update placeholder message {placeholder_message_id}: {str(e)}")
 
     # Use print as well as logger to ensure we see this in logs
-    print(f"🤖 [AI TASK] Starting AI response generation (request_id={request_id}) for conversation {conversation_id}, customer {customer_id}")
-    logger.info(f"🤖 [AI TASK] Starting AI response generation (request_id={request_id}) for conversation {conversation_id}, customer {customer_id}")
+    print(f"[AI TASK] Starting AI response generation (request_id={request_id}) for conversation {conversation_id}, customer {customer_id}")
+    logger.info(f"[AI TASK] Starting AI response generation (request_id={request_id}) for conversation {conversation_id}, customer {customer_id}")
     try:
         # Small delay to ensure message is saved
         logger.info(f"Waiting 1.5 seconds before generating AI response...")
@@ -2109,18 +2124,18 @@ async def _generate_ai_response_async(
         
         # Generate AI response
         try:
-            print(f"🤖 [AI TASK] Getting AI service...")
-            logger.info(f"🤖 [AI TASK] Getting AI service...")
+            print(f"[AI TASK] Getting AI service...")
+            logger.info(f"[AI TASK] Getting AI service...")
             ai_service = get_ai_service()
             if not ai_service:
-                print(f"❌ [AI TASK] AI service is not available")
-                logger.error(f"❌ [AI TASK] AI service is not available")
+                print(f"[AI TASK] AI service is not available")
+                logger.error(f"[AI TASK] AI service is not available")
                 _update_placeholder_to_error("Reel48 AI is temporarily unavailable right now. Please try again in a moment.")
                 return
-            print(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
-            logger.info(f"🤖 [AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
-            logger.info(f"🤖 [AI TASK] Context retrieved (length: {len(context)} chars)")
-            print(f"🤖 [AI TASK] Calling generate_response...")
+            print(f"[AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
+            logger.info(f"[AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
+            logger.info(f"[AI TASK] Context retrieved (length: {len(context)} chars)")
+            print(f"[AI TASK] Calling generate_response...")
             ai_result = ai_service.generate_response(
                 user_message=user_query,
                 conversation_history=conversation_history,
@@ -2139,24 +2154,24 @@ async def _generate_ai_response_async(
                 ai_response = ai_result.get("response", "")
                 function_calls = ai_result.get("function_calls", [])
             
-            print(f"🤖 [AI TASK] Response received: {len(ai_response) if ai_response else 0} chars, {len(function_calls)} function calls")
+            print(f"[AI TASK] Response received: {len(ai_response) if ai_response else 0} chars, {len(function_calls)} function calls")
             if not ai_response or len(ai_response.strip()) == 0:
-                print(f"⚠️ [AI TASK] AI service returned empty response")
-                logger.warning(f"⚠️ [AI TASK] AI service returned empty response")
+                print(f"[AI TASK] AI service returned empty response")
+                logger.warning(f"[AI TASK] AI service returned empty response")
                 _update_placeholder_to_error("Reel48 AI returned an empty response. Please try again.")
                 return
-            print(f"✅ [AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
-            logger.info(f"✅ [AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
+            print(f"[AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
+            logger.info(f"[AI TASK] AI response generated successfully (length: {len(ai_response)} chars)")
         except ValueError as ve:
-            print(f"❌ [AI TASK] AI service not configured: {str(ve)}")
-            logger.error(f"❌ [AI TASK] AI service not configured: {str(ve)}", exc_info=True)
+            print(f"[AI TASK] AI service not configured: {str(ve)}")
+            logger.error(f"[AI TASK] AI service not configured: {str(ve)}", exc_info=True)
             _update_placeholder_to_error("Reel48 AI is temporarily unavailable right now. Please try again in a moment.")
             return
         except Exception as ai_error:
-            print(f"❌ [AI TASK] Error calling AI service: {str(ai_error)}")
-            logger.error(f"❌ [AI TASK] Error calling AI service: {str(ai_error)}", exc_info=True)
+            print(f"[AI TASK] Error calling AI service: {str(ai_error)}")
+            logger.error(f"[AI TASK] Error calling AI service: {str(ai_error)}", exc_info=True)
             import traceback
-            print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
+            print(f"[AI TASK] Traceback: {traceback.format_exc()}")
             _update_placeholder_to_error("Reel48 AI ran into an error generating a response. Please try again.")
             return
         
@@ -2229,7 +2244,7 @@ async def _generate_ai_response_async(
                     if "line_items" in func_params:
                         logger.info(f"line_items type: {type(func_params['line_items'])}, length: {len(func_params['line_items']) if isinstance(func_params['line_items'], list) else 'N/A'}, value: {func_params['line_items']}")
                     else:
-                        logger.warning(f"⚠️ line_items MISSING from function params! Available keys: {list(func_params.keys())}")
+                        logger.warning(f"line_items MISSING from function params! Available keys: {list(func_params.keys())}")
                     logger.info(f"Full params (sanitized): { {k: v for k, v in func_params.items() if k != 'client_id'} }")
                     
                     # Get user message for validation
@@ -2390,7 +2405,7 @@ async def _generate_ai_response_async(
                                 folder_link = f"{frontend_url}/folders/{folder_id}"
                                 quote_link = f"{frontend_url}/quotes/{quote_id}" if quote_id else ""
                                 ai_response = (
-                                    "✅ **Quote created**\n\n"
+                                    "**Quote created**\n\n"
                                     f"- [View folder]({folder_link})\n"
                                     + (f"- [View quote]({quote_link})\n" if quote_link else "")
                                     + "\n"
@@ -2429,7 +2444,7 @@ async def _generate_ai_response_async(
                         if ai_response == "I'll help you with that. Let me create the quote and set everything up for you.":
                             ai_response = f"I encountered an issue while trying to create your quote: {error_msg}. Please try again or contact support."
                         else:
-                            ai_response += f"\n\n⚠️ Note: There was an issue: {error_msg}"
+                            ai_response += f"\n\nNote: There was an issue: {error_msg}"
             
             except Exception as e:
                 logger.error(f"Error executing function calls: {str(e)}", exc_info=True)
@@ -2453,9 +2468,9 @@ async def _generate_ai_response_async(
                     }
                 supabase_storage.table("chat_messages").update(update_payload).eq("id", placeholder_message_id).execute()
                 updated_placeholder = True
-                logger.info(f"✅ [AI TASK] Placeholder message updated with final AI response")
+                logger.info(f"[AI TASK] Placeholder message updated with final AI response")
             except Exception as e:
-                logger.warning(f"⚠️ [AI TASK] Failed to finalize placeholder message {placeholder_message_id}: {str(e)}")
+                logger.warning(f"[AI TASK] Failed to finalize placeholder message {placeholder_message_id}: {str(e)}")
 
         if not updated_placeholder:
             # Fallback: best-effort cleanup then insert a new AI message
@@ -2478,12 +2493,12 @@ async def _generate_ai_response_async(
                     "file_size": file_message_override.get("file_size"),
                 })
 
-            print("🤖 [AI TASK] Inserting AI message into database...")
-            logger.info("🤖 [AI TASK] Inserting AI message into database...")
+            print("[AI TASK] Inserting AI message into database...")
+            logger.info("[AI TASK] Inserting AI message into database...")
             message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
             if not message_response.data:
-                print("❌ [AI TASK] Failed to insert AI message - no data returned")
-                logger.error("❌ [AI TASK] Failed to insert AI message - no data returned")
+                print("[AI TASK] Failed to insert AI message - no data returned")
+                logger.error("[AI TASK] Failed to insert AI message - no data returned")
                 return
 
             # If we attached a PDF, follow up with a short action card with deep links.
@@ -2491,7 +2506,7 @@ async def _generate_ai_response_async(
                 try:
                     frontend_url = (os.getenv("FRONTEND_URL") or "").rstrip("/")
                     if frontend_url and (created_folder_id or created_quote_id):
-                        lines = ["✅ **Quote created**"]
+                        lines = ["**Quote created**"]
                         if created_folder_id:
                             lines.append(f"- [View folder]({frontend_url}/folders/{created_folder_id})")
                         if created_quote_id:
@@ -2506,12 +2521,12 @@ async def _generate_ai_response_async(
                     "last_message_at": datetime.now().isoformat(),
                     "updated_at": datetime.now().isoformat(),
                 }).eq("id", conversation_id).execute()
-                logger.info("✅ [AI TASK] Conversation timestamp updated")
+                logger.info("[AI TASK] Conversation timestamp updated")
             except Exception as e:
-                logger.warning(f"⚠️ [AI TASK] Failed to update conversation timestamp: {str(e)}")
+                logger.warning(f"[AI TASK] Failed to update conversation timestamp: {str(e)}")
 
-            print(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
-            logger.info(f"✅ [AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+            print(f"[AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
+            logger.info(f"[AI TASK] AI response successfully generated and saved for conversation {conversation_id}")
 
         # Update rolling conversation summary (optional; can be disabled)
         try:
@@ -2531,8 +2546,8 @@ async def _generate_ai_response_async(
             logger.debug(f"Failed to update chat summary for conversation {conversation_id}: {str(e)}")
     
     except Exception as e:
-        print(f"❌ [AI TASK] Error generating AI response asynchronously: {str(e)}")
-        logger.error(f"❌ [AI TASK] Error generating AI response asynchronously: {str(e)}", exc_info=True)
+        print(f"[AI TASK] Error generating AI response asynchronously: {str(e)}")
+        logger.error(f"[AI TASK] Error generating AI response asynchronously: {str(e)}", exc_info=True)
         import traceback
-        print(f"❌ [AI TASK] Traceback: {traceback.format_exc()}")
+        print(f"[AI TASK] Traceback: {traceback.format_exc()}")
         _update_placeholder_to_error("Reel48 AI ran into an error generating a response. Please try again.")
