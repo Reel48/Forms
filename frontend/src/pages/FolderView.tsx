@@ -783,7 +783,10 @@ const FolderView: React.FC = () => {
                         <tr
                           key={file.id}
                           style={{ cursor: 'pointer' }}
-                          onClick={() => navigate(`/files/${file.id}`)}
+                          onClick={() => {
+                            console.log('Clicking on file:', file.id, file.name);
+                            navigate(`/files/${file.id}`);
+                          }}
                         >
                           <td className="mobile-name-column">
                             <strong style={{ color: 'rgb(16 185 129)' }}>{file.name}</strong>

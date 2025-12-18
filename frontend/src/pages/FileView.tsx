@@ -34,18 +34,26 @@ function FileView() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Loading file with ID:', id);
       const response = await filesAPI.getById(id!);
+      console.log('File loaded:', response.data);
       setFile(response.data);
 
       // Get preview URL
       try {
+        console.log('Getting preview URL for file:', id);
         const previewResponse = await filesAPI.getPreview(id!);
+        console.log('Preview URL received:', previewResponse.data.preview_url);
         setPreviewUrl(previewResponse.data.preview_url);
-      } catch (previewError) {
-        console.warn('Could not get preview URL:', previewError);
+      } catch (previewError: any) {
+        console.error('Could not get preview URL:', previewError);
+        console.error('Preview error details:', previewError?.response?.data);
+        // Don't fail the whole page if preview fails, but show a warning
+        setError('File loaded but preview is not available. You can still download the file.');
       }
     } catch (error: any) {
       console.error('Failed to load file:', error);
+      console.error('Error details:', error?.response?.data);
       setError(error?.response?.data?.detail || error?.message || 'Failed to load file.');
     } finally {
       setLoading(false);
