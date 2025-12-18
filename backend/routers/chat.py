@@ -1868,14 +1868,10 @@ async def generate_ai_response(
                                 if line_items_for_detection:
                                     # Determine order type from line items
                                     order_type = _detect_order_type(line_items_for_detection)
-                                    form_slug = None
                                     
+                                    # Only assign form for hat orders (coozie form not available yet)
                                     if order_type == "hat":
                                         form_slug = "form-4f8ml8om"  # Custom Hat Design Form
-                                    elif order_type == "coozie":
-                                        form_slug = "form-rwljka86"  # Custom Coozie Design Form
-                                    
-                                    if form_slug:
                                         assign_result = action_executor.execute_function("assign_form_to_folder", {
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
@@ -2446,14 +2442,10 @@ async def _generate_ai_response_async(
                                 if line_items_for_detection:
                                     # Determine order type from line items
                                     order_type = _detect_order_type(line_items_for_detection)
-                                    form_slug = None
                                     
+                                    # Only assign form for hat orders (coozie form not available yet)
                                     if order_type == "hat":
                                         form_slug = "form-4f8ml8om"  # Custom Hat Design Form
-                                    elif order_type == "coozie":
-                                        form_slug = "form-rwljka86"  # Custom Coozie Design Form
-                                    
-                                    if form_slug:
                                         assign_result = action_executor.execute_function("assign_form_to_folder", {
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
