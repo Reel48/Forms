@@ -318,13 +318,11 @@ function CustomerSchedulingPage() {
                   onDateSelect={setSelectedDate}
                   eventTypeId={selectedEventType?.id}
                 />
-                {selectedDate && (
-                  <TimeSlotSelector
-                    selectedDate={selectedDate}
-                    onTimeSlotSelect={handleTimeSlotSelect}
-                    eventTypeId={selectedEventType?.id}
-                  />
-                )}
+                <TimeSlotSelector
+                  selectedDate={selectedDate}
+                  onTimeSlotSelect={handleTimeSlotSelect}
+                  eventTypeId={selectedEventType?.id}
+                />
               </div>
 
               {selectedDate && (

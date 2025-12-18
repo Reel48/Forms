@@ -109,25 +109,25 @@
 
 .calendar-day.clickable:hover:not(:disabled) {
   background: var(--color-bg-secondary, rgba(168, 187, 162, 0.15));
-  border-color: var(--color-border, #9ca3af);
+  border-color: rgb(59 130 246); /* indigo-500 */
   transform: scale(1.05);
   z-index: 1;
 }
 
 .calendar-day.today {
   background: #E8EBF0;
-  border-color: var(--color-text-muted, #6b7280);
+  border-color: rgb(59 130 246); /* indigo-500 */
   border-width: 2px;
 }
 
 .calendar-day.today .calendar-day-number {
-  color: var(--color-text, #1f2937);
+  color: rgb(59 130 246);
   font-weight: 700;
 }
 
 .calendar-day.selected {
-  background: var(--color-text, #1f2937);
-  border-color: var(--color-text, #1f2937);
+  background: rgb(59 130 246);
+  border-color: rgb(59 130 246); /* indigo-500 */
   color: white;
 }
 

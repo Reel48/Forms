@@ -73,6 +73,29 @@
   opacity: 0.7;
 }
 
+/* Grouped time slots (when no date is selected) */
+.time-slots-grouped {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.time-slot-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.time-slot-date-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .time-slot-selector {
