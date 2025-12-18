@@ -433,7 +433,7 @@ function QuoteView() {
     
     const status = quote.payment_status.toLowerCase();
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
-      'paid': { label: 'Paid', color: 'rgb(16 185 129)', icon: '' }, /* emerald-500 */
+      'paid': { label: 'Paid', color: 'rgb(59 130 246)', icon: '' }, /* blue-500 */
       'unpaid': { label: 'Unpaid', color: 'rgb(245 158 11)', icon: '' }, /* amber-500 */
       'partially_paid': { label: 'Partially Paid', color: 'rgb(251 191 36)', icon: '' }, /* yellow-400 */
       'refunded': { label: 'Refunded', color: 'rgb(168 85 247)', icon: '' }, /* purple-500 */
@@ -681,7 +681,7 @@ function QuoteView() {
               {/* Invoice Status - Enhanced */}
               {quote.stripe_invoice_id && (
                 <div className="mb-4 p-3" style={{ 
-                  backgroundColor: paymentStatusDetails?.color === 'rgb(16 185 129)' ? 'rgb(209 250 229)' : paymentStatusDetails?.color === 'rgb(239 68 68)' || paymentStatusDetails?.color === 'rgb(220 38 38)' ? 'rgb(254 226 226)' : paymentStatusDetails?.color === 'rgb(245 158 11)' || paymentStatusDetails?.color === 'rgb(251 191 36)' ? 'rgb(254 243 199)' : 'rgb(219 234 254)', /* emerald-100, red-100, yellow-100, blue-100 */ 
+                  backgroundColor: paymentStatusDetails?.color === 'rgb(59 130 246)' ? 'rgb(219 234 254)' : paymentStatusDetails?.color === 'rgb(239 68 68)' || paymentStatusDetails?.color === 'rgb(220 38 38)' ? 'rgb(254 226 226)' : paymentStatusDetails?.color === 'rgb(245 158 11)' || paymentStatusDetails?.color === 'rgb(251 191 36)' ? 'rgb(254 243 199)' : 'rgb(219 234 254)', /* blue-100, red-100, yellow-100, blue-100 */ 
                   borderRadius: '24px',
                   border: `2px solid ${paymentStatusDetails?.color || 'rgb(59 130 246)'}` 
                 }}>

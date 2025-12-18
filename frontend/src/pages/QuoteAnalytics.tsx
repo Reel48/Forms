@@ -91,14 +91,14 @@ function QuoteAnalytics() {
         
         <div className="card">
           <h3 style={{ marginTop: 0, fontSize: '1rem', color: '#6b7280' }}>Accepted Quotes</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'rgb(59 130 246)' }}>
             {analytics.accepted_quotes}
           </div>
         </div>
         
         <div className="card">
           <h3 style={{ marginTop: 0, fontSize: '1rem', color: '#6b7280' }}>Accepted Value</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'rgb(59 130 246)' }}>
             {currencySymbol}{parseFloat(analytics.accepted_value || '0').toFixed(2)}
           </div>
         </div>

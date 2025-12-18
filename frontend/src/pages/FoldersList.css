@@ -70,8 +70,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: rgb(16 185 129); /* emerald-500 */
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
+  border-color: rgb(59 130 246); /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .filter-controls {
@@ -93,8 +93,8 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: rgb(16 185 129); /* emerald-500 */
-  box-shadow: 0 0 0 3px var(--color-primary-focus, rgba(92, 121, 94, 0.1));
+  border-color: rgb(59 130 246); /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .empty-state {
@@ -127,7 +127,7 @@
 .folder-card:hover {
   box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.08));
   transform: translateY(-1px);
-  border-color: rgb(16 185 129); /* emerald-500 */
+  border-color: rgb(59 130 246); /* blue-500 */
 }
 
 .folder-header {

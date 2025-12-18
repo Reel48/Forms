@@ -253,8 +253,8 @@
 .btn-secondary-outline {
   padding: 0.5rem 1rem;
   background-color: white;
-  color: rgb(16 185 129); /* emerald-500 */
-  border: 1.5px solid rgb(16 185 129); /* emerald-500 */
+  color: rgb(59 130 246); /* blue-500 */
+  border: 1.5px solid rgb(59 130 246); /* blue-500 */
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -263,8 +263,8 @@
 }
 
 .btn-secondary-outline:hover:not(:disabled) {
-  background-color: rgb(209 250 229); /* emerald-100 */
-  border-color: rgb(5 150 105); /* emerald-600 */
+  background-color: rgb(219 234 254); /* blue-100 */
+  border-color: rgb(37 99 235); /* blue-600 */
 }
 
 .btn-secondary-outline:disabled {

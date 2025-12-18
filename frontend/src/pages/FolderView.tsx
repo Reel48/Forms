@@ -789,7 +789,7 @@ const FolderView: React.FC = () => {
                           }}
                         >
                           <td className="mobile-name-column">
-                            <strong style={{ color: 'rgb(16 185 129)' }}>{file.name}</strong>
+                            <strong style={{ color: 'rgb(59 130 246)' }}>{file.name}</strong>
                           </td>
                           <td>
                             {file.is_completed ? (
@@ -1064,18 +1064,18 @@ const FolderView: React.FC = () => {
                               style={{
                                 flex: 1,
                                 padding: '0.25rem 0.5rem',
-                                border: '1px solid rgb(16 185 129)',
+                                border: '1px solid rgb(59 130 246)',
                                 borderRadius: '4px',
                                 fontSize: '1rem',
                                 fontWeight: '600',
-                                color: 'rgb(16 185 129)'
+                                color: 'rgb(59 130 246)'
                               }}
                             />
                           </div>
                         ) : (
                           <strong
                             style={{
-                              color: 'rgb(16 185 129)',
+                              color: 'rgb(59 130 246)',
                               cursor: 'pointer'
                             }}
                             onDoubleClick={(e) => {
@@ -1232,13 +1232,13 @@ const FolderView: React.FC = () => {
                       </td>
                       <td className="mobile-name-column">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: 'rgb(16 185 129)' }}>{form.name}</strong>
+                          <strong style={{ color: 'rgb(59 130 246)' }}>{form.name}</strong>
                           {form.is_template && (
                             <span style={{ 
                               fontSize: '0.75rem', 
                               padding: '0.125rem 0.375rem', 
                               backgroundColor: '#E8EBF0', 
-                              color: 'rgb(16 185 129)', 
+                              color: 'rgb(59 130 246)', 
                               borderRadius: '0.25rem',
                               fontWeight: 500
                             }}>
@@ -1317,13 +1317,13 @@ const FolderView: React.FC = () => {
                       </td>
                       <td className="mobile-name-column">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: 'rgb(16 185 129)' }}>{esig.name}</strong>
+                          <strong style={{ color: 'rgb(59 130 246)' }}>{esig.name}</strong>
                           {esig.is_template && (
                             <span style={{ 
                               fontSize: '0.75rem', 
                               padding: '0.125rem 0.375rem', 
                               backgroundColor: '#E8EBF0', 
-                              color: 'rgb(16 185 129)', 
+                              color: 'rgb(59 130 246)', 
                               borderRadius: '0.25rem',
                               fontWeight: 500
                             }}>

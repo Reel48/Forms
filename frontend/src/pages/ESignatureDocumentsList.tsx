@@ -159,7 +159,7 @@ const ESignatureDocumentsList: React.FC = () => {
                   onClick={() => navigate(`/esignature/${doc.id}`)}
                 >
                   <td className="mobile-name-column">
-                    <strong style={{ color: 'rgb(16 185 129)' }}>{doc.name}</strong>
+                    <strong style={{ color: 'rgb(59 130 246)' }}>{doc.name}</strong>
                     {doc.description && (
                       <div className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
                         {doc.description}
@@ -221,7 +221,7 @@ const ESignatureDocumentsList: React.FC = () => {
                             handleAssignToFolder(doc);
                           }}
                           title="Use this template in a folder"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'rgb(16 185 129)', borderColor: 'rgb(16 185 129)' }}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'rgb(59 130 246)', borderColor: 'rgb(59 130 246)' }}
                         >
                           Use Template
                         </button>

@@ -32,10 +32,10 @@
   --color-danger-hover: rgb(220 38 38); /* red-600 */
   --color-danger-light: rgb(254 226 226); /* red-100 */
   
-  /* Success Colors (Emerald - Tailwind Default) */
-  --color-success: rgb(16 185 129); /* emerald-500 */
-  --color-success-hover: rgb(5 150 105); /* emerald-600 */
-  --color-success-light: rgb(209 250 229); /* emerald-100 */
+  /* Success Colors (Blue) */
+  --color-success: rgb(59 130 246); /* blue-500 */
+  --color-success-hover: rgb(37 99 235); /* blue-600 */
+  --color-success-light: rgb(219 234 254); /* blue-100 */
   
   /* Warning Colors (Amber - Tailwind Default) */
   --color-warning: rgb(245 158 11); /* amber-500 */

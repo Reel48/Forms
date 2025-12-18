@@ -176,7 +176,7 @@ function AdminCalendarView() {
                         key={booking.id}
                         className="calendar-booking-dot"
                         style={{
-                          backgroundColor: booking.status === 'confirmed' ? '#10b981' : '#ef4444'
+                          backgroundColor: booking.status === 'confirmed' ? 'rgb(59 130 246)' : '#ef4444'
                         }}
                         title={`${formatTime(booking.start_time)} - ${booking.customer_name}`}
                       />

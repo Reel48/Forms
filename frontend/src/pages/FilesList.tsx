@@ -218,11 +218,11 @@ function FilesList() {
                           style={{
                             flex: 1,
                             padding: '0.25rem 0.5rem',
-                            border: '1px solid rgb(16 185 129)',
+                            border: '1px solid rgb(59 130 246)',
                             borderRadius: '4px',
                             fontSize: '1rem',
                             fontWeight: '600',
-                            color: 'rgb(16 185 129)'
+                            color: 'rgb(59 130 246)'
                           }}
                         />
                       </div>

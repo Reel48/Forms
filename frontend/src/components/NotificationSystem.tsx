@@ -81,7 +81,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 'rgb(59 130 246)'
               }`,
               color: 
-                notification.type === 'success' ? 'rgb(16 185 129)' :
+                notification.type === 'success' ? 'rgb(59 130 246)' :
                 notification.type === 'error' ? 'rgb(239 68 68)' :
                 notification.type === 'warning' ? 'rgb(245 158 11)' :
                 'rgb(59 130 246)',

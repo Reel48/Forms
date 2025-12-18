@@ -65,7 +65,7 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ folderId }) => {
 
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
-    if (statusLower === 'delivered') return 'rgb(16 185 129)'; /* emerald-500 */
+    if (statusLower === 'delivered') return 'rgb(59 130 246)'; /* blue-500 */
     if (statusLower === 'in_transit' || statusLower === 'transit') return 'rgb(59 130 246)'; /* blue-500 */
     if (statusLower === 'exception' || statusLower === 'error') return 'rgb(239 68 68)'; /* red-500 */
     return 'rgb(107 114 128)'; /* gray-500 - Neutral grey */
