@@ -8,9 +8,9 @@
   --brand-white: #ffffff;
   
   /* Reel48 Brand Color - Single Primary Color */
-  --color-reel48-blue: #1D2134;      /* Primary navbar, brand elements */
-  --color-reel48-blue-light: rgba(29, 33, 52, 0.1);  /* Light variant (10% opacity) */
-  --color-reel48-blue-hover: #151822;  /* Hover variant (darker) */
+  --color-reel48-blue: #1B2B41;      /* Primary navbar, brand elements */
+  --color-reel48-blue-light: rgba(27, 43, 65, 0.1);  /* Light variant (10% opacity) */
+  --color-reel48-blue-hover: #15202e;  /* Hover variant (darker) */
   
   /* Primary Colors (Blue - Tailwind Default) */
   --color-primary: rgb(59 130 246); /* blue-500 */
@@ -157,7 +157,7 @@ select:focus-visible {
 
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
-  background: var(--color-reel48-blue); /* #1D2134 */
+  background: var(--color-reel48-blue); /* #1B2B41 */
   box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
@@ -306,7 +306,7 @@ select:focus-visible {
 
 /* Row 1: Top Bar (Hamburger, Search, Logo, User Info) */
 .navbar-top-row {
-  background: var(--color-reel48-blue) !important; /* #1D2134 */
+  background: var(--color-reel48-blue) !important; /* #1B2B41 */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1309,7 +1309,7 @@ a:not([class]) {
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
-  background: var(--color-reel48-blue-hover); /* #151822 */
+  background: var(--color-reel48-blue-hover); /* #15202e */
   transform: translateY(-2px);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }
