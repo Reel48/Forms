@@ -275,7 +275,10 @@ async def _upload_single_file(
             pass
         raise HTTPException(status_code=500, detail="Failed to create file record")
     
-    return response.data[0]
+    created_file = response.data[0]
+    print(f"File record created successfully: id={created_file.get('id')}, folder_id={created_file.get('folder_id')}, is_reusable={created_file.get('is_reusable')}, name={created_file.get('name')}")
+    
+    return created_file
 
 @router.post("/upload", response_model=File)
 async def upload_file(

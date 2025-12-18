@@ -1200,8 +1200,16 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
         files = []
         try:
             # Get only folder-specific files (directly assigned, not reusable)
-            files_response = supabase_storage.table("files").select("*").eq("folder_id", folder_id).eq("is_reusable", False).execute()
+            # Order by created_at descending to show newest first
+            # Use explicit False comparison to handle None values
+            files_response = supabase_storage.table("files").select("*").eq("folder_id", folder_id).eq("is_reusable", False).order("created_at", desc=True).execute()
             files = files_response.data if files_response.data else []
+            logger.info(f"Found {len(files)} files for folder {folder_id} (query: folder_id={folder_id}, is_reusable=False)")
+            
+            # Debug: Log file details if any found
+            if files:
+                for f in files[:3]:  # Log first 3 files
+                    logger.info(f"  - File: {f.get('name')} (id={f.get('id')}, folder_id={f.get('folder_id')}, is_reusable={f.get('is_reusable')})")
             
             # Check completion status for each file
             # For admins: check if ANY user has viewed it

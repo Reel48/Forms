@@ -202,16 +202,26 @@ const FolderView: React.FC = () => {
 
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
-        await filesAPI.upload(file, {
+        const response = await filesAPI.upload(file, {
           folder_id: id,
           // is_reusable will be automatically set to false by backend when folder_id is provided
         });
+        console.log('File uploaded:', response.data);
+        return response.data;
       });
 
-      await Promise.all(uploadPromises);
+      const uploadedFiles = await Promise.all(uploadPromises);
+      console.log('All files uploaded:', uploadedFiles);
+      
+      // Small delay to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Reload folder content to show the new files
       await loadFolderContent();
-      alert('Files uploaded successfully!');
+      
+      alert(`Successfully uploaded ${uploadedFiles.length} file(s)!`);
     } catch (err: any) {
+      console.error('Upload error:', err);
       const errorMessage = err.response?.data?.detail || 'Failed to upload files';
       setError(errorMessage);
       alert(`Upload failed: ${errorMessage}`);
@@ -390,7 +400,7 @@ const FolderView: React.FC = () => {
     );
   }
 
-  const { folder, quote, files, forms, esignatures, summary } = content;
+  const { folder, quote, files = [], forms = [], esignatures = [], summary } = content || {};
   const actionRequired = summary?.next_step_owner === 'customer';
   const etaDate = summary?.shipping?.actual_delivery_date || summary?.shipping?.estimated_delivery_date;
   const openShipments = summary?.stage === 'shipped' || summary?.stage === 'delivered';
