@@ -214,12 +214,19 @@ const FolderView: React.FC = () => {
       console.log('All files uploaded:', uploadedFiles);
       
       // Small delay to ensure database consistency
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Reload folder content to show the new files
       await loadFolderContent();
       
-      alert(`Successfully uploaded ${uploadedFiles.length} file(s)!`);
+      // Show success message with file count
+      const fileCount = uploadedFiles.length;
+      const fileNames = uploadedFiles.map(f => f.name || 'File').join(', ');
+      if (fileCount === 1) {
+        alert(`Successfully uploaded: ${fileNames}`);
+      } else {
+        alert(`Successfully uploaded ${fileCount} files!`);
+      }
     } catch (err: any) {
       console.error('Upload error:', err);
       const errorMessage = err.response?.data?.detail || 'Failed to upload files';

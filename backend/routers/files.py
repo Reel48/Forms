@@ -235,6 +235,7 @@ async def _upload_single_file(
         )
     
     # Get signed URL (temporary, expires in 1 hour)
+    # Note: We store this in the database but it will expire. The preview endpoint generates fresh URLs.
     try:
         signed_url_result = supabase_storage.storage.from_("project-files").create_signed_url(unique_filename, 3600)
         if isinstance(signed_url_result, dict):
@@ -243,8 +244,16 @@ async def _upload_single_file(
             signed_url = signed_url_result
         else:
             signed_url = getattr(signed_url_result, "signedURL", None) or getattr(signed_url_result, "signed_url", None) or getattr(signed_url_result, "url", None)
+        
+        if not signed_url:
+            print(f"Warning: create_signed_url returned unexpected format: {type(signed_url_result)}")
+            signed_url = None
+        else:
+            print(f"Generated signed URL for file: {unique_filename}")
     except Exception as url_error:
         print(f"Warning: Could not get signed URL: {str(url_error)}")
+        import traceback
+        traceback.print_exc()
         signed_url = None
     
     # Create file record in database
@@ -346,9 +355,10 @@ async def upload_file(
         
         # Check if file is a ZIP file
         filename_lower = (file.filename or "").lower()
-        is_zip = filename_lower.endswith('.zip') or file.content_type in ['application/zip', 'application/x-zip-compressed']
+        is_zip = filename_lower.endswith('.zip') or file.content_type in ['application/zip', 'application/x-zip-compressed', 'application/x-zip']
         
         if is_zip:
+            print(f"Detected ZIP file: {file.filename}, extracting and uploading all files...")
             # Extract and upload all files from ZIP
             try:
                 zip_file = zipfile.ZipFile(io.BytesIO(file_content))
@@ -358,6 +368,7 @@ async def upload_file(
                 for zip_info in zip_file.namelist():
                     # Skip directories
                     if zip_info.endswith('/'):
+                        print(f"Skipping directory in ZIP: {zip_info}")
                         continue
                     
                     try:
@@ -366,11 +377,14 @@ async def upload_file(
                         
                         # Skip empty files
                         if len(extracted_content) == 0:
+                            print(f"Skipping empty file in ZIP: {zip_info}")
                             continue
                         
                         # Validate extracted file size
                         if len(extracted_content) > MAX_FILE_SIZE:
-                            errors.append(f"{zip_info}: File size exceeds {MAX_FILE_SIZE / (1024*1024)}MB limit")
+                            error_msg = f"{zip_info}: File size exceeds {MAX_FILE_SIZE / (1024*1024)}MB limit"
+                            errors.append(error_msg)
+                            print(f"Error: {error_msg}")
                             continue
                         
                         # Determine content type from extension
@@ -380,6 +394,9 @@ async def upload_file(
                             'jpeg': 'image/jpeg',
                             'png': 'image/png',
                             'gif': 'image/gif',
+                            'webp': 'image/webp',
+                            'bmp': 'image/bmp',
+                            'svg': 'image/svg+xml',
                             'pdf': 'application/pdf',
                             'txt': 'text/plain',
                             'doc': 'application/msword',
@@ -387,10 +404,14 @@ async def upload_file(
                         }
                         extracted_content_type = content_type_map.get(ext.lower(), 'application/octet-stream')
                         
+                        # Get just the filename, not the path
+                        filename = zip_info.split('/')[-1]
+                        print(f"Extracting file from ZIP: {filename} (type: {extracted_content_type}, size: {len(extracted_content)} bytes)")
+                        
                         # Upload extracted file
                         uploaded_file = await _upload_single_file(
                             file_content=extracted_content,
-                            filename=zip_info.split('/')[-1],  # Get just the filename, not the path
+                            filename=filename,
                             content_type=extracted_content_type,
                             folder_id=folder_id,
                             quote_id=quote_id,
@@ -400,6 +421,7 @@ async def upload_file(
                             user_id=user["id"]
                         )
                         extracted_files.append(uploaded_file)
+                        print(f"Successfully uploaded extracted file: {filename} (id: {uploaded_file.get('id')})")
                         
                         # Create folder event for each extracted file
                         if folder_id:
@@ -427,12 +449,16 @@ async def upload_file(
                         detail="ZIP file is empty or contains no valid files" + (f". Errors: {'; '.join(errors)}" if errors else "")
                     )
                 
-                # Return the first uploaded file (or could return a list)
-                # For now, return the first file to maintain compatibility
+                # Log extraction results
+                print(f"Successfully extracted and uploaded {len(extracted_files)} files from ZIP")
+                if errors:
+                    print(f"Warnings during extraction: {len(errors)} files had errors")
+                
+                # Return the first uploaded file to maintain API compatibility
+                # All files are already in the database and will appear after reload
                 result = extracted_files[0]
                 if len(extracted_files) > 1:
-                    # Log that multiple files were extracted
-                    print(f"Extracted {len(extracted_files)} files from ZIP. Returning first file.")
+                    print(f"ZIP contained {len(extracted_files)} files. All uploaded. Returning first file for API response.")
                 
                 return result
                 
