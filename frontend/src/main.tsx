@@ -15,21 +15,25 @@ import App from './App.tsx'
  * - Reloads the page once per tab session to fetch the latest HTML/assets.
  */
 function installChunkLoadRecovery() {
-  const KEY = 'forms:chunk_recovery_reload_v1';
+  const KEY = 'forms:chunk_recovery_reload_v2';
+  let reloadCount = 0;
+  const MAX_RELOADS = 2; // Allow up to 2 reloads per session
 
-  const alreadyReloaded = () => {
+  const getReloadCount = () => {
     try {
-      return sessionStorage.getItem(KEY) === '1';
+      return parseInt(sessionStorage.getItem(KEY) || '0', 10);
     } catch {
-      return false;
+      return 0;
     }
   };
 
-  const markReloaded = () => {
+  const incrementReloadCount = () => {
     try {
-      sessionStorage.setItem(KEY, '1');
+      const count = getReloadCount() + 1;
+      sessionStorage.setItem(KEY, count.toString());
+      return count;
     } catch {
-      // ignore
+      return 0;
     }
   };
 
@@ -49,12 +53,24 @@ function installChunkLoadRecovery() {
     return msgMatches(message);
   };
 
-  const reloadOnce = (reason: string) => {
-    if (alreadyReloaded()) return;
-    markReloaded();
+  const reloadIfNeeded = (reason: string) => {
+    reloadCount = getReloadCount();
+    if (reloadCount >= MAX_RELOADS) {
+      console.warn(`[chunk-recovery] Max reloads (${MAX_RELOADS}) reached. Not reloading again.`);
+      return;
+    }
+    incrementReloadCount();
     // eslint-disable-next-line no-console
-    console.warn(`[chunk-recovery] Reloading once due to: ${reason}`);
-    window.location.reload();
+    console.warn(`[chunk-recovery] Reloading (${reloadCount}/${MAX_RELOADS}) due to: ${reason}`);
+    // Clear cache before reload
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => caches.delete(name));
+      });
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   };
 
   window.addEventListener('error', (event) => {
@@ -66,7 +82,7 @@ function installChunkLoadRecovery() {
       '';
 
     if (shouldReloadForError(message)) {
-      reloadOnce(message);
+      reloadIfNeeded(message);
     }
   });
 
@@ -78,7 +94,7 @@ function installChunkLoadRecovery() {
       '';
 
     if (shouldReloadForError(message)) {
-      reloadOnce(message);
+      reloadIfNeeded(message);
     }
   });
 }

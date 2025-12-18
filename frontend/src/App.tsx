@@ -4,42 +4,74 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import { NotificationProvider } from './components/NotificationSystem';
+import ErrorBoundary from './components/ErrorBoundary';
 import { FaTimes, FaBars } from 'react-icons/fa';
 import { getLogoForDarkBackground } from './utils/logoUtils';
 import { clientsAPI } from './api';
 import './App.css';
 
-// Lazy load components for better performance
-const QuotesList = lazy(() => import('./pages/QuotesList'));
-const QuoteBuilder = lazy(() => import('./pages/QuoteBuilder'));
-const QuoteView = lazy(() => import('./pages/QuoteView'));
-const FormsList = lazy(() => import('./pages/FormsList'));
-const TypeformImport = lazy(() => import('./pages/TypeformImport'));
-const FormView = lazy(() => import('./pages/FormView'));
-const FormSubmissions = lazy(() => import('./pages/FormSubmissions'));
-const PublicFormView = lazy(() => import('./pages/PublicFormView'));
-const ClientsList = lazy(() => import('./pages/ClientsList'));
-const FilesList = lazy(() => import('./pages/FilesList'));
-const FileView = lazy(() => import('./pages/FileView'));
-const ESignatureDocumentsList = lazy(() => import('./pages/ESignatureDocumentsList'));
-const ESignatureView = lazy(() => import('./pages/ESignatureView'));
-const FoldersList = lazy(() => import('./pages/FoldersList'));
-const FolderView = lazy(() => import('./pages/FolderView'));
-const CompanySettingsPage = lazy(() => import('./pages/CompanySettings'));
-const Profile = lazy(() => import('./pages/Profile'));
-const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
-const QuoteAnalytics = lazy(() => import('./pages/QuoteAnalytics'));
-const EmailTemplates = lazy(() => import('./pages/EmailTemplates'));
-const ChatPage = lazy(() => import('./pages/ChatPage'));
-const CustomerChatPage = lazy(() => import('./pages/CustomerChatPage'));
-const CustomerSchedulingPage = lazy(() => import('./pages/CustomerSchedulingPage'));
-const AdminCalendarView = lazy(() => import('./pages/AdminCalendarView'));
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
-const ResendVerification = lazy(() => import('./pages/ResendVerification'));
+// Retry function for lazy loading with chunk error recovery
+const retryLazyLoad = (importFn: () => Promise<any>, retries = 3, delay = 1000): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const attempt = (remaining: number) => {
+      importFn()
+        .then(resolve)
+        .catch((error) => {
+          const isChunkError =
+            error?.message?.includes("Unexpected token '<'") ||
+            error?.message?.includes('Failed to fetch dynamically imported module') ||
+            error?.message?.includes('Loading chunk') ||
+            error?.message?.includes('ChunkLoadError') ||
+            error?.message?.includes('importing a module script failed');
+
+          if (isChunkError && remaining > 0) {
+            // Clear cache and retry
+            if ('caches' in window) {
+              caches.keys().then((names) => {
+                names.forEach((name) => caches.delete(name));
+              });
+            }
+            setTimeout(() => attempt(remaining - 1), delay);
+          } else {
+            reject(error);
+          }
+        });
+    };
+    attempt(retries);
+  });
+};
+
+// Lazy load components for better performance with retry logic
+const QuotesList = lazy(() => retryLazyLoad(() => import('./pages/QuotesList')));
+const QuoteBuilder = lazy(() => retryLazyLoad(() => import('./pages/QuoteBuilder')));
+const QuoteView = lazy(() => retryLazyLoad(() => import('./pages/QuoteView')));
+const FormsList = lazy(() => retryLazyLoad(() => import('./pages/FormsList')));
+const TypeformImport = lazy(() => retryLazyLoad(() => import('./pages/TypeformImport')));
+const FormView = lazy(() => retryLazyLoad(() => import('./pages/FormView')));
+const FormSubmissions = lazy(() => retryLazyLoad(() => import('./pages/FormSubmissions')));
+const PublicFormView = lazy(() => retryLazyLoad(() => import('./pages/PublicFormView')));
+const ClientsList = lazy(() => retryLazyLoad(() => import('./pages/ClientsList')));
+const FilesList = lazy(() => retryLazyLoad(() => import('./pages/FilesList')));
+const FileView = lazy(() => retryLazyLoad(() => import('./pages/FileView')));
+const ESignatureDocumentsList = lazy(() => retryLazyLoad(() => import('./pages/ESignatureDocumentsList')));
+const ESignatureView = lazy(() => retryLazyLoad(() => import('./pages/ESignatureView')));
+const FoldersList = lazy(() => retryLazyLoad(() => import('./pages/FoldersList')));
+const FolderView = lazy(() => retryLazyLoad(() => import('./pages/FolderView')));
+const CompanySettingsPage = lazy(() => retryLazyLoad(() => import('./pages/CompanySettings')));
+const Profile = lazy(() => retryLazyLoad(() => import('./pages/Profile')));
+const CustomerDashboard = lazy(() => retryLazyLoad(() => import('./pages/CustomerDashboard')));
+const QuoteAnalytics = lazy(() => retryLazyLoad(() => import('./pages/QuoteAnalytics')));
+const EmailTemplates = lazy(() => retryLazyLoad(() => import('./pages/EmailTemplates')));
+const ChatPage = lazy(() => retryLazyLoad(() => import('./pages/ChatPage')));
+const CustomerChatPage = lazy(() => retryLazyLoad(() => import('./pages/CustomerChatPage')));
+const CustomerSchedulingPage = lazy(() => retryLazyLoad(() => import('./pages/CustomerSchedulingPage')));
+const AdminCalendarView = lazy(() => retryLazyLoad(() => import('./pages/AdminCalendarView')));
+const Login = lazy(() => retryLazyLoad(() => import('./pages/Login')));
+const Register = lazy(() => retryLazyLoad(() => import('./pages/Register')));
+const ForgotPassword = lazy(() => retryLazyLoad(() => import('./pages/ForgotPassword')));
+const ResetPassword = lazy(() => retryLazyLoad(() => import('./pages/ResetPassword')));
+const VerifyEmail = lazy(() => retryLazyLoad(() => import('./pages/VerifyEmail')));
+const ResendVerification = lazy(() => retryLazyLoad(() => import('./pages/ResendVerification')));
 
 // Loading component
 const LoadingFallback = () => (
@@ -516,7 +548,8 @@ function AppContent() {
       {!isPublicForm && !isAuthPage && <Navigation />}
       <SessionTimeoutWarning />
       <main id="main-content" role="main">
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           {/* Public routes */}
           <Route path="/public/form/:slug" element={<Suspense fallback={<LoadingFallback />}><PublicFormView /></Suspense>} />
           <Route path="/s/:short_code" element={<Suspense fallback={<LoadingFallback />}><PublicFormView /></Suspense>} />
@@ -556,7 +589,8 @@ function AppContent() {
           <Route path="/admin/calendar" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><AdminCalendarView /></Suspense></ProtectedRoute>} />
           <Route path="/email-templates" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><EmailTemplates /></Suspense></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Profile /></Suspense></ProtectedRoute>} />
-        </Routes>
+          </Routes>
+        </ErrorBoundary>
       </main>
     </>
   );
