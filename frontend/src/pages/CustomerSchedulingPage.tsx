@@ -155,12 +155,31 @@ function CustomerSchedulingPage() {
   if (loading) {
     return (
       <div className="container">
-        <div className="scheduling-page">
-          <div className="page-header">
-            <h1>Schedule a Meeting</h1>
-          </div>
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>Loading...</p>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '50vh',
+          padding: '2rem'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ 
+              display: 'inline-block',
+              width: '40px',
+              height: '40px',
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid rgb(59 130 246)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              marginBottom: '1rem'
+            }}></div>
+            <p style={{ color: 'var(--color-text-muted, #6b7280)' }}>Loading...</p>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
           </div>
         </div>
       </div>
