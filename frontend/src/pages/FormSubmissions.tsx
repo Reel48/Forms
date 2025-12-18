@@ -845,7 +845,6 @@ function FormSubmissions() {
                             padding: '0.25rem 0.75rem',
                             backgroundColor: tag.color + '20',
                             color: tag.color,
-                            border: `1px solid ${tag.color}40`,
                             borderRadius: '16px',
                             fontSize: '0.875rem',
                             fontWeight: '500',

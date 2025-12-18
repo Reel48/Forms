@@ -1005,7 +1005,6 @@ a:not([class]) {
 .badge-draft {
   background-color: rgb(219 234 254); /* blue-100 */
   color: rgb(30 64 175); /* blue-800 */
-  border: 2px solid rgb(59 130 246); /* blue-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1013,7 +1012,6 @@ a:not([class]) {
 .badge-sent {
   background-color: rgb(219 234 254); /* blue-100 */
   color: rgb(30 64 175); /* blue-800 */
-  border: 2px solid rgb(59 130 246); /* blue-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1021,7 +1019,6 @@ a:not([class]) {
 .badge-viewed {
   background-color: rgb(219 234 254); /* blue-100 */
   color: rgb(30 64 175); /* blue-800 */
-  border: 2px solid rgb(59 130 246); /* blue-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1029,7 +1026,6 @@ a:not([class]) {
 .badge-accepted {
   background-color: rgb(209 250 229); /* emerald-100 */
   color: rgb(6 95 70); /* emerald-800 */
-  border: 2px solid rgb(16 185 129); /* emerald-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1037,7 +1033,6 @@ a:not([class]) {
 .badge-declined {
   background-color: rgb(254 226 226); /* red-100 */
   color: rgb(153 27 27); /* red-800 */
-  border: 2px solid rgb(239 68 68); /* red-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1045,7 +1040,6 @@ a:not([class]) {
 .badge-unpaid {
   background-color: rgb(254 243 199); /* amber-100 */
   color: rgb(146 64 14); /* amber-800 */
-  border: 2px solid rgb(245 158 11); /* amber-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1053,7 +1047,6 @@ a:not([class]) {
 .badge-paid {
   background-color: rgb(209 250 229); /* emerald-100 */
   color: rgb(6 95 70); /* emerald-800 */
-  border: 2px solid rgb(16 185 129); /* emerald-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1061,7 +1054,6 @@ a:not([class]) {
 .badge-partially_paid {
   background-color: rgb(254 243 199); /* amber-100 */
   color: rgb(146 64 14); /* amber-800 */
-  border: 2px solid rgb(245 158 11); /* amber-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1069,7 +1061,6 @@ a:not([class]) {
 .badge-refunded {
   background-color: rgb(168 85 247); /* purple-500 */
   color: white;
-  border: 2px solid rgb(168 85 247);
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1077,7 +1068,6 @@ a:not([class]) {
 .badge-failed {
   background-color: rgb(254 226 226); /* red-100 */
   color: rgb(153 27 27); /* red-800 */
-  border: 2px solid rgb(239 68 68); /* red-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1085,7 +1075,6 @@ a:not([class]) {
 .badge-voided {
   background-color: rgb(107 114 128); /* gray-500 */
   color: white;
-  border: 2px solid rgb(107 114 128);
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
@@ -1093,7 +1082,6 @@ a:not([class]) {
 .badge-uncollectible {
   background-color: rgb(254 226 226); /* red-100 */
   color: rgb(153 27 27); /* red-800 */
-  border: 2px solid rgb(239 68 68); /* red-500 */
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
