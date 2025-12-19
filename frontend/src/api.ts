@@ -19,9 +19,20 @@ const api = axios.create({
 
 // Add request interceptor to include auth token if available
 api.interceptors.request.use(
-  (config) => {
-    // Token will be added by AuthContext when user is logged in
-    // This ensures token is included in all requests
+  async (config) => {
+    // If Authorization header is not already set, try to get it from Supabase session
+    if (!config.headers['Authorization']) {
+      try {
+        const { supabase } = await import('./lib/supabase');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          config.headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      } catch (err) {
+        // If we can't get the session, continue without token
+        // The request will fail with 401 if auth is required
+      }
+    }
     // Never log Authorization headers (tokens) in any environment.
     return config;
   },
