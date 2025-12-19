@@ -1031,6 +1031,7 @@ export const calcomAPI = {
 
 export const chatAPI = {
   getOchoUserId: () => api.get<{ocho_user_id: string}>('/api/chat/ocho-user-id'),
+  getAiStatus: () => api.get<{ai_service_available: boolean, has_gemini_key: boolean, ocho_user_id: string, ocho_user_id_valid: boolean}>('/api/chat/ai-status'),
   getConversations: () => api.get<ChatConversation[]>('/api/chat/conversations'),
   updateChatMode: (conversationId: string, mode: 'ai' | 'human') => 
     api.patch(`/api/chat/conversations/${conversationId}/mode`, { chat_mode: mode }),

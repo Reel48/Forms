@@ -164,6 +164,18 @@ async def get_ocho_user_id():
     """Get Ocho (AI assistant) user ID for frontend"""
     return {"ocho_user_id": OCHO_USER_ID}
 
+@router.get("/ai-status")
+async def get_ai_status(user = Depends(get_current_user)):
+    """Get AI service status for diagnostics"""
+    ai_service = get_ai_service()
+    has_gemini_key = bool(os.getenv("GEMINI_API_KEY"))
+    return {
+        "ai_service_available": ai_service is not None,
+        "has_gemini_key": has_gemini_key,
+        "ocho_user_id": OCHO_USER_ID,
+        "ocho_user_id_valid": OCHO_USER_ID and OCHO_USER_ID != "00000000-0000-0000-0000-000000000000"
+    }
+
 # --- Scheduling helpers (used for follow-up availability messages) ---
 SCHEDULING_TZ_FALLBACK = os.getenv("CHAT_SCHEDULING_DEFAULT_TZ", "America/Chicago")
 
@@ -1074,28 +1086,35 @@ async def send_message(
                             pass
 
                     if not admin_responded_recently:
-                        # Insert a lightweight placeholder "thinking" message immediately.
-                        # The UI will render this as a typing indicator and it will be deleted/replaced when the final AI response is saved.
-                        placeholder_id = str(uuid.uuid4())
-                        placeholder_created_at = datetime.now().isoformat()
-                        try:
-                            placeholder_message = {
-                                "id": placeholder_id,
-                                "conversation_id": conversation_id,
-                                "sender_id": OCHO_USER_ID,
-                                "message": "Reel48 AI is thinking…",
-                                "message_type": "system",
-                                "created_at": placeholder_created_at,
-                            }
-                            supabase_storage.table("chat_messages").insert(placeholder_message).execute()
-                        except Exception as e:
-                            # Don't fail message send if placeholder insert fails
-                            logger.warning(f"Failed to insert AI placeholder message: {str(e)}")
+                        # Check if OCHO_USER_ID is valid before proceeding
+                        if not OCHO_USER_ID or OCHO_USER_ID == "00000000-0000-0000-0000-000000000000":
+                            logger.error(f"OCHO_USER_ID is not set or invalid. Cannot generate AI responses. OCHO_USER_ID: {OCHO_USER_ID}")
+                            # Still try to trigger AI response, but it will fail gracefully
                             placeholder_id = None
+                        else:
+                            # Insert a lightweight placeholder "thinking" message immediately.
+                            # The UI will render this as a typing indicator and it will be deleted/replaced when the final AI response is saved.
+                            placeholder_id = str(uuid.uuid4())
+                            placeholder_created_at = datetime.now().isoformat()
+                            try:
+                                placeholder_message = {
+                                    "id": placeholder_id,
+                                    "conversation_id": conversation_id,
+                                    "sender_id": OCHO_USER_ID,
+                                    "message": "Reel48 AI is thinking…",
+                                    "message_type": "system",
+                                    "created_at": placeholder_created_at,
+                                }
+                                supabase_storage.table("chat_messages").insert(placeholder_message).execute()
+                                logger.info(f"Inserted AI placeholder message {placeholder_id} for conversation {conversation_id}")
+                            except Exception as e:
+                                # Don't fail message send if placeholder insert fails, but log the error
+                                logger.error(f"Failed to insert AI placeholder message: {str(e)}", exc_info=True)
+                                placeholder_id = None
 
                         # Trigger AI response asynchronously using BackgroundTasks.
                         # This ensures the task completes even after the request returns.
-                        logger.info(f"Triggering AI response for conversation {conversation_id}, customer {user['id']}")
+                        logger.info(f"Triggering AI response for conversation {conversation_id}, customer {user['id']}, placeholder_id={placeholder_id}")
                         try:
                             background_tasks.add_task(
                                 _generate_ai_response_async,
@@ -2138,9 +2157,10 @@ async def _generate_ai_response_async(
             logger.info(f"[AI TASK] Getting AI service...")
             ai_service = get_ai_service()
             if not ai_service:
-                print(f"[AI TASK] AI service is not available")
-                logger.error(f"[AI TASK] AI service is not available")
-                _update_placeholder_to_error("Reel48 AI is temporarily unavailable right now. Please try again in a moment.")
+                error_msg = "Reel48 AI is temporarily unavailable. Please check that GEMINI_API_KEY is set in the backend environment variables."
+                print(f"[AI TASK] AI service is not available - {error_msg}")
+                logger.error(f"[AI TASK] AI service is not available - {error_msg}")
+                _update_placeholder_to_error(error_msg)
                 return
             print(f"[AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")
             logger.info(f"[AI TASK] AI service obtained, generating response for query: '{user_query[:100]}...'")

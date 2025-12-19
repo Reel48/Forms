@@ -247,6 +247,20 @@ const CustomerChatPage: React.FC = () => {
       markAllAsRead();
       // Check session when conversation loads
       checkSession(conversation.id);
+      
+      // Check AI service status for diagnostics
+      chatAPI.getAiStatus().then((response) => {
+        const status = response.data;
+        if (!status.ai_service_available) {
+          console.warn('⚠️ AI service is not available:', {
+            hasGeminiKey: status.has_gemini_key,
+            ochoUserIdValid: status.ocho_user_id_valid,
+            ochoUserId: status.ocho_user_id
+          });
+        }
+      }).catch((error) => {
+        console.error('Failed to check AI status:', error);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation?.id]); // Only depend on conversation?.id to avoid infinite loops
