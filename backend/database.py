@@ -17,24 +17,10 @@ supabase: Client = create_client(supabase_url, supabase_key)
 # Service role client for storage operations (bypasses RLS)
 # Falls back to anon key if service_role key is not set
 if supabase_service_role_key:
-    try:
-        # Try with options first (newer client versions)
-        supabase_storage: Client = create_client(
-            supabase_url, 
-            supabase_service_role_key,
-            options={
-                "auth": {
-                    "persist_session": False,
-                    "auto_refresh_token": False,
-                }
-            }
-        )
-    except TypeError:
-        # Fallback for older client versions that don't support options
-        supabase_storage: Client = create_client(
-            supabase_url, 
-            supabase_service_role_key
-        )
+    supabase_storage: Client = create_client(
+        supabase_url, 
+        supabase_service_role_key
+    )
     print(f"✅ Service role client created (RLS bypass enabled)")
 else:
     print(f"⚠️ WARNING: SUPABASE_SERVICE_ROLE_KEY not set! Using anon key - RLS will be enforced!")
