@@ -99,9 +99,7 @@ const CustomerChatPage: React.FC = () => {
               if (filtered.length === 0 && prev.length > 0) {
                 // This might be a bulk delete, reload messages to be sure
                 setTimeout(() => {
-                  if (conversation?.id) {
-                    void loadMessages(conversation.id);
-                  }
+                  void loadMessages(conversationId);
                 }, 100);
               }
               return filtered;
@@ -138,7 +136,7 @@ const CustomerChatPage: React.FC = () => {
       .subscribe();
 
     conversationsSubscriptionRef.current = conversationsChannel;
-  }, [user?.id, loadMessages, conversation?.id]);
+  }, [user?.id, loadMessages]); // Removed conversation?.id - using conversationId parameter instead
 
   useEffect(() => {
     loadConversation();
@@ -216,7 +214,8 @@ const CustomerChatPage: React.FC = () => {
       // Check session when conversation loads
       checkSession(conversation.id);
     }
-  }, [conversation?.id, setupRealtimeSubscriptions, checkSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id]); // Only depend on conversation?.id to avoid infinite loops
 
   // Periodic session check (every 30 seconds)
   useEffect(() => {
@@ -233,7 +232,8 @@ const CustomerChatPage: React.FC = () => {
         sessionCheckIntervalRef.current = null;
       }
     };
-  }, [conversation?.id, checkSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id]); // Only depend on conversation?.id, checkSession is stable
 
   // Track page visibility changes
   useEffect(() => {
@@ -249,7 +249,8 @@ const CustomerChatPage: React.FC = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [conversation?.id, checkSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id]); // Only depend on conversation?.id, checkSession is stable
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
