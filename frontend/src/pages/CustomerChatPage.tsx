@@ -245,8 +245,8 @@ const CustomerChatPage: React.FC = () => {
       loadMessages(conversation.id);
       setupRealtimeSubscriptions(conversation.id);
       markAllAsRead();
-      // Check session when conversation loads
-      checkSession(conversation.id);
+      // Don't check session on initial load - it's too aggressive and clears messages
+      // Session will be checked periodically and when sending messages
       
       // Check AI service status for diagnostics
       chatAPI.getAiStatus().then((response) => {
@@ -259,7 +259,8 @@ const CustomerChatPage: React.FC = () => {
           });
         }
       }).catch((error) => {
-        console.error('Failed to check AI status:', error);
+        // Endpoint might not exist yet if backend hasn't been deployed
+        console.debug('AI status check failed (this is OK if backend not deployed yet):', error);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
