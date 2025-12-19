@@ -1974,9 +1974,41 @@ async def generate_ai_response(
             "created_at": datetime.now().isoformat()
         }
         
-        message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
-        if not message_response.data:
-            raise HTTPException(status_code=500, detail="Failed to save AI response")
+        # Use REST API directly with service role key to ensure RLS bypass
+        if not supabase_service_role_key:
+            raise HTTPException(status_code=500, detail="Service role key not configured. Cannot save AI response.")
+        
+        try:
+            headers = {
+                "apikey": supabase_service_role_key,
+                "Authorization": f"Bearer {supabase_service_role_key}",
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
+            }
+            response = requests.post(
+                f"{supabase_url}/rest/v1/chat_messages",
+                json=ai_message_data,
+                headers=headers
+            )
+            response.raise_for_status()
+            message_response_data = response.json()
+            if not message_response_data or len(message_response_data) == 0:
+                raise HTTPException(status_code=500, detail="Failed to save AI response - no data returned")
+        except requests.exceptions.HTTPError as http_error:
+            error_msg = str(http_error)
+            if hasattr(http_error, 'response') and http_error.response is not None:
+                try:
+                    error_detail = http_error.response.json()
+                    error_msg = error_detail.get('message', error_msg)
+                except:
+                    error_msg = http_error.response.text or error_msg
+            logger.error(f"Error inserting AI message in generate_ai_response: {error_msg}", exc_info=True)
+            if "row-level security" in error_msg.lower() or "42501" in error_msg:
+                raise HTTPException(status_code=500, detail="RLS policy violation. Service role key may not be configured correctly.")
+            raise HTTPException(status_code=500, detail=f"Failed to save AI response: {error_msg}")
+        except Exception as e:
+            logger.error(f"Error inserting AI message in generate_ai_response: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to save AI response: {str(e)}")
 
         # Update rolling conversation summary (optional; can be disabled)
         try:
