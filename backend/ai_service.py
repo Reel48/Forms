@@ -624,17 +624,35 @@ class AIService:
             # Create model with tools (use same model as main model, with fallback)
             model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-3-pro-preview")
             try:
-                model_with_tools = genai.GenerativeModel(
-                    model_name,
-                    tools=[{"function_declarations": functions}]
-                )
+                # Try to import FunctionCallingMode and set to ANY for better function call handling
+                try:
+                    from google.generativeai.types import FunctionCallingMode
+                    model_with_tools = genai.GenerativeModel(
+                        model_name,
+                        tools=[{"function_declarations": functions}],
+                        tool_config={"function_calling_mode": FunctionCallingMode.ANY}
+                    )
+                except (ImportError, AttributeError):
+                    # Fallback if FunctionCallingMode is not available
+                    model_with_tools = genai.GenerativeModel(
+                        model_name,
+                        tools=[{"function_declarations": functions}]
+                    )
             except Exception:
                 # Fallback to gemini-2.5-flash if the requested model fails
                 logger.warning(f"Failed to initialize {model_name} with tools, falling back to gemini-2.5-flash")
-                model_with_tools = genai.GenerativeModel(
-                    'gemini-2.5-flash',
-                    tools=[{"function_declarations": functions}]
-                )
+                try:
+                    from google.generativeai.types import FunctionCallingMode
+                    model_with_tools = genai.GenerativeModel(
+                        'gemini-2.5-flash',
+                        tools=[{"function_declarations": functions}],
+                        tool_config={"function_calling_mode": FunctionCallingMode.ANY}
+                    )
+                except (ImportError, AttributeError):
+                    model_with_tools = genai.GenerativeModel(
+                        'gemini-2.5-flash',
+                        tools=[{"function_declarations": functions}]
+                    )
             
             # Generate response
             response = model_with_tools.generate_content(messages)
