@@ -1071,9 +1071,6 @@ export const chatAPI = {
   },
   checkSession: (conversationId?: string) => {
     const body = conversationId ? { conversation_id: conversationId } : {};
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api.ts:1049',message:'checkSession API call',data:{conversationId,requestBody:body},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     return api.post<{
       is_expired: boolean;
       was_reset: boolean;

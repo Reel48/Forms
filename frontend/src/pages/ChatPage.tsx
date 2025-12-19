@@ -39,11 +39,6 @@ const ChatPage: React.FC = () => {
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
-    const setupData = {location:'ChatPage.tsx:43',message:'setupRealtimeSubscriptions called',data:{conversationId},timestamp:Date.now(),hypothesisId:'C'};
-    console.log('🔍 [DEBUG]', JSON.stringify(setupData));
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...setupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     // Get Realtime client (uses service role key if available, otherwise anon key)
     const realtimeClient = getRealtimeClient();
 
@@ -206,9 +201,6 @@ const ChatPage: React.FC = () => {
 
   // Setup global subscription for admins to see all conversations updating in real-time
   useEffect(() => {
-    const adminData = {location:'ChatPage.tsx:206',message:'admin global subscription useEffect running',data:{isAdmin,selectedConversationId:selectedConversation?.id},timestamp:Date.now(),hypothesisId:'C'};
-    console.log('🔍 [DEBUG]', JSON.stringify(adminData));
-    // #region agent log
     fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...adminData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
     // #endregion
     if (!isAdmin) return;
@@ -279,9 +271,6 @@ const ChatPage: React.FC = () => {
 
     // Cleanup subscriptions on unmount
     return () => {
-      const cleanupData = {location:'ChatPage.tsx:272',message:'ChatPage cleanup running',data:{hasMessagesSub:!!messagesSubscriptionRef.current,hasConversationsSub:!!conversationsSubscriptionRef.current,hasGlobalSub:!!globalConversationsSubscriptionRef.current},timestamp:Date.now(),hypothesisId:'E'};
-      console.log('🔍 [DEBUG]', JSON.stringify(cleanupData));
-      // #region agent log
       fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...cleanupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
       // #endregion
       const realtimeClient = getRealtimeClient();

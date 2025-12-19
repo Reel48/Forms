@@ -50,11 +50,6 @@ const CustomerChatPage: React.FC = () => {
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
-    const setupData = {location:'CustomerChatPage.tsx:54',message:'setupRealtimeSubscriptions called',data:{conversationId},timestamp:Date.now(),hypothesisId:'G'};
-    console.log('🔍 [DEBUG]', JSON.stringify(setupData));
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...setupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     const realtimeClient = getRealtimeClient();
 
     // Clean up existing subscriptions
@@ -79,23 +74,8 @@ const CustomerChatPage: React.FC = () => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const newMsg = payload.new as ChatMessage | undefined;
-          const oldMsg = payload.old as ChatMessage | undefined;
-          const realtimeData = {location:'CustomerChatPage.tsx:77',message:'Realtime message event received',data:{eventType:payload.eventType,hasNew:!!payload.new,hasOld:!!payload.old,messageId:newMsg?.id||oldMsg?.id,senderId:newMsg?.sender_id||oldMsg?.sender_id},timestamp:Date.now(),hypothesisId:'G'};
-          console.log('🔍 [DEBUG]', JSON.stringify(realtimeData));
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...realtimeData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-          // #endregion
-          
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
-            
-            // Enhanced logging for AI response tracking
-            const messageData = {location:'CustomerChatPage.tsx:91',message:'Realtime INSERT - new message received',data:{messageId:newMessage.id,senderId:newMessage.sender_id,messageType:newMessage.message_type,messagePreview:newMessage.message?.substring(0,50)||'[no message]',isFromCustomer:newMessage.sender_id===user?.id},timestamp:Date.now(),hypothesisId:'G'};
-            console.log('🔍 [DEBUG]', JSON.stringify(messageData));
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...messageData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-            // #endregion
             
             // Track activity when receiving messages
             lastActivityRef.current = Date.now();
@@ -128,11 +108,6 @@ const CustomerChatPage: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        const subData = {location:'CustomerChatPage.tsx:113',message:'Realtime messages subscription status',data:{status,conversationId},timestamp:Date.now(),hypothesisId:'G'};
-        console.log('🔍 [DEBUG]', JSON.stringify(subData));
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...subData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-        // #endregion
         if (status === 'SUBSCRIBED') {
           console.log('✅ Successfully subscribed to chat messages via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
@@ -202,25 +177,11 @@ const CustomerChatPage: React.FC = () => {
   const checkSession = useCallback(async (conversationId?: string) => {
     if (!conversationId && !conversation?.id) return;
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:176',message:'checkSession entry',data:{conversationId,conversationIdFromConversation:conversation?.id,hasConversation:!!conversation},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     try {
       const sessionId = conversationId || conversation?.id;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:178',message:'before API call',data:{sessionId,requestBody:sessionId?{conversation_id:sessionId}:{}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       const response = await chatAPI.checkSession(sessionId);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:179',message:'after API call success',data:{status:response.status,hasData:!!response.data,wasReset:response.data?.was_reset},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       
       if (response.data.was_reset) {
-        const resetData = {location:'CustomerChatPage.tsx:190',message:'session was reset - clearing messages',data:{conversationId:conversation?.id,messagesCountBeforeClear:messages.length},timestamp:Date.now(),hypothesisId:'F'};
-        console.log('🔍 [DEBUG]', JSON.stringify(resetData));
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...resetData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-        // #endregion
         // Session was reset, clear messages and reload (will be empty)
         // Silent reset - no notification shown to user
         setMessages([]);
@@ -232,9 +193,6 @@ const CustomerChatPage: React.FC = () => {
         }
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:194',message:'checkSession error',data:{errorType:error?.constructor?.name,errorMessage:error?.message||String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status,fullError:JSON.stringify(error,Object.getOwnPropertyNames(error)).substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       console.error('Failed to check session:', error);
       // Don't show error to user - session check failures are non-critical
     }
@@ -423,19 +381,9 @@ const CustomerChatPage: React.FC = () => {
 
   // Load or get the single conversation for this user
   const loadConversation = async () => {
-    const loadData = {location:'CustomerChatPage.tsx:377',message:'loadConversation called',data:{},timestamp:Date.now(),hypothesisId:'F'};
-    console.log('🔍 [DEBUG]', JSON.stringify(loadData));
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...loadData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     try {
       setLoading(true);
       const response = await chatAPI.getConversations();
-      const responseData = {location:'CustomerChatPage.tsx:380',message:'loadConversation API success',data:{hasData:!!response?.data,conversationCount:response?.data?.length||0,firstConversationId:response?.data?.[0]?.id},timestamp:Date.now(),hypothesisId:'F'};
-      console.log('🔍 [DEBUG]', JSON.stringify(responseData));
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...responseData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       if (response.data && response.data.length > 0) {
         // Use the most recent conversation
         setConversation(response.data[0]);
@@ -444,12 +392,7 @@ const CustomerChatPage: React.FC = () => {
         setConversation(null);
       }
     } catch (error: any) {
-      const loadErrorData = {location:'CustomerChatPage.tsx:390',message:'loadConversation error',data:{errorType:error?.constructor?.name,errorMessage:error instanceof Error ? error.message : String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status},timestamp:Date.now(),hypothesisId:'F'};
-      console.error('🔍 [DEBUG]', JSON.stringify(loadErrorData));
       console.error('Failed to load conversation:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...loadErrorData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
     } finally {
       setLoading(false);
     }
@@ -475,28 +418,13 @@ const CustomerChatPage: React.FC = () => {
 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || newMessage;
-    const sendData = {location:'CustomerChatPage.tsx:412',message:'sendMessage called',data:{hasText:!!textToSend?.trim(),textLength:textToSend?.trim()?.length||0,sending,hasConversation:!!conversation,conversationId:conversation?.id},timestamp:Date.now(),hypothesisId:'F'};
-    console.log('🔍 [DEBUG]', JSON.stringify(sendData));
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...sendData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     
     if (!textToSend.trim() || sending) {
-      const blockedData = {location:'CustomerChatPage.tsx:415',message:'sendMessage blocked',data:{reason:!textToSend.trim()?'no text':'already sending',sending},timestamp:Date.now(),hypothesisId:'F'};
-      console.log('🔍 [DEBUG]', JSON.stringify(blockedData));
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...blockedData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       return;
     }
 
     try {
       setSending(true);
-      const startData = {location:'CustomerChatPage.tsx:420',message:'sendMessage starting',data:{messagePayload:messageText?{message:messageText.trim()}:{message:textToSend.trim(),conversation_id:conversation?.id}},timestamp:Date.now(),hypothesisId:'F'};
-      console.log('🔍 [DEBUG]', JSON.stringify(startData));
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...startData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       
       // Build message payload - only include conversation_id if we have one
       // If no conversation exists, backend will create one
@@ -511,11 +439,6 @@ const CustomerChatPage: React.FC = () => {
       lastActivityRef.current = Date.now();
       
       const messageResponse = await chatAPI.sendMessage(messagePayload);
-      const successData = {location:'CustomerChatPage.tsx:432',message:'sendMessage API success',data:{hasResponse:!!messageResponse,hasData:!!messageResponse?.data,conversationId:messageResponse?.data?.conversation_id},timestamp:Date.now(),hypothesisId:'F'};
-      console.log('🔍 [DEBUG]', JSON.stringify(successData));
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...successData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       
       // Get the conversation_id from the response
       const responseConvId = messageResponse.data?.conversation_id;
@@ -572,12 +495,7 @@ const CustomerChatPage: React.FC = () => {
         }
       }
     } catch (error: any) {
-      const errorData = {location:'CustomerChatPage.tsx:490',message:'sendMessage error',data:{errorType:error?.constructor?.name,errorMessage:error instanceof Error ? error.message : String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status},timestamp:Date.now(),hypothesisId:'F'};
-      console.error('🔍 [DEBUG]', JSON.stringify(errorData));
       console.error('Failed to send message:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...errorData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       const errorMessage = error instanceof Error ? error.message : 'Failed to send message. Please try again.';
       showNotification({ type: 'error', message: errorMessage });
       
@@ -701,14 +619,6 @@ const CustomerChatPage: React.FC = () => {
 
         <div className="customer-chat-messages" ref={messagesContainerRef}>
           <div className="message-width-limiter">
-            {(() => {
-              const uiState = {location:'CustomerChatPage.tsx:615',message:'UI render state',data:{loading,hasConversation:!!conversation,conversationId:conversation?.id,messagesCount:messages.length,sending,uploading},timestamp:Date.now(),hypothesisId:'F'};
-              console.log('🔍 [DEBUG]', JSON.stringify(uiState));
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...uiState,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-              // #endregion
-              return null;
-            })()}
             {conversation?.chat_mode === 'human' && (
               <div style={{ padding: '0.75rem 1rem', margin: '0.75rem 0', borderRadius: '8px', background: 'var(--color-warning-light)', border: '1px solid var(--color-warning)' }}>
                 You're chatting with human support. AI replies are paused.

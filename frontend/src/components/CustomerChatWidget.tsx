@@ -11,15 +11,6 @@ import './CustomerChatWidget.css';
  * Canonical chat UX is the full page at `/chat`.
  */
 const CustomerChatWidget: React.FC = () => {
-  const renderCountRef = useRef(0);
-  renderCountRef.current++;
-  
-  const renderData = {location:'CustomerChatWidget.tsx:17',message:'CustomerChatWidget render',data:{renderCount:renderCountRef.current},timestamp:Date.now(),hypothesisId:'B'};
-  console.log('🔍 [DEBUG]', JSON.stringify(renderData));
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...renderData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-  // #endregion
-  
   const { user } = useAuth();
   const navigate = useNavigate();
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -38,11 +29,6 @@ const CustomerChatWidget: React.FC = () => {
   }, [user?.id]);
 
   const setupRealtime = useCallback((convId: string) => {
-    const setupData = {location:'CustomerChatWidget.tsx:34',message:'setupRealtime called',data:{convId},timestamp:Date.now(),hypothesisId:'D'};
-    console.log('🔍 [DEBUG]', JSON.stringify(setupData));
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...setupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     const realtimeClient = getRealtimeClient();
     if (messagesSubscriptionRef.current) {
       realtimeClient.removeChannel(messagesSubscriptionRef.current);
@@ -73,11 +59,6 @@ const CustomerChatWidget: React.FC = () => {
   }, [refreshUnreadCount, user?.id]);
 
   useEffect(() => {
-    const effectData = {location:'CustomerChatWidget.tsx:64',message:'useEffect main init running',data:{hasRefreshUnreadCount:!!refreshUnreadCount,hasSetupRealtime:!!setupRealtime},timestamp:Date.now(),hypothesisId:'D'};
-    console.log('🔍 [DEBUG]', JSON.stringify(effectData));
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...effectData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     let mounted = true;
     const init = async () => {
       try {
@@ -98,11 +79,6 @@ const CustomerChatWidget: React.FC = () => {
     void init();
 
     return () => {
-      const cleanupData = {location:'CustomerChatWidget.tsx:84',message:'useEffect cleanup running',data:{hasSubscription:!!messagesSubscriptionRef.current},timestamp:Date.now(),hypothesisId:'E'};
-      console.log('🔍 [DEBUG]', JSON.stringify(cleanupData));
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...cleanupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       mounted = false;
       const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
