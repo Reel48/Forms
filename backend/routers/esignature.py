@@ -519,7 +519,12 @@ async def sign_document(
         
         # Get file
         file_data = document.get("files")
-        if not file_data:
+        # Handle join result - can be a list or a single object
+        if isinstance(file_data, list):
+            if len(file_data) == 0:
+                raise HTTPException(status_code=404, detail="File not found")
+            file_data = file_data[0]  # Take first file if list
+        elif not file_data:
             raise HTTPException(status_code=404, detail="File not found")
         
         storage_path = file_data.get("storage_path")
