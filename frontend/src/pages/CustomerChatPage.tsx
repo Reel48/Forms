@@ -392,7 +392,7 @@ const CustomerChatPage: React.FC = () => {
         // Conversation will be created on first message
         setConversation(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       const loadErrorData = {location:'CustomerChatPage.tsx:390',message:'loadConversation error',data:{errorType:error?.constructor?.name,errorMessage:error instanceof Error ? error.message : String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status},timestamp:Date.now(),hypothesisId:'F'};
       console.error('🔍 [DEBUG]', JSON.stringify(loadErrorData));
       console.error('Failed to load conversation:', error);
@@ -520,7 +520,7 @@ const CustomerChatPage: React.FC = () => {
           textareaRef.current.style.height = '24px';
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       const errorData = {location:'CustomerChatPage.tsx:490',message:'sendMessage error',data:{errorType:error?.constructor?.name,errorMessage:error instanceof Error ? error.message : String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status},timestamp:Date.now(),hypothesisId:'F'};
       console.error('🔍 [DEBUG]', JSON.stringify(errorData));
       console.error('Failed to send message:', error);
