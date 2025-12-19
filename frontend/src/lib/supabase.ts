@@ -49,7 +49,7 @@ export const getRealtimeClient = (): SupabaseClient => {
   
   // Also send to local debug server if available (dev only)
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...debugData,location:'supabase.ts:30',timestamp}),sessionId:'debug-session',runId:'run1'}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...debugData,location:'supabase.ts:30',timestamp,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
   // #endregion
   
   // Check if service role key is available
