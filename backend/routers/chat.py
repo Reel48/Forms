@@ -2555,11 +2555,30 @@ async def _generate_ai_response_async(
                         "file_name": file_message_override.get("file_name"),
                         "file_size": file_message_override.get("file_size"),
                     }
-                supabase_storage.table("chat_messages").update(update_payload).eq("id", placeholder_message_id).execute()
+                # Use REST API directly with service role key to ensure RLS bypass
+                headers = {
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                }
+                response = requests.patch(
+                    f"{supabase_url}/rest/v1/chat_messages?id=eq.{placeholder_message_id}",
+                    json=update_payload,
+                    headers=headers
+                )
+                response.raise_for_status()
                 updated_placeholder = True
                 logger.info(f"[AI TASK] Placeholder message updated with final AI response")
             except Exception as e:
-                logger.warning(f"[AI TASK] Failed to finalize placeholder message {placeholder_message_id}: {str(e)}")
+                error_msg = str(e)
+                if hasattr(e, 'response') and e.response is not None:
+                    try:
+                        error_detail = e.response.json()
+                        error_msg = error_detail.get('message', error_msg)
+                    except:
+                        error_msg = e.response.text or error_msg
+                logger.warning(f"[AI TASK] Failed to finalize placeholder message {placeholder_message_id}: {error_msg}")
 
         if not updated_placeholder:
             # Fallback: best-effort cleanup then insert a new AI message
@@ -2584,10 +2603,57 @@ async def _generate_ai_response_async(
 
             print("[AI TASK] Inserting AI message into database...")
             logger.info("[AI TASK] Inserting AI message into database...")
-            message_response = supabase_storage.table("chat_messages").insert(ai_message_data).execute()
-            if not message_response.data:
-                print("[AI TASK] Failed to insert AI message - no data returned")
-                logger.error("[AI TASK] Failed to insert AI message - no data returned")
+            
+            # Verify service role key is available
+            if not supabase_service_role_key:
+                error_msg = "Cannot insert AI message: SUPABASE_SERVICE_ROLE_KEY not set in environment"
+                print(f"[AI TASK] {error_msg}")
+                logger.error(f"[AI TASK] {error_msg}")
+                _update_placeholder_to_error("Reel48 AI is temporarily unavailable. Please contact support.")
+                return
+            
+            try:
+                # Use REST API directly with service role key to ensure RLS bypass
+                headers = {
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                }
+                response = requests.post(
+                    f"{supabase_url}/rest/v1/chat_messages",
+                    json=ai_message_data,
+                    headers=headers
+                )
+                response.raise_for_status()
+                message_response_data = response.json()
+                if not message_response_data or len(message_response_data) == 0:
+                    print("[AI TASK] Failed to insert AI message - no data returned")
+                    logger.error("[AI TASK] Failed to insert AI message - no data returned")
+                    _update_placeholder_to_error("Failed to save AI response. Please try again.")
+                    return
+            except requests.exceptions.HTTPError as http_error:
+                error_msg = str(http_error)
+                if hasattr(http_error, 'response') and http_error.response is not None:
+                    try:
+                        error_detail = http_error.response.json()
+                        error_msg = error_detail.get('message', error_msg)
+                    except:
+                        error_msg = http_error.response.text or error_msg
+                print(f"[AI TASK] Error inserting AI message: {error_msg}")
+                logger.error(f"[AI TASK] Error inserting AI message: {error_msg}", exc_info=True)
+                # Check if it's an RLS error
+                if "row-level security" in error_msg.lower() or "42501" in error_msg:
+                    logger.error(f"[AI TASK] RLS policy violation! Service role key may not be configured correctly. Check SUPABASE_SERVICE_ROLE_KEY environment variable.")
+                    _update_placeholder_to_error("Reel48 AI is temporarily unavailable. Please contact support.")
+                else:
+                    _update_placeholder_to_error("Failed to save AI response. Please try again.")
+                return
+            except Exception as insert_error:
+                error_msg = str(insert_error)
+                print(f"[AI TASK] Error inserting AI message: {error_msg}")
+                logger.error(f"[AI TASK] Error inserting AI message: {error_msg}", exc_info=True)
+                _update_placeholder_to_error("Failed to save AI response. Please try again.")
                 return
 
             # If we attached a PDF, follow up with a short action card with deep links.
