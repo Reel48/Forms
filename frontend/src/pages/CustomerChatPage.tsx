@@ -181,10 +181,15 @@ const CustomerChatPage: React.FC = () => {
       // #endregion
       const response = await chatAPI.checkSession(sessionId);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:179',message:'after API call success',data:{status:response.status,hasData:!!response.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CustomerChatPage.tsx:179',message:'after API call success',data:{status:response.status,hasData:!!response.data,wasReset:response.data?.was_reset},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       
       if (response.data.was_reset) {
+        const resetData = {location:'CustomerChatPage.tsx:190',message:'session was reset - clearing messages',data:{conversationId:conversation?.id,messagesCountBeforeClear:messages.length},timestamp:Date.now(),hypothesisId:'F'};
+        console.log('🔍 [DEBUG]', JSON.stringify(resetData));
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...resetData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+        // #endregion
         // Session was reset, clear messages and reload (will be empty)
         // Silent reset - no notification shown to user
         setMessages([]);
