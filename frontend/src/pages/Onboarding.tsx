@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { clientsAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
-import { getLogoForLightBackground } from '../utils/logoUtils';
+import { getLogoForDarkBackground } from '../utils/logoUtils';
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -210,7 +210,7 @@ function Onboarding() {
         alignItems: 'center'
       }}>
         <img 
-          src={getLogoForLightBackground()} 
+          src={getLogoForDarkBackground()} 
           alt="Reel48 Logo" 
           style={{
             height: '48px',
