@@ -437,14 +437,49 @@ class AIService:
                     response = self.model.generate_content(full_prompt)
                 print(f"🔧 [AI SERVICE] Received response from Gemini API")
                 
-                # Check if response has text
-                if not response or not hasattr(response, 'text'):
-                    error_msg = f"Invalid response from Gemini API: {response}"
-                    print(f"❌ [AI SERVICE] {error_msg}")
-                    logger.error(f"❌ [AI SERVICE] {error_msg}")
-                    raise ValueError("Invalid response from Gemini API")
-                
-                response_text = response.text
+                # Check for invalid function calls (finish_reason 10) before accessing .text
+                response_text = ""
+                if hasattr(response, 'candidates') and response.candidates:
+                    candidate = response.candidates[0]
+                    if hasattr(candidate, 'finish_reason'):
+                        finish_reason = candidate.finish_reason
+                        # finish_reason 10 = FUNCTION_CALL_INVALID
+                        if finish_reason == 10:
+                            error_msg = "Model generated an invalid function call. This may be due to function calling constraints."
+                            print(f"⚠️ [AI SERVICE] {error_msg}")
+                            logger.warning(f"⚠️ [AI SERVICE] {error_msg}")
+                            # Try to extract any text from parts
+                            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                                for part in candidate.content.parts:
+                                    if hasattr(part, 'text'):
+                                        response_text += part.text
+                            # If still no text, provide a fallback message
+                            if not response_text:
+                                response_text = "I apologize, but I encountered an issue processing that request. Could you please rephrase your question?"
+                        else:
+                            # Normal case - try to get text
+                            try:
+                                response_text = response.text
+                            except (ValueError, AttributeError) as text_error:
+                                # If .text access fails, try to extract from parts
+                                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                                    for part in candidate.content.parts:
+                                        if hasattr(part, 'text'):
+                                            response_text += part.text
+                                if not response_text:
+                                    error_msg = f"Could not extract text from response: {str(text_error)}"
+                                    print(f"❌ [AI SERVICE] {error_msg}")
+                                    logger.error(f"❌ [AI SERVICE] {error_msg}")
+                                    raise ValueError(f"Invalid response from Gemini API: {error_msg}")
+                else:
+                    # Fallback: try to access .text directly
+                    try:
+                        response_text = response.text if hasattr(response, 'text') else ""
+                    except (ValueError, AttributeError) as text_error:
+                        error_msg = f"Invalid response from Gemini API: {str(text_error)}"
+                        print(f"❌ [AI SERVICE] {error_msg}")
+                        logger.error(f"❌ [AI SERVICE] {error_msg}")
+                        raise ValueError(error_msg)
                 if not response_text or len(response_text.strip()) == 0:
                     error_msg = "Empty response from Gemini API"
                     print(f"⚠️ [AI SERVICE] {error_msg}")
@@ -610,6 +645,25 @@ class AIService:
             
             if hasattr(response, 'candidates') and response.candidates:
                 candidate = response.candidates[0]
+                
+                # Check for invalid function calls (finish_reason 10)
+                if hasattr(candidate, 'finish_reason') and candidate.finish_reason == 10:
+                    error_msg = "Model generated an invalid function call. This may be due to function calling constraints."
+                    logger.warning(f"⚠️ [FUNCTION CALLING] {error_msg}")
+                    print(f"⚠️ [FUNCTION CALLING] {error_msg}")
+                    # Try to extract any text from parts
+                    if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'text'):
+                                response_text += part.text
+                    # If still no text, provide a fallback message
+                    if not response_text:
+                        response_text = "I apologize, but I encountered an issue processing that request. Could you please rephrase your question?"
+                    # Return early with no function calls
+                    return {
+                        "response": self._format_urls_as_markdown(response_text),
+                        "function_calls": []
+                    }
                 
                 # Check if there are function calls
                 if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
