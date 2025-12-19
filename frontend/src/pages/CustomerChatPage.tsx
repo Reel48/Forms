@@ -50,6 +50,11 @@ const CustomerChatPage: React.FC = () => {
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
+    const setupData = {location:'CustomerChatPage.tsx:54',message:'setupRealtimeSubscriptions called',data:{conversationId},timestamp:Date.now(),hypothesisId:'G'};
+    console.log('🔍 [DEBUG]', JSON.stringify(setupData));
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...setupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+    // #endregion
     const realtimeClient = getRealtimeClient();
 
     // Clean up existing subscriptions
@@ -74,6 +79,12 @@ const CustomerChatPage: React.FC = () => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          const realtimeData = {location:'CustomerChatPage.tsx:77',message:'Realtime message event received',data:{eventType:payload.eventType,hasNew:!!payload.new,hasOld:!!payload.old,messageId:payload.new?.id||payload.old?.id,senderId:payload.new?.sender_id||payload.old?.sender_id},timestamp:Date.now(),hypothesisId:'G'};
+          console.log('🔍 [DEBUG]', JSON.stringify(realtimeData));
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...realtimeData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+          // #endregion
+          
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
             
@@ -107,7 +118,18 @@ const CustomerChatPage: React.FC = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        const subData = {location:'CustomerChatPage.tsx:113',message:'Realtime messages subscription status',data:{status,conversationId},timestamp:Date.now(),hypothesisId:'G'};
+        console.log('🔍 [DEBUG]', JSON.stringify(subData));
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...subData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+        // #endregion
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to chat messages via Realtime');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to chat messages:', status);
+        }
+      });
 
     messagesSubscriptionRef.current = messagesChannel;
 
