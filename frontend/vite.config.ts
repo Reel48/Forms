@@ -16,5 +16,13 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 1000,
+    // Add sourcemap for better error tracking in production
+    sourcemap: false,
+  },
+  // Improve chunk loading reliability
+  server: {
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
   },
 })

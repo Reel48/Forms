@@ -47,15 +47,27 @@ class ErrorBoundary extends Component<Props, State> {
 
     if (isChunkError) {
       // Try to reload the page to get fresh chunks
+      // Use the same key as main.tsx for consistency
       const KEY = 'forms:chunk_recovery_reload_v2';
-      const alreadyReloaded = sessionStorage.getItem(KEY) === '1';
+      const reloadCount = parseInt(sessionStorage.getItem(KEY) || '0', 10);
+      const MAX_RELOADS = 2;
       
-      if (!alreadyReloaded) {
-        sessionStorage.setItem(KEY, '1');
-        console.warn('[ErrorBoundary] Chunk load error detected, reloading page...');
+      if (reloadCount < MAX_RELOADS) {
+        sessionStorage.setItem(KEY, (reloadCount + 1).toString());
+        console.warn(`[ErrorBoundary] Chunk load error detected, reloading page... (${reloadCount + 1}/${MAX_RELOADS})`);
+        
+        // Clear cache before reload
+        if ('caches' in window) {
+          caches.keys().then((names) => {
+            names.forEach((name) => caches.delete(name));
+          });
+        }
+        
         setTimeout(() => {
           window.location.reload();
         }, 100);
+      } else {
+        console.warn('[ErrorBoundary] Max reloads reached. Showing error UI.');
       }
     }
   }
