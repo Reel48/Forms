@@ -217,7 +217,7 @@ async def _upload_single_file(
     
     # Upload to Supabase Storage (bucket: project-files)
     try:
-        supabase_storage.storage.from_("project-files").upload(
+        upload_result = supabase_storage.storage.from_("project-files").upload(
             unique_filename,
             file_content,
             file_options={
@@ -228,10 +228,23 @@ async def _upload_single_file(
         print(f"File uploaded successfully: {unique_filename}")
     except Exception as storage_error:
         error_msg = str(storage_error)
-        print(f"Storage upload error: {error_msg}")
+        error_type = type(storage_error).__name__
+        print(f"Storage upload error ({error_type}): {error_msg}")
+        import traceback
+        traceback.print_exc()
+        # Check for specific error types
+        if "bucket" in error_msg.lower() or "not found" in error_msg.lower():
+            detail = f"Storage bucket 'project-files' not found or not accessible. Please check your Supabase configuration."
+        elif "permission" in error_msg.lower() or "unauthorized" in error_msg.lower():
+            detail = f"Permission denied: Unable to upload to storage. Please check your Supabase service role key."
+        elif "duplicate" in error_msg.lower() or "exists" in error_msg.lower():
+            # This shouldn't happen with upsert: false, but handle it anyway
+            detail = f"File already exists at this path. Please try again."
+        else:
+            detail = f"Failed to upload file to storage: {error_msg}"
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to upload file to storage: {error_msg}"
+            detail=detail
         )
     
     # Get signed URL (temporary, expires in 1 hour)
