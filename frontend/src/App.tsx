@@ -7,7 +7,6 @@ import { NotificationProvider } from './components/NotificationSystem';
 import ErrorBoundary from './components/ErrorBoundary';
 import { FaTimes, FaBars, FaUserCircle } from 'react-icons/fa';
 import { getLogoForDarkBackground } from './utils/logoUtils';
-import { clientsAPI } from './api';
 import './App.css';
 
 // Retry function for lazy loading with chunk error recovery
