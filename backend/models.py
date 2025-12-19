@@ -79,6 +79,12 @@ class ClientBase(BaseModel):
 class ClientCreate(ClientBase):
     pass
 
+# Profile Completion Models
+class ProfileCompletionStatus(BaseModel):
+    is_complete: bool
+    missing_fields: List[str] = []
+    profile_completed_at: Optional[datetime] = None
+
 class Client(ClientBase):
     id: str
     created_at: datetime
@@ -94,6 +100,7 @@ class Client(ClientBase):
     sms_opt_out_at: Optional[datetime] = None  # Deprecated: SMS no longer supported
     sms_verified: Optional[bool] = False  # Deprecated: SMS no longer supported
     sms_verified_at: Optional[datetime] = None  # Deprecated: SMS no longer supported
+    profile_completed_at: Optional[datetime] = None  # Timestamp when profile onboarding was completed
     
     @field_validator('created_at', mode='before')
     @classmethod

@@ -59,6 +59,7 @@ const FoldersList = lazy(() => retryLazyLoad(() => import('./pages/FoldersList')
 const FolderView = lazy(() => retryLazyLoad(() => import('./pages/FolderView')));
 const CompanySettingsPage = lazy(() => retryLazyLoad(() => import('./pages/CompanySettings')));
 const Profile = lazy(() => retryLazyLoad(() => import('./pages/Profile')));
+const Onboarding = lazy(() => retryLazyLoad(() => import('./pages/Onboarding')));
 const CustomerDashboard = lazy(() => retryLazyLoad(() => import('./pages/CustomerDashboard')));
 const QuoteAnalytics = lazy(() => retryLazyLoad(() => import('./pages/QuoteAnalytics')));
 const EmailTemplates = lazy(() => retryLazyLoad(() => import('./pages/EmailTemplates')));
@@ -542,10 +543,11 @@ function AppContent() {
   const location = useLocation();
   const isPublicForm = location.pathname.startsWith('/public/form/');
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || location.pathname === '/reset-password' || location.pathname === '/verify-email' || location.pathname === '/resend-verification';
+  const isOnboardingPage = location.pathname === '/onboarding';
   
   return (
     <>
-      {!isPublicForm && !isAuthPage && <Navigation />}
+      {!isPublicForm && !isAuthPage && !isOnboardingPage && <Navigation />}
       <SessionTimeoutWarning />
       <main id="main-content" role="main">
         <ErrorBoundary>
@@ -563,6 +565,7 @@ function AppContent() {
           <Route path="/resend-verification" element={<Suspense fallback={<LoadingFallback />}><ResendVerification /></Suspense>} />
           
           {/* Protected routes - require authentication */}
+          <Route path="/onboarding" element={<ProtectedRoute skipProfileCheck><Suspense fallback={<LoadingFallback />}><Onboarding /></Suspense></ProtectedRoute>} />
           <Route path="/" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><HomePage /></Suspense></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerDashboard /></Suspense></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><CustomerChatPage /></Suspense></ProtectedRoute>} />
@@ -588,7 +591,7 @@ function AppContent() {
           <Route path="/analytics" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteAnalytics /></Suspense></ProtectedRoute>} />
           <Route path="/admin/calendar" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><AdminCalendarView /></Suspense></ProtectedRoute>} />
           <Route path="/email-templates" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><EmailTemplates /></Suspense></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Profile /></Suspense></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute skipProfileCheck><Suspense fallback={<LoadingFallback />}><Profile /></Suspense></ProtectedRoute>} />
           </Routes>
         </ErrorBoundary>
       </main>

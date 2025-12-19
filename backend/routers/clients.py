@@ -5,7 +5,7 @@ import os
 import uuid
 import hashlib
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import Client, ClientCreate
+from models import Client, ClientCreate, ProfileCompletionStatus
 from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from stripe_service import StripeService
 from auth import get_current_user, get_current_admin
@@ -335,6 +335,73 @@ async def delete_client(client_id: str, current_admin: dict = Depends(get_curren
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def _check_profile_completion(client: dict) -> ProfileCompletionStatus:
+    """Check if a client profile has all required fields for onboarding"""
+    required_fields = {
+        "name": client.get("name"),
+        "email": client.get("email"),
+        "company": client.get("company"),
+        "phone": client.get("phone"),
+        "address_line1": client.get("address_line1"),
+        "address_city": client.get("address_city"),
+        "address_state": client.get("address_state"),
+        "address_postal_code": client.get("address_postal_code"),
+    }
+    
+    missing_fields = []
+    for field_name, field_value in required_fields.items():
+        if not field_value or (isinstance(field_value, str) and not field_value.strip()):
+            missing_fields.append(field_name)
+    
+    # Check email format if email is provided
+    if required_fields["email"]:
+        import re
+        email_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        if not re.match(email_pattern, required_fields["email"]):
+            if "email" not in missing_fields:
+                missing_fields.append("email")
+    
+    is_complete = len(missing_fields) == 0
+    
+    profile_completed_at = client.get("profile_completed_at")
+    if isinstance(profile_completed_at, str):
+        from datetime import datetime
+        try:
+            profile_completed_at = datetime.fromisoformat(profile_completed_at.replace('Z', '+00:00'))
+        except:
+            profile_completed_at = None
+    
+    return ProfileCompletionStatus(
+        is_complete=is_complete,
+        missing_fields=missing_fields,
+        profile_completed_at=profile_completed_at
+    )
+
+@router.get("/profile/me/completion", response_model=ProfileCompletionStatus)
+async def get_profile_completion_status(current_user: dict = Depends(get_current_user)):
+    """Check if the current user's profile is complete"""
+    try:
+        user_id = current_user.get("id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+        
+        # Find client record for this user
+        response = supabase_storage.table("clients").select("*").eq("user_id", user_id).execute()
+        if not response.data or len(response.data) == 0:
+            # No client record exists, return incomplete status
+            return ProfileCompletionStatus(
+                is_complete=False,
+                missing_fields=["name", "email", "company", "phone", "address_line1", "address_city", "address_state", "address_postal_code"],
+                profile_completed_at=None
+            )
+        
+        client = response.data[0]
+        return _check_profile_completion(client)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/profile/me", response_model=Client)
 async def get_my_profile(current_user: dict = Depends(get_current_user)):
     """Get the current user's client profile"""
@@ -396,6 +463,16 @@ async def update_my_profile(
         # Don't allow users to change registration_source or user_id
         client_data.pop("registration_source", None)
         client_data.pop("user_id", None)
+        
+        # Check if profile should be marked as complete
+        # Merge existing client data with new data to check completion
+        merged_client = {**existing_client, **client_data}
+        completion_status = _check_profile_completion(merged_client)
+        
+        # If profile is now complete and wasn't before, set profile_completed_at
+        if completion_status.is_complete and not existing_client.get("profile_completed_at"):
+            from datetime import datetime, timezone
+            client_data["profile_completed_at"] = datetime.now(timezone.utc).isoformat()
         
         # Create or update Stripe customer if email is provided
         if client_data.get("email"):

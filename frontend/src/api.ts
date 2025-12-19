@@ -125,6 +125,7 @@ export interface Client {
   address_state?: string;
   address_postal_code?: string;
   address_country?: string;
+  profile_completed_at?: string | null;
 }
 
 export interface LineItem {
@@ -385,6 +386,13 @@ export const stripeAPI = {
   getInvoice: (invoiceId: string) => api.get<{ id: string; status: string; amount_due: number; amount_paid: number; hosted_invoice_url: string; invoice_pdf: string; paid: boolean }>(`/api/stripe/invoices/${invoiceId}`),
 };
 
+// Profile Completion Status
+export interface ProfileCompletionStatus {
+  is_complete: boolean;
+  missing_fields: string[];
+  profile_completed_at?: string | null;
+}
+
 // Clients API
 export const clientsAPI = {
   getAll: () => api.get<Client[]>('/api/clients'),
@@ -394,6 +402,7 @@ export const clientsAPI = {
   delete: (id: string) => api.delete(`/api/clients/${id}`),
   getMyProfile: () => api.get<Client>('/api/clients/profile/me'),
   updateMyProfile: (client: Partial<Client>) => api.put<Client>('/api/clients/profile/me', client),
+  getProfileCompletionStatus: () => api.get<ProfileCompletionStatus>('/api/clients/profile/me/completion'),
   uploadProfilePicture: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
