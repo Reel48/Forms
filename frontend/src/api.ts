@@ -482,6 +482,8 @@ export const formsAPI = {
   },
   // Form submission
   submitForm: (formId: string, submission: any) => api.post(`/api/forms/${formId}/submit`, submission),
+  markComplete: (formId: string, payload: { folder_id: string; source?: string }) =>
+    api.post<{ success: boolean; submission_id: string; already_completed: boolean }>(`/api/forms/${formId}/mark-complete`, payload),
   getSubmissions: (formId: string) => api.get<FormSubmission[]>(`/api/forms/${formId}/submissions`),
   getSubmission: (formId: string, submissionId: string) => api.get<FormSubmission>(`/api/forms/${formId}/submissions/${submissionId}`),
   getMySubmission: (formId: string, opts?: { folder_id?: string }) => {

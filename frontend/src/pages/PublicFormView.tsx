@@ -2379,6 +2379,7 @@ function PublicFormView() {
 
   // Check if this is a Typeform form and render embed
   if (form?.is_typeform_form && form?.typeform_form_id) {
+    const folderId = searchParams.get('folder_id');
     return (
       <div style={{ 
         width: '100%', 
@@ -2390,12 +2391,31 @@ function PublicFormView() {
         <Widget
           id={form.typeform_form_id}
           style={{ width: '100%', height: '100%', flex: 1 }}
-          onSubmit={() => {
-            // Handle form completion
-            console.log('Typeform submission completed');
-            // Optionally redirect or show thank you message
-            if (form.thank_you_screen?.redirect_url) {
-              window.location.href = form.thank_you_screen.redirect_url;
+          hidden={{
+            folder_id: folderId || '',
+            user_id: (user as any)?.id || '',
+            submitter_email: user?.email || '',
+          }}
+          onSubmit={async () => {
+            // Typeform submissions do not hit our /submit endpoint, so we create a folder-scoped completion record.
+            try {
+              if (folderId && form?.id) {
+                await formsAPI.markComplete(form.id, { folder_id: folderId, source: 'typeform' });
+              }
+            } catch (err) {
+              // Non-fatal: even if this fails, user still completed Typeform; folder may require refresh or webhook fallback.
+              console.warn('Failed to mark Typeform form complete:', err);
+            } finally {
+              // Return the user to the folder if we have context, otherwise use configured redirect or dashboard.
+              if (folderId) {
+                navigate(`/folders/${folderId}`);
+                return;
+              }
+              if (form.thank_you_screen?.redirect_url) {
+                window.location.href = form.thank_you_screen.redirect_url;
+              } else {
+                navigate('/');
+              }
             }
           }}
         />

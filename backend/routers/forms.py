@@ -3,6 +3,10 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
+import uuid
+import hmac
+import hashlib
+import base64
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,7 +18,6 @@ from email_service import email_service
 from email_utils import get_admin_emails
 from webhook_service import webhook_service
 from services.typeform_service import TypeformService
-import uuid
 import secrets
 import string
 import hashlib
@@ -23,6 +26,103 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/forms", tags=["forms"])
+
+
+class MarkFormCompleteRequest(BaseModel):
+    folder_id: str
+    source: Optional[str] = "typeform"
+
+
+@router.post("/{form_id}/mark-complete", response_model=dict)
+async def mark_form_complete(
+    form_id: str,
+    payload: MarkFormCompleteRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Mark a folder-scoped form task as completed.
+
+    This is primarily used for Typeform-managed forms where the submission happens in Typeform,
+    but we still need a folder-scoped completion record in `form_submissions`.
+    """
+    try:
+        folder_id = payload.folder_id
+
+        # Ensure the form is assigned to this folder
+        assignment = (
+            supabase_storage
+            .table("form_folder_assignments")
+            .select("id")
+            .eq("form_id", form_id)
+            .eq("folder_id", folder_id)
+            .limit(1)
+            .execute()
+        ).data or []
+        if not assignment:
+            raise HTTPException(status_code=400, detail="Form is not assigned to this folder")
+
+        # Ensure the user can access the folder (assignment or created_by)
+        folder = supabase_storage.table("folders").select("id, created_by").eq("id", folder_id).single().execute().data
+        if not folder:
+            raise HTTPException(status_code=404, detail="Folder not found")
+
+        if current_user.get("role") != "admin":
+            fa = (
+                supabase_storage
+                .table("folder_assignments")
+                .select("folder_id")
+                .eq("folder_id", folder_id)
+                .eq("user_id", current_user["id"])
+                .limit(1)
+                .execute()
+            ).data or []
+            if not fa and folder.get("created_by") != current_user["id"]:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        # Idempotency: if we already have a completed submission for this user+folder+form, return success
+        existing = (
+            supabase_storage
+            .table("form_submissions")
+            .select("id")
+            .eq("form_id", form_id)
+            .eq("folder_id", folder_id)
+            .eq("user_id", current_user["id"])
+            .eq("status", "completed")
+            .limit(1)
+            .execute()
+        ).data or []
+
+        if existing:
+            return {"success": True, "submission_id": existing[0].get("id"), "already_completed": True}
+
+        now = datetime.now().isoformat()
+        submission_id = str(uuid.uuid4())
+        submitter_email = (current_user.get("email") or "").lower().strip() or None
+
+        insert_data = {
+            "id": submission_id,
+            "form_id": form_id,
+            "folder_id": folder_id,
+            "user_id": current_user["id"],
+            "submitter_email": submitter_email,
+            "submitter_name": current_user.get("name") or None,
+            "status": "completed",
+            "review_status": f"completed:{(payload.source or 'typeform')}",
+            "submitted_at": now,
+            "started_at": now,
+            "assignment_id": assignment[0].get("id"),
+        }
+
+        resp = supabase_storage.table("form_submissions").insert(insert_data).execute()
+        if not resp.data:
+            raise HTTPException(status_code=500, detail="Failed to mark form as completed")
+
+        return {"success": True, "submission_id": submission_id, "already_completed": False}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def generate_url_slug() -> str:
     """Generate a unique URL slug for forms"""
@@ -1036,24 +1136,38 @@ async def get_my_submission(
         # Normalize email to lowercase for comparison
         user_email_lower = user_email.lower().strip()
         
-        # Get submissions for this form (optionally scoped to folder)
-        q = (
-            supabase_storage
-            .table("form_submissions")
-            .select("*, form_submission_answers(*)")
-            .eq("form_id", form_id)
-        )
-        if folder_id:
-            q = q.eq("folder_id", folder_id)
-        all_submissions = q.order("submitted_at", desc=True).execute()
-        
-        # Find matching submission by case-insensitive email match
+        # Prefer exact match by authenticated user_id (more reliable than email),
+        # fall back to submitter_email for legacy submissions.
         matching_submission = None
-        for s in (all_submissions.data or []):
-            submission_email = s.get("submitter_email", "")
-            if submission_email:
-                submission_email_lower = submission_email.lower().strip()
-                if submission_email_lower == user_email_lower:
+        if current_user.get("id"):
+            q_user = (
+                supabase_storage
+                .table("form_submissions")
+                .select("*, form_submission_answers(*)")
+                .eq("form_id", form_id)
+                .eq("user_id", current_user.get("id"))
+            )
+            if folder_id:
+                q_user = q_user.eq("folder_id", folder_id)
+            user_submissions = q_user.order("submitted_at", desc=True).execute()
+            if user_submissions.data:
+                matching_submission = user_submissions.data[0]
+
+        if not matching_submission:
+            # Fallback: get submissions for this form (optionally scoped to folder) and match by email
+            q = (
+                supabase_storage
+                .table("form_submissions")
+                .select("*, form_submission_answers(*)")
+                .eq("form_id", form_id)
+            )
+            if folder_id:
+                q = q.eq("folder_id", folder_id)
+            all_submissions = q.order("submitted_at", desc=True).execute()
+
+            for s in (all_submissions.data or []):
+                submission_email = s.get("submitter_email", "")
+                if submission_email and submission_email.lower().strip() == user_email_lower:
                     matching_submission = s
                     break
         
