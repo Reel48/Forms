@@ -37,6 +37,7 @@ def get_stage_steps(
     payment_paid: bool,
     has_shipment: bool,
     is_delivered: bool,
+    design_tasks_incomplete: bool,
 ) -> List[Dict[str, Any]]:
     """
     Get stepper configuration based on current order state.
@@ -44,12 +45,14 @@ def get_stage_steps(
     """
     steps = []
     
-    # Step 1: Design (always shown, completed when quote exists)
-    steps.append({
-        "key": "design",
-        "label": "Design",
-        "status": "completed" if has_quote else "pending",
-    })
+    # Step 1: Design
+    # Pending until we have a quote.
+    # Active after quote exists while any pre-production tasks are incomplete (before-delivery forms + e-signatures).
+    # Completed once design tasks are done for this folder.
+    design_status = "pending"
+    if has_quote:
+        design_status = "active" if design_tasks_incomplete else "completed"
+    steps.append({"key": "design", "label": "Design", "status": design_status})
     
     # Step 2: Quote & Pay (active when quote_sent or payment pending)
     quote_pay_status = "pending"
@@ -312,6 +315,7 @@ def compute_stage_and_next_step(
         payment_paid=payment_paid,
         has_shipment=has_shipment,
         is_delivered=bool(delivered_at or shipped_status == "delivered"),
+        design_tasks_incomplete=non_payment_incomplete,
     )
     
     return {

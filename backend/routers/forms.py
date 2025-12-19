@@ -1074,6 +1074,75 @@ async def get_my_submission(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/{form_id}/folder-completion-debug", response_model=dict)
+async def debug_folder_completion(
+    form_id: str,
+    folder_id: str = Query(..., description="Folder ID to debug completion for"),
+    submitter_email: Optional[str] = Query(None, description="Optional submitter email to debug matching"),
+    current_admin: dict = Depends(get_current_admin),
+):
+    """Admin-only: explain why a folder-scoped form may be showing incomplete."""
+    try:
+        # Verify form exists
+        form_resp = supabase_storage.table("forms").select("id, name").eq("id", form_id).single().execute()
+        if not form_resp.data:
+            raise HTTPException(status_code=404, detail="Form not found")
+
+        # Verify folder exists
+        folder_resp = supabase_storage.table("folders").select("id, name").eq("id", folder_id).single().execute()
+        if not folder_resp.data:
+            raise HTTPException(status_code=404, detail="Folder not found")
+
+        # Is the form assigned to the folder?
+        assignment = (
+            supabase_storage
+            .table("form_folder_assignments")
+            .select("id, assigned_at, assigned_by")
+            .eq("form_id", form_id)
+            .eq("folder_id", folder_id)
+            .limit(1)
+            .execute()
+        ).data or []
+
+        # Pull submissions scoped to folder+form
+        submissions_q = (
+            supabase_storage
+            .table("form_submissions")
+            .select("id, submitted_at, status, submitter_email, user_id, assignment_id, folder_id")
+            .eq("form_id", form_id)
+            .eq("folder_id", folder_id)
+            .order("submitted_at", desc=True)
+        )
+        submissions = submissions_q.execute().data or []
+
+        email_norm = (submitter_email or "").lower().strip() if submitter_email else None
+        matched_by_email = []
+        if email_norm:
+            for s in submissions:
+                s_email = (s.get("submitter_email") or "").lower().strip()
+                if s_email and s_email == email_norm:
+                    matched_by_email.append(s)
+
+        completed = [s for s in submissions if str(s.get("status") or "").lower() == "completed"]
+        completed_by_email = [s for s in matched_by_email if str(s.get("status") or "").lower() == "completed"]
+
+        return {
+            "form": {"id": form_resp.data.get("id"), "name": form_resp.data.get("name")},
+            "folder": {"id": folder_resp.data.get("id"), "name": folder_resp.data.get("name")},
+            "assignment": assignment[0] if assignment else None,
+            "submissions_total_for_folder": len(submissions),
+            "submissions_completed_for_folder": len(completed),
+            "submitter_email": email_norm,
+            "submissions_matching_email": len(matched_by_email) if email_norm else None,
+            "submissions_completed_matching_email": len(completed_by_email) if email_norm else None,
+            "latest_submission": submissions[0] if submissions else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/{form_id}/short-url", response_model=dict)
 async def create_short_url(form_id: str, request: Request, current_admin: dict = Depends(get_current_admin)):
     """Create a short URL for a form (admin only)"""

@@ -295,6 +295,16 @@ function PublicFormView() {
       return;
     }
 
+    // If opened from a folder task, return to that folder so the user immediately
+    // sees the form marked completed in the folder task list/progress.
+    const folderId = searchParams.get('folder_id');
+    if (folderId) {
+      const timer = setTimeout(() => {
+        navigate(`/folders/${folderId}`);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+
     // Get redirect URL from ref (set when form was loaded)
     const redirectUrl = redirectUrlRef.current;
     
@@ -2185,7 +2195,8 @@ function PublicFormView() {
   if (submitted) {
     const thankYouMessage = form?.thank_you_screen?.title || 'Thank you!';
     const thankYouDescription = form?.thank_you_screen?.description || 'Your response has been recorded.';
-    const redirectUrl = form?.thank_you_screen?.redirect_url;
+    const folderId = searchParams.get('folder_id');
+    const redirectUrl = folderId ? `/folders/${folderId}` : form?.thank_you_screen?.redirect_url;
 
     return (
       <div className="container" style={{ textAlign: 'center', padding: '2rem' }}>
@@ -2196,6 +2207,15 @@ function PublicFormView() {
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
               Redirecting in 3 seconds...
             </p>
+          )}
+          {folderId && (
+            <button
+              onClick={() => navigate(`/folders/${folderId}`)}
+              className="btn-secondary"
+              style={{ fontSize: '1rem', padding: '0.75rem 1.5rem' }}
+            >
+              Back to Folder
+            </button>
           )}
           {/* Back to Dashboard button for customers */}
           {role === 'customer' && (
