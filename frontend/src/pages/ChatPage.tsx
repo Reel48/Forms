@@ -201,8 +201,6 @@ const ChatPage: React.FC = () => {
 
   // Setup global subscription for admins to see all conversations updating in real-time
   useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...adminData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-    // #endregion
     if (!isAdmin) return;
 
     const realtimeClient = getRealtimeClient();
@@ -271,8 +269,6 @@ const ChatPage: React.FC = () => {
 
     // Cleanup subscriptions on unmount
     return () => {
-      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...cleanupData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
-      // #endregion
       const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
         realtimeClient.removeChannel(messagesSubscriptionRef.current);
