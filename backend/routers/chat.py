@@ -196,11 +196,11 @@ def _check_and_reset_session_if_expired(conversation_id: str, customer_id: str) 
     Only resets for customer messages, not admin messages.
     """
     try:
-        # Get conversation with session fields
-        # Handle case where session columns don't exist yet (migration not run)
+        # Get conversation with session fields.
+        # NOTE: Some environments do NOT have legacy `last_activity_at`. Use `updated_at` as activity timestamp.
         try:
             conv_response = supabase_storage.table("chat_conversations").select(
-                "id, last_activity_at, session_id, session_started_at, is_active_session"
+                "id, updated_at, last_message_at, session_id, session_started_at, is_active_session"
             ).eq("id", conversation_id).single().execute()
         except Exception as col_error:
             error_str = str(col_error)
@@ -214,60 +214,30 @@ def _check_and_reset_session_if_expired(conversation_id: str, customer_id: str) 
             return False
         
         conv = conv_response.data
-        last_activity_at_str = conv.get("last_activity_at")
-        
-        if not last_activity_at_str:
-            # No last_activity_at set, initialize it but don't reset
-            now = datetime.now().isoformat()
-            supabase_storage.table("chat_conversations").update({
-                "last_activity_at": now,
-                "session_started_at": conv.get("session_started_at") or now,
-                "session_id": conv.get("session_id") or str(uuid.uuid4()),
-                "is_active_session": True
-            }).eq("id", conversation_id).execute()
+        activity_str = conv.get("updated_at") or conv.get("last_message_at") or conv.get("session_started_at")
+        if not activity_str:
             return False
-        
-        # Parse last_activity_at and check if expired
+
+        # Parse activity timestamp and check if expired
         try:
-            last_activity = datetime.fromisoformat(last_activity_at_str.replace("Z", "+00:00"))
+            last_activity = datetime.fromisoformat(str(activity_str).replace("Z", "+00:00"))
             if not last_activity.tzinfo:
                 from zoneinfo import ZoneInfo
                 last_activity = last_activity.replace(tzinfo=ZoneInfo("UTC"))
         except Exception as e:
-            logger.warning(f"Failed to parse last_activity_at for conversation {conversation_id}: {e}")
+            logger.warning(f"Failed to parse activity timestamp for conversation {conversation_id}: {e}")
             return False
         
         now = datetime.now(last_activity.tzinfo)
         timeout_minutes = get_session_timeout_minutes()
         timeout_delta = timedelta(minutes=timeout_minutes)
         
-        # Check if session expired
+        # Check if session expired.
+        # IMPORTANT: Do NOT delete messages. We want full conversation history.
+        # We also do not force-create a new session here; returning False keeps the conversation continuous.
         if now - last_activity > timeout_delta:
-            logger.info(f"Session expired for conversation {conversation_id}. Resetting session.")
-            
-            # Delete all messages in the conversation
-            try:
-                supabase_storage.table("chat_messages").delete().eq("conversation_id", conversation_id).execute()
-                logger.info(f"Deleted all messages for expired session in conversation {conversation_id}")
-            except Exception as e:
-                logger.error(f"Failed to delete messages for conversation {conversation_id}: {e}")
-                # Continue with reset even if message deletion fails
-            
-            # Reset session fields
-            now_iso = datetime.now().isoformat()
-            new_session_id = str(uuid.uuid4())
-            
-            supabase_storage.table("chat_conversations").update({
-                "session_id": new_session_id,
-                "session_started_at": now_iso,
-                "last_activity_at": now_iso,
-                "is_active_session": True,
-                "last_message_at": None,  # Clear last message timestamp
-                "updated_at": now_iso
-            }).eq("id", conversation_id).execute()
-            
-            logger.info(f"Reset session for conversation {conversation_id}. New session_id: {new_session_id}")
-            return True
+            logger.info(f"Session would be considered expired for conversation {conversation_id}, but resets are disabled to preserve full history.")
+            return False
         
         return False
     except Exception as e:
@@ -829,7 +799,7 @@ async def check_session(
         # Try to select session fields, but handle case where columns don't exist yet
         try:
             updated_conv_response = supabase_storage.table("chat_conversations").select(
-                "session_id, session_started_at, last_activity_at, is_active_session"
+                "session_id, session_started_at, is_active_session, updated_at"
             ).eq("id", conversation_id).single().execute()
         except Exception as col_error:
             error_str = str(col_error)
@@ -867,7 +837,7 @@ async def check_session(
             "was_reset": was_reset,
             "session_id": session_data.get("session_id"),
             "session_started_at": session_data.get("session_started_at"),
-            "last_activity_at": session_data.get("last_activity_at"),
+            "last_activity_at": None,
             "message": "Session was reset" if was_reset else "Session is active"
         }
     except HTTPException as he:
@@ -1007,16 +977,12 @@ async def send_message(
         if not message_response.data:
             raise HTTPException(status_code=500, detail="Failed to send message")
         
-        # Explicitly update last_message_at, updated_at, and last_activity_at in conversation
+        # Explicitly update last_message_at and updated_at in conversation
         # (Database trigger also updates last_message_at, but explicit update ensures consistency)
-        # For customers, also update last_activity_at to track session activity
         update_data = {
             "last_message_at": message_created_at,
             "updated_at": message_created_at
         }
-        if not is_admin:
-            # Update last_activity_at for customer messages to track session activity
-            update_data["last_activity_at"] = message_created_at
         
         try:
             supabase_storage.table("chat_conversations").update(update_data).eq("id", conversation_id).execute()

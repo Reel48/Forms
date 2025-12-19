@@ -274,17 +274,26 @@ def setup_schedulers():
         replace_existing=True
     )
     
-    # Run expired session cleanup every 5 minutes
-    scheduler.add_job(
-        cleanup_expired_sessions,
-        trigger=CronTrigger(minute='*/5'),  # Every 5 minutes
-        id='session_cleanup',
-        name='Expired session cleanup (every 5 minutes)',
-        replace_existing=True
-    )
+    # Optional: session cleanup (DISABLED by default).
+    # Customers should be able to keep a full chat history; session cleanup must never delete messages.
+    # Enable explicitly via env:
+    #   ENABLE_CHAT_SESSION_CLEANUP=true
+    # If enabled, it runs infrequently to avoid any perceived "refreshing".
+    enable_session_cleanup = str(os.getenv("ENABLE_CHAT_SESSION_CLEANUP", "false")).lower() in ("1", "true", "yes")
+    if enable_session_cleanup:
+        scheduler.add_job(
+            cleanup_expired_sessions,
+            trigger=CronTrigger(hour='*/6', minute=0),  # Every 6 hours
+            id='session_cleanup',
+            name='Expired session cleanup (every 6 hours)',
+            replace_existing=True
+        )
     
     scheduler.start()
-    logger.info("Schedulers started (chat cleanup + security maintenance + session cleanup)")
+    logger.info(
+        "Schedulers started (chat cleanup + security maintenance%s)",
+        " + session cleanup" if enable_session_cleanup else ""
+    )
     return scheduler
 
 # Start scheduler when app starts
