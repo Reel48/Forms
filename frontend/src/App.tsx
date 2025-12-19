@@ -5,7 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionTimeoutWarning } from './components/SessionTimeoutWarning';
 import { NotificationProvider } from './components/NotificationSystem';
 import ErrorBoundary from './components/ErrorBoundary';
-import { FaTimes, FaBars } from 'react-icons/fa';
+import { FaTimes, FaBars, FaUserCircle } from 'react-icons/fa';
 import { getLogoForDarkBackground } from './utils/logoUtils';
 import { clientsAPI } from './api';
 import './App.css';
@@ -305,71 +305,18 @@ function Navigation() {
         {/* User Info */}
         {user && (
           <div className="navbar-user-section" style={{ paddingRight: '1.5rem' }}>
-            {/* Desktop: Show email */}
             <Link
               to="/profile"
-              className="user-email desktop-only"
+              className="hamburger-button"
               title={user.email}
+              aria-label="Open profile"
               style={{
-                maxWidth: '200px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
                 textDecoration: 'none',
                 cursor: 'pointer',
-                transition: 'opacity 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
+                color: '#ffffff',
               }}
             >
-              {user.email}
-            </Link>
-            {/* Mobile: Show profile picture avatar */}
-            <Link
-              to="/profile"
-              className="user-avatar mobile-only"
-              title={user.email}
-              style={{
-                display: 'none', // Hidden by default, shown via CSS on mobile
-                textDecoration: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              {profilePictureUrl ? (
-                <img
-                  src={profilePictureUrl}
-                  alt="Profile"
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid rgba(255, 255, 255, 0.3)'
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1rem',
-                    color: '#ffffff',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {clientName ? clientName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || '?'}
-                </div>
-              )}
+              <FaUserCircle />
             </Link>
           </div>
         )}
