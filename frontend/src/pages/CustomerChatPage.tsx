@@ -79,7 +79,9 @@ const CustomerChatPage: React.FC = () => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const realtimeData = {location:'CustomerChatPage.tsx:77',message:'Realtime message event received',data:{eventType:payload.eventType,hasNew:!!payload.new,hasOld:!!payload.old,messageId:payload.new?.id||payload.old?.id,senderId:payload.new?.sender_id||payload.old?.sender_id},timestamp:Date.now(),hypothesisId:'G'};
+          const newMsg = payload.new as ChatMessage | undefined;
+          const oldMsg = payload.old as ChatMessage | undefined;
+          const realtimeData = {location:'CustomerChatPage.tsx:77',message:'Realtime message event received',data:{eventType:payload.eventType,hasNew:!!payload.new,hasOld:!!payload.old,messageId:newMsg?.id||oldMsg?.id,senderId:newMsg?.sender_id||oldMsg?.sender_id},timestamp:Date.now(),hypothesisId:'G'};
           console.log('🔍 [DEBUG]', JSON.stringify(realtimeData));
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...realtimeData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
