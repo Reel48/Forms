@@ -533,12 +533,51 @@ async def sign_document(
 ):
     """Sign an e-signature document (simple mode)."""
     try:
+        # Check if user is admin
+        is_admin = False
+        try:
+            user_role_response = supabase_storage.table("user_roles").select("role").eq("user_id", user["id"]).single().execute()
+            is_admin = user_role_response.data and user_role_response.data.get("role") == "admin"
+        except Exception:
+            is_admin = False
+        
         # Get document - use service role client to bypass RLS
         doc_response = supabase_storage.table("esignature_documents").select("*, files(*)").eq("id", document_id).single().execute()
         if not doc_response.data:
             raise HTTPException(status_code=404, detail="Document not found")
         
         document = doc_response.data
+        
+        # Check access if not admin
+        if not is_admin:
+            # Customers can sign documents they created or documents in folders they have access to
+            if document.get("created_by") != user["id"]:
+                # Check folder access
+                folder_id = document.get("folder_id")
+                if folder_id:
+                    try:
+                        # Check if user has access to the folder
+                        folder_assignment = supabase_storage.table("folder_assignments").select("folder_id").eq("folder_id", folder_id).eq("user_id", user["id"]).execute()
+                        if not folder_assignment.data:
+                            # Also check if user is the client for this folder
+                            folder_response = supabase_storage.table("folders").select("client_id").eq("id", folder_id).single().execute()
+                            if folder_response.data:
+                                client_id = folder_response.data.get("client_id")
+                                if client_id:
+                                    # Check if user is linked to this client
+                                    client_response = supabase_storage.table("clients").select("user_id").eq("id", client_id).single().execute()
+                                    if not client_response.data or client_response.data.get("user_id") != user["id"]:
+                                        raise HTTPException(status_code=403, detail="Access denied")
+                            else:
+                                raise HTTPException(status_code=403, detail="Access denied")
+                    except HTTPException:
+                        raise
+                    except Exception:
+                        # If folder_assignments doesn't exist or other error, deny access
+                        raise HTTPException(status_code=403, detail="Access denied")
+                else:
+                    # Document not in a folder and user didn't create it
+                    raise HTTPException(status_code=403, detail="Access denied")
         
         # Check if already signed
         if document.get("status") == "signed":
