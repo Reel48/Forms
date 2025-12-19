@@ -20,13 +20,17 @@ let cachedStatus: {
   error: boolean;
 } | null = null;
 
+let hasLogged401Warning = false; // Track if we've already logged the 401 warning
+
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function useProfileCompletion(): UseProfileCompletionReturn {
-  const [isComplete, setIsComplete] = useState(cachedStatus?.isComplete ?? false);
-  const [isLoading, setIsLoading] = useState(!cachedStatus);
-  const [missingFields, setMissingFields] = useState<string[]>(cachedStatus?.missingFields ?? []);
-  const [profileCompletedAt, setProfileCompletedAt] = useState<string | null>(cachedStatus?.profileCompletedAt ?? null);
+  // Initialize from cache if available
+  const isCacheValid = cachedStatus && (Date.now() - cachedStatus.timestamp) < CACHE_DURATION;
+  const [isComplete, setIsComplete] = useState(isCacheValid ? cachedStatus!.isComplete : false);
+  const [isLoading, setIsLoading] = useState(!isCacheValid);
+  const [missingFields, setMissingFields] = useState<string[]>(isCacheValid ? cachedStatus!.missingFields : []);
+  const [profileCompletedAt, setProfileCompletedAt] = useState<string | null>(isCacheValid ? cachedStatus!.profileCompletedAt : null);
   const [error, setError] = useState<Error | null>(null);
   const hasFetchedRef = useRef(false);
 
@@ -72,8 +76,9 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
     } catch (err: any) {
       // Handle 401 errors gracefully - might be token refresh issue
       if (err?.response?.status === 401) {
-        // Only log once to avoid console spam
-        if (!cachedStatus?.error) {
+        // Only log once per session to avoid console spam
+        if (!hasLogged401Warning) {
+          hasLogged401Warning = true;
           console.warn('Profile completion check returned 401 - assuming profile is complete to avoid blocking');
         }
         
@@ -186,16 +191,21 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
   };
 
   useEffect(() => {
-    // Only fetch once per component mount, use cache for subsequent renders
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      fetchCompletionStatus();
-    } else if (cachedStatus) {
-      // Use cached value if component remounts
+    // Check cache first before making any API call
+    if (isCacheValid && cachedStatus) {
+      // Use cached value immediately
       setIsComplete(cachedStatus.isComplete);
       setMissingFields(cachedStatus.missingFields);
       setProfileCompletedAt(cachedStatus.profileCompletedAt);
       setIsLoading(false);
+      hasFetchedRef.current = true;
+      return;
+    }
+    
+    // Only fetch if we don't have a valid cache and haven't fetched yet
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchCompletionStatus();
     }
   }, []);
 
