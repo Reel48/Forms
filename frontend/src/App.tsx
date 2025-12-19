@@ -89,8 +89,6 @@ function Navigation() {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
-  const [clientName, setClientName] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLLIElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
@@ -128,24 +126,6 @@ function Navigation() {
 
   // Check if any settings-related page is active
   const isSettingsSectionActive = isSettingsActive || isClientsActive || isEmailTemplatesActive || isAnalyticsActive;
-
-  // Load profile picture for mobile navbar
-  useEffect(() => {
-    const loadProfilePicture = async () => {
-      if (user) {
-        try {
-          const response = await clientsAPI.getMyProfile();
-          if (response.data) {
-            setProfilePictureUrl(response.data.profile_picture_url || null);
-            setClientName(response.data.name || null);
-          }
-        } catch (error) {
-          console.error('Failed to load profile picture:', error);
-        }
-      }
-    };
-    loadProfilePicture();
-  }, [user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
