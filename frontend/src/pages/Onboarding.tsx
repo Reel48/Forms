@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clientsAPI } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
+import { getLogoForLightBackground } from '../utils/logoUtils';
 
 function Onboarding() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,7 +25,8 @@ function Onboarding() {
     address_country: 'US',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [addressMode, setAddressMode] = useState<'simple' | 'structured'>('structured');
+  // Onboarding always requires structured address mode
+  const [addressMode] = useState<'simple' | 'structured'>('structured');
 
   useEffect(() => {
     // Load existing profile data if available
@@ -120,21 +124,48 @@ function Onboarding() {
         }
       });
 
-      // If using structured mode, ensure we have all structured fields
-      if (addressMode === 'structured') {
-        // Remove simple address field if using structured
-        delete apiData.address;
-      } else {
-        // Remove structured fields if using simple
-        delete apiData.address_line1;
-        delete apiData.address_line2;
-        delete apiData.address_city;
-        delete apiData.address_state;
-        delete apiData.address_postal_code;
-        delete apiData.address_country;
+      // Onboarding always uses structured address mode
+      // Remove simple address field
+      delete apiData.address;
+      
+      // Ensure address_country has a default value if not set
+      if (!apiData.address_country) {
+        apiData.address_country = 'US';
       }
 
-      await clientsAPI.updateMyProfile(apiData);
+      const response = await clientsAPI.updateMyProfile(apiData);
+      
+      // Verify the profile was updated successfully
+      if (!response.data) {
+        throw new Error('Profile update failed: No data returned');
+      }
+      
+      // Verify all required fields are present in the response
+      const updatedProfile = response.data;
+      const requiredFields = {
+        name: updatedProfile.name,
+        email: updatedProfile.email,
+        company: updatedProfile.company,
+        phone: updatedProfile.phone,
+        address_line1: updatedProfile.address_line1,
+        address_city: updatedProfile.address_city,
+        address_state: updatedProfile.address_state,
+        address_postal_code: updatedProfile.address_postal_code,
+      };
+      
+      const missingFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value || (typeof value === 'string' && !value.trim()))
+        .map(([key]) => key);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Profile update incomplete. Missing fields: ${missingFields.join(', ')}`);
+      }
+      
+      // Refresh user context to ensure auth state is up to date
+      await refreshUser();
+      
+      // Small delay to ensure backend has processed the update
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Redirect to dashboard after successful completion
       navigate('/dashboard');
@@ -154,9 +185,9 @@ function Onboarding() {
         justifyContent: 'center', 
         alignItems: 'center', 
         minHeight: '100vh',
-        backgroundColor: '#f9fafb'
+        backgroundColor: '#1B2B41'
       }}>
-        <div>Loading...</div>
+        <div style={{ color: '#ffffff' }}>Loading...</div>
       </div>
     );
   }
@@ -164,19 +195,43 @@ function Onboarding() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#f9fafb',
+      backgroundColor: '#1B2B41',
       padding: '2rem 1rem',
       display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'flex-start'
+      flexDirection: 'column',
+      justifyContent: 'flex-start',
+      alignItems: 'center'
     }}>
+      {/* Logo */}
+      <div style={{ 
+        marginBottom: '2rem',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <img 
+          src={getLogoForLightBackground()} 
+          alt="Reel48 Logo" 
+          style={{
+            height: '48px',
+            width: 'auto',
+            objectFit: 'contain'
+          }}
+          onError={(e) => {
+            // Fallback if logo doesn't exist
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+          }}
+        />
+      </div>
+
       <div style={{
         maxWidth: '600px',
         width: '100%',
         backgroundColor: 'white',
         borderRadius: '8px',
         padding: '2rem',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <h1 style={{ 
@@ -321,11 +376,18 @@ function Onboarding() {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '0.5rem', 
+              fontWeight: '500',
+              color: '#374151'
+            }}>
+              Address *
+            </label>
             <AddressInput
               value={formData}
               onChange={(addressData) => setFormData({ ...formData, ...addressData })}
-              mode={addressMode}
-              onModeChange={setAddressMode}
+              mode="structured"
             />
             {(errors.address || errors.address_line1 || errors.address_city || errors.address_state || errors.address_postal_code) && (
               <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>
