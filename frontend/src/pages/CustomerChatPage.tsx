@@ -186,15 +186,13 @@ const CustomerChatPage: React.FC = () => {
       
       if (response.data.was_reset) {
         // Session was reset, clear messages and reload (will be empty)
+        // Silent reset - no notification shown to user
         setMessages([]);
         if (conversation?.id) {
           // Small delay to ensure backend has finished deleting
           await new Promise(resolve => setTimeout(resolve, 200));
           await loadMessages(conversation.id);
-          showNotification({
-            type: 'info',
-            message: 'Your chat session has expired. Starting fresh conversation.',
-          });
+          // Notification removed per user request
         }
       }
     } catch (error: any) {
