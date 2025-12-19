@@ -283,7 +283,7 @@ function Navigation() {
 
         {/* User Info */}
         {user && (
-          <div className="navbar-user-section" style={{ paddingRight: '1.5rem' }}>
+          <div className="navbar-user-section">
             <Link
               to="/profile"
               className="hamburger-button"

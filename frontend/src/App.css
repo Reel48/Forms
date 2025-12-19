@@ -157,6 +157,8 @@ select:focus-visible {
 
 /* Navigation - Two-Row Layout */
 .navbar-two-row {
+  /* Used to keep the profile icon aligned with the utility bar role dropdown area */
+  --utility-role-container-width: 120px;
   background: var(--color-reel48-blue); /* #1B2B41 */
   box-shadow: var(--shadow-soft);
   display: flex;
@@ -193,10 +195,11 @@ select:focus-visible {
   top: 0;
   height: 20px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
+  min-width: var(--utility-role-container-width);
   background-color: var(--utility-bar-color);
   border-radius: 6px; /* Curved all corners, including where it meshes with thin bar */
   z-index: 1001;
@@ -375,6 +378,14 @@ select:focus-visible {
   flex-shrink: 0;
   position: relative;
   z-index: 2; /* Ensure user email is above the utility bar dropdown */
+}
+
+/* Align the profile icon with the center of the utility role dropdown area */
+.navbar-top-row .navbar-user-section {
+  position: absolute;
+  right: 1.5rem;
+  width: var(--utility-role-container-width);
+  justify-content: center;
 }
 
 .navbar-user-section .user-email {
