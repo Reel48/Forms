@@ -16,7 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, role, loading: authLoading } = useAuth();
   const location = useLocation();
-  const { isComplete, isLoading: profileLoading } = useProfileCompletion();
+  const { isComplete, isLoading: profileLoading, error: profileError } = useProfileCompletion();
 
   // Don't check profile completion for onboarding and profile pages
   const isOnboardingRoute = location.pathname === '/onboarding' || location.pathname === '/profile';
@@ -43,8 +43,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // Check profile completion for authenticated users (except on onboarding/profile pages)
-  if (shouldCheckProfile && !isComplete) {
+  // If there's a profile error (like 401), don't block access - let the user through
+  // The error will be logged but won't prevent navigation
+  // This prevents infinite redirect loops if there's an auth issue
+  if (shouldCheckProfile && !isComplete && !profileError) {
     return <Navigate to="/onboarding" replace />;
   }
 
