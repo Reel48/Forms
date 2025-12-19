@@ -1278,49 +1278,47 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                         )
                         form["submissions_count"] = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
                     else:
-                        # Customer: check if current user has submitted this form and count their submissions
+                        # Customer: prefer matching submissions by authenticated user_id (more reliable than email),
+                        # fall back to submitter_email for legacy/unauthenticated submissions.
+                        user_id = user.get("id")
                         user_email = user.get("email")
-                        if user_email:
-                            # Normalize email to lowercase for comparison (emails are case-insensitive)
-                            user_email_lower = user_email.lower().strip()
-                            logger.info(f"Checking form completion for user email: {user_email_lower} (form_id: {form['id']})")
-                            try:
-                                # Query submissions for this form and user email (case-insensitive)
-                                # Get all submissions and filter in Python to ensure case-insensitive matching
+                        try:
+                            matched = []
+
+                            # 1) Try by user_id (fast + exact)
+                            if user_id:
+                                by_user = (
+                                    supabase_storage
+                                    .table("form_submissions")
+                                    .select("id, status")
+                                    .eq("form_id", form["id"])
+                                    .eq("folder_id", folder_id)
+                                    .eq("user_id", user_id)
+                                    .execute()
+                                )
+                                matched = (by_user.data or [])
+
+                            # 2) Fallback by email (case-insensitive match done in Python)
+                            if (not matched) and user_email:
+                                user_email_lower = user_email.lower().strip()
                                 all_submissions = (
                                     supabase_storage
                                     .table("form_submissions")
-                                    .select("id, submitter_email, status, folder_id")
+                                    .select("id, submitter_email, status")
                                     .eq("form_id", form["id"])
                                     .eq("folder_id", folder_id)
                                     .execute()
                                 )
-                                logger.info(f"Found {len(all_submissions.data or [])} total submissions for form {form['id']}")
-                                
-                                # Filter submissions by case-insensitive email match
-                                matching_submissions = []
                                 for s in (all_submissions.data or []):
                                     submission_email = s.get("submitter_email", "")
-                                    if submission_email:
-                                        submission_email_lower = submission_email.lower().strip()
-                                        if submission_email_lower == user_email_lower:
-                                            matching_submissions.append(s)
-                                
-                                logger.info(f"Found {len(matching_submissions)} matching submissions for email {user_email_lower}")
-                                
-                                # Only count completed submissions for completion
-                                completed_submissions = [s for s in matching_submissions if (s.get("status") or "").lower() == "completed"]
-                                form["is_completed"] = len(completed_submissions) > 0
-                                form["submissions_count"] = len(completed_submissions)
-                                logger.info(f"Form {form['id']} - is_completed: {form['is_completed']}, submissions_count: {form['submissions_count']}")
-                            except Exception as e:
-                                logger.error(f"Error checking form completion for user {user_email}: {str(e)}")
-                                import traceback
-                                logger.error(traceback.format_exc())
-                                form["is_completed"] = False
-                                form["submissions_count"] = 0
-                        else:
-                            logger.warning(f"No email found for user {user.get('id')} when checking form completion")
+                                    if submission_email and submission_email.lower().strip() == user_email_lower:
+                                        matched.append(s)
+
+                            completed = [s for s in matched if str(s.get("status") or "").lower() == "completed"]
+                            form["is_completed"] = len(completed) > 0
+                            form["submissions_count"] = len(completed)
+                        except Exception as e:
+                            logger.error(f"Error checking form completion for user {user_id}: {str(e)}", exc_info=True)
                             form["is_completed"] = False
                             form["submissions_count"] = 0
                 except Exception:
