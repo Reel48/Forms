@@ -281,24 +281,26 @@ def compute_stage_and_next_step(
     else:
         computed_stage = "quote_sent"
 
-    # Next step
-    if unpaid_by_payment:
+    # Next step - prioritize forms and e-signatures over payment
+    # Check for incomplete forms or e-signatures first (they come before payment)
+    task_next = compute_next_step_from_tasks(tasks)
+    if task_next:
+        # If there's an incomplete task (form, e-signature, or quote), use that
+        computed_next = task_next
+        computed_owner = "customer"
+    elif unpaid_by_payment:
+        # Only show payment as next step if no other tasks are incomplete
         computed_next = "Review and pay your quote"
         computed_owner = "customer"
+    elif has_shipment:
+        computed_next = "Track your shipment"
+        computed_owner = "customer"
+    elif has_quote:
+        computed_next = "We're working on production — we'll notify you when it ships"
+        computed_owner = "reel48"
     else:
-        task_next = compute_next_step_from_tasks(tasks)
-        if task_next:
-            computed_next = task_next
-            computed_owner = "customer"
-        elif has_shipment:
-            computed_next = "Track your shipment"
-            computed_owner = "customer"
-        elif has_quote:
-            computed_next = "We’re working on production — we’ll notify you when it ships"
-            computed_owner = "reel48"
-        else:
-            computed_next = "We’re preparing your quote — we’ll notify you when it’s ready"
-            computed_owner = "reel48"
+        computed_next = "We're preparing your quote — we'll notify you when it's ready"
+        computed_owner = "reel48"
 
     # Get human-readable stage label
     human_readable_stage = get_human_readable_stage(stage_override if stage_override else computed_stage)

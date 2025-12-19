@@ -414,13 +414,27 @@ const FolderView: React.FC = () => {
   const tasks = summary?.tasks || [];
   const hasUnreadNote = role !== 'admin' && !!latestNote && latestNote.is_read === false;
   
-  // Get primary action task (payment) and secondary tasks
-  const primaryTask = tasks.find((t: any) => t.kind === 'quote' && t.status === 'incomplete');
+  // Get primary action task
+  // Order must respect delivery timing:
+  // - Before-delivery forms FIRST
+  // - Then e-signatures
+  // - Then review & pay quote
+  // - After-delivery forms LAST (e.g. customer satisfaction surveys)
+  const isBeforeDeliveryForm = (t: any) =>
+    t?.kind === 'form' && (t?.delivery_timing ?? 'before_delivery') !== 'after_delivery';
+  const isAfterDeliveryForm = (t: any) =>
+    t?.kind === 'form' && (t?.delivery_timing ?? 'before_delivery') === 'after_delivery';
+
+  const primaryTask =
+    tasks.find((t: any) => t.status === 'incomplete' && isBeforeDeliveryForm(t)) ||
+    tasks.find((t: any) => t.status === 'incomplete' && t.kind === 'esignature') ||
+    tasks.find((t: any) => t.status === 'incomplete' && t.kind === 'quote') ||
+    tasks.find((t: any) => t.status === 'incomplete' && isAfterDeliveryForm(t));
   const secondaryTasks = tasks.filter((t: any) => t.id !== primaryTask?.id);
   const completedTasks = tasks.filter((t: any) => t.status === 'complete');
   
-  // Check if payment is required (locks other tasks)
-  const paymentRequired = primaryTask && primaryTask.status === 'incomplete';
+  // Forms and e-signatures are never locked - only quote payment can be required
+  const paymentRequired = false; // Forms are always available, no locking
   
   // Get stepper steps from summary
   const stepperSteps: StepperStep[] = (summary?.stepper_steps || []) as StepperStep[];
@@ -617,21 +631,61 @@ const FolderView: React.FC = () => {
             {primaryTask && (
               <section className="content-section hero-action-card">
                 <div className="hero-action-content">
-                  <h2 className="hero-action-title">Your quote is ready for review.</h2>
-                  <p className="hero-action-subtitle">
-                    Please finalize payment to move your order to production.
-                  </p>
-                  <button
-                    className="btn-hero-primary"
-                    onClick={() => {
-                      const action = (primaryTask.deeplink || '') as string;
-                      if (action) {
-                        navigate(action);
-                      }
-                    }}
-                  >
-                    Review & Pay Quote
-                  </button>
+                  {primaryTask.kind === 'form' ? (
+                    <>
+                      <h2 className="hero-action-title">Complete your design form</h2>
+                      <p className="hero-action-subtitle">
+                        Please fill out the form to provide your design details.
+                      </p>
+                      <button
+                        className="btn-hero-primary"
+                        onClick={() => {
+                          const action = (primaryTask.deeplink || '') as string;
+                          if (action) {
+                            navigate(action);
+                          }
+                        }}
+                      >
+                        {primaryTask.title || 'Open Form'}
+                      </button>
+                    </>
+                  ) : primaryTask.kind === 'esignature' ? (
+                    <>
+                      <h2 className="hero-action-title">Sign your documents</h2>
+                      <p className="hero-action-subtitle">
+                        Please review and sign the required documents.
+                      </p>
+                      <button
+                        className="btn-hero-primary"
+                        onClick={() => {
+                          const action = (primaryTask.deeplink || '') as string;
+                          if (action) {
+                            navigate(action);
+                          }
+                        }}
+                      >
+                        {primaryTask.title || 'Sign Document'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="hero-action-title">Your quote is ready for review.</h2>
+                      <p className="hero-action-subtitle">
+                        Please finalize payment to move your order to production.
+                      </p>
+                      <button
+                        className="btn-hero-primary"
+                        onClick={() => {
+                          const action = (primaryTask.deeplink || '') as string;
+                          if (action) {
+                            navigate(action);
+                          }
+                        }}
+                      >
+                        Review & Pay Quote
+                      </button>
+                    </>
+                  )}
                 </div>
               </section>
             )}
