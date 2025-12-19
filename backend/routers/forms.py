@@ -12,7 +12,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import Form, FormCreate, FormUpdate, FormField, FormFieldCreate, FormSubmissionCreate, FormSubmission
 from pydantic import ValidationError, BaseModel
-from database import supabase, supabase_storage
+from database import supabase, supabase_storage, supabase_url, supabase_service_role_key
 from auth import get_current_user, get_current_admin, get_optional_user
 from email_service import email_service
 from email_utils import get_admin_emails
@@ -62,7 +62,15 @@ async def mark_form_complete(
             raise HTTPException(status_code=400, detail="Form is not assigned to this folder")
 
         # Ensure the user can access the folder (assignment or created_by)
-        folder = supabase_storage.table("folders").select("id, created_by").eq("id", folder_id).single().execute().data
+        folder_rows = (
+            supabase_storage
+            .table("folders")
+            .select("id, created_by")
+            .eq("id", folder_id)
+            .limit(1)
+            .execute()
+        ).data or []
+        folder = folder_rows[0] if folder_rows else None
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
 
@@ -113,15 +121,54 @@ async def mark_form_complete(
             "assignment_id": assignment[0].get("id"),
         }
 
-        resp = supabase_storage.table("form_submissions").insert(insert_data).execute()
-        if not resp.data:
-            raise HTTPException(status_code=500, detail="Failed to mark form as completed")
+        # Insert completion record. Prefer supabase client, but fall back to direct REST with service-role
+        # if the environment is missing SUPABASE_SERVICE_ROLE_KEY (RLS enforced) or PostgREST rejects insert.
+        try:
+            resp = supabase_storage.table("form_submissions").insert(insert_data).execute()
+            if not resp.data:
+                raise RuntimeError("Insert returned no data")
+        except Exception as insert_err:
+            # Fallback: direct REST with service role headers (bypasses RLS)
+            if not supabase_service_role_key or not supabase_url:
+                logger.error("mark-complete insert failed and service role not configured", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to mark form as completed: {str(insert_err)}")
+
+            try:
+                import requests as http_requests
+
+                headers = {
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation",
+                }
+
+                r = http_requests.post(
+                    f"{supabase_url}/rest/v1/form_submissions",
+                    headers=headers,
+                    json=insert_data,
+                    timeout=10,
+                )
+                if r.status_code >= 400:
+                    # Surface Supabase error body (often includes RLS details)
+                    try:
+                        err_json = r.json()
+                    except Exception:
+                        err_json = {"message": r.text}
+                    logger.error("mark-complete REST insert failed: %s", err_json)
+                    raise HTTPException(status_code=500, detail=str(err_json))
+            except HTTPException:
+                raise
+            except Exception as rest_err:
+                logger.error("mark-complete REST fallback failed", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to mark form as completed: {str(rest_err)}")
 
         return {"success": True, "submission_id": submission_id, "already_completed": False}
 
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("mark_form_complete error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 def generate_url_slug() -> str:
