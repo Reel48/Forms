@@ -291,7 +291,12 @@ async def get_document_preview(document_id: str, user = Depends(get_current_user
         document = doc_response.data
         file_data = document.get("files")
         
-        if not file_data:
+        # Handle join result - can be a list or a single object
+        if isinstance(file_data, list):
+            if len(file_data) == 0:
+                raise HTTPException(status_code=404, detail="File not found")
+            file_data = file_data[0]  # Take first file if list
+        elif not file_data:
             raise HTTPException(status_code=404, detail="File not found")
         
         storage_path = file_data.get("storage_path")
@@ -740,6 +745,13 @@ async def get_signed_pdf(document_id: str, user = Depends(get_current_user)):
         
         # Try to get file from signature join first, then fallback to direct query
         file_data = signature.get("files")
+        # Handle join result - can be a list or a single object
+        if isinstance(file_data, list):
+            if len(file_data) == 0:
+                file_data = None
+            else:
+                file_data = file_data[0]  # Take first file if list
+        
         if not file_data:
             # Fallback: Get file directly
             file_response = supabase_storage.table("files").select("*").eq("id", signed_file_id).single().execute()
