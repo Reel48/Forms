@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { clientsAPI, ProfileCompletionStatus } from '../api';
+import { clientsAPI } from '../api';
+import type { ProfileCompletionStatus } from '../api';
 
 interface UseProfileCompletionReturn {
   isComplete: boolean;

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clientsAPI } from '../api';
-import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 
 function Onboarding() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
