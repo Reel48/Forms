@@ -274,15 +274,35 @@ async def _upload_single_file(
     }
     
     # Use service role client to bypass RLS (user is already authenticated)
-    response = supabase_storage.table("files").insert(file_data).execute()
+    try:
+        response = supabase_storage.table("files").insert(file_data).execute()
+    except Exception as db_error:
+        error_msg = str(db_error)
+        print(f"Database insert error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        # Try to delete uploaded file if database insert fails
+        try:
+            supabase_storage.storage.from_("project-files").remove([unique_filename])
+            print(f"Cleaned up uploaded file after database error: {unique_filename}")
+        except Exception as cleanup_error:
+            print(f"Warning: Failed to cleanup file after database error: {str(cleanup_error)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create file record in database: {error_msg}"
+        )
     
     if not response.data:
         # Try to delete uploaded file if database insert fails
         try:
             supabase_storage.storage.from_("project-files").remove([unique_filename])
-        except:
-            pass
-        raise HTTPException(status_code=500, detail="Failed to create file record")
+            print(f"Cleaned up uploaded file after empty response: {unique_filename}")
+        except Exception as cleanup_error:
+            print(f"Warning: Failed to cleanup file after empty response: {str(cleanup_error)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create file record: Database returned no data"
+        )
     
     created_file = response.data[0]
     print(f"File record created successfully: id={created_file.get('id')}, folder_id={created_file.get('folder_id')}, is_reusable={created_file.get('is_reusable')}, name={created_file.get('name')}")
@@ -500,8 +520,18 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error uploading file: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+        error_msg = str(e)
+        print(f"Error uploading file: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        # Provide more detailed error message
+        if "storage" in error_msg.lower() or "bucket" in error_msg.lower():
+            detail = f"Storage error: {error_msg}. Please check that the 'project-files' bucket exists and is accessible."
+        elif "permission" in error_msg.lower() or "access" in error_msg.lower():
+            detail = f"Permission error: {error_msg}. Please check your access permissions."
+        else:
+            detail = f"Failed to upload file: {error_msg}"
+        raise HTTPException(status_code=500, detail=detail)
 
 @router.put("/{file_id}", response_model=File)
 async def update_file(
