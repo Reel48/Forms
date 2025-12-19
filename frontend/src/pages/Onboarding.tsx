@@ -7,7 +7,7 @@ import { getLogoForDarkBackground } from '../utils/logoUtils';
 
 function Onboarding() {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { refreshUser, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -161,14 +161,22 @@ function Onboarding() {
         throw new Error(`Profile update incomplete. Missing fields: ${missingFields.join(', ')}`);
       }
       
+      // Verify profile_completed_at was set in the response
+      if (!updatedProfile.profile_completed_at) {
+        console.warn('Profile completed but profile_completed_at not set. This may cause issues.');
+      }
+      
       // Refresh user context to ensure auth state is up to date
       await refreshUser();
       
-      // Small delay to ensure backend has processed the update
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Redirect based on user role
+      // Admins go to home page (/) which shows QuotesList
+      // Customers go to dashboard (/dashboard) which shows CustomerDashboard
+      const redirectPath = role === 'admin' ? '/' : '/dashboard';
       
-      // Redirect to dashboard after successful completion
-      navigate('/dashboard');
+      // Force a page reload to clear any cached profile completion state
+      // This ensures the ProtectedRoute will re-check with fresh data
+      window.location.href = redirectPath;
     } catch (error: any) {
       console.error('Failed to save profile:', error);
       const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to save profile. Please try again.';

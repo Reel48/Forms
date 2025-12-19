@@ -37,7 +37,9 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
           const { supabase } = await import('../lib/supabase');
           const { data: { session } } = await supabase.auth.refreshSession();
           if (session?.access_token) {
-            // Retry with refreshed token
+            // Update API token - the api instance is already imported via clientsAPI
+            // The token will be picked up by the axios interceptor on the next request
+            // Just retry the request
             const retryResponse = await clientsAPI.getProfileCompletionStatus();
             const status: ProfileCompletionStatus = retryResponse.data;
             setIsComplete(status.is_complete);
@@ -49,12 +51,42 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
         } catch (refreshErr) {
           console.error('Failed to refresh session for profile completion check:', refreshErr);
         }
+        
+        // If refresh failed, try to check profile directly via getMyProfile
+        // This is a fallback to avoid blocking users unnecessarily
+        try {
+          const profileResponse = await clientsAPI.getMyProfile();
+          const profile = profileResponse.data;
+          // If profile_completed_at exists, assume profile is complete
+          if (profile.profile_completed_at) {
+            setIsComplete(true);
+            setMissingFields([]);
+            setProfileCompletedAt(profile.profile_completed_at);
+            setError(null);
+            return;
+          }
+          // If no profile_completed_at, check if all required fields are present
+          const hasRequiredFields = profile.name && profile.email && profile.company && 
+                                   profile.phone && profile.address_line1 && profile.address_city && 
+                                   profile.address_state && profile.address_postal_code;
+          if (hasRequiredFields) {
+            // Profile has all fields, assume complete even if timestamp missing
+            setIsComplete(true);
+            setMissingFields([]);
+            setProfileCompletedAt(null);
+            setError(null);
+            return;
+          }
+        } catch (profileErr) {
+          console.error('Failed to fetch profile as fallback:', profileErr);
+        }
       }
       
       const error = err instanceof Error ? err : new Error('Failed to check profile completion');
       setError(error);
-      // Default to incomplete on error to be safe
-      setIsComplete(false);
+      // On error, default to complete to avoid blocking users
+      // This is safer than blocking access due to a transient error
+      setIsComplete(true);
       setMissingFields([]);
       setProfileCompletedAt(null);
     } finally {

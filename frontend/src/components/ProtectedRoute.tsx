@@ -43,13 +43,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // If there's a profile error (like 401), don't block access - let the user through
-  // The error will be logged but won't prevent navigation
-  // This prevents infinite redirect loops if there's an auth issue
-  if (shouldCheckProfile && !isComplete && !profileError) {
+  // Check profile completion for authenticated users (except on onboarding/profile pages)
+  // If there's a profile error, allow access to prevent blocking users due to transient errors
+  // Only redirect to onboarding if profile is explicitly incomplete AND there's no error
+  if (shouldCheckProfile && !isComplete && !profileError && !profileLoading) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  // If there's an error but user is authenticated, let them through
+  // This prevents blocking users due to API errors while still enforcing completion when possible
   return <>{children}</>;
 };
 
