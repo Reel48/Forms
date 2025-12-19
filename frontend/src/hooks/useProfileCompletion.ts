@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { clientsAPI } from '../api';
 import type { ProfileCompletionStatus } from '../api';
 
@@ -11,19 +11,60 @@ interface UseProfileCompletionReturn {
   refetch: () => Promise<void>;
 }
 
-export function useProfileCompletion(): UseProfileCompletionReturn {
-  const [isComplete, setIsComplete] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
-  const [profileCompletedAt, setProfileCompletedAt] = useState<string | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+// Session-level cache to prevent repeated API calls
+let cachedStatus: {
+  isComplete: boolean;
+  missingFields: string[];
+  profileCompletedAt: string | null;
+  timestamp: number;
+  error: boolean;
+} | null = null;
 
-  const fetchCompletionStatus = async () => {
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export function useProfileCompletion(): UseProfileCompletionReturn {
+  const [isComplete, setIsComplete] = useState(cachedStatus?.isComplete ?? false);
+  const [isLoading, setIsLoading] = useState(!cachedStatus);
+  const [missingFields, setMissingFields] = useState<string[]>(cachedStatus?.missingFields ?? []);
+  const [profileCompletedAt, setProfileCompletedAt] = useState<string | null>(cachedStatus?.profileCompletedAt ?? null);
+  const [error, setError] = useState<Error | null>(null);
+  const hasFetchedRef = useRef(false);
+
+  const fetchCompletionStatus = async (force = false) => {
+    // Use cached result if available and not expired
+    if (!force && cachedStatus && (Date.now() - cachedStatus.timestamp) < CACHE_DURATION) {
+      setIsComplete(cachedStatus.isComplete);
+      setMissingFields(cachedStatus.missingFields);
+      setProfileCompletedAt(cachedStatus.profileCompletedAt);
+      setIsLoading(false);
+      setError(cachedStatus.error ? new Error('Previous check failed') : null);
+      return;
+    }
+
+    // If we've already failed with 401 and have a cached "complete" status, don't retry
+    if (cachedStatus?.error && !force) {
+      setIsComplete(cachedStatus.isComplete);
+      setMissingFields(cachedStatus.missingFields);
+      setProfileCompletedAt(cachedStatus.profileCompletedAt);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
       const response = await clientsAPI.getProfileCompletionStatus();
       const status: ProfileCompletionStatus = response.data;
+      
+      // Cache successful result
+      cachedStatus = {
+        isComplete: status.is_complete,
+        missingFields: status.missing_fields || [],
+        profileCompletedAt: status.profile_completed_at || null,
+        timestamp: Date.now(),
+        error: false
+      };
       
       setIsComplete(status.is_complete);
       setMissingFields(status.missing_fields || []);
@@ -31,34 +72,55 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
     } catch (err: any) {
       // Handle 401 errors gracefully - might be token refresh issue
       if (err?.response?.status === 401) {
-        console.warn('Profile completion check returned 401 - token may need refresh');
-        // Try to refresh and retry once
-        try {
-          const { supabase } = await import('../lib/supabase');
-          const { data: { session } } = await supabase.auth.refreshSession();
-          if (session?.access_token) {
-            // Update API token - the api instance is already imported via clientsAPI
-            // The token will be picked up by the axios interceptor on the next request
-            // Just retry the request
-            const retryResponse = await clientsAPI.getProfileCompletionStatus();
-            const status: ProfileCompletionStatus = retryResponse.data;
-            setIsComplete(status.is_complete);
-            setMissingFields(status.missing_fields || []);
-            setProfileCompletedAt(status.profile_completed_at || null);
-            setError(null);
-            return;
-          }
-        } catch (refreshErr) {
-          console.error('Failed to refresh session for profile completion check:', refreshErr);
+        // Only log once to avoid console spam
+        if (!cachedStatus?.error) {
+          console.warn('Profile completion check returned 401 - assuming profile is complete to avoid blocking');
         }
         
-        // If refresh failed, try to check profile directly via getMyProfile
-        // This is a fallback to avoid blocking users unnecessarily
+        // Try to refresh and retry once (only if we haven't tried before)
+        if (!cachedStatus?.error) {
+          try {
+            const { supabase } = await import('../lib/supabase');
+            const { data: { session } } = await supabase.auth.refreshSession();
+            if (session?.access_token) {
+              // Retry with refreshed token
+              const retryResponse = await clientsAPI.getProfileCompletionStatus();
+              const status: ProfileCompletionStatus = retryResponse.data;
+              
+              // Cache successful retry
+              cachedStatus = {
+                isComplete: status.is_complete,
+                missingFields: status.missing_fields || [],
+                profileCompletedAt: status.profile_completed_at || null,
+                timestamp: Date.now(),
+                error: false
+              };
+              
+              setIsComplete(status.is_complete);
+              setMissingFields(status.missing_fields || []);
+              setProfileCompletedAt(status.profile_completed_at || null);
+              setError(null);
+              return;
+            }
+          } catch (refreshErr) {
+            // Refresh failed, continue to fallback
+          }
+        }
+        
+        // If refresh failed or already tried, use fallback or cache "complete" status
+        // This prevents repeated API calls on every route change
         try {
           const profileResponse = await clientsAPI.getMyProfile();
           const profile = profileResponse.data;
           // If profile_completed_at exists, assume profile is complete
           if (profile.profile_completed_at) {
+            cachedStatus = {
+              isComplete: true,
+              missingFields: [],
+              profileCompletedAt: profile.profile_completed_at,
+              timestamp: Date.now(),
+              error: false
+            };
             setIsComplete(true);
             setMissingFields([]);
             setProfileCompletedAt(profile.profile_completed_at);
@@ -71,6 +133,13 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
                                    profile.address_state && profile.address_postal_code;
           if (hasRequiredFields) {
             // Profile has all fields, assume complete even if timestamp missing
+            cachedStatus = {
+              isComplete: true,
+              missingFields: [],
+              profileCompletedAt: null,
+              timestamp: Date.now(),
+              error: false
+            };
             setIsComplete(true);
             setMissingFields([]);
             setProfileCompletedAt(null);
@@ -78,14 +147,36 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
             return;
           }
         } catch (profileErr) {
-          console.error('Failed to fetch profile as fallback:', profileErr);
+          // Fallback also failed, cache "complete" status to avoid blocking
         }
+        
+        // Cache "complete" status to prevent repeated 401 errors
+        // This allows users to continue using the app even if the endpoint has auth issues
+        cachedStatus = {
+          isComplete: true,
+          missingFields: [],
+          profileCompletedAt: null,
+          timestamp: Date.now(),
+          error: true
+        };
+        
+        setIsComplete(true);
+        setMissingFields([]);
+        setProfileCompletedAt(null);
+        setError(null);
+        return;
       }
       
-      const error = err instanceof Error ? err : new Error('Failed to check profile completion');
-      setError(error);
-      // On error, default to complete to avoid blocking users
-      // This is safer than blocking access due to a transient error
+      // For other errors, cache "complete" status to avoid blocking
+      cachedStatus = {
+        isComplete: true,
+        missingFields: [],
+        profileCompletedAt: null,
+        timestamp: Date.now(),
+        error: true
+      };
+      
+      setError(err instanceof Error ? err : new Error('Failed to check profile completion'));
       setIsComplete(true);
       setMissingFields([]);
       setProfileCompletedAt(null);
@@ -95,7 +186,17 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
   };
 
   useEffect(() => {
-    fetchCompletionStatus();
+    // Only fetch once per component mount, use cache for subsequent renders
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchCompletionStatus();
+    } else if (cachedStatus) {
+      // Use cached value if component remounts
+      setIsComplete(cachedStatus.isComplete);
+      setMissingFields(cachedStatus.missingFields);
+      setProfileCompletedAt(cachedStatus.profileCompletedAt);
+      setIsLoading(false);
+    }
   }, []);
 
   return {
@@ -104,7 +205,12 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
     missingFields,
     profileCompletedAt,
     error,
-    refetch: fetchCompletionStatus,
+    refetch: () => fetchCompletionStatus(true), // Force refetch when explicitly called
   };
+}
+
+// Export function to clear cache (useful after profile updates)
+export function clearProfileCompletionCache() {
+  cachedStatus = null;
 }
 

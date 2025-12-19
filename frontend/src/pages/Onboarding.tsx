@@ -4,6 +4,7 @@ import { clientsAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 import { getLogoForDarkBackground } from '../utils/logoUtils';
+import { clearProfileCompletionCache } from '../hooks/useProfileCompletion';
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -165,6 +166,9 @@ function Onboarding() {
       if (!updatedProfile.profile_completed_at) {
         console.warn('Profile completed but profile_completed_at not set. This may cause issues.');
       }
+      
+      // Clear the profile completion cache so it will be re-checked
+      clearProfileCompletionCache();
       
       // Refresh user context to ensure auth state is up to date
       await refreshUser();
