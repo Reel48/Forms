@@ -173,7 +173,8 @@ async def get_ai_status(user = Depends(get_current_user)):
         "ai_service_available": ai_service is not None,
         "has_gemini_key": has_gemini_key,
         "ocho_user_id": OCHO_USER_ID,
-        "ocho_user_id_valid": OCHO_USER_ID and OCHO_USER_ID != "00000000-0000-0000-0000-000000000000"
+        "ocho_user_id_valid": OCHO_USER_ID and OCHO_USER_ID != "00000000-0000-0000-0000-000000000000",
+        "timestamp": datetime.now().isoformat()  # Add timestamp for debugging
     }
 
 # --- Scheduling helpers (used for follow-up availability messages) ---
