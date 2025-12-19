@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { clientsAPI } from '../api';
 import type { ProfileCompletionStatus } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface UseProfileCompletionReturn {
   isComplete: boolean;
@@ -25,10 +26,12 @@ let hasLogged401Warning = false; // Track if we've already logged the 401 warnin
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function useProfileCompletion(): UseProfileCompletionReturn {
+  const { user, loading: authLoading } = useAuth();
+  
   // Initialize from cache if available
   const isCacheValid = cachedStatus && (Date.now() - cachedStatus.timestamp) < CACHE_DURATION;
   const [isComplete, setIsComplete] = useState(isCacheValid ? cachedStatus!.isComplete : false);
-  const [isLoading, setIsLoading] = useState(!isCacheValid);
+  const [isLoading, setIsLoading] = useState(!isCacheValid || authLoading);
   const [missingFields, setMissingFields] = useState<string[]>(isCacheValid ? cachedStatus!.missingFields : []);
   const [profileCompletedAt, setProfileCompletedAt] = useState<string | null>(isCacheValid ? cachedStatus!.profileCompletedAt : null);
   const [error, setError] = useState<Error | null>(null);
@@ -191,6 +194,12 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
   };
 
   useEffect(() => {
+    // Don't fetch if auth is still loading or user is not authenticated
+    if (authLoading || !user) {
+      setIsLoading(authLoading);
+      return;
+    }
+    
     // Check cache first before making any API call
     if (isCacheValid && cachedStatus) {
       // Use cached value immediately
@@ -207,7 +216,7 @@ export function useProfileCompletion(): UseProfileCompletionReturn {
       hasFetchedRef.current = true;
       fetchCompletionStatus();
     }
-  }, []);
+  }, [authLoading, user, isCacheValid]);
 
   return {
     isComplete,
