@@ -2218,7 +2218,10 @@ function PublicFormView() {
 
   const welcomeTitle = form.welcome_screen?.title || form.name;
   const welcomeDescription = form.welcome_screen?.description || form.description;
-  const showWelcome = form.welcome_screen?.enabled !== false && !formValues._started;
+  // If this form is being opened from a folder task (folder_id present),
+  // skip the extra "Start" welcome gate and go straight into the form.
+  const openedFromFolder = Boolean(searchParams.get('folder_id'));
+  const showWelcome = form.welcome_screen?.enabled !== false && !formValues._started && !openedFromFolder;
 
   if (showWelcome) {
     return (

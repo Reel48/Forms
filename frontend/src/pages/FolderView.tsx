@@ -669,21 +669,21 @@ const FolderView: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <h2 className="hero-action-title">Your quote is ready for review.</h2>
-                      <p className="hero-action-subtitle">
-                        Please finalize payment to move your order to production.
-                      </p>
-                      <button
-                        className="btn-hero-primary"
-                        onClick={() => {
-                          const action = (primaryTask.deeplink || '') as string;
-                          if (action) {
-                            navigate(action);
-                          }
-                        }}
-                      >
-                        Review & Pay Quote
-                      </button>
+                  <h2 className="hero-action-title">Your quote is ready for review.</h2>
+                  <p className="hero-action-subtitle">
+                    Please finalize payment to move your order to production.
+                  </p>
+                  <button
+                    className="btn-hero-primary"
+                    onClick={() => {
+                      const action = (primaryTask.deeplink || '') as string;
+                      if (action) {
+                        navigate(action);
+                      }
+                    }}
+                  >
+                    Review & Pay Quote
+                  </button>
                     </>
                   )}
                 </div>
@@ -1249,7 +1249,7 @@ const FolderView: React.FC = () => {
                     <tr
                       key={`form-${form.id}`}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/forms/${form.id}`)}
+                      onClick={() => navigate(`/forms/${form.id}?folder_id=${encodeURIComponent(folder.id)}`)}
                     >
                       <td className="mobile-checkmark-column" onClick={(e) => e.stopPropagation()}>
                         <div
