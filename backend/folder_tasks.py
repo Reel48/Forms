@@ -165,7 +165,7 @@ def build_customer_tasks(
             "description": None,
             "status": "complete" if esig.get("is_completed") else "incomplete",
             "owner": "customer",
-            "deeplink": f"/esignature/{esig_id}",
+            "deeplink": f"/esignature/{esig_id}?folder_id={folder_id}",
         })
 
     # 3. Quote task (review/pay) - priority 30

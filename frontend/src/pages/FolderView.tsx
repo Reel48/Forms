@@ -1334,7 +1334,7 @@ const FolderView: React.FC = () => {
                     <tr
                       key={`esignature-${esig.id}`}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/esignature/${esig.id}`)}
+                      onClick={() => navigate(`/esignature/${esig.id}?folder_id=${encodeURIComponent(folder.id)}`)}
                     >
                       <td className="mobile-checkmark-column" onClick={(e) => e.stopPropagation()}>
                         <div

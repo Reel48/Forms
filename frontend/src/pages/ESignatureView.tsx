@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { esignatureAPI, filesAPI, foldersAPI, type ESignatureDocument, type ESignatureDocumentCreate, type FileItem, type Folder } from '../api';
 import SignatureCanvas from '../components/SignatureCanvas';
 import SignatureInput from '../components/SignatureInput';
+import { useAuth } from '../contexts/AuthContext';
 import './ESignatureView.css';
 
 const ESignatureView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { role } = useAuth();
+
+  const folderIdFromUrl = new URLSearchParams(location.search).get('folder_id');
+  const backHref = folderIdFromUrl ? `/folders/${folderIdFromUrl}` : (role === 'admin' ? '/esignature' : '/');
+  const backLabel = folderIdFromUrl ? 'Back to Folder' : (role === 'admin' ? 'Back to Documents' : 'Back to Dashboard');
   const [document, setDocument] = useState<ESignatureDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -291,8 +298,8 @@ const ESignatureView: React.FC = () => {
     return (
       <div className="esignature-view-container">
         <div className="error">{error}</div>
-        <button onClick={() => navigate('/esignature')} className="btn-secondary">
-          Back to Documents
+        <button onClick={() => navigate(backHref)} className="btn-secondary">
+          {backLabel}
         </button>
       </div>
     );
@@ -302,8 +309,8 @@ const ESignatureView: React.FC = () => {
     return (
       <div className="esignature-view-container">
         <div className="error">Document not found</div>
-        <button onClick={() => navigate('/esignature')} className="btn-secondary">
-          Back to Documents
+        <button onClick={() => navigate(backHref)} className="btn-secondary">
+          {backLabel}
         </button>
       </div>
     );
@@ -380,8 +387,8 @@ const ESignatureView: React.FC = () => {
               >
                 Download Signed PDF
               </button>
-              <button onClick={() => navigate('/esignature')} className="btn-secondary">
-                Back to Documents
+              <button onClick={() => navigate(backHref)} className="btn-secondary">
+                {backLabel}
               </button>
             </div>
           </div>
