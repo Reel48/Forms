@@ -1938,7 +1938,7 @@ async def generate_ai_response(
                                     
                                     # Only assign form for hat orders (coozie form not available yet)
                                     if order_type == "hat":
-                                        form_slug = "form-4f8ml8om"  # Custom Hat Design Form
+                                        form_slug = "form-zb2tias0"  # Custom Hat Design Form
                                         assign_result = action_executor.execute_function("assign_form_to_folder", {
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
@@ -2545,7 +2545,7 @@ async def _generate_ai_response_async(
                                     
                                     # Only assign form for hat orders (coozie form not available yet)
                                     if order_type == "hat":
-                                        form_slug = "form-4f8ml8om"  # Custom Hat Design Form
+                                        form_slug = "form-zb2tias0"  # Custom Hat Design Form
                                         assign_result = action_executor.execute_function("assign_form_to_folder", {
                                             "folder_id": folder_id,
                                             "form_slug": form_slug
