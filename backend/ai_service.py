@@ -257,11 +257,11 @@ class AIService:
                         },
                         "form_id": {
                             "type": "string",
-                            "description": "The UUID of the form to assign. Alternatively, you can use form_slug with the public_url_slug (e.g., 'form-4f8ml8om' for Custom Hat Design Form, 'form-rwljka86' for Custom Coozie Design Form)."
+                            "description": "The UUID of the form to assign. Alternatively, you can use form_slug with the public_url_slug (e.g., 'form-zb2tias0' for Custom Hat Design Form, 'form-rwljka86' for Custom Coozie Design Form)."
                         },
                         "form_slug": {
                             "type": "string",
-                            "description": "Alternative to form_id: The public_url_slug of the form (e.g., 'form-4f8ml8om' for Custom Hat Design Form, 'form-rwljka86' for Custom Coozie Design Form). Use this if you know the slug but not the UUID."
+                            "description": "Alternative to form_id: The public_url_slug of the form (e.g., 'form-zb2tias0' for Custom Hat Design Form, 'form-rwljka86' for Custom Coozie Design Form). Use this if you know the slug but not the UUID."
                         }
                     },
                     "required": ["folder_id"]
