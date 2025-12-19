@@ -334,17 +334,37 @@ def _set_pending_action(conversation_id: str, pending_action: Optional[Dict[str,
 
 
 def _insert_ai_message(conversation_id: str, message: str) -> None:
+    """Insert an AI message using REST API with service role key to bypass RLS."""
+    if not supabase_service_role_key:
+        logger.error("Cannot insert AI message: SUPABASE_SERVICE_ROLE_KEY not set")
+        return
     try:
-        supabase_storage.table("chat_messages").insert({
+        # Use REST API directly with service role key to ensure RLS bypass
+        message_data = {
             "id": str(uuid.uuid4()),
             "conversation_id": conversation_id,
             "sender_id": OCHO_USER_ID,
             "message": message,
             "message_type": "text",
             "created_at": datetime.now().isoformat(),
-        }).execute()
-    except Exception:
-        pass
+        }
+        headers = {
+            "apikey": supabase_service_role_key,
+            "Authorization": f"Bearer {supabase_service_role_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        response = requests.post(
+            f"{supabase_url}/rest/v1/chat_messages",
+            json=message_data,
+            headers=headers
+        )
+        response.raise_for_status()
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to insert AI message: {error_msg}", exc_info=True)
+        if "row-level security" in error_msg.lower() or "42501" in error_msg:
+            logger.error(f"RLS policy violation in _insert_ai_message! Service role key may not be configured correctly.")
 
 
 def _event_duration_minutes(event_type_id: Optional[int]) -> int:
@@ -1106,11 +1126,38 @@ async def send_message(
                                     "message_type": "system",
                                     "created_at": placeholder_created_at,
                                 }
-                                supabase_storage.table("chat_messages").insert(placeholder_message).execute()
-                                logger.info(f"Inserted AI placeholder message {placeholder_id} for conversation {conversation_id}")
+                                # Verify service role key is available
+                                if not supabase_service_role_key:
+                                    logger.error(f"Cannot insert AI placeholder: SUPABASE_SERVICE_ROLE_KEY not set in environment")
+                                    placeholder_id = None
+                                else:
+                                    # Use REST API directly with service role key to ensure RLS bypass
+                                    headers = {
+                                        "apikey": supabase_service_role_key,
+                                        "Authorization": f"Bearer {supabase_service_role_key}",
+                                        "Content-Type": "application/json",
+                                        "Prefer": "return=representation"
+                                    }
+                                    response = requests.post(
+                                        f"{supabase_url}/rest/v1/chat_messages",
+                                        json=placeholder_message,
+                                        headers=headers
+                                    )
+                                    response.raise_for_status()
+                                    logger.info(f"Inserted AI placeholder message {placeholder_id} for conversation {conversation_id}")
                             except Exception as e:
                                 # Don't fail message send if placeholder insert fails, but log the error
-                                logger.error(f"Failed to insert AI placeholder message: {str(e)}", exc_info=True)
+                                error_msg = str(e)
+                                if hasattr(e, 'response') and e.response is not None:
+                                    try:
+                                        error_detail = e.response.json()
+                                        error_msg = error_detail.get('message', error_msg)
+                                    except:
+                                        error_msg = e.response.text or error_msg
+                                logger.error(f"Failed to insert AI placeholder message: {error_msg}", exc_info=True)
+                                # Check if it's an RLS error
+                                if "row-level security" in error_msg.lower() or "42501" in error_msg:
+                                    logger.error(f"RLS policy violation! Service role key may not be configured correctly. Check SUPABASE_SERVICE_ROLE_KEY environment variable.")
                                 placeholder_id = None
 
                         # Trigger AI response asynchronously using BackgroundTasks.
