@@ -1255,10 +1255,27 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 try:
                     if is_admin:
                         # Admin: check if any user has submitted this form and count all submissions
-                        submission_check = supabase_storage.table("form_submissions").select("id").eq("form_id", form["id"]).limit(1).execute()
+                        submission_check = (
+                            supabase_storage
+                            .table("form_submissions")
+                            .select("id")
+                            .eq("form_id", form["id"])
+                            .eq("folder_id", folder_id)
+                            .eq("status", "completed")
+                            .limit(1)
+                            .execute()
+                        )
                         form["is_completed"] = len(submission_check.data or []) > 0
                         # Count all completed submissions for admin
-                        count_response = supabase_storage.table("form_submissions").select("id", count="exact").eq("form_id", form["id"]).eq("status", "completed").execute()
+                        count_response = (
+                            supabase_storage
+                            .table("form_submissions")
+                            .select("id", count="exact")
+                            .eq("form_id", form["id"])
+                            .eq("folder_id", folder_id)
+                            .eq("status", "completed")
+                            .execute()
+                        )
                         form["submissions_count"] = count_response.count if hasattr(count_response, 'count') else len(count_response.data or [])
                     else:
                         # Customer: check if current user has submitted this form and count their submissions
@@ -1270,7 +1287,14 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                             try:
                                 # Query submissions for this form and user email (case-insensitive)
                                 # Get all submissions and filter in Python to ensure case-insensitive matching
-                                all_submissions = supabase_storage.table("form_submissions").select("id, submitter_email, status").eq("form_id", form["id"]).execute()
+                                all_submissions = (
+                                    supabase_storage
+                                    .table("form_submissions")
+                                    .select("id, submitter_email, status, folder_id")
+                                    .eq("form_id", form["id"])
+                                    .eq("folder_id", folder_id)
+                                    .execute()
+                                )
                                 logger.info(f"Found {len(all_submissions.data or [])} total submissions for form {form['id']}")
                                 
                                 # Filter submissions by case-insensitive email match
@@ -1284,9 +1308,9 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                                 
                                 logger.info(f"Found {len(matching_submissions)} matching submissions for email {user_email_lower}")
                                 
-                                form["is_completed"] = len(matching_submissions) > 0
-                                # Count only completed submissions
-                                completed_submissions = [s for s in matching_submissions if s.get("status") == "completed"]
+                                # Only count completed submissions for completion
+                                completed_submissions = [s for s in matching_submissions if (s.get("status") or "").lower() == "completed"]
+                                form["is_completed"] = len(completed_submissions) > 0
                                 form["submissions_count"] = len(completed_submissions)
                                 logger.info(f"Form {form['id']} - is_completed: {form['is_completed']}, submissions_count: {form['submissions_count']}")
                             except Exception as e:

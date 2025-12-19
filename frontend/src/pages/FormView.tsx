@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { formsAPI } from '../api';
 import type { Form, FormSubmission } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +23,7 @@ const FIELD_TYPE_LABELS: Record<string, string> = {
 function FormView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +89,9 @@ function FormView() {
       // For customers, redirect to public form view using the slug
       // If no slug exists, we need to generate one or use form ID
       if (formData.public_url_slug) {
-        navigate(`/public/form/${formData.public_url_slug}`);
+        const params = new URLSearchParams(location.search);
+        const folderId = params.get('folder_id');
+        navigate(`/public/form/${formData.public_url_slug}${folderId ? `?folder_id=${encodeURIComponent(folderId)}` : ''}`);
       } else {
         // If form doesn't have a slug, try to use form ID as fallback
         // Or show an error - but ideally we should ensure all forms have slugs

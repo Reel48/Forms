@@ -422,6 +422,8 @@ class FormSubmissionBase(BaseModel):
     form_id: str
     submitter_email: Optional[str] = None
     submitter_name: Optional[str] = None
+    # Optional folder scoping: used to mark completion per order/folder (repeat orders supported)
+    folder_id: Optional[str] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
     started_at: Optional[datetime] = None

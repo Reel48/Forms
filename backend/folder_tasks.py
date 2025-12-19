@@ -147,7 +147,7 @@ def build_customer_tasks(
             "description": None,
             "status": "complete" if form.get("is_completed") else "incomplete",
             "owner": "customer",
-            "deeplink": f"/forms/{form_id}",
+            "deeplink": f"/forms/{form_id}?folder_id={folder_id}",
             "delivery_timing": "before_delivery",
         })
 
@@ -196,7 +196,7 @@ def build_customer_tasks(
             "description": None,
             "status": "complete" if form.get("is_completed") else "incomplete",
             "owner": "customer",
-            "deeplink": f"/forms/{form_id}",
+            "deeplink": f"/forms/{form_id}?folder_id={folder_id}",
             "delivery_timing": "after_delivery",
         })
 

@@ -121,10 +121,12 @@ function PublicFormView() {
         setForm(formData);
         
         // Check if user has already submitted this form (if authenticated)
+        // If folder_id is present in the URL, scope this check to the folder so repeat orders work correctly.
+        const folderId = searchParams.get('folder_id') || undefined;
         if (user && user.email && formData?.id) {
           try {
             setLoadingPreviousSubmission(true);
-            const submissionResponse = await formsAPI.getMySubmission(formData.id);
+            const submissionResponse = await formsAPI.getMySubmission(formData.id, { folder_id: folderId });
             if (submissionResponse.data) {
               setPreviousSubmission(submissionResponse.data);
               setViewMode('view');
@@ -617,6 +619,7 @@ function PublicFormView() {
       // Prepare submission data
       const submissionData: any = {
         form_id: form.id,
+        folder_id: searchParams.get('folder_id') || undefined,
         started_at: new Date(startTime).toISOString(),
         time_spent_seconds: timeSpent,
         status: 'completed',
@@ -662,7 +665,7 @@ function PublicFormView() {
     } finally {
       setSubmitting(false);
     }
-  }, [form, formValues, startTime]);
+  }, [form, formValues, startTime, searchParams, user, captchaToken]);
 
   // Touch gesture support for mobile swipe navigation
   useEffect(() => {

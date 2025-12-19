@@ -1009,8 +1009,15 @@ async def get_form_submission(form_id: str, submission_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{form_id}/my-submission", response_model=FormSubmission)
-async def get_my_submission(form_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
-    """Get the current user's submission for a form (customer access)"""
+async def get_my_submission(
+    form_id: str,
+    folder_id: Optional[str] = Query(None, description="Optional folder scope for per-order completion"),
+    current_user: Optional[dict] = Depends(get_optional_user),
+):
+    """Get the current user's submission for a form (customer access).
+
+    If folder_id is provided, returns the most recent submission for that specific folder+form.
+    """
     try:
         # Check if form exists
         form_response = supabase_storage.table("forms").select("id").eq("id", form_id).single().execute()
@@ -1029,8 +1036,16 @@ async def get_my_submission(form_id: str, current_user: Optional[dict] = Depends
         # Normalize email to lowercase for comparison
         user_email_lower = user_email.lower().strip()
         
-        # Get all submissions for this form
-        all_submissions = supabase_storage.table("form_submissions").select("*, form_submission_answers(*)").eq("form_id", form_id).order("submitted_at", desc=True).execute()
+        # Get submissions for this form (optionally scoped to folder)
+        q = (
+            supabase_storage
+            .table("form_submissions")
+            .select("*, form_submission_answers(*)")
+            .eq("form_id", form_id)
+        )
+        if folder_id:
+            q = q.eq("folder_id", folder_id)
+        all_submissions = q.order("submitted_at", desc=True).execute()
         
         # Find matching submission by case-insensitive email match
         matching_submission = None
@@ -2263,6 +2278,7 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
             "form_id": form_id,
             "submitter_email": submitter_email,
             "submitter_name": submitter_name,
+            "folder_id": getattr(submission, "folder_id", None),
             "ip_address": submission.ip_address,
             "user_agent": submission.user_agent,
             "started_at": submission.started_at.isoformat() if hasattr(submission.started_at, 'isoformat') else (submission.started_at if isinstance(submission.started_at, str) else now),
@@ -2271,6 +2287,29 @@ async def submit_form(form_id: str, submission: FormSubmissionCreate, request: R
             "review_status": "new",  # Default to 'new' for new submissions
             "submitted_at": now,
         }
+
+        # If we have folder_id, try to attach assignment_id (form_folder_assignments.id) for durability.
+        try:
+            folder_id = submission_data.get("folder_id")
+            if folder_id:
+                fa = (
+                    supabase_storage
+                    .table("form_folder_assignments")
+                    .select("id")
+                    .eq("form_id", form_id)
+                    .eq("folder_id", folder_id)
+                    .limit(1)
+                    .execute()
+                )
+                if fa.data:
+                    submission_data["assignment_id"] = fa.data[0].get("id")
+        except Exception:
+            # Don't fail submission if assignment lookup fails
+            pass
+
+        # If authenticated, record user_id as well (helps internal queries)
+        if current_user and current_user.get("id"):
+            submission_data["user_id"] = current_user.get("id")
         
         submission_response = supabase_storage.table("form_submissions").insert(submission_data).execute()
         
