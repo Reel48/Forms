@@ -90,6 +90,13 @@ const CustomerChatPage: React.FC = () => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
             
+            // Enhanced logging for AI response tracking
+            const messageData = {location:'CustomerChatPage.tsx:91',message:'Realtime INSERT - new message received',data:{messageId:newMessage.id,senderId:newMessage.sender_id,messageType:newMessage.message_type,messagePreview:newMessage.message?.substring(0,50)||'[no message]',isFromCustomer:newMessage.sender_id===user?.id},timestamp:Date.now(),hypothesisId:'G'};
+            console.log('🔍 [DEBUG]', JSON.stringify(messageData));
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...messageData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+            // #endregion
+            
             // Track activity when receiving messages
             lastActivityRef.current = Date.now();
             
