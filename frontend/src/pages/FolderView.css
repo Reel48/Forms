@@ -97,6 +97,10 @@
   font-weight: 600;
   color: var(--color-text-primary, #1f2937);
   margin: 0;
+  min-width: 0;
+  flex: 1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .folder-description {
