@@ -372,9 +372,19 @@ const CustomerChatPage: React.FC = () => {
 
   // Load or get the single conversation for this user
   const loadConversation = async () => {
+    const loadData = {location:'CustomerChatPage.tsx:377',message:'loadConversation called',data:{},timestamp:Date.now(),hypothesisId:'F'};
+    console.log('🔍 [DEBUG]', JSON.stringify(loadData));
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...loadData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+    // #endregion
     try {
       setLoading(true);
       const response = await chatAPI.getConversations();
+      const responseData = {location:'CustomerChatPage.tsx:380',message:'loadConversation API success',data:{hasData:!!response?.data,conversationCount:response?.data?.length||0,firstConversationId:response?.data?.[0]?.id},timestamp:Date.now(),hypothesisId:'F'};
+      console.log('🔍 [DEBUG]', JSON.stringify(responseData));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...responseData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+      // #endregion
       if (response.data && response.data.length > 0) {
         // Use the most recent conversation
         setConversation(response.data[0]);
@@ -383,7 +393,12 @@ const CustomerChatPage: React.FC = () => {
         setConversation(null);
       }
     } catch (error) {
+      const loadErrorData = {location:'CustomerChatPage.tsx:390',message:'loadConversation error',data:{errorType:error?.constructor?.name,errorMessage:error instanceof Error ? error.message : String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status},timestamp:Date.now(),hypothesisId:'F'};
+      console.error('🔍 [DEBUG]', JSON.stringify(loadErrorData));
       console.error('Failed to load conversation:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...loadErrorData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+      // #endregion
     } finally {
       setLoading(false);
     }
@@ -409,10 +424,28 @@ const CustomerChatPage: React.FC = () => {
 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || newMessage;
-    if (!textToSend.trim() || sending) return;
+    const sendData = {location:'CustomerChatPage.tsx:412',message:'sendMessage called',data:{hasText:!!textToSend?.trim(),textLength:textToSend?.trim()?.length||0,sending,hasConversation:!!conversation,conversationId:conversation?.id},timestamp:Date.now(),hypothesisId:'F'};
+    console.log('🔍 [DEBUG]', JSON.stringify(sendData));
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...sendData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+    // #endregion
+    
+    if (!textToSend.trim() || sending) {
+      const blockedData = {location:'CustomerChatPage.tsx:415',message:'sendMessage blocked',data:{reason:!textToSend.trim()?'no text':'already sending',sending},timestamp:Date.now(),hypothesisId:'F'};
+      console.log('🔍 [DEBUG]', JSON.stringify(blockedData));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...blockedData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
 
     try {
       setSending(true);
+      const startData = {location:'CustomerChatPage.tsx:420',message:'sendMessage starting',data:{messagePayload:messageText?{message:messageText.trim()}:{message:textToSend.trim(),conversation_id:conversation?.id}},timestamp:Date.now(),hypothesisId:'F'};
+      console.log('🔍 [DEBUG]', JSON.stringify(startData));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...startData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+      // #endregion
       
       // Build message payload - only include conversation_id if we have one
       // If no conversation exists, backend will create one
@@ -427,6 +460,11 @@ const CustomerChatPage: React.FC = () => {
       lastActivityRef.current = Date.now();
       
       const messageResponse = await chatAPI.sendMessage(messagePayload);
+      const successData = {location:'CustomerChatPage.tsx:432',message:'sendMessage API success',data:{hasResponse:!!messageResponse,hasData:!!messageResponse?.data,conversationId:messageResponse?.data?.conversation_id},timestamp:Date.now(),hypothesisId:'F'};
+      console.log('🔍 [DEBUG]', JSON.stringify(successData));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...successData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+      // #endregion
       
       // Get the conversation_id from the response
       const responseConvId = messageResponse.data?.conversation_id;
@@ -483,7 +521,12 @@ const CustomerChatPage: React.FC = () => {
         }
       }
     } catch (error) {
+      const errorData = {location:'CustomerChatPage.tsx:490',message:'sendMessage error',data:{errorType:error?.constructor?.name,errorMessage:error instanceof Error ? error.message : String(error),errorResponse:error?.response?.data,statusCode:error?.response?.status},timestamp:Date.now(),hypothesisId:'F'};
+      console.error('🔍 [DEBUG]', JSON.stringify(errorData));
       console.error('Failed to send message:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...errorData,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+      // #endregion
       const errorMessage = error instanceof Error ? error.message : 'Failed to send message. Please try again.';
       showNotification({ type: 'error', message: errorMessage });
       
@@ -607,9 +650,17 @@ const CustomerChatPage: React.FC = () => {
 
         <div className="customer-chat-messages" ref={messagesContainerRef}>
           <div className="message-width-limiter">
+            {(() => {
+              const uiState = {location:'CustomerChatPage.tsx:615',message:'UI render state',data:{loading,hasConversation:!!conversation,conversationId:conversation?.id,messagesCount:messages.length,sending,uploading},timestamp:Date.now(),hypothesisId:'F'};
+              console.log('🔍 [DEBUG]', JSON.stringify(uiState));
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/0aea16b7-47e0-4efd-b91d-c07093d7e27d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...uiState,sessionId:'debug-session',runId:'run1'})}).catch(()=>{});
+              // #endregion
+              return null;
+            })()}
             {conversation?.chat_mode === 'human' && (
               <div style={{ padding: '0.75rem 1rem', margin: '0.75rem 0', borderRadius: '8px', background: 'var(--color-warning-light)', border: '1px solid var(--color-warning)' }}>
-                You’re chatting with human support. AI replies are paused.
+                You're chatting with human support. AI replies are paused.
               </div>
             )}
             {!conversation || messages.length === 0 ? (
