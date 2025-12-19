@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { clientsAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
@@ -7,7 +6,6 @@ import { getLogoForDarkBackground } from '../utils/logoUtils';
 import { clearProfileCompletionCache } from '../hooks/useProfileCompletion';
 
 function Onboarding() {
-  const navigate = useNavigate();
   const { refreshUser, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
