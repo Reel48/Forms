@@ -282,13 +282,13 @@ def setup_schedulers():
     # If enabled, it runs infrequently to avoid any perceived "refreshing".
     enable_session_cleanup = str(os.getenv("ENABLE_CHAT_SESSION_CLEANUP", "false")).lower() in ("1", "true", "yes")
     if enable_session_cleanup:
-    scheduler.add_job(
-        cleanup_expired_sessions,
+        scheduler.add_job(
+            cleanup_expired_sessions,
             trigger=CronTrigger(hour='*/6', minute=0),  # Every 6 hours
-        id='session_cleanup',
+            id='session_cleanup',
             name='Expired session cleanup (every 6 hours)',
-        replace_existing=True
-    )
+            replace_existing=True
+        )
     
     scheduler.start()
     logger.info(
