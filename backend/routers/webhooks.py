@@ -88,7 +88,9 @@ def _create_form_completion_record(
             "review_status": f"completed:{source}",
             "submitted_at": now,
             "started_at": now,
-            "assignment_id": assignment_id,
+            # Note: assignment_id is set to None to avoid foreign key constraint issues
+            # The database expects form_assignments.id but we use form_folder_assignments
+            "assignment_id": None,
         }
         
         # Insert using service role (bypasses RLS)

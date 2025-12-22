@@ -118,7 +118,9 @@ async def mark_form_complete(
             "review_status": f"completed:{(payload.source or 'typeform')}",
             "submitted_at": now,
             "started_at": now,
-            "assignment_id": assignment[0].get("id"),
+            # Note: assignment_id is set to None to avoid foreign key constraint issues
+            # The database expects form_assignments.id but we use form_folder_assignments
+            "assignment_id": None,
         }
 
         # Insert completion record. Prefer supabase client, but fall back to direct REST with service-role
