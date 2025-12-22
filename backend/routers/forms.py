@@ -1212,11 +1212,11 @@ async def get_my_submission(
                 q = q.eq("folder_id", folder_id)
             all_submissions = q.order("submitted_at", desc=True).execute()
 
-        for s in (all_submissions.data or []):
-            submission_email = s.get("submitter_email", "")
-            if submission_email and submission_email.lower().strip() == user_email_lower:
-                matching_submission = s
-                break
+            for s in (all_submissions.data or []):
+                submission_email = s.get("submitter_email", "")
+                if submission_email and submission_email.lower().strip() == user_email_lower:
+                    matching_submission = s
+                    break
         
         if not matching_submission:
             raise HTTPException(status_code=404, detail="No submission found for this user")
