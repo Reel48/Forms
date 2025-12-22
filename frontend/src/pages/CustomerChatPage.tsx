@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
-import { getRealtimeClient } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft } from 'react-icons/fa';
 import { ChatMessageBody } from '../components/chat/ChatMessageBody';
 import { useNotifications } from '../components/NotificationSystem';
@@ -50,7 +50,15 @@ const CustomerChatPage: React.FC = () => {
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
-    const realtimeClient = getRealtimeClient();
+    // Verify user is authenticated before subscribing
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.warn('Cannot setup Realtime subscriptions: user not authenticated');
+      return;
+    }
+
+    // Use main supabase client which automatically includes access token for RLS
+    const realtimeClient = supabase;
 
     // Clean up existing subscriptions
     if (messagesSubscriptionRef.current) {
@@ -157,13 +165,12 @@ const CustomerChatPage: React.FC = () => {
       }
     }
     return () => {
-      const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
-        realtimeClient.removeChannel(messagesSubscriptionRef.current);
+        supabase.removeChannel(messagesSubscriptionRef.current);
         messagesSubscriptionRef.current = null;
       }
       if (conversationsSubscriptionRef.current) {
-        realtimeClient.removeChannel(conversationsSubscriptionRef.current);
+        supabase.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
       }
       if (sessionCheckIntervalRef.current) {

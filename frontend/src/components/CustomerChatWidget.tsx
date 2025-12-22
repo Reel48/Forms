@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaComments } from 'react-icons/fa';
 import { chatAPI, type ChatMessage } from '../api';
 import { useAuth } from '../contexts/AuthContext';
-import { getRealtimeClient } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import './CustomerChatWidget.css';
 
 /**
@@ -28,14 +28,21 @@ const CustomerChatWidget: React.FC = () => {
     }
   }, [user?.id]);
 
-  const setupRealtime = useCallback((convId: string) => {
-    const realtimeClient = getRealtimeClient();
+  const setupRealtime = useCallback(async (convId: string) => {
+    // Verify user is authenticated before subscribing
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.warn('Cannot setup Realtime subscription: user not authenticated');
+      return;
+    }
+
+    // Use main supabase client which automatically includes access token for RLS
     if (messagesSubscriptionRef.current) {
-      realtimeClient.removeChannel(messagesSubscriptionRef.current);
+      supabase.removeChannel(messagesSubscriptionRef.current);
       messagesSubscriptionRef.current = null;
     }
 
-    messagesSubscriptionRef.current = realtimeClient
+    messagesSubscriptionRef.current = supabase
       .channel(`chat_widget_messages:${convId}`)
       .on(
         'postgres_changes',
@@ -68,7 +75,7 @@ const CustomerChatWidget: React.FC = () => {
         setConversationId(convId);
         if (convId) {
           await refreshUnreadCount(convId);
-          setupRealtime(convId);
+          await setupRealtime(convId);
         } else {
           setUnreadCount(0);
         }
@@ -80,9 +87,8 @@ const CustomerChatWidget: React.FC = () => {
 
     return () => {
       mounted = false;
-      const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
-        realtimeClient.removeChannel(messagesSubscriptionRef.current);
+        supabase.removeChannel(messagesSubscriptionRef.current);
         messagesSubscriptionRef.current = null;
       }
     };

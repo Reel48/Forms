@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatAPI, type ChatConversation, type ChatMessage, type ChatAiActionLog } from '../api';
 import { useAuth } from '../contexts/AuthContext';
-import { getRealtimeClient } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { FaPaperclip, FaCheck, FaTrash } from 'react-icons/fa';
 import { ChatMessageBody } from '../components/chat/ChatMessageBody';
 import { useNotifications } from '../components/NotificationSystem';
@@ -39,8 +39,15 @@ const ChatPage: React.FC = () => {
 
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
-    // Get Realtime client (uses service role key if available, otherwise anon key)
-    const realtimeClient = getRealtimeClient();
+    // Verify user is authenticated before subscribing
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.warn('Cannot setup Realtime subscriptions: user not authenticated');
+      return;
+    }
+
+    // Use main supabase client which automatically includes access token for RLS
+    const realtimeClient = supabase;
 
     // Clean up existing subscriptions
     if (messagesSubscriptionRef.current) {
@@ -120,7 +127,7 @@ const ChatPage: React.FC = () => {
           console.log('Successfully subscribed to chat messages via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('Error subscribing to chat messages:', status);
-          console.error('Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
+          console.error('Check: Is user authenticated? Session may have expired.');
         } else if (status === 'TIMED_OUT') {
           console.warn('Realtime subscription timed out, will retry');
         } else if (status === 'CLOSED') {
@@ -153,7 +160,7 @@ const ChatPage: React.FC = () => {
           console.log('Successfully subscribed to chat conversations via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('Error subscribing to chat conversations:', status);
-          console.error('Check: Is VITE_SUPABASE_SERVICE_ROLE_KEY set in Vercel?');
+          console.error('Check: Is user authenticated? Session may have expired.');
         } else if (status === 'TIMED_OUT') {
           console.warn('Realtime subscription timed out, will retry');
         } else if (status === 'CLOSED') {
@@ -203,60 +210,72 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     if (!isAdmin) return;
 
-    const realtimeClient = getRealtimeClient();
+    // Verify user is authenticated before subscribing
+    const setupGlobalSubscription = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('Cannot setup global Realtime subscription: user not authenticated');
+        return;
+      }
 
-    // Subscribe to all conversations for admins (to see new conversations and updates)
-    const globalConversationsChannel = realtimeClient
-      .channel('admin_all_conversations')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_conversations',
-        },
-        (payload) => {
-          console.log('Admin: Global conversation event:', payload.eventType);
-          // Reload conversations list to get updated data
-          loadConversations(false); // Silent refresh
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-        },
-        (payload) => {
-          console.log('Admin: New message in any conversation:', payload);
-          // Reload conversations to update unread counts and last_message_at
-          loadConversations(false); // Silent refresh
-          
-          // Show notification if message is not in currently selected conversation
-          const newMessage = payload.new as ChatMessage;
-          // Use a callback to access current state
-          setConversations((currentConversations) => {
-            const conversation = currentConversations.find(c => c.id === newMessage.conversation_id);
-            if (selectedConversation?.id !== newMessage.conversation_id) {
-              showBrowserNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
-            }
-            return currentConversations;
-          });
-        }
-      )
-      .subscribe((status) => {
-        console.log('Admin: Global conversations subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('Admin successfully subscribed to all conversations via Realtime');
-        }
-      });
+      // Use main supabase client which automatically includes access token for RLS
+      const realtimeClient = supabase;
 
-    globalConversationsSubscriptionRef.current = globalConversationsChannel;
+      // Subscribe to all conversations for admins (to see new conversations and updates)
+      const globalConversationsChannel = realtimeClient
+        .channel('admin_all_conversations')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_conversations',
+          },
+          (payload) => {
+            console.log('Admin: Global conversation event:', payload.eventType);
+            // Reload conversations list to get updated data
+            loadConversations(false); // Silent refresh
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+          },
+          (payload) => {
+            console.log('Admin: New message in any conversation:', payload);
+            // Reload conversations to update unread counts and last_message_at
+            loadConversations(false); // Silent refresh
+            
+            // Show notification if message is not in currently selected conversation
+            const newMessage = payload.new as ChatMessage;
+            // Use a callback to access current state
+            setConversations((currentConversations) => {
+              const conversation = currentConversations.find(c => c.id === newMessage.conversation_id);
+              if (selectedConversation?.id !== newMessage.conversation_id) {
+                showBrowserNotification(newMessage, conversation?.customer_name || conversation?.customer_email || undefined);
+              }
+              return currentConversations;
+            });
+          }
+        )
+        .subscribe((status) => {
+          console.log('Admin: Global conversations subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('Admin successfully subscribed to all conversations via Realtime');
+          }
+        });
+
+      globalConversationsSubscriptionRef.current = globalConversationsChannel;
+    };
+
+    void setupGlobalSubscription();
 
     return () => {
       if (globalConversationsSubscriptionRef.current) {
-        realtimeClient.removeChannel(globalConversationsSubscriptionRef.current);
+        supabase.removeChannel(globalConversationsSubscriptionRef.current);
         globalConversationsSubscriptionRef.current = null;
       }
     };
@@ -269,17 +288,16 @@ const ChatPage: React.FC = () => {
 
     // Cleanup subscriptions on unmount
     return () => {
-      const realtimeClient = getRealtimeClient();
       if (messagesSubscriptionRef.current) {
-        realtimeClient.removeChannel(messagesSubscriptionRef.current);
+        supabase.removeChannel(messagesSubscriptionRef.current);
         messagesSubscriptionRef.current = null;
       }
       if (conversationsSubscriptionRef.current) {
-        realtimeClient.removeChannel(conversationsSubscriptionRef.current);
+        supabase.removeChannel(conversationsSubscriptionRef.current);
         conversationsSubscriptionRef.current = null;
       }
       if (globalConversationsSubscriptionRef.current) {
-        realtimeClient.removeChannel(globalConversationsSubscriptionRef.current);
+        supabase.removeChannel(globalConversationsSubscriptionRef.current);
         globalConversationsSubscriptionRef.current = null;
       }
     };
