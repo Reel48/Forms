@@ -45,31 +45,29 @@ def get_stage_steps(
     """
     steps = []
     
-    # Step 1: Design
+    # Step 1: Pre-Production (combines Design and Quote & Pay)
     # Pending until we have a quote.
-    # Active after quote exists while any pre-production tasks are incomplete (before-delivery forms + e-signatures).
-    # Completed once design tasks are done for this folder.
-    design_status = "pending"
+    # Active after quote exists while any pre-production tasks are incomplete (forms, e-signatures) OR payment is not paid.
+    # Completed once design tasks are done AND payment is paid.
+    pre_production_status = "pending"
     if has_quote:
-        design_status = "active" if design_tasks_incomplete else "completed"
-    steps.append({"key": "design", "label": "Design", "status": design_status})
-    
-    # Step 2: Quote & Pay (active when quote_sent or payment pending)
-    quote_pay_status = "pending"
-    if current_stage:
+        if design_tasks_incomplete or not payment_paid:
+            pre_production_status = "active"
+        else:
+            pre_production_status = "completed"
+    elif current_stage:
+        # If we're past pre-production stage, mark it as completed
         stage_lower = str(current_stage).lower()
-        if stage_lower in ("quote_sent", "design_info_needed") or (stage_lower == "production" and not payment_paid):
-            quote_pay_status = "active"
-        elif payment_paid or stage_lower in ("production", "shipped", "delivered"):
-            quote_pay_status = "completed"
+        if stage_lower in ("production", "shipped", "delivered"):
+            pre_production_status = "completed"
     
     steps.append({
-        "key": "quote_pay",
-        "label": "Quote & Pay",
-        "status": quote_pay_status,
+        "key": "pre_production",
+        "label": "Pre-Production",
+        "status": pre_production_status,
     })
     
-    # Step 3: Production (active when production stage)
+    # Step 2: Production (active when production stage)
     production_status = "pending"
     if current_stage:
         stage_lower = str(current_stage).lower()
@@ -84,7 +82,7 @@ def get_stage_steps(
         "status": production_status,
     })
     
-    # Step 4: Shipping (active when shipped or delivered)
+    # Step 3: Shipping (active when shipped or delivered)
     shipping_status = "pending"
     if is_delivered:
         shipping_status = "completed"
