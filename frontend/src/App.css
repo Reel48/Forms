@@ -8,9 +8,9 @@
   --brand-white: #ffffff;
   
   /* Reel48 Brand Color - Single Primary Color */
-  --color-reel48-blue: #1B2B41;      /* Primary navbar, brand elements */
-  --color-reel48-blue-light: rgba(27, 43, 65, 0.1);  /* Light variant (10% opacity) */
-  --color-reel48-blue-hover: #15202e;  /* Hover variant (darker) */
+  --color-reel48-blue: #292c2f;      /* Primary navbar, brand elements (Reel48 Black) */
+  --color-reel48-blue-light: rgba(41, 44, 47, 0.1);  /* Light variant (10% opacity) */
+  --color-reel48-blue-hover: #1f2124;  /* Hover variant (darker) */
   
   /* Primary Colors (Blue - Tailwind Default) */
   --color-primary: rgb(59 130 246); /* blue-500 */
@@ -159,7 +159,7 @@ select:focus-visible {
 .navbar-two-row {
   /* Used to keep the profile icon aligned with the utility bar role dropdown area */
   --utility-role-container-width: 120px;
-  background: var(--color-reel48-blue); /* #1B2B41 */
+  background: var(--color-reel48-blue); /* #292c2f */
   box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
@@ -309,7 +309,7 @@ select:focus-visible {
 
 /* Row 1: Top Bar (Hamburger, Search, Logo, User Info) */
 .navbar-top-row {
-  background: var(--color-reel48-blue) !important; /* #1B2B41 */
+  background: var(--color-reel48-blue) !important; /* #292c2f */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1320,7 +1320,7 @@ a:not([class]) {
 }
 
 .typeform-btn-primary:hover:not(:disabled) {
-  background: var(--color-reel48-blue-hover); /* #15202e */
+  background: var(--color-reel48-blue-hover); /* #1f2124 */
   transform: translateY(-2px);
   box-shadow: 0px 8px 28px rgba(92, 121, 94, 0.5);
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getLogoForLightBackground } from '../utils/logoUtils';
+import { getLogoForDarkBackground } from '../utils/logoUtils';
 import './Login.css';
 
 export default function Login() {
@@ -50,7 +50,7 @@ export default function Login() {
         {/* Company Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img 
-            src={getLogoForLightBackground()} 
+            src={getLogoForDarkBackground()} 
             alt="Company Logo" 
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';

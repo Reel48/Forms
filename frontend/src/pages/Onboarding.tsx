@@ -195,7 +195,7 @@ function Onboarding() {
         justifyContent: 'center', 
         alignItems: 'center', 
         minHeight: '100vh',
-        backgroundColor: '#1B2B41'
+        backgroundColor: '#292c2f'
       }}>
         <div style={{ color: '#ffffff' }}>Loading...</div>
       </div>
@@ -205,7 +205,7 @@ function Onboarding() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#1B2B41',
+      backgroundColor: '#292c2f',
       padding: '2rem 1rem',
       display: 'flex',
       flexDirection: 'column',
