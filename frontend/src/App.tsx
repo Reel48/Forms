@@ -92,6 +92,12 @@ function Navigation() {
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchTerm = searchParams.get('search') || '';
   
+  // Utility bar color state - default to blue-500
+  const [utilityBarColor, setUtilityBarColor] = useState<string>(() => {
+    const saved = localStorage.getItem('utilityBarColor');
+    return saved || 'rgb(59 130 246)'; // blue-500 default
+  });
+  
   const handleLogout = async () => {
     try {
       await signOut();
@@ -153,6 +159,42 @@ function Navigation() {
     setIsNavMenuOpen(false); // Close nav menu when navigating
   }, [location.pathname]);
 
+  // Apply utility bar color to CSS variable
+  useEffect(() => {
+    document.documentElement.style.setProperty('--utility-bar-color', utilityBarColor);
+    localStorage.setItem('utilityBarColor', utilityBarColor);
+  }, [utilityBarColor]);
+
+  // Tailwind color options (500 shade for each color)
+  const tailwindColors = [
+    { name: 'Blue', value: 'rgb(59 130 246)', class: 'blue-500' },
+    { name: 'Red', value: 'rgb(239 68 68)', class: 'red-500' },
+    { name: 'Green', value: 'rgb(34 197 94)', class: 'green-500' },
+    { name: 'Yellow', value: 'rgb(234 179 8)', class: 'yellow-500' },
+    { name: 'Purple', value: 'rgb(168 85 247)', class: 'purple-500' },
+    { name: 'Pink', value: 'rgb(236 72 153)', class: 'pink-500' },
+    { name: 'Indigo', value: 'rgb(99 102 241)', class: 'indigo-500' },
+    { name: 'Teal', value: 'rgb(20 184 166)', class: 'teal-500' },
+    { name: 'Orange', value: 'rgb(249 115 22)', class: 'orange-500' },
+    { name: 'Cyan', value: 'rgb(6 182 212)', class: 'cyan-500' },
+    { name: 'Emerald', value: 'rgb(16 185 129)', class: 'emerald-500' },
+    { name: 'Violet', value: 'rgb(139 92 246)', class: 'violet-500' },
+    { name: 'Fuchsia', value: 'rgb(217 70 239)', class: 'fuchsia-500' },
+    { name: 'Rose', value: 'rgb(244 63 94)', class: 'rose-500' },
+    { name: 'Sky', value: 'rgb(14 165 233)', class: 'sky-500' },
+    { name: 'Lime', value: 'rgb(132 204 22)', class: 'lime-500' },
+    { name: 'Amber', value: 'rgb(245 158 11)', class: 'amber-500' },
+    { name: 'Slate', value: 'rgb(100 116 139)', class: 'slate-500' },
+    { name: 'Gray', value: 'rgb(107 114 128)', class: 'gray-500' },
+    { name: 'Zinc', value: 'rgb(113 113 122)', class: 'zinc-500' },
+    { name: 'Neutral', value: 'rgb(115 115 115)', class: 'neutral-500' },
+    { name: 'Stone', value: 'rgb(120 113 108)', class: 'stone-500' },
+  ];
+
+  const handleColorSelect = (colorValue: string) => {
+    setUtilityBarColor(colorValue);
+  };
+
   
   return (
     <nav role="navigation" aria-label="Main navigation" className="navbar-two-row">
@@ -172,6 +214,22 @@ function Navigation() {
             </span>
             {isRoleDropdownOpen && (
               <div className="role-dropdown-content">
+                <div className="dropdown-section">
+                  <div className="dropdown-section-title">Utility Bar Color</div>
+                  <div className="color-picker-grid">
+                    {tailwindColors.map((color) => (
+                      <button
+                        key={color.class}
+                        className={`color-option ${utilityBarColor === color.value ? 'selected' : ''}`}
+                        onClick={() => handleColorSelect(color.value)}
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                        aria-label={`Select ${color.name} color`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="dropdown-divider"></div>
                 <Link to="/profile" onClick={() => setIsRoleDropdownOpen(false)} className="dropdown-link">
                   Profile
                 </Link>
