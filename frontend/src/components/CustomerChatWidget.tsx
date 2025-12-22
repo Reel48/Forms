@@ -30,11 +30,17 @@ const CustomerChatWidget: React.FC = () => {
 
   const setupRealtime = useCallback(async (convId: string) => {
     // Verify user is authenticated before subscribing
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.warn('Cannot setup Realtime subscription: user not authenticated');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (!session || sessionError) {
+      console.warn('Cannot setup Realtime subscription: user not authenticated', sessionError);
       return;
     }
+
+    // Explicitly set the session to ensure Realtime has access to the token
+    await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
 
     // Use main supabase client which automatically includes access token for RLS
     if (messagesSubscriptionRef.current) {

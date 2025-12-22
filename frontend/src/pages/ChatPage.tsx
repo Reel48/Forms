@@ -40,11 +40,18 @@ const ChatPage: React.FC = () => {
   // Setup Realtime subscriptions for messages and conversations
   const setupRealtimeSubscriptions = useCallback(async (conversationId: string) => {
     // Verify user is authenticated before subscribing
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.warn('Cannot setup Realtime subscriptions: user not authenticated');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (!session || sessionError) {
+      console.warn('Cannot setup Realtime subscriptions: user not authenticated', sessionError);
       return;
     }
+
+    // Explicitly set the session to ensure Realtime has access to the token
+    // This ensures the access token is available for Realtime authentication
+    await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
 
     // Use main supabase client which automatically includes access token for RLS
     const realtimeClient = supabase;
@@ -212,11 +219,17 @@ const ChatPage: React.FC = () => {
 
     // Verify user is authenticated before subscribing
     const setupGlobalSubscription = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.warn('Cannot setup global Realtime subscription: user not authenticated');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (!session || sessionError) {
+        console.warn('Cannot setup global Realtime subscription: user not authenticated', sessionError);
         return;
       }
+
+      // Explicitly set the session to ensure Realtime has access to the token
+      await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      });
 
       // Use main supabase client which automatically includes access token for RLS
       const realtimeClient = supabase;
