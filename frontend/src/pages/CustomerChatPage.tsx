@@ -126,6 +126,11 @@ const CustomerChatPage: React.FC = () => {
           console.log('✅ Successfully subscribed to chat messages via Realtime');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Error subscribing to chat messages:', status);
+          console.error('💡 This may be due to:');
+          console.error('   1. WebSocket connection failure (check for %0A in URL - indicates newline in anon key)');
+          console.error('   2. RLS policy blocking subscription (check Supabase dashboard)');
+          console.error('   3. Realtime not enabled for chat_messages table');
+          console.error('   Fix: Update VITE_SUPABASE_ANON_KEY in Vercel (remove any newlines/whitespace)');
         }
       });
 

@@ -1,11 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-// Trim any whitespace/newlines from the anon key (common issue with env vars)
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+// Aggressively clean the anon key - remove all whitespace, newlines, and control characters
+// This handles cases where env vars have trailing newlines or other whitespace
+const rawAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = rawAnonKey.replace(/[\s\n\r\t]/g, '').trim();
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+}
+
+// Validate the anon key format (should be a JWT)
+if (!supabaseAnonKey.includes('.')) {
+  console.error('⚠️ WARNING: VITE_SUPABASE_ANON_KEY does not appear to be a valid JWT token. Please check your Vercel environment variables.');
 }
 
 // Main client with anon key (for authenticated operations)
