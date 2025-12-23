@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaSun, FaMoon, FaArrowUp, FaArrowLeft, FaCopy, FaCheck } from 'react-icons/fa';
 import { ChatMessageBody } from '../components/chat/ChatMessageBody';
 import { useNotifications } from '../components/NotificationSystem';
 import './CustomerChatPage.css';
@@ -16,20 +16,16 @@ const CustomerChatPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('chat-theme');
     return (saved as 'dark' | 'light') || 'light';
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const attachMenuRef = useRef<HTMLDivElement>(null);
   const markingAsReadRef = useRef(false);
   const lastMarkAsReadRef = useRef<number>(0);
   const messagesSubscriptionRef = useRef<any>(null);
@@ -278,18 +274,6 @@ const CustomerChatPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation?.id]); // Only depend on conversation?.id, checkSession is stable
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
-        setShowAttachMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   useEffect(() => {
     if (shouldAutoScroll && messages.length > 0) {
@@ -529,51 +513,6 @@ const CustomerChatPage: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || uploading) return;
-
-    try {
-      setUploading(true);
-      const uploadResponse = await chatAPI.uploadFile(file);
-      
-      // Build message payload - only include conversation_id if we have one
-      const messagePayload: any = {
-        message: `File: ${uploadResponse.data.file_name}`,
-        message_type: uploadResponse.data.message_type,
-        file_url: uploadResponse.data.file_url,
-        file_name: uploadResponse.data.file_name,
-        file_size: uploadResponse.data.file_size,
-      };
-      if (conversation?.id) {
-        messagePayload.conversation_id = conversation.id;
-      }
-
-      const messageResponse = await chatAPI.sendMessage(messagePayload);
-
-      // If this was a new conversation, set it up
-      if (!conversation?.id) {
-        const newConvId = messageResponse.data.conversation_id;
-        const convsResponse = await chatAPI.getConversations();
-        if (convsResponse.data) {
-          const newConv = convsResponse.data.find(c => c.id === newConvId);
-          if (newConv) {
-            setConversation(newConv);
-            await loadMessages(newConvId);
-            setupRealtimeSubscriptions(newConvId);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to upload file:', error);
-      showNotification({ type: 'error', message: 'Failed to upload file. Please try again.' });
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -836,38 +775,6 @@ const CustomerChatPage: React.FC = () => {
                 Jump to latest
               </button>
             )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-              disabled={uploading}
-            />
-            
-            <div className="attach-menu-wrapper" ref={attachMenuRef}>
-              <button
-                className="attach-btn"
-                onClick={() => setShowAttachMenu(!showAttachMenu)}
-                disabled={uploading || sending}
-                title="Add content"
-              >
-                <FaPlus />
-              </button>
-              
-              {showAttachMenu && (
-                <div className="attach-menu-popup">
-                  <button 
-                    className="attach-menu-item"
-                    onClick={() => {
-                      fileInputRef.current?.click();
-                      setShowAttachMenu(false);
-                    }}
-                  >
-                    <FaPaperclip /> Add a file
-                  </button>
-                </div>
-              )}
-            </div>
             
             <textarea
               ref={textareaRef}
@@ -905,7 +812,7 @@ const CustomerChatPage: React.FC = () => {
                 if (!hasTextToSend) return;
                 void sendMessage();
               }}
-              disabled={sending || uploading || !hasTextToSend}
+              disabled={sending || !hasTextToSend}
               title="Send message"
               aria-label="Send message"
             >

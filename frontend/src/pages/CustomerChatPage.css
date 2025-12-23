@@ -835,6 +835,7 @@
   transition: opacity 0.2s, transform 0.2s;
   display: flex;
   gap: 4px;
+  z-index: 10;
   pointer-events: none;
 }
 
@@ -843,9 +844,22 @@
   left: -36px;
 }
 
+/* Show actions when hovering over message */
 .message:hover .message-actions {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Keep actions visible when hovering over actions area */
+.message-actions:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Ensure button is always clickable when actions are visible */
+.message-actions .message-action-btn {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .message-action-btn {
