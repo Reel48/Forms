@@ -241,6 +241,19 @@ function CustomerDashboard() {
     });
   }, [filteredFoldersByStatus.active, folderSummaries]);
 
+  // Sort active folders: action-required first, then others
+  const sortedActiveFolders = useMemo(() => {
+    const actionRequired = filteredFoldersByStatus.active.filter((folder) => {
+      const summary = folderSummaries[folder.id];
+      return summary?.next_step_owner === 'customer' || summary?.computed_next_step_owner === 'customer';
+    });
+    const others = filteredFoldersByStatus.active.filter((folder) => {
+      const summary = folderSummaries[folder.id];
+      return !(summary?.next_step_owner === 'customer' || summary?.computed_next_step_owner === 'customer');
+    });
+    return [...actionRequired, ...others];
+  }, [filteredFoldersByStatus.active, folderSummaries]);
+
   const getStatusBadge = (status: string, type: 'quote' | 'form' | 'folder') => {
     const statusLower = status.toLowerCase();
     let badgeClass = 'status-badge-customer status-badge-active';
@@ -312,7 +325,7 @@ function CustomerDashboard() {
     }));
   };
 
-  const renderFolderCard = (item: TimelineItem) => {
+  const renderFolderCard = (item: TimelineItem, isActive: boolean = false) => {
     const summary = folderSummaries[item.id];
     const progress = summary?.progress;
     const progressPercent = progress && progress.tasks_total && progress.tasks_total > 0
@@ -321,11 +334,12 @@ function CustomerDashboard() {
     const nextStep = summary?.computed_next_step || summary?.next_step;
     const nextStepOwner = summary?.computed_next_step_owner || summary?.next_step_owner;
     const stageLabel = summary?.computed_stage_label || summary?.stage_label;
+    const needsAction = nextStepOwner === 'customer' || summary?.computed_next_step_owner === 'customer';
 
     return (
       <div
         key={`${item.type}-${item.id}`}
-        className={`folder-card ${item.priority === 'high' ? 'priority-high' : ''}`}
+        className={`folder-card ${isActive ? 'folder-card-active' : ''} ${item.priority === 'high' ? 'priority-high' : ''} ${needsAction ? 'folder-card-action-required' : ''}`}
         onClick={() => handleItemClick(item)}
       >
         <div className="folder-card-header">
@@ -337,12 +351,64 @@ function CustomerDashboard() {
           <p className="folder-card-description">{item.description}</p>
         )}
 
-        {stageLabel && (
-          <div style={{ marginBottom: '0.75rem' }}>
-            <span className="folder-stat-badge">{stageLabel}</span>
+        {/* Next Step - Prominent for active cards */}
+        {nextStep && needsAction && (
+          <div className="folder-card-next-step">
+            <div className="folder-card-next-step-label">Action Required</div>
+            <p className="folder-card-next-step-text">{nextStep}</p>
           </div>
         )}
 
+        {/* Enhanced details grid for active cards */}
+        {isActive && summary && (
+          <div className="folder-card-details-grid">
+            {stageLabel && (
+              <div className="folder-card-detail-item">
+                <span className="folder-card-detail-label">Stage</span>
+                <span className="folder-card-detail-value">{stageLabel}</span>
+              </div>
+            )}
+            {summary.progress?.forms_total !== undefined && summary.progress.forms_total > 0 && (
+              <div className="folder-card-detail-item">
+                <span className="folder-card-detail-label">Forms</span>
+                <span className="folder-card-detail-value">
+                  {summary.progress.forms_completed || 0} of {summary.progress.forms_total} completed
+                </span>
+              </div>
+            )}
+            {summary.progress?.esignatures_total !== undefined && summary.progress.esignatures_total > 0 && (
+              <div className="folder-card-detail-item">
+                <span className="folder-card-detail-label">Signatures</span>
+                <span className="folder-card-detail-value">
+                  {summary.progress.esignatures_completed || 0} of {summary.progress.esignatures_total} completed
+                </span>
+              </div>
+            )}
+            {summary.shipping?.has_shipment && (
+              <div className="folder-card-detail-item">
+                <span className="folder-card-detail-label">Shipping</span>
+                <span className="folder-card-detail-value">
+                  {summary.shipping.status || 'In Transit'}
+                  {summary.shipping.tracking_number && ` • ${summary.shipping.tracking_number}`}
+                </span>
+              </div>
+            )}
+            {summary.shipping?.estimated_delivery_date && (
+              <div className="folder-card-detail-item">
+                <span className="folder-card-detail-label">Est. Delivery</span>
+                <span className="folder-card-detail-value">
+                  {new Date(summary.shipping.estimated_delivery_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Progress bar */}
         {progress && progress.tasks_total !== undefined && progress.tasks_total > 0 && (
           <div className="folder-card-progress">
             <div className="progress-bar-container">
@@ -352,19 +418,13 @@ function CustomerDashboard() {
               />
             </div>
             <p className="progress-text">
-              {progress.tasks_completed || 0} of {progress.tasks_total} tasks completed
+              {progress.tasks_completed || 0} of {progress.tasks_total} tasks completed ({progressPercent}%)
             </p>
           </div>
         )}
 
-        {nextStep && nextStepOwner === 'customer' && (
-          <div className="folder-card-next-step">
-            <div className="folder-card-next-step-label">Action Required</div>
-            <p className="folder-card-next-step-text">{nextStep}</p>
-          </div>
-        )}
-
-        {summary && (
+        {/* Stats badges for non-active cards */}
+        {!isActive && summary && (
           <div className="folder-card-stats">
             {summary.progress?.forms_total !== undefined && summary.progress.forms_total > 0 && (
               <span className="folder-stat-badge">
@@ -385,13 +445,13 @@ function CustomerDashboard() {
         )}
 
         <div className="folder-card-footer">
-          <span className="folder-card-date">{formatDate(item.created_at)}</span>
+          <span className="folder-card-date">Created {formatDate(item.created_at)}</span>
           <div className="folder-card-actions" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => handleItemClick(item)}
               className="btn-primary btn-sm"
             >
-              View
+              View Details
             </button>
           </div>
         </div>
@@ -456,18 +516,6 @@ function CustomerDashboard() {
             </div>
           )}
 
-          {/* What's Next Section */}
-          {actionableFolders.length > 0 && (
-            <div className="whats-next-section">
-              <div className="whats-next-header">
-                <h2 className="whats-next-title">What's Next</h2>
-              </div>
-              <div className="folders-grid">
-                {actionableFolders.map((item) => renderFolderCard(item))}
-              </div>
-            </div>
-          )}
-
           {/* Folders Grouped by Status */}
           {filteredFoldersByStatus.active.length === 0 && 
            filteredFoldersByStatus.completed.length === 0 && 
@@ -487,15 +535,13 @@ function CustomerDashboard() {
           ) : (
             <>
               {/* Active Orders */}
-              {filteredFoldersByStatus.active.length > 0 && (
+              {sortedActiveFolders.length > 0 && (
                 <div className="dashboard-section">
                   <div className="dashboard-section-header">
                     <h2 className="dashboard-section-title">Active Orders</h2>
                   </div>
-                  <div className="folders-grid">
-                    {filteredFoldersByStatus.active
-                      .filter((item) => !actionableFolders.find((af) => af.id === item.id))
-                      .map((item) => renderFolderCard(item))}
+                  <div className="folders-grid-active">
+                    {sortedActiveFolders.map((item) => renderFolderCard(item, true))}
                   </div>
                 </div>
               )}
