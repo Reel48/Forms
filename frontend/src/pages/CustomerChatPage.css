@@ -960,7 +960,7 @@
 
 .input-island {
   width: 100%;
-  max-width: 950px;
+  max-width: 960px;
   background-color: var(--chat-input-bg);
   border-radius: 24px; /* Rounded shape */
   border: 1px solid var(--color-border);
