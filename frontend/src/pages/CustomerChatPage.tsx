@@ -646,9 +646,8 @@ const CustomerChatPage: React.FC = () => {
     const groupedMessages: Array<ChatMessage | { type: 'date-separator'; date: string }> = [];
     let lastDate = '';
 
-    messages.forEach((message, index) => {
+    messages.forEach((message) => {
       const messageDate = new Date(message.created_at).toDateString();
-      const previousMessage = index > 0 ? messages[index - 1] : null;
       
       // Add date separator if needed
       if (messageDate !== lastDate) {
