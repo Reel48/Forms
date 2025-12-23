@@ -59,35 +59,9 @@ class AIActionExecutor:
                         "suggestion": "Use get_availability instead"
                     }
 
-                # 🚨 CONFIRMATION GATE: Don't create quotes unless user clearly asked for a quote/order
-                confirmed = parameters.get("confirmed") is True or str(parameters.get("confirmed")).lower() == "true"
-                if not confirmed:
-                    # Allow if user explicitly requested a quote/order in the latest message
-                    explicit_quote_intent = any(
-                        phrase in user_msg_lower
-                        for phrase in [
-                            "create a quote",
-                            "create quote",
-                            "make a quote",
-                            "give me a quote",
-                            "get a quote",
-                            "quote for",
-                            "i want a quote",
-                            "i'd like a quote",
-                            "i want to order",
-                            "i'd like to order",
-                            "place an order",
-                            "i want to purchase",
-                            "i'd like to purchase",
-                        ]
-                    )
-                    if not explicit_quote_intent:
-                        logger.warning(f"🚨 BLOCKED: create_quote without explicit customer confirmation. User message: {user_message}")
-                        return {
-                            "success": False,
-                            "requires_confirmation": True,
-                            "error": "Before I create a quote, please confirm: would you like me to create the quote now? Reply 'Yes, create the quote' to proceed."
-                        }
+                # Note: Removed strict confirmation gate - AI's system prompt already has extensive validation
+                # The AI is instructed to only create quotes when appropriate, so we trust its judgment
+                # This allows quotes to be created after clarifying questions without requiring exact phrase matching
             
             if function_name == "create_quote":
                 return self._create_quote(parameters)
