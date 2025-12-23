@@ -1079,19 +1079,19 @@ async def send_message(
                             # Still try to trigger AI response, but it will fail gracefully
                             placeholder_id = None
                         else:
-                        # Insert a lightweight placeholder "thinking" message immediately.
-                        # The UI will render this as a typing indicator and it will be deleted/replaced when the final AI response is saved.
-                        placeholder_id = str(uuid.uuid4())
-                        placeholder_created_at = datetime.now().isoformat()
-                        try:
-                            placeholder_message = {
-                                "id": placeholder_id,
-                                "conversation_id": conversation_id,
-                                "sender_id": OCHO_USER_ID,
-                                "message": "Reel48 AI is thinking…",
-                                "message_type": "system",
-                                "created_at": placeholder_created_at,
-                            }
+                            # Insert a lightweight placeholder "thinking" message immediately.
+                            # The UI will render this as a typing indicator and it will be deleted/replaced when the final AI response is saved.
+                            placeholder_id = str(uuid.uuid4())
+                            placeholder_created_at = datetime.now().isoformat()
+                            try:
+                                placeholder_message = {
+                                    "id": placeholder_id,
+                                    "conversation_id": conversation_id,
+                                    "sender_id": OCHO_USER_ID,
+                                    "message": "Reel48 AI is thinking…",
+                                    "message_type": "system",
+                                    "created_at": placeholder_created_at,
+                                }
                                 # Verify service role key is available
                                 if not supabase_service_role_key:
                                     logger.error(f"Cannot insert AI placeholder: SUPABASE_SERVICE_ROLE_KEY not set in environment")
@@ -1111,7 +1111,7 @@ async def send_message(
                                     )
                                     response.raise_for_status()
                                     logger.info(f"Inserted AI placeholder message {placeholder_id} for conversation {conversation_id}")
-                        except Exception as e:
+                            except Exception as e:
                                 # Don't fail message send if placeholder insert fails, but log the error
                                 error_msg = str(e)
                                 if hasattr(e, 'response') and e.response is not None:
@@ -2626,8 +2626,8 @@ async def _generate_ai_response_async(
                 response.raise_for_status()
                 message_response_data = response.json()
                 if not message_response_data or len(message_response_data) == 0:
-                print("[AI TASK] Failed to insert AI message - no data returned")
-                logger.error("[AI TASK] Failed to insert AI message - no data returned")
+                    print("[AI TASK] Failed to insert AI message - no data returned")
+                    logger.error("[AI TASK] Failed to insert AI message - no data returned")
                     _update_placeholder_to_error("Failed to save AI response. Please try again.")
                     return
             except requests.exceptions.HTTPError as http_error:
