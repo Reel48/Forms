@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { quotesAPI, foldersAPI, clientsAPI } from '../api';
-import type { Quote, Form, Folder, Client } from '../api';
+import type { Quote, Form, Folder, Client, FolderContent, FolderSummary } from '../api';
 import CustomerChatWidget from '../components/CustomerChatWidget';
+import './CustomerDashboard.css';
 
 interface TimelineItem {
   id: string;
@@ -25,6 +26,13 @@ function CustomerDashboard() {
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
   const [customerProfile, setCustomerProfile] = useState<Client | null>(null);
+  const [folderSummaries, setFolderSummaries] = useState<Record<string, FolderSummary>>({});
+  const [summariesLoading, setSummariesLoading] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    completed: false,
+    archived: false,
+    cancelled: false,
+  });
   const searchTerm = searchParams.get('search') || '';
 
   useEffect(() => {
@@ -68,13 +76,46 @@ function CustomerDashboard() {
       setLoading(true);
       // Load folders (main organizing structure)
       const foldersResponse = await foldersAPI.getAll();
-      setFolders(foldersResponse.data || []);
+      const foldersData = foldersResponse.data || [];
+      setFolders(foldersData);
       
-      // Quotes and forms are now accessed through folders
+      // Load folder summaries in parallel
+      if (foldersData.length > 0) {
+        loadFolderSummaries(foldersData);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFolderSummaries = async (folders: Folder[]) => {
+    setSummariesLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        folders.map(async (folder) => {
+          try {
+            const response = await foldersAPI.getContent(folder.id);
+            return { id: folder.id, summary: response.data.summary };
+          } catch (error) {
+            console.error(`Failed to load summary for folder ${folder.id}:`, error);
+            return { id: folder.id, summary: undefined };
+          }
+        })
+      );
+
+      const summaries: Record<string, FolderSummary> = {};
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.summary) {
+          summaries[result.value.id] = result.value.summary;
+        }
+      });
+      setFolderSummaries(summaries);
+    } catch (error) {
+      console.error('Failed to load folder summaries:', error);
+    } finally {
+      setSummariesLoading(false);
     }
   };
 
@@ -194,75 +235,102 @@ function CustomerDashboard() {
     }
   };
 
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Compute quick stats
+  const quickStats = useMemo(() => {
+    const activeCount = filteredFoldersByStatus.active.length;
+    const completedCount = filteredFoldersByStatus.completed.length;
+    
+    // Count pending actions (folders with next_step_owner === 'customer')
+    let pendingActions = 0;
+    filteredFoldersByStatus.active.forEach((folder) => {
+      const summary = folderSummaries[folder.id];
+      if (summary?.next_step_owner === 'customer' || summary?.computed_next_step_owner === 'customer') {
+        pendingActions++;
+      }
+    });
+
+    return {
+      active: activeCount,
+      completed: completedCount,
+      pendingActions,
+    };
+  }, [filteredFoldersByStatus, folderSummaries]);
+
+  // Get folders that need customer action
+  const actionableFolders = useMemo(() => {
+    return filteredFoldersByStatus.active.filter((folder) => {
+      const summary = folderSummaries[folder.id];
+      return summary?.next_step_owner === 'customer' || summary?.computed_next_step_owner === 'customer';
+    });
+  }, [filteredFoldersByStatus.active, folderSummaries]);
+
   const getStatusBadge = (status: string, type: 'quote' | 'form' | 'folder') => {
     const statusLower = status.toLowerCase();
-    let badgeClass = 'badge-draft';
+    let badgeClass = 'status-badge-customer status-badge-active';
     let label = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
-    let icon = '';
 
-    if (type === 'quote') {
-      switch (statusLower) {
-        case 'accepted':
-          badgeClass = 'badge-accepted';
-          icon = '';
-          break;
-        case 'declined':
-          badgeClass = 'badge-declined';
-          icon = '';
-          break;
-        case 'sent':
-          badgeClass = 'badge-sent';
-          icon = '';
-          break;
-        case 'viewed':
-          badgeClass = 'badge-sent';
-          icon = '';
-          break;
-        default:
-          badgeClass = 'badge-draft';
-          icon = '';
-      }
-    } else if (type === 'folder') {
+    if (type === 'folder') {
       switch (statusLower) {
         case 'active':
-          badgeClass = 'badge-sent';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-active';
           break;
         case 'completed':
-          badgeClass = 'badge-accepted';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-completed';
           break;
         case 'archived':
-          badgeClass = 'badge-declined';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-archived';
           break;
         case 'cancelled':
-          badgeClass = 'badge-declined';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-cancelled';
           break;
         default:
-          badgeClass = 'badge-draft';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-active';
+      }
+    } else if (type === 'quote') {
+      switch (statusLower) {
+        case 'accepted':
+          badgeClass = 'status-badge-customer status-badge-completed';
+          break;
+        case 'declined':
+          badgeClass = 'status-badge-customer status-badge-cancelled';
+          break;
+        case 'sent':
+        case 'viewed':
+          badgeClass = 'status-badge-customer status-badge-active';
+          break;
+        default:
+          badgeClass = 'status-badge-customer status-badge-active';
       }
     } else {
       switch (statusLower) {
         case 'published':
-          badgeClass = 'badge-sent';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-active';
           break;
         case 'archived':
-          badgeClass = 'badge-declined';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-archived';
           break;
         default:
-          badgeClass = 'badge-draft';
-          icon = '';
+          badgeClass = 'status-badge-customer status-badge-active';
       }
     }
 
-    return <span className={`badge ${badgeClass}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-      {icon}{label}
-    </span>;
+    return <span className={badgeClass}>{label}</span>;
   };
 
   const handleItemClick = (item: TimelineItem) => {
@@ -306,6 +374,100 @@ function CustomerDashboard() {
     }
   };
 
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const renderFolderCard = (item: TimelineItem) => {
+    const summary = folderSummaries[item.id];
+    const progress = summary?.progress;
+    const progressPercent = progress && progress.tasks_total && progress.tasks_total > 0
+      ? Math.round((progress.tasks_completed || 0) / progress.tasks_total * 100)
+      : 0;
+    const nextStep = summary?.computed_next_step || summary?.next_step;
+    const nextStepOwner = summary?.computed_next_step_owner || summary?.next_step_owner;
+    const stageLabel = summary?.computed_stage_label || summary?.stage_label;
+
+    return (
+      <div
+        key={`${item.type}-${item.id}`}
+        className={`folder-card ${item.priority === 'high' ? 'priority-high' : ''}`}
+        onClick={() => handleItemClick(item)}
+      >
+        <div className="folder-card-header">
+          <h3 className="folder-card-name">{item.title}</h3>
+          {getStatusBadge(item.status, item.type)}
+        </div>
+        
+        {item.description && (
+          <p className="folder-card-description">{item.description}</p>
+        )}
+
+        {stageLabel && (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <span className="folder-stat-badge">{stageLabel}</span>
+          </div>
+        )}
+
+        {progress && progress.tasks_total !== undefined && progress.tasks_total > 0 && (
+          <div className="folder-card-progress">
+            <div className="progress-bar-container">
+              <div
+                className="progress-bar"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <p className="progress-text">
+              {progress.tasks_completed || 0} of {progress.tasks_total} tasks completed
+            </p>
+          </div>
+        )}
+
+        {nextStep && nextStepOwner === 'customer' && (
+          <div className="folder-card-next-step">
+            <div className="folder-card-next-step-label">Action Required</div>
+            <p className="folder-card-next-step-text">{nextStep}</p>
+          </div>
+        )}
+
+        {summary && (
+          <div className="folder-card-stats">
+            {summary.progress?.forms_total !== undefined && summary.progress.forms_total > 0 && (
+              <span className="folder-stat-badge">
+                {summary.progress.forms_completed || 0}/{summary.progress.forms_total} Forms
+              </span>
+            )}
+            {summary.progress?.esignatures_total !== undefined && summary.progress.esignatures_total > 0 && (
+              <span className="folder-stat-badge">
+                {summary.progress.esignatures_completed || 0}/{summary.progress.esignatures_total} Signatures
+              </span>
+            )}
+            {summary.shipping?.has_shipment && (
+              <span className="folder-stat-badge">
+                Shipping: {summary.shipping.status || 'In Transit'}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="folder-card-footer">
+          <span className="folder-card-date">{formatDate(item.created_at)}</span>
+          <div className="folder-card-actions" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => handleItemClick(item)}
+              className="btn-primary btn-sm"
+            >
+              View
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container">
       <CustomerChatWidget />
@@ -318,437 +480,156 @@ function CustomerDashboard() {
 
       {!loading && (
         <>
-      {/* Customer Header */}
-      {customerProfile && (
-        <div style={{ marginBottom: '4rem' }}>
-          <h1 className="customer-company-name" style={{
-            fontSize: '2.5rem',
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            margin: '0 0 1rem 0',
-            color: 'var(--color-text-primary)'
-          }}>
-            {customerProfile.company || 'Company Name'}
-          </h1>
-          <p style={{ 
-            fontSize: '1.125rem', 
-            fontWeight: '400',
-            margin: '0',
-            color: 'var(--color-text-secondary)'
-          }}>
-            {customerProfile.name || 'Customer Name'}
-          </p>
-        </div>
-      )}
-
-      {/* Folders Grouped by Status */}
-      {filteredFoldersByStatus.active.length === 0 && filteredFoldersByStatus.completed.length === 0 && filteredFoldersByStatus.archived.length === 0 && filteredFoldersByStatus.cancelled.length === 0 ? (
-        <div className="card">
-          <div style={{ textAlign: 'center', padding: '6rem' }}>
-            <h2 style={{ marginBottom: '1rem' }}>
-              {searchTerm ? 'No results found' : 'No assignments yet'}
-            </h2>
-            <p className="text-muted">
-              {searchTerm
-                ? 'Try adjusting your search terms'
-                : 'You don\'t have any quotes or forms assigned to you yet.'}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Active Folders */}
-          {filteredFoldersByStatus.active.length > 0 && (
-            <div className="card" style={{ marginBottom: '4rem' }}>
-              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Active Orders</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Description</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-                  {filteredFoldersByStatus.active.map((item) => (
-                <tr
-                  key={`${item.type}-${item.id}`}
-                  style={{
-                    cursor: 'pointer',
-                    ...(item.priority === 'high' ? {
-                      backgroundColor: '#fef2f2',
-                    } : {}),
-                  }}
-                  onClick={() => handleItemClick(item)}
-                >
-                  <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
-                    </span>
-                  </td>
-                  <td className="mobile-name-column">
-                    <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
-                  </td>
-                  <td className="mobile-status-column">
-                    {getStatusBadge(item.status, item.type)}
-                  </td>
-                  <td>
-                    {item.priority === 'high' ? (
-                      <span style={{
-                        padding: '0.5rem 1rem',
-                        borderRadius: '24px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        backgroundColor: '#fee2e2',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca',
-                      }}>
-                        High Priority
-                      </span>
-                    ) : (
-                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {item.description || '-'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                      {formatDate(item.created_at)}
-                    </span>
-                  </td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => handleItemClick(item)}
-                        className="btn-primary btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                      >
-                        Open
-                      </button>
-                      {item.type === 'quote' && (
-                        <>
-                          <button
-                            onClick={(e) => handleDownloadPDF(item.data as Quote, e)}
-                            className="btn-outline btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                          >
-                            PDF
-                          </button>
-                          {(item.status === 'draft' || item.status === 'sent' || item.status === 'viewed') && (
-                            <>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAcceptQuote(item.id);
-                                }}
-                                disabled={acceptingQuote === item.id}
-                                className="btn-primary btn-sm"
-                                style={{
-                                  fontSize: '0.75rem',
-                                  padding: '0.25rem 0.5rem',
-                                  opacity: acceptingQuote === item.id ? 0.6 : 1,
-                                }}
-                              >
-                                {acceptingQuote === item.id ? 'Accepting...' : 'Accept'}
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeclineQuote(item.id);
-                                }}
-                                disabled={decliningQuote === item.id}
-                                className="btn-danger btn-sm"
-                                style={{
-                                  fontSize: '0.75rem',
-                                  padding: '0.25rem 0.5rem',
-                                  opacity: decliningQuote === item.id ? 0.6 : 1,
-                                }}
-                              >
-                                {decliningQuote === item.id ? 'Declining...' : 'Decline'}
-                              </button>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {item.type === 'form' && (
-                        <button
-                          onClick={(e) => handleCompleteForm(item.data as Form, e)}
-                          className="btn-primary btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                        >
-                          Complete
-                        </button>
-                      )}
+          {/* Welcome Header */}
+          {customerProfile && (
+            <div className="welcome-header">
+              <div className="welcome-header-content">
+                <div className="welcome-greeting-section">
+                  {customerProfile.profile_picture_url ? (
+                    <img
+                      src={customerProfile.profile_picture_url}
+                      alt={customerProfile.name || 'Profile'}
+                      className="welcome-profile-picture"
+                    />
+                  ) : (
+                    <div className="welcome-profile-placeholder">
+                      {getInitials(customerProfile.name || customerProfile.company || 'U')}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-          )}
+                  )}
+                  <div className="welcome-text">
+                    <h2 className="welcome-greeting">
+                      {getTimeBasedGreeting()}, {customerProfile.name?.split(' ')[0] || 'there'}!
+                    </h2>
+                    {customerProfile.company && (
+                      <p className="welcome-company">{customerProfile.company}</p>
+                    )}
+                  </div>
+                </div>
 
-          {/* Completed Folders */}
-          {filteredFoldersByStatus.completed.length > 0 && (
-            <div className="card" style={{ marginBottom: '4rem' }}>
-              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Completed Orders</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Description</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredFoldersByStatus.completed.map((item) => (
-                    <tr
-                      key={`${item.type}-${item.id}`}
-                      style={{
-                        cursor: 'pointer',
-                        ...(item.priority === 'high' ? {
-                          backgroundColor: '#fef2f2',
-                        } : {}),
-                      }}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
-                        </span>
-                      </td>
-                      <td className="mobile-name-column">
-                        <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
-                      </td>
-                      <td>
-                        {getStatusBadge(item.status, item.type)}
-                      </td>
-                      <td>
-                        {item.priority === 'high' ? (
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            backgroundColor: '#fee2e2',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
-                          }}>
-                            High Priority
-                          </span>
-                        ) : (
-                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {item.description || '-'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {formatDate(item.created_at)}
-                        </span>
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => handleItemClick(item)}
-                            className="btn-primary btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                          >
-                            Open
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                {/* Quick Stats */}
+                <div className="quick-stats">
+                  <div className="stat-card">
+                    <p className="stat-value">{quickStats.active}</p>
+                    <p className="stat-label">Active Orders</p>
+                  </div>
+                  <div className="stat-card">
+                    <p className="stat-value">{quickStats.pendingActions}</p>
+                    <p className="stat-label">Pending Actions</p>
+                  </div>
+                  <div className="stat-card">
+                    <p className="stat-value">{quickStats.completed}</p>
+                    <p className="stat-label">Completed</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Archived Folders */}
-          {filteredFoldersByStatus.archived.length > 0 && (
-            <div className="card" style={{ marginBottom: '4rem' }}>
-              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Archived Orders</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Description</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredFoldersByStatus.archived.map((item) => (
-                    <tr
-                      key={`${item.type}-${item.id}`}
-                      style={{
-                        cursor: 'pointer',
-                        ...(item.priority === 'high' ? {
-                          backgroundColor: '#fef2f2',
-                        } : {}),
-                      }}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
-                        </span>
-                      </td>
-                      <td className="mobile-name-column">
-                        <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
-                      </td>
-                      <td>
-                        {getStatusBadge(item.status, item.type)}
-                      </td>
-                      <td>
-                        {item.priority === 'high' ? (
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            backgroundColor: '#fee2e2',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
-                          }}>
-                            High Priority
-                          </span>
-                        ) : (
-                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {item.description || '-'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {formatDate(item.created_at)}
-                        </span>
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => handleItemClick(item)}
-                            className="btn-primary btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                          >
-                            Open
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* What's Next Section */}
+          {actionableFolders.length > 0 && (
+            <div className="whats-next-section">
+              <div className="whats-next-header">
+                <h2 className="whats-next-title">What's Next</h2>
+              </div>
+              <div className="folders-grid">
+                {actionableFolders.map((item) => renderFolderCard(item))}
+              </div>
             </div>
           )}
 
-          {/* Cancelled Folders */}
-          {filteredFoldersByStatus.cancelled.length > 0 && (
-            <div className="card" style={{ marginBottom: '4rem' }}>
-              <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '600' }}>Cancelled Orders</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Description</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredFoldersByStatus.cancelled.map((item) => (
-                    <tr
-                      key={`${item.type}-${item.id}`}
-                      style={{
-                        cursor: 'pointer',
-                        ...(item.priority === 'high' ? {
-                          backgroundColor: '#fef2f2',
-                        } : {}),
-                      }}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {item.type === 'folder' ? 'Folder' : item.type === 'quote' ? 'Quote' : 'Form'}
-                        </span>
-                      </td>
-                      <td className="mobile-name-column">
-                        <strong style={{ color: 'rgb(59 130 246)' }}>{item.title}</strong>
-                      </td>
-                      <td>
-                        {getStatusBadge(item.status, item.type)}
-                      </td>
-                      <td>
-                        {item.priority === 'high' ? (
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            backgroundColor: '#fee2e2',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
-                          }}>
-                            High Priority
-                          </span>
-                        ) : (
-                          <span className="text-muted" style={{ fontSize: '0.875rem' }}>-</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {item.description || '-'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                          {formatDate(item.created_at)}
-                        </span>
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => handleItemClick(item)}
-                            className="btn-primary btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-                          >
-                            Open
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Folders Grouped by Status */}
+          {filteredFoldersByStatus.active.length === 0 && 
+           filteredFoldersByStatus.completed.length === 0 && 
+           filteredFoldersByStatus.archived.length === 0 && 
+           filteredFoldersByStatus.cancelled.length === 0 ? (
+            <div className="empty-state-enhanced">
+              <div className="empty-state-icon">📋</div>
+              <h2 className="empty-state-title">
+                {searchTerm ? 'No results found' : "You're all set!"}
+              </h2>
+              <p className="empty-state-description">
+                {searchTerm
+                  ? 'Try adjusting your search terms'
+                  : "No active orders at the moment. When you have orders, they'll appear here."}
+              </p>
             </div>
+          ) : (
+            <>
+              {/* Active Orders */}
+              {filteredFoldersByStatus.active.length > 0 && (
+                <div className="dashboard-section">
+                  <div className="dashboard-section-header">
+                    <h2 className="dashboard-section-title">Active Orders</h2>
+                  </div>
+                  <div className="folders-grid">
+                    {filteredFoldersByStatus.active
+                      .filter((item) => !actionableFolders.find((af) => af.id === item.id))
+                      .map((item) => renderFolderCard(item))}
+                  </div>
+                </div>
+              )}
+
+              {/* Completed Orders */}
+              {filteredFoldersByStatus.completed.length > 0 && (
+                <div className="dashboard-section">
+                  <div className="dashboard-section-header">
+                    <h2 className="dashboard-section-title">Completed Orders</h2>
+                    <button
+                      className="section-toggle"
+                      onClick={() => toggleSection('completed')}
+                    >
+                      {collapsedSections.completed ? 'Show' : 'Hide'}
+                    </button>
+                  </div>
+                  {!collapsedSections.completed && (
+                    <div className="folders-grid">
+                      {filteredFoldersByStatus.completed.map((item) => renderFolderCard(item))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Archived Orders */}
+              {filteredFoldersByStatus.archived.length > 0 && (
+                <div className="dashboard-section">
+                  <div className="dashboard-section-header">
+                    <h2 className="dashboard-section-title">Archived Orders</h2>
+                    <button
+                      className="section-toggle"
+                      onClick={() => toggleSection('archived')}
+                    >
+                      {collapsedSections.archived ? 'Show' : 'Hide'}
+                    </button>
+                  </div>
+                  {!collapsedSections.archived && (
+                    <div className="folders-grid">
+                      {filteredFoldersByStatus.archived.map((item) => renderFolderCard(item))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cancelled Orders */}
+              {filteredFoldersByStatus.cancelled.length > 0 && (
+                <div className="dashboard-section">
+                  <div className="dashboard-section-header">
+                    <h2 className="dashboard-section-title">Cancelled Orders</h2>
+                    <button
+                      className="section-toggle"
+                      onClick={() => toggleSection('cancelled')}
+                    >
+                      {collapsedSections.cancelled ? 'Show' : 'Hide'}
+                    </button>
+                  </div>
+                  {!collapsedSections.cancelled && (
+                    <div className="folders-grid">
+                      {filteredFoldersByStatus.cancelled.map((item) => renderFolderCard(item))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
         </>
       )}
     </div>
