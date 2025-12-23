@@ -691,7 +691,7 @@ const FolderView: React.FC = () => {
             )}
 
             {/* Secondary Tasks */}
-            {secondaryTasks.length > 0 && (
+            {secondaryTasks.filter((t: any) => t.status === 'incomplete').length > 0 && (
               <section className="content-section">
                 <div className="section-header">
                   <h2>Next Up</h2>
@@ -793,35 +793,29 @@ const FolderView: React.FC = () => {
             )}
 
             {/* Project Files (customer) */}
-            <section className="content-section" id="project-files">
-              <div className="section-header">
-                <h2>Project Files ({files.length})</h2>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                    disabled={uploading}
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn-primary btn-sm"
-                    disabled={uploading}
-                  >
-                    {uploading ? 'Uploading...' : 'Upload Files'}
-                  </button>
+            {files.length > 0 && (
+              <section className="content-section" id="project-files">
+                <div className="section-header">
+                  <h2>Project Files ({files.length})</h2>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                      disabled={uploading}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="btn-primary btn-sm"
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Uploading...' : 'Upload Files'}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {files.length === 0 ? (
-                <EmptyState
-                  icon={<FaFolderOpen />}
-                  title="No files in this project yet"
-                  description="Upload files to share documents, designs, or other project materials."
-                />
-              ) : (
                 <div className="card">
                   <table>
                     <thead>
@@ -871,8 +865,8 @@ const FolderView: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-              )}
-            </section>
+              </section>
+            )}
 
             {/* Notes (moves to bottom after latest is read) */}
             {latestNote && !hasUnreadNote && (
