@@ -216,22 +216,12 @@ function CustomerDashboard() {
   const quickStats = useMemo(() => {
     const activeCount = filteredFoldersByStatus.active.length;
     const completedCount = filteredFoldersByStatus.completed.length;
-    
-    // Count pending actions (folders with next_step_owner === 'customer')
-    let pendingActions = 0;
-    filteredFoldersByStatus.active.forEach((folder) => {
-      const summary = folderSummaries[folder.id];
-      if (summary?.next_step_owner === 'customer' || summary?.computed_next_step_owner === 'customer') {
-        pendingActions++;
-      }
-    });
 
     return {
       active: activeCount,
       completed: completedCount,
-      pendingActions,
     };
-  }, [filteredFoldersByStatus, folderSummaries]);
+  }, [filteredFoldersByStatus]);
 
   // Sort active folders: action-required first, then others
   const sortedActiveFolders = useMemo(() => {
@@ -496,12 +486,8 @@ function CustomerDashboard() {
                     <p className="stat-label">Active Orders</p>
                   </div>
                   <div className="stat-card">
-                    <p className="stat-value">{quickStats.pendingActions}</p>
-                    <p className="stat-label">Pending Actions</p>
-                  </div>
-                  <div className="stat-card">
                     <p className="stat-value">{quickStats.completed}</p>
-                    <p className="stat-label">Completed</p>
+                    <p className="stat-label">Completed Orders</p>
                   </div>
                 </div>
               </div>
