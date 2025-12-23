@@ -34,7 +34,63 @@ class AIActionExecutor:
         """
         self.admin_user_id = admin_user_id
     
-    def execute_function(self, function_name: str, parameters: Dict[str, Any], user_message: Optional[str] = None) -> Dict[str, Any]:
+    def _check_side_embroidery_asked(self, conversation_id: str) -> bool:
+        """
+        Check if the side embroidery question was asked in the conversation history.
+        Returns True if the question was asked, False otherwise.
+        """
+        try:
+            # Get OCHO_USER_ID to identify AI messages
+            ocho_user_id = os.getenv("OCHO_USER_ID")
+            if not ocho_user_id:
+                # Fallback: try to get from clients table
+                try:
+                    ocho_client = supabase_storage.table("clients").select("user_id").eq("email", "ocho@reel48.ai").single().execute()
+                    if ocho_client.data:
+                        ocho_user_id = ocho_client.data["user_id"]
+                        logger.info(f"Found Ocho user ID from database for side embroidery check: {ocho_user_id}")
+                except Exception as e:
+                    logger.warning(f"Could not find OCHO_USER_ID for side embroidery check: {str(e)}")
+                    # If we can't find OCHO user ID, fail open (allow quote creation)
+                    return True
+            
+            if not ocho_user_id:
+                logger.warning("OCHO_USER_ID not available, cannot verify side embroidery question")
+                return True  # Fail open
+            
+            # Get recent messages from the conversation (last 20 messages should be enough)
+            messages_response = supabase_storage.table("chat_messages").select("message, sender_id").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(20).execute()
+            messages = messages_response.data if messages_response.data else []
+            
+            # Check if any AI message contains side embroidery question
+            side_embroidery_keywords = [
+                "side embroider",
+                "side embroidery",
+                "left side",
+                "right side",
+                "side embroideries",
+                "would you like any side",
+                "side embroidery on the hats",
+                "side embroideries on the hats"
+            ]
+            
+            for msg in messages:
+                # Only check AI messages (messages from OCHO_USER_ID)
+                if msg.get("sender_id") == ocho_user_id:
+                    message_text = str(msg.get("message", "")).lower()
+                    # Check if this message asks about side embroidery
+                    if any(keyword in message_text for keyword in side_embroidery_keywords):
+                        logger.info(f"✅ Found side embroidery question in conversation {conversation_id}")
+                        return True
+            
+            logger.warning(f"❌ Side embroidery question NOT found in conversation {conversation_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Error checking side embroidery question: {str(e)}", exc_info=True)
+            # If we can't check, allow the quote creation (fail open) but log the error
+            return True  # Fail open to avoid blocking legitimate quotes
+    
+    def execute_function(self, function_name: str, parameters: Dict[str, Any], user_message: Optional[str] = None, conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Execute a function call from the AI
         
@@ -42,6 +98,7 @@ class AIActionExecutor:
             function_name: Name of the function to execute
             parameters: Parameters for the function
             user_message: Optional user message for validation checks
+            conversation_id: Optional conversation ID for checking conversation history
             
         Returns:
             Dict with 'success', 'result', and optionally 'error' keys
@@ -59,9 +116,33 @@ class AIActionExecutor:
                         "suggestion": "Use get_availability instead"
                     }
 
-                # Note: Removed strict confirmation gate - AI's system prompt already has extensive validation
-                # The AI is instructed to only create quotes when appropriate, so we trust its judgment
-                # This allows quotes to be created after clarifying questions without requiring exact phrase matching
+                # 🚨 CRITICAL VALIDATION: Check if quote is for hats and side embroidery question was asked
+                line_items = parameters.get("line_items", [])
+                if isinstance(line_items, str):
+                    try:
+                        import json
+                        line_items = json.loads(line_items)
+                    except (json.JSONDecodeError, ValueError):
+                        line_items = []
+                
+                # Check if any line item is for a hat
+                is_hat_quote = False
+                for item in line_items if isinstance(line_items, list) else []:
+                    if isinstance(item, dict):
+                        description = str(item.get("description", "")).lower()
+                        if "hat" in description and "coozie" not in description:
+                            is_hat_quote = True
+                            break
+                
+                # If it's a hat quote, verify side embroidery question was asked
+                if is_hat_quote and conversation_id:
+                    if not self._check_side_embroidery_asked(conversation_id):
+                        logger.warning(f"🚨 BLOCKED: Attempted to create hat quote without asking about side embroidery. Conversation: {conversation_id}")
+                        return {
+                            "success": False,
+                            "error": "Before creating a quote for hats, I need to ask about side embroideries. Would you like any side embroideries on the hats? You can add one on the left side, one on the right side, or both. For orders under 300 units, each side embroidery is $1 per hat. For orders of 300 or more, side embroideries are included at no additional cost.",
+                            "requires_side_embroidery_question": True
+                        }
             
             if function_name == "create_quote":
                 return self._create_quote(parameters)
