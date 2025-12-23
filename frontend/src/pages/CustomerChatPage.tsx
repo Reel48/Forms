@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft } from 'react-icons/fa';
+import { FaPaperclip, FaSun, FaMoon, FaArrowUp, FaPlus, FaArrowLeft, FaCopy, FaCheck } from 'react-icons/fa';
 import { ChatMessageBody } from '../components/chat/ChatMessageBody';
 import { useNotifications } from '../components/NotificationSystem';
 import './CustomerChatPage.css';
@@ -36,6 +36,7 @@ const CustomerChatPage: React.FC = () => {
   const conversationsSubscriptionRef = useRef<any>(null);
   const sessionCheckIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   // Load messages function - defined early so it can be used in other callbacks
   const loadMessages = useCallback(async (conversationId: string, limit: number = 50) => {
@@ -578,6 +579,147 @@ const CustomerChatPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Format timestamp for display
+  const formatTimestamp = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    // For older messages, show date
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Format date for separator
+  const formatDateSeparator = (dateString: string): string => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    }
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  // Check if messages should be grouped
+  const shouldGroupMessages = (current: ChatMessage, previous: ChatMessage | null): boolean => {
+    if (!previous) return false;
+    if (current.sender_id !== previous.sender_id) return false;
+    
+    const currentTime = new Date(current.created_at).getTime();
+    const previousTime = new Date(previous.created_at).getTime();
+    const diffMinutes = (currentTime - previousTime) / 60000;
+    
+    return diffMinutes < 2; // Group if within 2 minutes
+  };
+
+  // Copy message to clipboard
+  const copyMessage = async (message: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.message);
+      setCopiedMessageId(message.id);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+      showNotification({ type: 'success', message: 'Message copied to clipboard' });
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      showNotification({ type: 'error', message: 'Failed to copy message' });
+    }
+  };
+
+  // Group messages and add date separators
+  const renderMessages = () => {
+    if (messages.length === 0) return null;
+
+    const groupedMessages: Array<ChatMessage | { type: 'date-separator'; date: string }> = [];
+    let lastDate = '';
+
+    messages.forEach((message, index) => {
+      const messageDate = new Date(message.created_at).toDateString();
+      const previousMessage = index > 0 ? messages[index - 1] : null;
+      
+      // Add date separator if needed
+      if (messageDate !== lastDate) {
+        groupedMessages.push({ type: 'date-separator', date: message.created_at });
+        lastDate = messageDate;
+      }
+
+      groupedMessages.push(message);
+    });
+
+    return groupedMessages.map((item, index) => {
+      if ('type' in item && item.type === 'date-separator') {
+        return (
+          <div key={`date-${item.date}`} className="date-separator">
+            <span className="date-separator-text">{formatDateSeparator(item.date)}</span>
+          </div>
+        );
+      }
+
+      const message = item as ChatMessage;
+      const isCustomer = message.sender_id === user?.id;
+      const previousMessage = index > 0 && groupedMessages[index - 1] && !('type' in groupedMessages[index - 1])
+        ? groupedMessages[index - 1] as ChatMessage
+        : null;
+      const isGroupStart = !shouldGroupMessages(message, previousMessage);
+      const isGroupContinued = previousMessage && shouldGroupMessages(message, previousMessage);
+
+      return (
+        <div
+          key={message.id}
+          className={`message ${isCustomer ? 'user-message' : 'ai-message'} ${
+            isGroupStart ? 'message-group-start' : ''
+          } ${isGroupContinued ? 'message-group-continued' : ''}`}
+        >
+          <div className="message-wrapper">
+            <div className="message-sender-name">
+              {isCustomer ? 'You' : 'Reel48 AI'}
+            </div>
+            <div className="message-content">
+              {!isCustomer && message.message_type === 'system' ? (
+                <div className="typing-indicator">
+                  <span className="typing-text">AI is thinking...</span>
+                  <div className="typing-dots">
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                  </div>
+                </div>
+              ) : (
+                <ChatMessageBody message={message} renderAsMarkdown={!isCustomer} />
+              )}
+              <div className="message-actions">
+                <button
+                  className="message-action-btn"
+                  onClick={() => copyMessage(message)}
+                  title="Copy message"
+                  aria-label="Copy message to clipboard"
+                >
+                  {copiedMessageId === message.id ? <FaCheck /> : <FaCopy />}
+                </button>
+              </div>
+            </div>
+            <div className="message-timestamp">
+              {formatTimestamp(message.created_at)}
+            </div>
+          </div>
+        </div>
+      );
+    });
+  };
+
   if (loading) {
     return (
       <div className="customer-chat-page">
@@ -590,9 +732,10 @@ const CustomerChatPage: React.FC = () => {
   }
 
   const hasTextToSend = Boolean(newMessage.trim());
+  const isEmpty = !conversation || messages.length === 0;
 
   return (
-    <div className="customer-chat-page">
+    <div className={`customer-chat-page ${isEmpty ? 'is-empty' : ''}`}>
       {/* Main Chat Area */}
       <div className="chat-main-area">
         <div className="customer-chat-header">
@@ -672,36 +815,7 @@ const CustomerChatPage: React.FC = () => {
                     <span>Loading older messages...</span>
                   </div>
                 )}
-                {messages.map((message) => {
-                  const isCustomer = message.sender_id === user?.id;
-                  
-                  return (
-                    <div
-                      key={message.id}
-                      className={`message ${isCustomer ? 'user-message' : 'ai-message'}`}
-                    >
-                      <div className="message-wrapper">
-                        <div className="message-sender-name">
-                          {isCustomer ? 'You' : 'Reel48 AI'}
-                        </div>
-                        <div className="message-content">
-                          {!isCustomer && message.message_type === 'system' ? (
-                            <div className="typing-indicator">
-                              <span className="typing-text">AI is thinking...</span>
-                              <div className="typing-dots">
-                                <div className="typing-dot"></div>
-                                <div className="typing-dot"></div>
-                                <div className="typing-dot"></div>
-                              </div>
-                            </div>
-                          ) : (
-                          <ChatMessageBody message={message} renderAsMarkdown={!isCustomer} />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {renderMessages()}
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -717,17 +831,8 @@ const CustomerChatPage: React.FC = () => {
                   setShouldAutoScroll(true);
                   scrollToBottom();
                 }}
-                style={{
-                  position: 'absolute',
-                  top: '-44px',
-                  right: '16px',
-                  padding: '8px 12px',
-                  borderRadius: '999px',
-                  border: '1px solid var(--color-border)',
-                  background: 'var(--brand-white)',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                }}
+                className="jump-to-latest-btn"
+                aria-label="Jump to latest messages"
               >
                 Jump to latest
               </button>
@@ -778,11 +883,21 @@ const CustomerChatPage: React.FC = () => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   sendMessage();
+                } else if (e.key === 'Escape') {
+                  setNewMessage('');
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = '24px';
+                  }
                 }
               }}
               disabled={sending}
               rows={1}
+              aria-label="Message input"
+              aria-describedby="message-input-help"
             />
+            <span id="message-input-help" className="sr-only">
+              Press Enter to send, Shift+Enter for new line, Escape to clear
+            </span>
 
             <button
               type="button"
@@ -793,6 +908,7 @@ const CustomerChatPage: React.FC = () => {
               }}
               disabled={sending || uploading || !hasTextToSend}
               title="Send message"
+              aria-label="Send message"
             >
               <FaArrowUp />
             </button>

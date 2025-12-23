@@ -25,7 +25,20 @@ export function ChatMessageBody({
         <img
           src={message.file_url}
           alt={message.file_name || 'Image'}
-          style={{ maxWidth: '100%', borderRadius: '8px' }}
+          className="message-image"
+          loading="lazy"
+          onClick={() => {
+            // Open image in new tab for better viewing
+            window.open(message.file_url, '_blank');
+          }}
+          style={{ 
+            maxWidth: '100%', 
+            maxHeight: '400px',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            display: 'block',
+            margin: '0.5rem 0'
+          }}
         />
       );
     }
@@ -36,12 +49,13 @@ export function ChatMessageBody({
         href={message.file_url}
         target="_blank"
         rel="noopener noreferrer"
+        className="message-file-link"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           color: 'inherit',
-          textDecoration: 'underline',
+          textDecoration: 'none',
         }}
       >
         <FaPaperclip />
