@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api, { quotesAPI, foldersAPI, clientsAPI } from '../api';
-import type { Quote, Form, Folder, Client, FolderContent, FolderSummary } from '../api';
+import { foldersAPI, clientsAPI } from '../api';
+import type { Quote, Form, Folder, Client, FolderSummary } from '../api';
 import CustomerChatWidget from '../components/CustomerChatWidget';
 import './CustomerDashboard.css';
 
@@ -23,11 +23,8 @@ function CustomerDashboard() {
   const { role } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
-  const [decliningQuote, setDecliningQuote] = useState<string | null>(null);
   const [customerProfile, setCustomerProfile] = useState<Client | null>(null);
   const [folderSummaries, setFolderSummaries] = useState<Record<string, FolderSummary>>({});
-  const [summariesLoading, setSummariesLoading] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     completed: false,
     archived: false,
@@ -91,7 +88,6 @@ function CustomerDashboard() {
   };
 
   const loadFolderSummaries = async (folders: Folder[]) => {
-    setSummariesLoading(true);
     try {
       const results = await Promise.allSettled(
         folders.map(async (folder) => {
@@ -114,8 +110,6 @@ function CustomerDashboard() {
       setFolderSummaries(summaries);
     } catch (error) {
       console.error('Failed to load folder summaries:', error);
-    } finally {
-      setSummariesLoading(false);
     }
   };
 
@@ -180,39 +174,6 @@ function CustomerDashboard() {
     };
   }, [foldersByStatus, searchTerm]);
 
-  // Handle accept quote
-  const handleAcceptQuote = async (quoteId: string) => {
-    setAcceptingQuote(quoteId);
-    try {
-      await quotesAPI.accept(quoteId);
-      await loadData();
-      alert('Quote accepted successfully! An invoice has been created for payment.');
-    } catch (error: any) {
-      console.error('Failed to accept quote:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to accept quote. Please try again.';
-      alert(errorMessage);
-    } finally {
-      setAcceptingQuote(null);
-    }
-  };
-
-  // Handle decline quote
-  const handleDeclineQuote = async (quoteId: string) => {
-    if (!confirm('Are you sure you want to decline this quote?')) return;
-    
-    setDecliningQuote(quoteId);
-    try {
-      await quotesAPI.update(quoteId, { status: 'declined' });
-      await loadData();
-      alert('Quote declined.');
-    } catch (error: any) {
-      console.error('Failed to decline quote:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to decline quote. Please try again.';
-      alert(errorMessage);
-    } finally {
-      setDecliningQuote(null);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -343,36 +304,6 @@ function CustomerDashboard() {
     }
   };
 
-  const handleDownloadPDF = async (quote: Quote, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    try {
-      const response = await api.get(`/api/pdf/quote/${quote.id}`, {
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${quote.quote_number || 'quote'}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to download PDF:', error);
-      alert('Failed to download PDF. Please try again.');
-    }
-  };
-
-  const handleCompleteForm = (form: Form, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    // Navigate to public form view to complete it
-    if (form.public_url_slug) {
-      window.open(`/public/form/${form.public_url_slug}`, '_blank');
-    } else {
-      navigate(`/forms/${form.id}`);
-    }
-  };
 
   const toggleSection = (section: string) => {
     setCollapsedSections((prev) => ({
