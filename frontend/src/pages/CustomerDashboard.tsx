@@ -233,14 +233,6 @@ function CustomerDashboard() {
     };
   }, [filteredFoldersByStatus, folderSummaries]);
 
-  // Get folders that need customer action
-  const actionableFolders = useMemo(() => {
-    return filteredFoldersByStatus.active.filter((folder) => {
-      const summary = folderSummaries[folder.id];
-      return summary?.next_step_owner === 'customer' || summary?.computed_next_step_owner === 'customer';
-    });
-  }, [filteredFoldersByStatus.active, folderSummaries]);
-
   // Sort active folders: action-required first, then others
   const sortedActiveFolders = useMemo(() => {
     const actionRequired = filteredFoldersByStatus.active.filter((folder) => {
