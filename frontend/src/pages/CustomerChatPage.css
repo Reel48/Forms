@@ -830,18 +830,20 @@
 .message-actions {
   position: absolute;
   top: 0;
-  right: -36px;
+  right: -40px;
   opacity: 0;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity 0.15s ease-out;
   display: flex;
   gap: 4px;
   z-index: 10;
   pointer-events: none;
+  padding: 4px;
+  margin: -4px;
 }
 
 .user-message .message-actions {
   right: auto;
-  left: -36px;
+  left: -40px;
 }
 
 /* Show actions when hovering over message */
@@ -850,14 +852,14 @@
   pointer-events: auto;
 }
 
-/* Keep actions visible when hovering over actions area */
+/* Keep actions visible when hovering over actions area - important for clicking */
 .message-actions:hover {
-  opacity: 1;
-  pointer-events: auto;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* Ensure button is always clickable when actions are visible */
-.message-actions .message-action-btn {
+.message-action-btn {
   pointer-events: auto;
   cursor: pointer;
 }
