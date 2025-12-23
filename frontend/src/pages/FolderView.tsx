@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaCheck, FaChevronRight, FaFolderOpen } from 'react-icons/fa';
+import { FaCheck, FaChevronRight } from 'react-icons/fa';
 import { foldersAPI, clientsAPI, filesAPI, type FolderContent, type FolderCreate, type Client, type FolderEvent, type FolderNote } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FolderContentManager from '../components/FolderContentManager';
@@ -8,7 +8,6 @@ import TypeformImportModal from '../components/TypeformImportModal';
 import ShipmentTracker from '../components/ShipmentTracker';
 import AddShipmentModal from '../components/AddShipmentModal';
 import OrderStepper, { type StepperStep } from '../components/OrderStepper';
-import EmptyState from '../components/EmptyState';
 import './FolderView.css';
 
 const FolderView: React.FC = () => {
