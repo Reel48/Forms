@@ -1116,5 +1116,65 @@ export const authAPI = {
   logoutAll: () => api.post<{ message: string; sessions_revoked: number }>('/api/auth/logout-all'),
 };
 
+export type KnowledgeDocument = {
+  id: string;
+  filename: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by: string;
+  chunk_count: number;
+  processing_status: 'pending' | 'processing' | 'completed' | 'failed';
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KnowledgeEntry = {
+  id: string;
+  category: string;
+  title?: string;
+  content: string;
+  embedding?: any;
+  document_id?: string;
+  chunk_index?: number;
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
+  knowledge_documents?: { filename: string };
+};
+
+export const knowledgeAPI = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<KnowledgeDocument>('/api/knowledge/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  listDocuments: (status?: string) => {
+    const params = status ? { status } : {};
+    return api.get<{ documents: KnowledgeDocument[]; count: number }>('/api/knowledge/documents', { params });
+  },
+  getDocument: (documentId: string) => api.get<KnowledgeDocument>(`/api/knowledge/documents/${documentId}`),
+  deleteDocument: (documentId: string) => api.delete<{ message: string }>(`/api/knowledge/documents/${documentId}`),
+  reprocessDocument: (documentId: string) => api.post<{ message: string }>(`/api/knowledge/documents/${documentId}/reprocess`),
+  listEntries: (params?: { category?: string; search?: string; source?: string; document_id?: string; limit?: number; offset?: number }) => {
+    return api.get<{ entries: KnowledgeEntry[]; total: number; limit: number; offset: number; categories: string[] }>('/api/knowledge/entries', { params });
+  },
+  getEntry: (entryId: string) => api.get<KnowledgeEntry>(`/api/knowledge/entries/${entryId}`),
+  findSimilar: (entryId: string, params?: { threshold?: number; limit?: number }) => {
+    return api.get<{ similar_entries: Array<{ id: string; title?: string; content: string; category: string; similarity: number; document_id?: string }>; threshold: number; count: number }>(`/api/knowledge/entries/${entryId}/similar`, {
+      params: params || {}
+    });
+  },
+  updateEntry: (entryId: string, data: { title?: string; content?: string; category?: string; metadata?: any; regenerate_embedding?: boolean }) => {
+    return api.put<KnowledgeEntry>(`/api/knowledge/entries/${entryId}`, data);
+  },
+  deleteEntry: (entryId: string) => api.delete<{ message: string }>(`/api/knowledge/entries/${entryId}`),
+  getStats: () => api.get<{ total_entries: number; with_embeddings: number; without_embeddings: number; manual_entries: number; document_entries: number; by_category: Record<string, number> }>('/api/knowledge/entries/stats'),
+};
+
 export default api;
 

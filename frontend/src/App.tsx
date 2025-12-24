@@ -66,6 +66,7 @@ const ChatPage = lazy(() => retryLazyLoad(() => import('./pages/ChatPage')));
 const CustomerChatPage = lazy(() => retryLazyLoad(() => import('./pages/CustomerChatPage')));
 const CustomerSchedulingPage = lazy(() => retryLazyLoad(() => import('./pages/CustomerSchedulingPage')));
 const AdminCalendarView = lazy(() => retryLazyLoad(() => import('./pages/AdminCalendarView')));
+const KnowledgeBaseUpload = lazy(() => retryLazyLoad(() => import('./pages/KnowledgeBaseUpload')));
 const Login = lazy(() => retryLazyLoad(() => import('./pages/Login')));
 const Register = lazy(() => retryLazyLoad(() => import('./pages/Register')));
 const ForgotPassword = lazy(() => retryLazyLoad(() => import('./pages/ForgotPassword')));
@@ -127,10 +128,11 @@ function Navigation() {
   const isEmailTemplatesActive = location.pathname === '/email-templates';
   const isAnalyticsActive = location.pathname === '/analytics';
   const isChatActive = location.pathname === '/chat' || location.pathname === '/admin/chat';
+  const isKnowledgeBaseActive = location.pathname === '/admin/knowledge-base';
   const isAdmin = role === 'admin';
 
   // Check if any settings-related page is active
-  const isSettingsSectionActive = isSettingsActive || isClientsActive || isEmailTemplatesActive || isAnalyticsActive;
+  const isSettingsSectionActive = isSettingsActive || isClientsActive || isEmailTemplatesActive || isAnalyticsActive || isKnowledgeBaseActive;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -472,6 +474,15 @@ function Navigation() {
                       Email Templates
                     </Link>
                   </li>
+                  <li role="none">
+                    <Link 
+                      to="/admin/knowledge-base" 
+                      className={`nav-dropdown-item ${isKnowledgeBaseActive ? 'active' : ''}`}
+                      role="menuitem"
+                    >
+                      Knowledge Base
+                    </Link>
+                  </li>
                 </ul>
               )}
             </li>
@@ -575,6 +586,7 @@ function AppContent() {
           <Route path="/analytics" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><QuoteAnalytics /></Suspense></ProtectedRoute>} />
           <Route path="/admin/calendar" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><AdminCalendarView /></Suspense></ProtectedRoute>} />
           <Route path="/email-templates" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><EmailTemplates /></Suspense></ProtectedRoute>} />
+          <Route path="/admin/knowledge-base" element={<ProtectedRoute requireAdmin><Suspense fallback={<LoadingFallback />}><KnowledgeBaseUpload /></Suspense></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute skipProfileCheck><Suspense fallback={<LoadingFallback />}><Profile /></Suspense></ProtectedRoute>} />
           </Routes>
         </ErrorBoundary>
