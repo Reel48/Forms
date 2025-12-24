@@ -613,16 +613,28 @@ const CustomerChatPage: React.FC = () => {
       }
 
       // Process the stream
+      console.log('[STREAMING] Starting to process stream...');
       const stream = await createTextStream(response.body);
       let accumulatedContent = '';
+      let chunkCount = 0;
 
       for await (const update of stream) {
+        console.log('[STREAMING] Received update:', { 
+          done: update.done, 
+          hasValue: !!update.value, 
+          valueLength: update.value?.length || 0,
+          valuePreview: update.value?.substring(0, 50) || '',
+          hasError: !!update.error,
+          error: update.error
+        });
+
         if (update.done) {
+          console.log('[STREAMING] Stream completed. Total chunks:', chunkCount, 'Total length:', accumulatedContent.length);
           break;
         }
 
         if (update.error) {
-          console.error('Streaming error:', update.error);
+          console.error('[STREAMING] Streaming error:', update.error);
           // Update message with error
           setMessages((prev) =>
             prev.map((msg) =>
@@ -635,16 +647,20 @@ const CustomerChatPage: React.FC = () => {
         }
 
         if (update.value) {
+          chunkCount++;
           accumulatedContent += update.value;
+          console.log(`[STREAMING] Chunk ${chunkCount}: "${update.value}" | Accumulated: ${accumulatedContent.length} chars | Preview: "${accumulatedContent.substring(0, 100)}"`);
           
           // Update the streaming message in real-time
-          setMessages((prev) =>
-            prev.map((msg) =>
+          setMessages((prev) => {
+            const updated = prev.map((msg) =>
               msg.id === streamingMessageId
                 ? { ...msg, message: accumulatedContent }
                 : msg
-            )
-          );
+            );
+            console.log('[STREAMING] Updated message in state. Message found:', updated.some(msg => msg.id === streamingMessageId && msg.message.length > 0));
+            return updated;
+          });
 
           // Auto-scroll to bottom while streaming
           if (shouldAutoScroll) {
@@ -652,8 +668,12 @@ const CustomerChatPage: React.FC = () => {
               messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
             }, 0);
           }
+        } else {
+          console.log('[STREAMING] Update has no value (usage or empty delta)');
         }
       }
+
+      console.log('[STREAMING] Stream processing complete. Final content length:', accumulatedContent.length);
 
       // Streaming complete - the backend has saved the final message to the database
       // Keep the streaming message visible with the accumulated content

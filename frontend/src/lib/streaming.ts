@@ -57,26 +57,36 @@ async function* streamToIterator(
 
 		try {
 			const parsedData = JSON.parse(data);
+			console.log('[STREAMING PARSER] Parsed SSE data:', parsedData);
 
 			if (parsedData.error) {
+				console.error('[STREAMING PARSER] Error in stream:', parsedData.error);
 				yield { done: true, value: '', error: parsedData.error };
 				break;
 			}
 
 			if (parsedData.usage) {
+				console.log('[STREAMING PARSER] Usage info received:', parsedData.usage);
 				yield { done: false, value: '', usage: parsedData.usage };
 				continue;
 			}
 
 			// Support both OpenAI-style (delta.content) and our custom format (delta or value)
 			const deltaContent = parsedData.choices?.[0]?.delta?.content ?? parsedData.delta ?? parsedData.value ?? '';
+			console.log('[STREAMING PARSER] Extracted delta content:', {
+				hasChoices: !!parsedData.choices,
+				hasDelta: !!parsedData.delta,
+				hasValue: !!parsedData.value,
+				deltaContent: deltaContent,
+				deltaLength: deltaContent.length
+			});
 			
 			yield {
 				done: false,
 				value: deltaContent
 			};
 		} catch (e) {
-			console.error('Error extracting delta from SSE event:', e);
+			console.error('[STREAMING PARSER] Error extracting delta from SSE event:', e, 'Raw data:', data);
 		}
 	}
 }
