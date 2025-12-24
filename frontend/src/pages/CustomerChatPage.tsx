@@ -99,6 +99,28 @@ const CustomerChatPage: React.FC = () => {
               return; // Ignore placeholder when streaming
             }
             
+            // If this is an AI message and we have a streaming message, replace it
+            // This handles the case where Realtime delivers the final message
+            if (newMessage.sender_id !== user?.id && 
+                newMessage.message_type === 'text' &&
+                newMessage.message && newMessage.message.length > 0 &&
+                streamingMessageRef.current) {
+              setMessages((prev) => {
+                // Check if message already exists (avoid duplicates)
+                if (prev.some((msg) => msg.id === newMessage.id)) {
+                  // Message already exists, just remove streaming message
+                  return prev.filter((msg) => msg.id !== streamingMessageRef.current!.id);
+                }
+                // Remove the streaming message and add the real one
+                return prev
+                  .filter((msg) => msg.id !== streamingMessageRef.current!.id)
+                  .concat(newMessage);
+              });
+              streamingMessageRef.current = null;
+              lastActivityRef.current = Date.now();
+              return;
+            }
+            
             // Track activity when receiving messages
             lastActivityRef.current = Date.now();
             
@@ -634,9 +656,46 @@ const CustomerChatPage: React.FC = () => {
       }
 
       // Streaming complete - the backend has saved the final message to the database
-      // Remove the temporary streaming message immediately - Realtime will show the final message
-      setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
-      streamingMessageRef.current = null;
+      // Keep the streaming message visible with the accumulated content
+      // Realtime will replace it when the final message arrives (handled in INSERT handler above)
+      // If Realtime doesn't deliver within 3 seconds, keep the streaming message (it has the content)
+      if (accumulatedContent && accumulatedContent.length > 0) {
+        // Ensure the streaming message has the final content
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === streamingMessageId
+              ? { ...msg, message: accumulatedContent }
+              : msg
+          )
+        );
+        
+        // Set a timeout to clean up if Realtime doesn't deliver
+        setTimeout(() => {
+          setMessages((prev) => {
+            // Check if we have the final message from Realtime (with a different ID)
+            const hasFinalMessage = prev.some(
+              (msg) => 
+                msg.conversation_id === conversationId &&
+                msg.sender_id !== user?.id &&
+                msg.id !== streamingMessageId &&
+                msg.message_type === 'text' &&
+                msg.message && msg.message.length > 0
+            );
+            
+            if (hasFinalMessage) {
+              // Realtime delivered the final message - remove the streaming message
+              return prev.filter((msg) => msg.id !== streamingMessageId);
+            }
+            // Otherwise keep the streaming message - it has the content
+            return prev;
+          });
+          streamingMessageRef.current = null;
+        }, 3000); // Give Realtime 3 seconds to deliver the message
+      } else {
+        // No content - remove the blank message immediately
+        setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
+        streamingMessageRef.current = null;
+      }
 
     } catch (error) {
       console.error('Failed to stream AI response:', error);
