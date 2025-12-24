@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat, shipments, calcom, webhooks
+from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat, shipments, calcom, webhooks, knowledge
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
@@ -16,6 +16,13 @@ from apscheduler.triggers.cron import CronTrigger
 from chat_cleanup import cleanup_old_chat_history, cleanup_expired_sessions
 from auth import get_current_admin
 from database import supabase_storage
+
+# Load environment variables first
+load_dotenv()
+
+# Configure logging early (before middleware that uses logger)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class WebSocketLoggingMiddleware:
@@ -39,12 +46,6 @@ class WebSocketLoggingMiddleware:
                 # Never break the WS due to logging
                 pass
         await self.app(scope, receive, send)
-
-load_dotenv()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # Chat router is imported above with other routers
 
@@ -188,6 +189,7 @@ app.include_router(chat.router)
 app.include_router(calcom.router)
 app.include_router(email_debug.router)
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
+app.include_router(knowledge.router)
 
 @app.get("/")
 async def root():
