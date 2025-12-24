@@ -2411,8 +2411,8 @@ function PublicFormView() {
                 navigate(`/folders/${folderId}`);
                 return;
               }
-              if (form.thank_you_screen?.redirect_url) {
-                window.location.href = form.thank_you_screen.redirect_url;
+            if (form.thank_you_screen?.redirect_url) {
+              window.location.href = form.thank_you_screen.redirect_url;
               } else {
                 navigate('/');
               }

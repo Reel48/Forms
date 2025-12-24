@@ -1313,11 +1313,11 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                                     submission_email = s.get("submitter_email", "")
                                     if submission_email and submission_email.lower().strip() == user_email_lower:
                                         matched.append(s)
-
+                                
                             completed = [s for s in matched if str(s.get("status") or "").lower() == "completed"]
                             form["is_completed"] = len(completed) > 0
                             form["submissions_count"] = len(completed)
-                        except Exception as e:
+                            except Exception as e:
                             logger.error(f"Error checking form completion for user {user_id}: {str(e)}", exc_info=True)
                             form["is_completed"] = False
                             form["submissions_count"] = 0

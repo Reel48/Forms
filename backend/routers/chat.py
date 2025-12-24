@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile, Query, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
 from decimal import Decimal
 
@@ -2009,6 +2010,196 @@ async def generate_ai_response(
     except Exception as e:
         logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate AI response: {str(e)}")
+
+
+@router.get("/conversations/{conversation_id}/ai-response-stream")
+async def stream_ai_response(
+    conversation_id: str,
+    user = Depends(get_current_user)
+):
+    """
+    Stream AI response for a conversation using Server-Sent Events (SSE).
+    This endpoint streams tokens as they are generated, providing a better UX.
+    """
+    import json
+    
+    try:
+        # Verify conversation exists and user has access
+        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
+        if not conv_response.data:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        conv = conv_response.data
+        is_admin = user.get("role") == "admin"
+        
+        # Block admins from triggering AI responses
+        if is_admin:
+            raise HTTPException(
+                status_code=403, 
+                detail="Admins cannot trigger AI responses. AI responses are automatically generated for customer messages."
+            )
+        
+        # Check access - only customers can trigger AI responses for their own conversations
+        if conv["customer_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Respect chat_mode: customers cannot trigger AI responses when set to human support.
+        if conv.get("chat_mode") == "human":
+            raise HTTPException(status_code=409, detail="Chat is currently in human support mode. Switch back to AI mode to receive automated responses.")
+
+        # Get recent messages for context
+        messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).order("created_at", desc=True).limit(10).execute()
+        messages = messages_response.data if messages_response.data else []
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No messages found in conversation")
+        
+        # Get the most recent user message (not from AI)
+        latest_message = None
+        for msg in messages:
+            if msg.get("sender_id") != OCHO_USER_ID and msg.get("message"):
+                latest_message = msg
+                break
+        
+        if not latest_message:
+            raise HTTPException(status_code=400, detail="No user message found to respond to")
+        
+        user_query = latest_message.get("message", "")
+        attachments = []
+
+        # Attachment-aware query enrichment
+        if os.getenv("ENABLE_CHAT_ATTACHMENT_PROCESSING", "true").lower() in ("1", "true", "yes"):
+            try:
+                msg_type = (latest_message.get("message_type") or "text").lower()
+                file_url = latest_message.get("file_url")
+                file_name = latest_message.get("file_name")
+
+                if file_url and msg_type in ("file", "image"):
+                    downloaded = download_attachment(file_url, file_name=file_name)
+                    if downloaded:
+                        if msg_type == "image":
+                            attachments.append({"kind": "image", "data": downloaded.data, "mime_type": downloaded.mime_type})
+                            user_query = (user_query or "").strip() or "Please describe the attached image."
+                            user_query += f"\n\n(Attached image: {file_name or 'image'})"
+                        else:
+                            extracted = extract_text_from_attachment_bytes(downloaded.data, downloaded.mime_type, file_name=file_name)
+                            if extracted:
+                                user_query = (user_query or "").strip()
+                                user_query += f"\n\nAttachment ({file_name or 'file'}):\n{extracted}"
+                            else:
+                                user_query = (user_query or "").strip()
+                                user_query += f"\n\n(Attached file: {file_name or 'file'})"
+            except Exception as e:
+                logger.warning(f"Attachment processing failed (non-fatal): {str(e)}")
+        
+        # Format conversation history
+        conversation_history = []
+        for msg in reversed(messages):
+            if msg.get("id") == latest_message.get("id"):
+                continue
+            
+            sender_id = msg.get("sender_id", "")
+            content = msg.get("message", "")
+            
+            if content and sender_id:
+                if sender_id == OCHO_USER_ID:
+                    role = "model"
+                else:
+                    role = "user"
+                
+                conversation_history.append({
+                    "role": role,
+                    "content": content
+                })
+        
+        # Retrieve relevant context using RAG
+        rag_service = get_rag_service()
+        customer_id = conv.get("customer_id")
+        
+        context = rag_service.retrieve_context(
+            user_query, 
+            customer_id=customer_id,
+            is_admin=is_admin
+        )
+
+        # Fetch rolling conversation summary
+        conversation_summary = ""
+        try:
+            summary_resp = supabase_storage.table("chat_conversations").select("summary").eq("id", conversation_id).single().execute()
+            if summary_resp.data and summary_resp.data.get("summary"):
+                conversation_summary = summary_resp.data.get("summary") or ""
+        except Exception:
+            conversation_summary = ""
+        
+        # Get customer-specific context
+        customer_context = None
+        if customer_id:
+            try:
+                client_response = supabase_storage.table("clients").select("name, company").eq("user_id", customer_id).single().execute()
+                if client_response.data:
+                    customer_context = {
+                        "company": client_response.data.get("company"),
+                        "name": client_response.data.get("name")
+                    }
+            except Exception as e:
+                logger.warning(f"Error getting customer context: {str(e)}")
+        
+        # Get AI service
+        ai_service = get_ai_service()
+        if not ai_service:
+            raise HTTPException(status_code=503, detail="AI service is not configured. Please set GEMINI_API_KEY environment variable.")
+        
+        # Create streaming generator
+        async def generate_stream():
+            accumulated_text = ""
+            try:
+                # Stream the response
+                async for chunk in ai_service.generate_response_stream(
+                    user_message=user_query,
+                    conversation_history=conversation_history,
+                    context=context,
+                    conversation_summary=conversation_summary,
+                    customer_context=customer_context,
+                    attachments=attachments,
+                    enable_function_calling=False  # Function calling not supported in streaming yet
+                ):
+                    accumulated_text += chunk
+                    # Format as SSE event
+                    yield f"data: {json.dumps({'delta': chunk})}\n\n"
+                
+                # Format URLs as markdown on the final accumulated text
+                formatted_text = ai_service._format_urls_as_markdown(accumulated_text)
+                
+                # If formatting changed anything, send the difference
+                if formatted_text != accumulated_text:
+                    # Send the formatted version
+                    diff = formatted_text[len(accumulated_text):]
+                    if diff:
+                        yield f"data: {json.dumps({'delta': diff})}\n\n"
+                
+                # Send completion signal
+                yield "data: [DONE]\n\n"
+                
+            except Exception as e:
+                logger.error(f"Error in streaming: {str(e)}", exc_info=True)
+                error_msg = json.dumps({"error": str(e)})
+                yield f"data: {error_msg}\n\n"
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"  # Disable buffering in nginx
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting up streaming: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to setup streaming: {str(e)}")
 
 
 async def _generate_ai_response_async(

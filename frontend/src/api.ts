@@ -1076,6 +1076,22 @@ export const chatAPI = {
   generateAIResponse: (conversationId: string) => {
     return api.post<ChatMessage>(`/api/chat/conversations/${conversationId}/ai-response`);
   },
+  streamAIResponse: async (conversationId: string): Promise<ReadableStream<Uint8Array>> => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'text/event-stream',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Streaming failed: ${response.statusText}`);
+    }
+    
+    return response.body!;
+  },
   checkSession: (conversationId?: string) => {
     const body = conversationId ? { conversation_id: conversationId } : {};
     return api.post<{

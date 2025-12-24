@@ -254,7 +254,7 @@ const ESignatureDocumentsList: React.FC = () => {
                       </div>
                     ) : (
                       <>
-                        <strong style={{ color: 'rgb(59 130 246)' }}>{doc.name}</strong>
+                    <strong style={{ color: 'rgb(59 130 246)' }}>{doc.name}</strong>
                         {editingId === doc.id ? (
                           <div style={{ marginTop: '0.5rem' }}>
                             <textarea
@@ -283,9 +283,9 @@ const ESignatureDocumentsList: React.FC = () => {
                           </div>
                         ) : (
                           doc.description && (
-                            <div className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                              {doc.description}
-                            </div>
+                      <div className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                        {doc.description}
+                      </div>
                           )
                         )}
                       </>
@@ -340,17 +340,17 @@ const ESignatureDocumentsList: React.FC = () => {
                       </button>
                       {role === 'admin' && doc.is_template && (
                         <>
-                          <button
-                            className="btn-primary btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAssignToFolder(doc);
-                            }}
-                            title="Use this template in a folder"
-                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'rgb(59 130 246)', borderColor: 'rgb(59 130 246)' }}
-                          >
-                            Use Template
-                          </button>
+                        <button
+                          className="btn-primary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAssignToFolder(doc);
+                          }}
+                          title="Use this template in a folder"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'rgb(59 130 246)', borderColor: 'rgb(59 130 246)' }}
+                        >
+                          Use Template
+                        </button>
                           {renamingId !== doc.id && (
                             <button
                               className="btn-secondary btn-sm"

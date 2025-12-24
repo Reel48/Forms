@@ -288,7 +288,7 @@ async def _upload_single_file(
     
     # Use service role client to bypass RLS (user is already authenticated)
     try:
-        response = supabase_storage.table("files").insert(file_data).execute()
+    response = supabase_storage.table("files").insert(file_data).execute()
     except Exception as db_error:
         error_msg = str(db_error)
         print(f"Database insert error: {error_msg}")

@@ -11,6 +11,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import supabase_storage
+from embeddings_service import get_embeddings_service
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,10 @@ class RAGService:
                     context_parts.append(_truncate(form_context, MAX_SECTION_CHARS))
             
             # 4. Search knowledge base (FAQs, company info) - public info only
-            knowledge_context = self._search_knowledge_base(user_query, limit)
+            # Try vector search first, fall back to keyword search
+            knowledge_context = self._search_knowledge_base_vector(user_query, limit)
+            if not knowledge_context:
+                knowledge_context = self._search_knowledge_base(user_query, limit)
             if knowledge_context:
                 context_parts.append(_truncate(knowledge_context, MAX_SECTION_CHARS))
             
@@ -321,6 +325,46 @@ class RAGService:
             
         except Exception as e:
             logger.warning(f"Error searching customer forms: {str(e)}")
+            return ""
+    
+    def _search_knowledge_base_vector(self, query: str, limit: int = 5) -> str:
+        """Search knowledge base using vector embeddings (preferred method)"""
+        try:
+            embeddings_service = get_embeddings_service()
+            
+            # Generate embedding for query
+            query_embedding = embeddings_service.generate_embedding(query)
+            if not query_embedding or len(query_embedding) == 0:
+                # Fall back to keyword search if embedding generation fails
+                return ""
+            
+            # Search using vector similarity
+            results = embeddings_service.search_similar_content(
+                query_embedding=query_embedding,
+                table='knowledge_embeddings',
+                limit=limit
+            )
+            
+            if not results:
+                return ""
+            
+            # Format results
+            context_items = []
+            for result in results:
+                content = result.get("content", "")
+                # Title comes directly from RPC function, not from metadata
+                title = result.get("title") or result.get("metadata", {}).get("title") or "Information"
+                
+                if content:
+                    context_items.append(f"{title}:\n{content}")
+            
+            if context_items:
+                return "COMPANY AND PRODUCT INFORMATION:\n\n" + "\n\n".join(context_items)
+            
+            return ""
+            
+        except Exception as e:
+            logger.debug(f"Vector search for knowledge base failed (will fall back to keyword): {str(e)}")
             return ""
     
     def _search_knowledge_base(self, query: str, limit: int = 5) -> str:

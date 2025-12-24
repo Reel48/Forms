@@ -357,6 +357,123 @@ class AIService:
             }
         ]
     
+    async def generate_response_stream(
+        self,
+        user_message: str,
+        conversation_history: List[Dict[str, str]],
+        context: str = "",
+        conversation_summary: str = "",
+        customer_context: Optional[Dict] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
+        enable_function_calling: bool = False
+    ):
+        """
+        Generate AI response with streaming support
+        
+        Yields:
+            str: Token chunks as they are generated
+        """
+        try:
+            # Build system prompt with context
+            system_prompt = self._build_system_prompt(context, customer_context, enable_function_calling, conversation_summary=conversation_summary)
+            
+            # If we have image attachments, prefer a direct multimodal generation path for reliability.
+            has_image = bool(attachments) and any((a or {}).get("kind") == "image" for a in attachments or [])
+            
+            # For streaming, we don't support function calling yet (can be added later)
+            if enable_function_calling:
+                # Fallback to non-streaming for function calling
+                result = self.generate_response(
+                    user_message, conversation_history, context, conversation_summary,
+                    customer_context, attachments, enable_function_calling
+                )
+                # Yield the full response as a single chunk
+                response_text = result.get("response", "")
+                for char in response_text:
+                    yield char
+                return
+            
+            # Format conversation history for Gemini
+            full_prompt = f"{system_prompt}\n\n"
+            
+            # Add conversation history
+            if conversation_history:
+                full_prompt += "Previous conversation:\n"
+                for msg in conversation_history[-10:]:  # Limit to last 10 messages for context
+                    role = msg.get("role", "user")
+                    content = msg.get("content", msg.get("message", ""))
+                    if content:
+                        if role == "model":
+                            full_prompt += f"Assistant: {content}\n"
+                        else:
+                            full_prompt += f"User: {content}\n"
+                full_prompt += "\n"
+            
+            # Add current user message
+            full_prompt += f"User: {user_message}\n\nAssistant:"
+            
+            logger.debug(f"Generated prompt length: {len(full_prompt)} characters")
+            
+            # Generate response using streaming
+            try:
+                print(f"🔧 [AI SERVICE] Calling Gemini API with streaming, prompt length: {len(full_prompt)} chars")
+                logger.debug(f"🔧 [AI SERVICE] Calling Gemini API with streaming, prompt length: {len(full_prompt)} chars")
+                
+                if has_image and Part is not None:
+                    parts: List[Any] = [full_prompt]
+                    for att in attachments or []:
+                        if not att:
+                            continue
+                        if att.get("kind") == "image" and att.get("data") and att.get("mime_type"):
+                            try:
+                                parts.append(Part.from_bytes(data=att["data"], mime_type=att["mime_type"]))
+                            except Exception as e:
+                                logger.warning(f"Failed to attach image part: {str(e)}")
+                    # Stream with images
+                    response_stream = self.model.generate_content(parts, stream=True)
+                else:
+                    # Stream text-only
+                    response_stream = self.model.generate_content(full_prompt, stream=True)
+                
+                print(f"🔧 [AI SERVICE] Streaming response from Gemini API")
+                
+                accumulated_text = ""
+                for chunk in response_stream:
+                    if hasattr(chunk, 'text') and chunk.text:
+                        accumulated_text += chunk.text
+                        yield chunk.text
+                    elif hasattr(chunk, 'candidates') and chunk.candidates:
+                        for candidate in chunk.candidates:
+                            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                                for part in candidate.content.parts:
+                                    if hasattr(part, 'text') and part.text:
+                                        accumulated_text += part.text
+                                        yield part.text
+                
+                # Post-process accumulated text to convert URLs to markdown
+                if accumulated_text:
+                    formatted_text = self._format_urls_as_markdown(accumulated_text)
+                    # If formatting changed anything, we'd need to yield the difference
+                    # For now, we'll format on the frontend or in the final message
+                
+                print(f"✅ [AI SERVICE] Successfully streamed AI response: {len(accumulated_text)} characters")
+                logger.info(f"✅ [AI SERVICE] Successfully streamed AI response: {len(accumulated_text)} characters")
+                
+            except Exception as api_error:
+                error_msg = str(api_error)
+                error_type = type(api_error).__name__
+                print(f"❌ [AI SERVICE] Gemini API streaming error [{error_type}]: {error_msg}")
+                logger.error(f"❌ [AI SERVICE] Gemini API streaming error [{error_type}]: {error_msg}", exc_info=True)
+                # Yield error message
+                yield f"\n\n[Error: {error_msg}]"
+                
+        except Exception as e:
+            error_msg = str(e)
+            error_type = type(e).__name__
+            print(f"❌ [AI SERVICE] Error in streaming [{error_type}]: {error_msg}")
+            logger.error(f"❌ Error in streaming [{error_type}]: {error_msg}", exc_info=True)
+            yield f"\n\n[Error: I apologize, but I'm having trouble processing your request right now. Please try again later.]"
+
     def generate_response(
         self,
         user_message: str,
