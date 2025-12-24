@@ -460,27 +460,29 @@ class AIService:
                     # Fallback: Extract from candidates -> content -> parts (like non-streaming version)
                     if not chunk_yielded and hasattr(chunk, 'candidates') and chunk.candidates:
                         for candidate in chunk.candidates:
-                            # Check for finish_reason - skip if it's an error finish reason
-                            finish_reason = None
-                            try:
-                                if hasattr(candidate, 'finish_reason'):
-                                    finish_reason = candidate.finish_reason
-                                    # finish_reason 10 = FUNCTION_CALL_INVALID, 12 = unknown
-                                    if finish_reason in [10, 12]:
-                                        print(f"[STREAMING] Chunk {chunk_count}: Skipping chunk with finish_reason {finish_reason}")
-                                        continue
-                            except:
-                                pass
-                            
-                            # Extract text from parts (same logic as non-streaming version)
+                            # Extract text from parts first (same logic as non-streaming version)
+                            # Don't skip based on finish_reason - still try to extract text
                             if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                                 for part in candidate.content.parts:
-                                    if hasattr(part, 'text') and part.text:
-                                        part_text = part.text
-                                        print(f"[STREAMING] Chunk {chunk_count}: Got {len(part_text)} chars from part.text")
-                                        accumulated_text += part_text
-                                        yield part_text
-                                        chunk_yielded = True
+                                    try:
+                                        if hasattr(part, 'text') and part.text:
+                                            part_text = part.text
+                                            print(f"[STREAMING] Chunk {chunk_count}: Got {len(part_text)} chars from part.text")
+                                            accumulated_text += part_text
+                                            yield part_text
+                                            chunk_yielded = True
+                                    except (ValueError, AttributeError) as part_error:
+                                        # Part doesn't have valid text, skip it
+                                        print(f"[STREAMING] Chunk {chunk_count}: Part text access failed: {type(part_error).__name__}")
+                                        continue
+                            
+                            # Log finish_reason for debugging but don't skip
+                            try:
+                                if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
+                                    finish_reason = candidate.finish_reason
+                                    print(f"[STREAMING] Chunk {chunk_count}: finish_reason={finish_reason} (text already extracted if available)")
+                            except:
+                                pass
                     
                     if not chunk_yielded:
                         print(f"[STREAMING] Chunk {chunk_count}: No text extracted (might be metadata chunk)")
