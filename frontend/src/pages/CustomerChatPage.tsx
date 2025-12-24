@@ -625,12 +625,10 @@ const CustomerChatPage: React.FC = () => {
         }
       }
 
-      // Streaming complete - the backend will insert the final message via Realtime
-      // Remove the temporary streaming message
-      setTimeout(() => {
-        setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
-        streamingMessageRef.current = null;
-      }, 1000); // Small delay to allow Realtime message to arrive
+      // Streaming complete - the backend has saved the final message to the database
+      // Remove the temporary streaming message immediately - Realtime will show the final message
+      setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
+      streamingMessageRef.current = null;
 
     } catch (error) {
       console.error('Failed to stream AI response:', error);

@@ -2177,6 +2177,57 @@ async def stream_ai_response(
                     if diff:
                         yield f"data: {json.dumps({'delta': diff})}\n\n"
                 
+                # Save the final message to the database after streaming completes
+                # This prevents duplicate responses from the background task
+                try:
+                    # Check if an AI response already exists for this conversation (from background task)
+                    # If it does, update it instead of creating a new one
+                    existing_ai_messages = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).eq("sender_id", OCHO_USER_ID).order("created_at", desc=True).limit(1).execute()
+                    
+                    if existing_ai_messages.data and len(existing_ai_messages.data) > 0:
+                        existing_msg = existing_ai_messages.data[0]
+                        # Check if this message was created after the customer's latest message
+                        if existing_msg.get("created_at") >= latest_message.get("created_at"):
+                            # Update the existing message with the streamed content
+                            supabase_storage.table("chat_messages").update({
+                                "message": formatted_text,
+                                "message_type": "text"
+                            }).eq("id", existing_msg["id"]).execute()
+                            logger.info(f"[STREAMING] Updated existing AI message {existing_msg['id']} with streamed content")
+                        else:
+                            # Create new message if existing one is older
+                            ai_message_data = {
+                                "id": str(uuid.uuid4()),
+                                "conversation_id": conversation_id,
+                                "sender_id": OCHO_USER_ID,
+                                "message": formatted_text,
+                                "message_type": "text",
+                                "created_at": datetime.now().isoformat(),
+                            }
+                            supabase_storage.table("chat_messages").insert(ai_message_data).execute()
+                            logger.info(f"[STREAMING] Created new AI message with streamed content")
+                    else:
+                        # No existing AI message, create new one
+                        ai_message_data = {
+                            "id": str(uuid.uuid4()),
+                            "conversation_id": conversation_id,
+                            "sender_id": OCHO_USER_ID,
+                            "message": formatted_text,
+                            "message_type": "text",
+                            "created_at": datetime.now().isoformat(),
+                        }
+                        supabase_storage.table("chat_messages").insert(ai_message_data).execute()
+                        logger.info(f"[STREAMING] Created new AI message with streamed content")
+                    
+                    # Update conversation timestamp
+                    supabase_storage.table("chat_conversations").update({
+                        "last_message_at": datetime.now().isoformat(),
+                        "updated_at": datetime.now().isoformat()
+                    }).eq("id", conversation_id).execute()
+                except Exception as save_error:
+                    logger.error(f"[STREAMING] Failed to save streamed message to database: {str(save_error)}", exc_info=True)
+                    # Don't fail the stream if save fails - user already saw the response
+                
                 # Send completion signal
                 yield "data: [DONE]\n\n"
                 
