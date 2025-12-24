@@ -535,11 +535,22 @@ const CustomerChatPage: React.FC = () => {
       }
       
       // Start streaming AI response if we have a conversation
+      console.log('[MESSAGE SEND] Checking if should start streaming:', {
+        finalConversationId,
+        isStreaming: isStreamingRef.current
+      });
       if (finalConversationId && !isStreamingRef.current) {
         // Small delay to ensure the user message is visible first
+        console.log('[MESSAGE SEND] Will start streaming in 500ms for conversation:', finalConversationId);
         setTimeout(() => {
+          console.log('[MESSAGE SEND] Now calling streamAIResponse...');
           void streamAIResponse(finalConversationId);
         }, 500);
+      } else {
+        console.log('[MESSAGE SEND] Not starting streaming:', {
+          hasConversation: !!finalConversationId,
+          alreadyStreaming: isStreamingRef.current
+        });
       }
     } catch (error: any) {
       console.error('Failed to send message:', error);
@@ -559,20 +570,25 @@ const CustomerChatPage: React.FC = () => {
 
   // Stream AI response function
   const streamAIResponse = async (conversationId: string) => {
+    console.log('[STREAMING] streamAIResponse called for conversation:', conversationId);
     if (isStreamingRef.current) {
-      console.log('Already streaming, skipping');
+      console.log('[STREAMING] Already streaming, skipping');
       return;
     }
 
     try {
+      console.log('[STREAMING] Starting streaming process...');
       isStreamingRef.current = true;
       
       // Get auth token from Supabase session
+      console.log('[STREAMING] Getting Supabase session...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        console.error('No auth token available for streaming');
+        console.error('[STREAMING] ❌ No auth token available for streaming');
+        isStreamingRef.current = false;
         return;
       }
+      console.log('[STREAMING] ✅ Auth token obtained');
 
       // Create a temporary streaming message ID
       const streamingMessageId = `streaming-${Date.now()}`;
@@ -593,24 +609,28 @@ const CustomerChatPage: React.FC = () => {
       streamingMessageRef.current = { id: streamingMessageId, content: '' };
 
       // Start streaming
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Accept': 'text/event-stream',
-          },
-        }
-      );
+      const streamUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`;
+      console.log('[STREAMING] Fetching stream from:', streamUrl);
+      const response = await fetch(streamUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Accept': 'text/event-stream',
+        },
+      });
 
+      console.log('[STREAMING] Fetch response status:', response.status, response.statusText);
       if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error');
+        console.error('[STREAMING] ❌ Streaming failed:', response.status, response.statusText, errorText);
         throw new Error(`Streaming failed: ${response.statusText}`);
       }
 
       if (!response.body) {
+        console.error('[STREAMING] ❌ Response body is null');
         throw new Error('Response body is null');
       }
+      console.log('[STREAMING] ✅ Response body obtained, starting to process stream...');
 
       // Process the stream
       console.log('[STREAMING] Starting to process stream...');
