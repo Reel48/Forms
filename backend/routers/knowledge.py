@@ -442,6 +442,16 @@ async def list_knowledge_entries(
         
         response = query.execute()
         entries = response.data if response.data else []
+        
+        # If search was provided, also filter by content in memory (since we can only search one field in DB)
+        if search:
+            search_lower = search.lower()
+            entries = [
+                e for e in entries
+                if search_lower in (e.get("title", "") or "").lower() or 
+                   search_lower in (e.get("content", "") or "").lower()
+            ]
+        
         total_count = response.count if hasattr(response, 'count') else len(entries)
         
         # Get categories for filtering
