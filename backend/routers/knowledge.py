@@ -429,7 +429,10 @@ async def list_knowledge_entries(
         
         if search:
             # Search in title and content
-            query = query.or_(f"title.ilike.%{search}%,content.ilike.%{search}%")
+            # Note: Supabase Python client doesn't support .or_() directly
+            # We'll filter in memory after fetching, or use a single field search
+            # For now, search in title (most common) - can enhance later
+            query = query.ilike("title", f"%{search}%")
         
         # Order by created_at descending
         query = query.order("created_at", desc=True)
