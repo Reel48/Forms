@@ -439,16 +439,43 @@ class AIService:
                 
                 accumulated_text = ""
                 for chunk in response_stream:
-                    if hasattr(chunk, 'text') and chunk.text:
-                        accumulated_text += chunk.text
-                        yield chunk.text
-                    elif hasattr(chunk, 'candidates') and chunk.candidates:
+                    # Try to get text from chunk directly
+                    try:
+                        if hasattr(chunk, 'text'):
+                            chunk_text = chunk.text
+                            if chunk_text:
+                                accumulated_text += chunk_text
+                                yield chunk_text
+                                continue
+                    except (ValueError, AttributeError) as e:
+                        # Chunk doesn't have valid text (might be finish reason or metadata)
+                        # Check if it's a finish reason chunk - we can skip these
+                        if hasattr(chunk, 'candidates') and chunk.candidates:
+                            # This chunk might have candidates with content
+                            pass
+                        else:
+                            # Skip chunks without text content
+                            logger.debug(f"Skipping chunk without text content: {type(e).__name__}")
+                            continue
+                    
+                    # Try to get text from candidates
+                    if hasattr(chunk, 'candidates') and chunk.candidates:
                         for candidate in chunk.candidates:
+                            # Check for finish_reason - if it's set, this might be the end
+                            if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
+                                logger.debug(f"Chunk has finish_reason: {candidate.finish_reason}")
+                                # Continue to check for content even if finish_reason is set
+                            
                             if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                                 for part in candidate.content.parts:
-                                    if hasattr(part, 'text') and part.text:
-                                        accumulated_text += part.text
-                                        yield part.text
+                                    try:
+                                        if hasattr(part, 'text') and part.text:
+                                            accumulated_text += part.text
+                                            yield part.text
+                                    except (ValueError, AttributeError):
+                                        # Part doesn't have valid text, skip it
+                                        logger.debug("Skipping part without text content")
+                                        continue
                 
                 # Post-process accumulated text to convert URLs to markdown
                 if accumulated_text:
