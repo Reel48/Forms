@@ -105,18 +105,21 @@ const CustomerChatPage: React.FC = () => {
                 newMessage.message_type === 'text' &&
                 newMessage.message && newMessage.message.length > 0 &&
                 streamingMessageRef.current) {
+              // Store the streaming message ID before clearing the ref
+              const streamingMessageId = streamingMessageRef.current.id;
+              streamingMessageRef.current = null;
+              
               setMessages((prev) => {
                 // Check if message already exists (avoid duplicates)
                 if (prev.some((msg) => msg.id === newMessage.id)) {
                   // Message already exists, just remove streaming message
-                  return prev.filter((msg) => msg.id !== streamingMessageRef.current!.id);
+                  return prev.filter((msg) => msg.id !== streamingMessageId);
                 }
                 // Remove the streaming message and add the real one
                 return prev
-                  .filter((msg) => msg.id !== streamingMessageRef.current!.id)
+                  .filter((msg) => msg.id !== streamingMessageId)
                   .concat(newMessage);
               });
-              streamingMessageRef.current = null;
               lastActivityRef.current = Date.now();
               return;
             }
