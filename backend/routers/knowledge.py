@@ -22,10 +22,11 @@ router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 logger = logging.getLogger(__name__)
 
 # Import services with error handling to prevent startup failures
+# Catch all exceptions (ImportError, ValueError, etc.) to prevent deployment failures
 try:
     from document_extraction_service import extract_text_from_document
     DOCUMENT_EXTRACTION_AVAILABLE = True
-except ImportError as e:
+except Exception as e:
     logger.warning(f"document_extraction_service not available: {e}")
     DOCUMENT_EXTRACTION_AVAILABLE = False
     extract_text_from_document = None
@@ -33,7 +34,7 @@ except ImportError as e:
 try:
     from chunking_service import get_chunking_service
     CHUNKING_AVAILABLE = True
-except ImportError as e:
+except Exception as e:
     logger.warning(f"chunking_service not available: {e}")
     CHUNKING_AVAILABLE = False
     get_chunking_service = None
@@ -41,7 +42,7 @@ except ImportError as e:
 try:
     from embeddings_service import get_embeddings_service
     EMBEDDINGS_AVAILABLE = True
-except ImportError as e:
+except Exception as e:
     logger.warning(f"embeddings_service not available: {e}")
     EMBEDDINGS_AVAILABLE = False
     get_embeddings_service = None
