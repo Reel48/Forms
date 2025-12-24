@@ -470,12 +470,24 @@ async def get_knowledge_entry(
     Get details of a specific knowledge entry
     """
     try:
-        response = supabase_storage.table("knowledge_embeddings").select("*, knowledge_documents(filename)").eq("id", entry_id).single().execute()
+        response = supabase_storage.table("knowledge_embeddings").select("*").eq("id", entry_id).single().execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Entry not found")
         
-        return response.data
+        entry = response.data
+        
+        # Fetch document filename if document_id exists
+        if entry.get("document_id"):
+            try:
+                doc_response = supabase_storage.table("knowledge_documents").select("filename").eq("id", entry["document_id"]).single().execute()
+                if doc_response.data:
+                    entry["knowledge_documents"] = {"filename": doc_response.data["filename"]}
+            except Exception:
+                # Document might not exist, continue without filename
+                pass
+        
+        return entry
         
     except HTTPException:
         raise
