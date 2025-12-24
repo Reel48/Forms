@@ -1077,7 +1077,12 @@ export const chatAPI = {
     return api.post<ChatMessage>(`/api/chat/conversations/${conversationId}/ai-response`);
   },
   streamAIResponse: async (conversationId: string): Promise<ReadableStream<Uint8Array>> => {
-    const token = localStorage.getItem('token');
+    // This method is kept for backward compatibility but is now handled directly in CustomerChatPage
+    // Get token from Supabase session instead of localStorage
+    const { supabase } = await import('./lib/supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || localStorage.getItem('token');
+    
     const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`, {
       method: 'GET',
       headers: {

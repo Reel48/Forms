@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { FaSun, FaMoon, FaArrowUp, FaArrowLeft, FaCopy, FaCheck } from 'react-icons/fa';
 import { ChatMessageBody } from '../components/chat/ChatMessageBody';
 import { useNotifications } from '../components/NotificationSystem';
+import { createTextStream } from '../lib/streaming';
 import './CustomerChatPage.css';
 
 const CustomerChatPage: React.FC = () => {
@@ -33,6 +34,8 @@ const CustomerChatPage: React.FC = () => {
   const sessionCheckIntervalRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const streamingMessageRef = useRef<{ id: string; content: string } | null>(null);
+  const isStreamingRef = useRef(false);
 
   // Load messages function - defined early so it can be used in other callbacks
   const loadMessages = useCallback(async (conversationId: string, limit: number = 50) => {
@@ -490,12 +493,23 @@ const CustomerChatPage: React.FC = () => {
         }
       }
       
-      // Show thinking indicator - AI will respond automatically
+      // Get final conversation ID for streaming
+      const finalConversationId = responseConvId || conversation?.id;
+      
+      // Clear input
       if (!messageText) {
         setNewMessage('');
         if (textareaRef.current) {
           textareaRef.current.style.height = '24px';
         }
+      }
+      
+      // Start streaming AI response if we have a conversation
+      if (finalConversationId && !isStreamingRef.current) {
+        // Small delay to ensure the user message is visible first
+        setTimeout(() => {
+          void streamAIResponse(finalConversationId);
+        }, 500);
       }
     } catch (error: any) {
       console.error('Failed to send message:', error);
@@ -510,6 +524,123 @@ const CustomerChatPage: React.FC = () => {
       }
     } finally {
       setSending(false);
+    }
+  };
+
+  // Stream AI response function
+  const streamAIResponse = async (conversationId: string) => {
+    if (isStreamingRef.current) {
+      console.log('Already streaming, skipping');
+      return;
+    }
+
+    try {
+      isStreamingRef.current = true;
+      
+      // Get auth token from Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.error('No auth token available for streaming');
+        return;
+      }
+
+      // Create a temporary streaming message ID
+      const streamingMessageId = `streaming-${Date.now()}`;
+      const streamingMessage: ChatMessage = {
+        id: streamingMessageId,
+        conversation_id: conversationId,
+        sender_id: 'ai-streaming', // Temporary ID
+        message: '',
+        message_type: 'text',
+        created_at: new Date().toISOString(),
+        read_at: undefined,
+        file_url: undefined,
+        file_name: undefined,
+      };
+
+      // Add streaming message to UI
+      setMessages((prev) => [...prev, streamingMessage]);
+      streamingMessageRef.current = { id: streamingMessageId, content: '' };
+
+      // Start streaming
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Accept': 'text/event-stream',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Streaming failed: ${response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      // Process the stream
+      const stream = await createTextStream(response.body);
+      let accumulatedContent = '';
+
+      for await (const update of stream) {
+        if (update.done) {
+          break;
+        }
+
+        if (update.error) {
+          console.error('Streaming error:', update.error);
+          // Update message with error
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === streamingMessageId
+                ? { ...msg, message: 'Sorry, I encountered an error. Please try again.' }
+                : msg
+            )
+          );
+          break;
+        }
+
+        if (update.value) {
+          accumulatedContent += update.value;
+          
+          // Update the streaming message in real-time
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === streamingMessageId
+                ? { ...msg, message: accumulatedContent }
+                : msg
+            )
+          );
+
+          // Auto-scroll to bottom while streaming
+          if (shouldAutoScroll) {
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 0);
+          }
+        }
+      }
+
+      // Streaming complete - the backend will insert the final message via Realtime
+      // Remove the temporary streaming message
+      setTimeout(() => {
+        setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
+        streamingMessageRef.current = null;
+      }, 1000); // Small delay to allow Realtime message to arrive
+
+    } catch (error) {
+      console.error('Failed to stream AI response:', error);
+      // Remove streaming message on error
+      if (streamingMessageRef.current) {
+        setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageRef.current!.id));
+        streamingMessageRef.current = null;
+      }
+    } finally {
+      isStreamingRef.current = false;
     }
   };
 
