@@ -1073,9 +1073,6 @@ export const chatAPI = {
   deleteConversation: (conversationId: string) => {
     return api.delete<{ message: string }>(`/api/chat/conversations/${conversationId}`);
   },
-  generateAIResponse: (conversationId: string) => {
-    return api.post<ChatMessage>(`/api/chat/conversations/${conversationId}/ai-response`);
-  },
   streamAIResponse: async (conversationId: string): Promise<ReadableStream<Uint8Array>> => {
     // This method is kept for backward compatibility but is now handled directly in CustomerChatPage
     // Get token from Supabase session instead of localStorage

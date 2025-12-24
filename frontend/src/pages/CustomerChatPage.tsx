@@ -91,6 +91,14 @@ const CustomerChatPage: React.FC = () => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
             
+            // Skip system placeholder messages if we're streaming
+            // Frontend handles streaming UI, so we don't need backend placeholders
+            if (isStreamingRef.current && 
+                newMessage.message_type === 'system' && 
+                newMessage.sender_id !== user?.id) {
+              return; // Ignore placeholder when streaming
+            }
+            
             // Track activity when receiving messages
             lastActivityRef.current = Date.now();
             
@@ -755,7 +763,7 @@ const CustomerChatPage: React.FC = () => {
               {isCustomer ? 'You' : 'Reel48 AI'}
             </div>
             <div className="message-content">
-              {!isCustomer && message.message_type === 'system' ? (
+              {!isCustomer && message.message_type === 'system' && !isStreamingRef.current ? (
                 <div className="typing-indicator">
                   <span className="typing-text">AI is thinking...</span>
                   <div className="typing-dots">

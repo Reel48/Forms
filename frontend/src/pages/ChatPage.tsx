@@ -582,17 +582,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // Note: generateAIResponse function is available but not currently used in the UI
-  // It can be called programmatically if needed for future features
-  // const generateAIResponse = async () => {
-  //   if (!selectedConversation) return;
-  //   try {
-  //     await chatAPI.generateAIResponse(selectedConversation.id);
-  //   } catch (error: any) {
-  //     console.error('Failed to generate AI response:', error);
-  //   }
-  // };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedConversation || uploading) return;
