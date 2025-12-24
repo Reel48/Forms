@@ -744,8 +744,9 @@ const CustomerChatPage: React.FC = () => {
       console.error('Failed to stream AI response:', error);
       // Remove streaming message on error
       if (streamingMessageRef.current) {
-        setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageRef.current!.id));
+        const streamingMessageId = streamingMessageRef.current.id;
         streamingMessageRef.current = null;
+        setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
       }
     } finally {
       isStreamingRef.current = false;
