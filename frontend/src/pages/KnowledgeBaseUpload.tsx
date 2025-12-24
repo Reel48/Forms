@@ -27,11 +27,14 @@ const KnowledgeBaseUpload: React.FC = () => {
 
   const loadDocuments = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await knowledgeAPI.listDocuments();
       setDocuments(response.data.documents || []);
     } catch (error: any) {
       console.error('Failed to load documents:', error);
       showNotification({ type: 'error', message: 'Failed to load documents' });
+    } finally {
+      setLoading(false);
     }
   }, [showNotification]);
 
@@ -84,6 +87,7 @@ const KnowledgeBaseUpload: React.FC = () => {
       }, 5000);
       return () => clearInterval(interval);
     } else {
+      setLoading(true);
       loadEntries();
       loadStats();
     }
