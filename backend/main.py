@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
-from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat, shipments, calcom, webhooks, knowledge
+from routers import quotes, clients, pdf, stripe, company_settings, forms, auth, assignments, email_debug, files, esignature, folders, chat, shipments, calcom, webhooks
 from rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from decimal import Decimal
@@ -23,6 +23,15 @@ load_dotenv()
 # Configure logging early (before middleware that uses logger)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Import knowledge router with error handling to prevent startup failures
+try:
+    from routers import knowledge
+    KNOWLEDGE_ROUTER_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Knowledge router not available: {e}")
+    KNOWLEDGE_ROUTER_AVAILABLE = False
+    knowledge = None
 
 
 class WebSocketLoggingMiddleware:
@@ -189,7 +198,8 @@ app.include_router(chat.router)
 app.include_router(calcom.router)
 app.include_router(email_debug.router)
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
-app.include_router(knowledge.router)
+if KNOWLEDGE_ROUTER_AVAILABLE and knowledge:
+    app.include_router(knowledge.router)
 
 @app.get("/")
 async def root():
