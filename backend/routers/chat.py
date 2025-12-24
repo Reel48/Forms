@@ -2347,6 +2347,21 @@ async def _generate_ai_response_async(
             _delete_placeholder()
             return
         
+        # Check if a streaming response already exists for this customer message
+        # If streaming endpoint was called, it will have already created/updated an AI message
+        # This prevents duplicate responses
+        try:
+            # Check for AI messages created after the customer's message
+            ai_messages_after = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).eq("sender_id", OCHO_USER_ID).gte("created_at", latest_customer_message.get("created_at")).execute()
+            if ai_messages_after.data and len(ai_messages_after.data) > 0:
+                # An AI response already exists for this customer message (likely from streaming)
+                logger.info(f"[AI TASK] Skipping AI response - streaming response already exists for message {latest_customer_message.get('id')}")
+                _delete_placeholder()
+                return
+        except Exception as check_error:
+            logger.debug(f"[AI TASK] Could not check for existing streaming response: {str(check_error)}")
+            # Continue with normal flow if check fails
+        
         user_query = latest_customer_message.get("message", "")
         attachments = []
 
