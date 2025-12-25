@@ -650,8 +650,9 @@ async def get_messages(
         if not is_admin and conv.get("customer_id") != user.get("id"):
             raise HTTPException(status_code=403, detail="Access denied")
         
-        # Build query
+        # Build and execute query
         try:
+            # Start with base query
             query = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id)
             
             # If before_id is provided, load messages before that message
@@ -671,32 +672,118 @@ async def get_messages(
                     logger.warning(f"Error fetching before_id message: {str(e)}")
                     # Continue without before_id filter
             
-            # Order by created_at descending (newest first) for pagination, then reverse to show oldest first
+            # Execute query - try with ordering first, fallback to simple query if it fails
+            messages = []
             try:
+                # Try to execute with ordering
+                logger.debug(f"Executing messages query for conversation {conversation_id} with limit {limit}")
                 messages_response = query.order("created_at", desc=True).limit(limit).execute()
-                messages = messages_response.data if messages_response.data else []
+                
+                # Handle response - check for both .data attribute and direct data
+                if hasattr(messages_response, 'data'):
+                    messages = messages_response.data if messages_response.data else []
+                elif isinstance(messages_response, list):
+                    messages = messages_response
+                elif messages_response:
+                    # Try to extract data from response object
+                    messages = getattr(messages_response, 'data', []) or []
+                else:
+                    messages = []
+                    
+                logger.debug(f"Query returned {len(messages)} messages")
+                
+            except AttributeError as attr_error:
+                logger.error(f"AttributeError executing query for conversation {conversation_id}: {str(attr_error)}", exc_info=True)
+                # Try fallback
+                messages = []
             except Exception as query_error:
-                logger.error(f"Error executing messages query for conversation {conversation_id}: {str(query_error)}", exc_info=True)
-                # Try a simpler query without ordering as fallback
+                error_msg = str(query_error)
+                error_type = type(query_error).__name__
+                logger.error(f"Error executing ordered query for conversation {conversation_id}: {error_type}: {error_msg}", exc_info=True)
+                
+                # Fallback: execute without ordering and sort in Python
                 try:
                     logger.info(f"Attempting fallback query without ordering for conversation {conversation_id}")
-                    messages_response = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id).limit(limit).execute()
-                    messages = messages_response.data if messages_response.data else []
-                    # Sort in Python
-                    messages.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+                    fallback_query = supabase_storage.table("chat_messages").select("*").eq("conversation_id", conversation_id)
+                    if before_id:
+                        try:
+                            uuid.UUID(before_id)
+                            before_message_response = supabase_storage.table("chat_messages").select("created_at").eq("id", before_id).execute()
+                            if before_message_response.data and len(before_message_response.data) > 0:
+                                before_created_at = before_message_response.data[0]["created_at"]
+                                fallback_query = fallback_query.lt("created_at", before_created_at)
+                        except:
+                            pass
+                    
+                    messages_response = fallback_query.limit(limit).execute()
+                    if hasattr(messages_response, 'data'):
+                        messages = messages_response.data if messages_response.data else []
+                    elif isinstance(messages_response, list):
+                        messages = messages_response
+                    else:
+                        messages = []
+                    
+                    # Sort in Python by created_at descending
+                    messages.sort(key=lambda x: x.get("created_at", "") or "", reverse=True)
+                    logger.info(f"Fallback query succeeded, returned {len(messages)} messages")
+                    
                 except Exception as fallback_error:
-                    logger.error(f"Fallback query also failed for conversation {conversation_id}: {str(fallback_error)}", exc_info=True)
-                    raise HTTPException(status_code=500, detail=f"Failed to query messages: {str(fallback_error)}")
+                    error_msg = str(fallback_error)
+                    error_type = type(fallback_error).__name__
+                    logger.error(f"Fallback query also failed for conversation {conversation_id}: {error_type}: {error_msg}", exc_info=True)
+                    raise HTTPException(status_code=500, detail=f"Failed to query messages: {error_type}: {error_msg}")
             
             # Reverse to show messages in chronological order (oldest first)
             messages.reverse()
             
-            return messages
+            # Validate and clean messages before returning
+            validated_messages = []
+            for msg in messages:
+                try:
+                    # Ensure all required fields are present
+                    if not isinstance(msg, dict):
+                        logger.warning(f"Skipping invalid message (not a dict): {type(msg)}")
+                        continue
+                    
+                    # Check required fields
+                    required_fields = ['id', 'conversation_id', 'sender_id', 'message', 'created_at']
+                    missing_fields = [field for field in required_fields if field not in msg]
+                    if missing_fields:
+                        logger.warning(f"Skipping message {msg.get('id', 'unknown')} - missing fields: {missing_fields}")
+                        continue
+                    
+                    # Ensure message field is not empty
+                    if not msg.get('message') or not str(msg.get('message', '')).strip():
+                        logger.warning(f"Skipping message {msg.get('id')} - empty message field")
+                        continue
+                    
+                    # Ensure created_at is a valid datetime string or datetime object
+                    created_at = msg.get('created_at')
+                    if created_at:
+                        if isinstance(created_at, str):
+                            try:
+                                # Try to parse as ISO format
+                                datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            except:
+                                logger.warning(f"Invalid created_at format for message {msg.get('id')}: {created_at}")
+                        elif not isinstance(created_at, datetime):
+                            logger.warning(f"Invalid created_at type for message {msg.get('id')}: {type(created_at)}")
+                    
+                    validated_messages.append(msg)
+                except Exception as validation_error:
+                    logger.warning(f"Error validating message {msg.get('id', 'unknown')}: {str(validation_error)}")
+                    continue
+            
+            logger.info(f"Successfully fetched {len(validated_messages)}/{len(messages)} valid messages for conversation {conversation_id}")
+            return validated_messages
+            
         except HTTPException:
             raise
         except Exception as query_build_error:
-            logger.error(f"Error building query for conversation {conversation_id}: {str(query_build_error)}", exc_info=True)
-            raise
+            error_msg = str(query_build_error)
+            error_type = type(query_build_error).__name__
+            logger.error(f"Error building query for conversation {conversation_id}: {error_type}: {error_msg}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to build query: {error_type}: {error_msg}")
     except HTTPException:
         raise
     except Exception as e:
