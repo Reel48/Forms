@@ -1588,21 +1588,13 @@ async def stream_ai_response(
                     chunk_json = json.dumps({'delta': chunk})
                     sse_event = f"data: {chunk_json}\n\n"
                     
-                    # Verify SSE format
+                    # Verify SSE format (only log errors)
                     if not sse_event.endswith('\n\n'):
                         logger.error(f"[STREAMING BACKEND] ERROR: SSE event missing double newline!")
                     if not sse_event.startswith('data: '):
                         logger.error(f"[STREAMING BACKEND] ERROR: SSE event missing 'data: ' prefix!")
                     
-                    # Log for debugging
-                    print(f"[STREAMING BACKEND] Chunk {chunk_count}: {len(chunk)} chars, SSE length: {len(sse_event)}, ends with \\n\\n: {sse_event.endswith(chr(10)+chr(10))}")
-                    logger.info(f"[STREAMING BACKEND] Sending chunk {chunk_count}: {len(chunk)} chars")
-                    logger.debug(f"[STREAMING BACKEND] SSE event preview: {repr(sse_event[:150])}")
-                    
                     yield sse_event
-                
-                print(f"[STREAMING BACKEND] Total chunks yielded: {chunk_count}, Total text: {len(accumulated_text)} chars")
-                logger.info(f"[STREAMING BACKEND] Total chunks yielded: {chunk_count}, Total text: {len(accumulated_text)} chars")
                 
                 # Format URLs as markdown on the final accumulated text
                 formatted_text = ai_service._format_urls_as_markdown(accumulated_text)
@@ -1678,17 +1670,12 @@ async def stream_ai_response(
                     # Don't fail the stream if save fails - user already saw the response
                 
                 # Send completion signal
-                print(f"[STREAMING BACKEND] Sending [DONE] signal")
-                logger.info(f"[STREAMING BACKEND] Sending [DONE] signal")
                 yield "data: [DONE]\n\n"
                 
             except Exception as e:
                 logger.error(f"Error in streaming: {str(e)}", exc_info=True)
                 error_msg = json.dumps({"error": str(e)})
                 yield f"data: {error_msg}\n\n"
-        
-        print(f"[STREAMING BACKEND] Creating StreamingResponse")
-        logger.info(f"[STREAMING BACKEND] Creating StreamingResponse")
         
         return StreamingResponse(
             generate_stream(),

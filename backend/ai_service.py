@@ -416,7 +416,6 @@ class AIService:
             
             # Generate response using streaming
             try:
-                print(f"🔧 [AI SERVICE] Calling Gemini API with streaming, prompt length: {len(full_prompt)} chars")
                 logger.debug(f"🔧 [AI SERVICE] Calling Gemini API with streaming, prompt length: {len(full_prompt)} chars")
                 
                 if has_image and Part is not None:
@@ -435,8 +434,6 @@ class AIService:
                     # Stream text-only
                     response_stream = self.model.generate_content(full_prompt, stream=True)
                 
-                print(f"🔧 [AI SERVICE] Streaming response from Gemini API")
-                
                 accumulated_text = ""
                 chunk_count = 0
                 for chunk in response_stream:
@@ -448,7 +445,6 @@ class AIService:
                         if hasattr(chunk, 'text'):
                             chunk_text = chunk.text
                             if chunk_text:
-                                print(f"[STREAMING] Chunk {chunk_count}: Got {len(chunk_text)} chars from chunk.text")
                                 accumulated_text += chunk_text
                                 yield chunk_text
                                 chunk_yielded = True
@@ -467,27 +463,13 @@ class AIService:
                                     try:
                                         if hasattr(part, 'text') and part.text:
                                             part_text = part.text
-                                            print(f"[STREAMING] Chunk {chunk_count}: Got {len(part_text)} chars from part.text")
                                             accumulated_text += part_text
                                             yield part_text
                                             chunk_yielded = True
                                     except (ValueError, AttributeError) as part_error:
                                         # Part doesn't have valid text, skip it
-                                        print(f"[STREAMING] Chunk {chunk_count}: Part text access failed: {type(part_error).__name__}")
                                         continue
-                            
-                            # Log finish_reason for debugging but don't skip
-                            try:
-                                if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
-                                    finish_reason = candidate.finish_reason
-                                    print(f"[STREAMING] Chunk {chunk_count}: finish_reason={finish_reason} (text already extracted if available)")
-                            except:
-                                pass
-                    
-                    if not chunk_yielded:
-                        print(f"[STREAMING] Chunk {chunk_count}: No text extracted (might be metadata chunk)")
                 
-                print(f"[STREAMING] Processed {chunk_count} chunks, accumulated {len(accumulated_text)} characters")
                 logger.info(f"[STREAMING] Processed {chunk_count} chunks, accumulated {len(accumulated_text)} characters")
                 
                 # Post-process accumulated text to convert URLs to markdown
