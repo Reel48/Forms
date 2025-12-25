@@ -1530,6 +1530,7 @@ async def stream_ai_response(
             accumulated_text = ""
             try:
                 # Stream the response
+                chunk_count = 0
                 async for chunk in ai_service.generate_response_stream(
                     user_message=user_query,
                     conversation_history=conversation_history,
@@ -1539,9 +1540,29 @@ async def stream_ai_response(
                     attachments=attachments,
                     enable_function_calling=False  # Function calling not supported in streaming yet
                 ):
+                    chunk_count += 1
                     accumulated_text += chunk
+                    
                     # Format as SSE event
-                    yield f"data: {json.dumps({'delta': chunk})}\n\n"
+                    # SSE format requires: "data: <json>\n\n" (double newline is critical)
+                    chunk_json = json.dumps({'delta': chunk})
+                    sse_event = f"data: {chunk_json}\n\n"
+                    
+                    # Verify SSE format
+                    if not sse_event.endswith('\n\n'):
+                        logger.error(f"[STREAMING BACKEND] ERROR: SSE event missing double newline!")
+                    if not sse_event.startswith('data: '):
+                        logger.error(f"[STREAMING BACKEND] ERROR: SSE event missing 'data: ' prefix!")
+                    
+                    # Log for debugging
+                    print(f"[STREAMING BACKEND] Chunk {chunk_count}: {len(chunk)} chars, SSE length: {len(sse_event)}, ends with \\n\\n: {sse_event.endswith(chr(10)+chr(10))}")
+                    logger.info(f"[STREAMING BACKEND] Sending chunk {chunk_count}: {len(chunk)} chars")
+                    logger.debug(f"[STREAMING BACKEND] SSE event preview: {repr(sse_event[:150])}")
+                    
+                    yield sse_event
+                
+                print(f"[STREAMING BACKEND] Total chunks yielded: {chunk_count}, Total text: {len(accumulated_text)} chars")
+                logger.info(f"[STREAMING BACKEND] Total chunks yielded: {chunk_count}, Total text: {len(accumulated_text)} chars")
                 
                 # Format URLs as markdown on the final accumulated text
                 formatted_text = ai_service._format_urls_as_markdown(accumulated_text)
@@ -1617,6 +1638,8 @@ async def stream_ai_response(
                     # Don't fail the stream if save fails - user already saw the response
                 
                 # Send completion signal
+                print(f"[STREAMING BACKEND] Sending [DONE] signal")
+                logger.info(f"[STREAMING BACKEND] Sending [DONE] signal")
                 yield "data: [DONE]\n\n"
                 
             except Exception as e:
@@ -1624,13 +1647,17 @@ async def stream_ai_response(
                 error_msg = json.dumps({"error": str(e)})
                 yield f"data: {error_msg}\n\n"
         
+        print(f"[STREAMING BACKEND] Creating StreamingResponse")
+        logger.info(f"[STREAMING BACKEND] Creating StreamingResponse")
+        
         return StreamingResponse(
             generate_stream(),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "X-Accel-Buffering": "no"  # Disable buffering in nginx
+                "X-Accel-Buffering": "no",  # Disable buffering in nginx
+                "Transfer-Encoding": "chunked"  # Ensure chunked transfer encoding
             }
         )
         

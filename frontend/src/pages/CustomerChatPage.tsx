@@ -634,6 +634,10 @@ const CustomerChatPage: React.FC = () => {
         throw new Error('Response body is null');
       }
       console.log('[STREAMING] ✅ Response body obtained, starting to process stream...');
+      console.log('[STREAMING] Response body type:', response.body?.constructor?.name);
+      console.log('[STREAMING] Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('[STREAMING] Content-Type:', response.headers.get('content-type'));
+      console.log('[STREAMING] Response ok:', response.ok, 'status:', response.status);
 
       // Process the stream
       console.log('[STREAMING] Starting to process stream...');

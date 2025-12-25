@@ -25,11 +25,55 @@ export async function createTextStream(
 	responseBody: ReadableStream<Uint8Array>,
 	splitLargeDeltas: boolean = true
 ): Promise<AsyncGenerator<TextStreamUpdate>> {
+	console.log('[STREAMING PARSER] Creating text stream from ReadableStream');
+	
+	// Create a logging wrapper to see raw bytes before parsing
+	// This passes through raw bytes and logs the decoded text for debugging
+	const loggedStream = new ReadableStream({
+		start(controller) {
+			const reader = responseBody.getReader();
+			const decoder = new TextDecoder();
+			let chunkCount = 0;
+			let totalBytes = 0;
+			
+			function pump(): Promise<void> {
+				return reader.read().then(({ done, value }) => {
+					if (done) {
+						console.log('[STREAMING PARSER] Raw stream ended. Total raw chunks:', chunkCount, 'Total bytes:', totalBytes);
+						controller.close();
+						return;
+					}
+					
+					chunkCount++;
+					totalBytes += value.length;
+					// Decode for logging only (don't modify the stream)
+					const text = decoder.decode(value, { stream: true });
+					console.log(`[STREAMING PARSER] Raw chunk ${chunkCount} (${value.length} bytes):`, 
+						text.substring(0, 150).replace(/\n/g, '\\n'), 
+						text.length > 150 ? '...' : '',
+						'(text length:', text.length, ')');
+					
+					// Pass through the raw bytes unchanged
+					controller.enqueue(value);
+					return pump();
+				}).catch((error) => {
+					console.error('[STREAMING PARSER] Error in logged stream:', error);
+					controller.error(error);
+				});
+			}
+			
+			return pump();
+		}
+	});
+	
+	// Now decode and parse the logged stream
 	const decoder = new TextDecoderStream();
-	const eventStream = responseBody
+	const eventStream = loggedStream
 		.pipeThrough(decoder as any)
 		.pipeThrough(new EventSourceParserStream())
 		.getReader();
+	
+	console.log('[STREAMING PARSER] EventSourceParserStream created, starting to read events');
 	let iterator = streamToIterator(eventStream);
 	if (splitLargeDeltas) {
 		iterator = streamLargeDeltasAsRandomChunks(iterator);
@@ -47,10 +91,25 @@ async function* streamToIterator(
 			break;
 		}
 		if (!value) {
+			console.log('[STREAMING PARSER] Received null/undefined value');
 			continue;
 		}
+		
+		console.log('[STREAMING PARSER] Received event:', {
+			type: value.type,
+			data: value.data?.substring(0, 200),
+			dataLength: value.data?.length,
+			hasData: !!value.data
+		});
+		
 		const data = value.data;
+		if (!data) {
+			console.log('[STREAMING PARSER] Event has no data field');
+			continue;
+		}
+		
 		if (data.startsWith('[DONE]')) {
+			console.log('[STREAMING PARSER] Received [DONE] signal');
 			yield { done: true, value: '' };
 			break;
 		}
@@ -131,4 +190,68 @@ async function* streamLargeDeltasAsRandomChunks(
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Manual SSE parser as fallback if EventSourceParserStream fails
+export async function* manualSSEParser(
+	responseBody: ReadableStream<Uint8Array>
+): AsyncGenerator<TextStreamUpdate> {
+	console.log('[STREAMING PARSER] Using manual SSE parser');
+	const reader = responseBody.getReader();
+	const decoder = new TextDecoder();
+	let buffer = '';
+	
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) {
+				console.log('[STREAMING PARSER] Manual parser: stream ended');
+				break;
+			}
+			
+			// Decode chunk and add to buffer
+			buffer += decoder.decode(value, { stream: true });
+			
+			// Process complete SSE events (separated by \n\n)
+			while (buffer.includes('\n\n')) {
+				const eventEnd = buffer.indexOf('\n\n');
+				const eventText = buffer.substring(0, eventEnd);
+				buffer = buffer.substring(eventEnd + 2);
+				
+				// Parse SSE event
+				if (eventText.startsWith('data: ')) {
+					const data = eventText.substring(6); // Remove "data: " prefix
+					
+					if (data === '[DONE]') {
+						console.log('[STREAMING PARSER] Manual parser: [DONE] received');
+						yield { done: true, value: '' };
+						return;
+					}
+					
+					try {
+						const parsedData = JSON.parse(data);
+						console.log('[STREAMING PARSER] Manual parser: parsed data:', parsedData);
+						
+						if (parsedData.error) {
+							yield { done: true, value: '', error: parsedData.error };
+							return;
+						}
+						
+						const deltaContent = parsedData.delta ?? parsedData.value ?? '';
+						if (deltaContent) {
+							console.log('[STREAMING PARSER] Manual parser: extracted delta:', deltaContent.substring(0, 50));
+							yield { done: false, value: deltaContent };
+						}
+					} catch (e) {
+						console.error('[STREAMING PARSER] Manual parser: JSON parse error:', e, 'Data:', data);
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.error('[STREAMING PARSER] Manual parser error:', error);
+		yield { done: true, value: '', error };
+	} finally {
+		reader.releaseLock();
+	}
+}
 
