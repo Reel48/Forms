@@ -626,16 +626,24 @@ async def get_messages(
 ):
     """Get messages for a conversation with pagination support."""
     try:
+        # Validate conversation_id format (UUID)
+        try:
+            uuid.UUID(conversation_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid conversation ID format")
+        
         # Check if user has access to this conversation
-        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).single().execute()
-        if not conv_response.data:
+        # Use execute() instead of single() to avoid exceptions when conversation doesn't exist
+        conv_response = supabase_storage.table("chat_conversations").select("*").eq("id", conversation_id).execute()
+        
+        if not conv_response.data or len(conv_response.data) == 0:
             raise HTTPException(status_code=404, detail="Conversation not found")
         
-        conv = conv_response.data
+        conv = conv_response.data[0]
         is_admin = user.get("role") == "admin"
         
         # Check access
-        if not is_admin and conv["customer_id"] != user["id"]:
+        if not is_admin and conv.get("customer_id") != user.get("id"):
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Build query
@@ -643,11 +651,20 @@ async def get_messages(
         
         # If before_id is provided, load messages before that message
         if before_id:
-            # Get the created_at of the before_id message
-            before_message_response = supabase_storage.table("chat_messages").select("created_at").eq("id", before_id).single().execute()
-            if before_message_response.data:
-                before_created_at = before_message_response.data["created_at"]
-                query = query.lt("created_at", before_created_at)
+            try:
+                # Validate before_id format
+                uuid.UUID(before_id)
+                # Get the created_at of the before_id message
+                before_message_response = supabase_storage.table("chat_messages").select("created_at").eq("id", before_id).execute()
+                if before_message_response.data and len(before_message_response.data) > 0:
+                    before_created_at = before_message_response.data[0]["created_at"]
+                    query = query.lt("created_at", before_created_at)
+            except ValueError:
+                # Invalid before_id format, ignore it
+                logger.warning(f"Invalid before_id format: {before_id}")
+            except Exception as e:
+                logger.warning(f"Error fetching before_id message: {str(e)}")
+                # Continue without before_id filter
         
         # Order by created_at descending (newest first) for pagination, then reverse to show oldest first
         messages_response = query.order("created_at", desc=True).limit(limit).execute()

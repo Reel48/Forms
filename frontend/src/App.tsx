@@ -16,21 +16,73 @@ const retryLazyLoad = (importFn: () => Promise<any>, retries = 3, delay = 1000):
       importFn()
         .then(resolve)
         .catch((error) => {
+          const errorMessage = error?.message || String(error || '');
+          const errorName = error?.name || '';
+          
+          // Check for chunk load errors (including 404s and network errors)
           const isChunkError =
-            error?.message?.includes("Unexpected token '<'") ||
-            error?.message?.includes('Failed to fetch dynamically imported module') ||
-            error?.message?.includes('Loading chunk') ||
-            error?.message?.includes('ChunkLoadError') ||
-            error?.message?.includes('importing a module script failed');
+            errorMessage.includes("Unexpected token '<'") ||
+            errorMessage.includes('Failed to fetch dynamically imported module') ||
+            errorMessage.includes('Loading chunk') ||
+            errorMessage.includes('ChunkLoadError') ||
+            errorMessage.includes('importing a module script failed') ||
+            errorMessage.includes('ERR_ABORTED') ||
+            errorMessage.includes('404') ||
+            errorMessage.includes('Not Found') ||
+            errorName === 'ChunkLoadError' ||
+            errorName === 'TypeError';
 
-          if (isChunkError && remaining > 0) {
-            // Clear cache and retry
-            if ('caches' in window) {
-              caches.keys().then((names) => {
-                names.forEach((name) => caches.delete(name));
-              });
+          // Check if it's a network error (404, network failure, etc.)
+          const isNetworkError = 
+            errorMessage.includes('ERR_ABORTED') ||
+            errorMessage.includes('404') ||
+            errorMessage.includes('Failed to fetch') ||
+            errorMessage.includes('NetworkError') ||
+            (error && typeof error === 'object' && 'status' in error && (error as any).status === 404);
+
+          if (isChunkError || isNetworkError) {
+            // For 404s and network errors, the chunk file doesn't exist
+            // Force a full page reload to get fresh HTML with correct chunk references
+            if (isNetworkError || errorMessage.includes('404') || errorMessage.includes('ERR_ABORTED')) {
+              const KEY = 'forms:chunk_recovery_reload_v2';
+              const reloadCount = parseInt(sessionStorage.getItem(KEY) || '0', 10);
+              const MAX_RELOADS = 2;
+              
+              if (reloadCount < MAX_RELOADS) {
+                sessionStorage.setItem(KEY, (reloadCount + 1).toString());
+                console.warn(`[retryLazyLoad] Chunk file not found (404/network error), reloading page to get fresh assets... (${reloadCount + 1}/${MAX_RELOADS})`);
+                
+                // Clear cache before reload
+                if ('caches' in window) {
+                  caches.keys().then((names) => {
+                    names.forEach((name) => caches.delete(name));
+                  });
+                }
+                
+                // Force reload to get fresh HTML
+                setTimeout(() => {
+                  window.location.reload();
+                }, 100);
+                
+                // Don't reject immediately - let the reload happen
+                return;
+              }
             }
-            setTimeout(() => attempt(remaining - 1), delay);
+            
+            // For other chunk errors, retry with cache clearing
+            if (remaining > 0) {
+              console.warn(`[retryLazyLoad] Chunk load error, retrying... (${retries - remaining + 1}/${retries})`);
+              
+              // Clear cache and retry
+              if ('caches' in window) {
+                caches.keys().then((names) => {
+                  names.forEach((name) => caches.delete(name));
+                });
+              }
+              setTimeout(() => attempt(remaining - 1), delay);
+            } else {
+              reject(error);
+            }
           } else {
             reject(error);
           }

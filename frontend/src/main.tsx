@@ -44,7 +44,11 @@ function installChunkLoadRecovery() {
       m.includes('failed to fetch dynamically imported module') ||
       m.includes('loading chunk') ||
       m.includes('chunkloaderror') ||
-      m.includes('importing a module script failed')
+      m.includes('importing a module script failed') ||
+      m.includes('err_aborted') ||
+      m.includes('404') ||
+      m.includes('not found') ||
+      m.includes('failed to fetch')
     );
   };
 
@@ -97,6 +101,24 @@ function installChunkLoadRecovery() {
       reloadIfNeeded(message);
     }
   });
+
+  // Listen for resource loading errors (script tags, etc.) - separate from JavaScript errors
+  // This catches 404s on chunk files that might not trigger the error event handler above
+  window.addEventListener('error', (event) => {
+    // Check if it's a resource loading error (script, link, etc.)
+    // Resource errors have event.target, JavaScript errors have event.message
+    const target = event.target as HTMLElement;
+    if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+      const src = (target as HTMLScriptElement).src || (target as HTMLLinkElement).href || '';
+      // Check if it's a chunk file (assets/*.js or assets/*.css)
+      if (src && src.includes('/assets/') && (src.endsWith('.js') || src.endsWith('.css'))) {
+        // For resource loading errors, the event might not have a message
+        // If a chunk file fails to load, it's likely a 404 or network error
+        // Force a reload to get fresh HTML with correct chunk references
+        reloadIfNeeded(`Chunk file failed to load: ${src}`);
+      }
+    }
+  }, true); // Use capture phase to catch errors early
 }
 
 installChunkLoadRecovery();

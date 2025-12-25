@@ -18,13 +18,27 @@ const CustomerChatWidget: React.FC = () => {
   const messagesSubscriptionRef = useRef<any>(null);
 
   const refreshUnreadCount = useCallback(async (convId: string) => {
+    if (!convId || !user?.id) {
+      setUnreadCount(0);
+      return;
+    }
+    
     try {
       // API caps at 100; good enough for badge.
       const response = await chatAPI.getMessages(convId, 100);
       const unread = response.data.filter((msg) => !msg.read_at && msg.sender_id !== user?.id && msg.message_type !== 'system').length;
       setUnreadCount(unread);
-    } catch (error) {
-      console.error('Failed to refresh unread count:', error);
+    } catch (error: any) {
+      // Only log unexpected errors, not 404s (conversation doesn't exist) or 403s (access denied)
+      const status = error?.response?.status || error?.status;
+      if (status === 404 || status === 403) {
+        // Conversation doesn't exist or user doesn't have access - reset count silently
+        setUnreadCount(0);
+        return;
+      }
+      // For other errors (500, network errors, etc.), log but don't break the UI
+      console.warn('Failed to refresh unread count:', error?.message || error);
+      // Don't update unread count on error - keep previous value
     }
   }, [user?.id]);
 
@@ -80,13 +94,21 @@ const CustomerChatWidget: React.FC = () => {
         const convId = convs.data?.[0]?.id || null;
         setConversationId(convId);
         if (convId) {
+          // Refresh unread count and setup realtime - errors are handled internally
           await refreshUnreadCount(convId);
           await setupRealtime(convId);
         } else {
           setUnreadCount(0);
         }
-      } catch (error) {
-        console.error('Failed to load conversation for widget:', error);
+      } catch (error: any) {
+        // Only log unexpected errors, not authentication errors
+        const status = error?.response?.status || error?.status;
+        if (status !== 401 && status !== 403) {
+          console.warn('Failed to load conversation for widget:', error?.message || error);
+        }
+        // Reset state on error
+        setConversationId(null);
+        setUnreadCount(0);
       }
     };
     void init();
@@ -101,7 +123,10 @@ const CustomerChatWidget: React.FC = () => {
   }, [refreshUnreadCount, setupRealtime]);
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId) {
+      setUnreadCount(0);
+      return;
+    }
     const interval = setInterval(() => {
       void refreshUnreadCount(conversationId);
     }, 60000);

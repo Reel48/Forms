@@ -37,13 +37,18 @@ class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // Check if this is a chunk load error
+    // Check if this is a chunk load error (including 404s and network errors)
+    const errorMessage = error.message || '';
     const isChunkError =
-      error.message?.includes("Unexpected token '<'") ||
-      error.message?.includes('Failed to fetch dynamically imported module') ||
-      error.message?.includes('Loading chunk') ||
-      error.message?.includes('ChunkLoadError') ||
-      error.message?.includes('importing a module script failed');
+      errorMessage.includes("Unexpected token '<'") ||
+      errorMessage.includes('Failed to fetch dynamically imported module') ||
+      errorMessage.includes('Loading chunk') ||
+      errorMessage.includes('ChunkLoadError') ||
+      errorMessage.includes('importing a module script failed') ||
+      errorMessage.includes('ERR_ABORTED') ||
+      errorMessage.includes('404') ||
+      errorMessage.includes('Not Found') ||
+      errorMessage.includes('Failed to fetch');
 
     if (isChunkError) {
       // Try to reload the page to get fresh chunks
