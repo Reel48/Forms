@@ -619,18 +619,11 @@ const CustomerChatPage: React.FC = () => {
       };
 
       // Add streaming message to UI
-      setMessages((prev) => {
-        console.log('[STREAMING] Adding streaming message. Prev messages count:', prev.length, 'streamingMessageId:', streamingMessageId);
-        const updated = [...prev, streamingMessage];
-        console.log('[STREAMING] After adding, messages count:', updated.length, 'Message exists:', updated.some(msg => msg.id === streamingMessageId));
-        return updated;
-      });
+      setMessages((prev) => [...prev, streamingMessage]);
       streamingMessageRef.current = { id: streamingMessageId, content: '' };
-      console.log('[STREAMING] Streaming message ref set:', streamingMessageRef.current);
 
       // Start streaming
       const streamUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`;
-      console.log('[STREAMING] Fetching stream from:', streamUrl);
       const response = await fetch(streamUrl, {
         method: 'GET',
         headers: {
@@ -639,7 +632,6 @@ const CustomerChatPage: React.FC = () => {
         },
       });
 
-      console.log('[STREAMING] Fetch response status:', response.status, response.statusText);
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Could not read error');
         console.error('[STREAMING] ❌ Streaming failed:', response.status, response.statusText, errorText);
@@ -650,7 +642,6 @@ const CustomerChatPage: React.FC = () => {
         console.error('[STREAMING] ❌ Response body is null');
         throw new Error('Response body is null');
       }
-      console.log('[STREAMING] ✅ Response body obtained, starting to process stream...');
       console.log('[STREAMING] Response body type:', response.body?.constructor?.name);
       console.log('[STREAMING] Response headers:', Object.fromEntries(response.headers.entries()));
       console.log('[STREAMING] Content-Type:', response.headers.get('content-type'));
@@ -663,17 +654,7 @@ const CustomerChatPage: React.FC = () => {
       let chunkCount = 0;
 
       for await (const update of stream) {
-        console.log('[STREAMING] Received update:', { 
-          done: update.done, 
-          hasValue: !!update.value, 
-          valueLength: update.value?.length || 0,
-          valuePreview: update.value?.substring(0, 50) || '',
-          hasError: !!update.error,
-          error: update.error
-        });
-
         if (update.done) {
-          console.log('[STREAMING] Stream completed. Total chunks:', chunkCount, 'Total length:', accumulatedContent.length);
           break;
         }
 
@@ -693,12 +674,10 @@ const CustomerChatPage: React.FC = () => {
         if (update.value) {
           chunkCount++;
           accumulatedContent += update.value;
-          console.log(`[STREAMING] Chunk ${chunkCount}: "${update.value}" | Accumulated: ${accumulatedContent.length} chars | Preview: "${accumulatedContent.substring(0, 100)}"`);
           
           // Update the streaming message in real-time
           setMessages((prev) => {
             const messageExists = prev.some(msg => msg.id === streamingMessageId);
-            console.log('[STREAMING] Updating message. Message exists in prev:', messageExists, 'streamingMessageId:', streamingMessageId);
             
             if (!messageExists) {
               console.warn('[STREAMING] Streaming message not found in state! Adding it...');
@@ -717,14 +696,11 @@ const CustomerChatPage: React.FC = () => {
               return [...prev, streamingMessage];
             }
             
-            const updated = prev.map((msg) =>
+            return prev.map((msg) =>
               msg.id === streamingMessageId
                 ? { ...msg, message: accumulatedContent }
                 : msg
             );
-            const foundAfterUpdate = updated.some(msg => msg.id === streamingMessageId);
-            console.log('[STREAMING] Updated message in state. Message found after update:', foundAfterUpdate, 'Content length:', accumulatedContent.length);
-            return updated;
           });
 
           // Auto-scroll to bottom while streaming
