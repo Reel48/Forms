@@ -101,10 +101,13 @@ const CustomerChatPage: React.FC = () => {
             
             // If this is an AI message and we have a streaming message, replace it
             // This handles the case where Realtime delivers the final message
+            // BUT: Don't replace if we're still actively streaming (isStreamingRef.current)
             if (newMessage.sender_id !== user?.id && 
                 newMessage.message_type === 'text' &&
                 newMessage.message && newMessage.message.length > 0 &&
-                streamingMessageRef.current) {
+                streamingMessageRef.current &&
+                !isStreamingRef.current) {  // Only replace if streaming is complete
+              console.log('[REALTIME] Replacing streaming message with final message from backend');
               // Store the streaming message ID before clearing the ref
               const streamingMessageId = streamingMessageRef.current.id;
               streamingMessageRef.current = null;
@@ -121,6 +124,14 @@ const CustomerChatPage: React.FC = () => {
                   .concat(newMessage);
               });
               lastActivityRef.current = Date.now();
+              return;
+            }
+            
+            // If we're still streaming and this is an AI message, ignore it (we'll handle it when streaming completes)
+            if (isStreamingRef.current && 
+                newMessage.sender_id !== user?.id && 
+                newMessage.message_type === 'text') {
+              console.log('[REALTIME] Ignoring AI message from Realtime while streaming is active');
               return;
             }
             
@@ -608,8 +619,14 @@ const CustomerChatPage: React.FC = () => {
       };
 
       // Add streaming message to UI
-      setMessages((prev) => [...prev, streamingMessage]);
+      setMessages((prev) => {
+        console.log('[STREAMING] Adding streaming message. Prev messages count:', prev.length, 'streamingMessageId:', streamingMessageId);
+        const updated = [...prev, streamingMessage];
+        console.log('[STREAMING] After adding, messages count:', updated.length, 'Message exists:', updated.some(msg => msg.id === streamingMessageId));
+        return updated;
+      });
       streamingMessageRef.current = { id: streamingMessageId, content: '' };
+      console.log('[STREAMING] Streaming message ref set:', streamingMessageRef.current);
 
       // Start streaming
       const streamUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/conversations/${conversationId}/ai-response-stream`;
@@ -680,12 +697,33 @@ const CustomerChatPage: React.FC = () => {
           
           // Update the streaming message in real-time
           setMessages((prev) => {
+            const messageExists = prev.some(msg => msg.id === streamingMessageId);
+            console.log('[STREAMING] Updating message. Message exists in prev:', messageExists, 'streamingMessageId:', streamingMessageId);
+            
+            if (!messageExists) {
+              console.warn('[STREAMING] Streaming message not found in state! Adding it...');
+              // Message was removed somehow, add it back
+              const streamingMessage: ChatMessage = {
+                id: streamingMessageId,
+                conversation_id: conversationId,
+                sender_id: 'ai-streaming',
+                message: accumulatedContent,
+                message_type: 'text',
+                created_at: new Date().toISOString(),
+                read_at: undefined,
+                file_url: undefined,
+                file_name: undefined,
+              };
+              return [...prev, streamingMessage];
+            }
+            
             const updated = prev.map((msg) =>
               msg.id === streamingMessageId
                 ? { ...msg, message: accumulatedContent }
                 : msg
             );
-            console.log('[STREAMING] Updated message in state. Message found:', updated.some(msg => msg.id === streamingMessageId && msg.message.length > 0));
+            const foundAfterUpdate = updated.some(msg => msg.id === streamingMessageId);
+            console.log('[STREAMING] Updated message in state. Message found after update:', foundAfterUpdate, 'Content length:', accumulatedContent.length);
             return updated;
           });
 
