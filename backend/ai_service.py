@@ -477,9 +477,10 @@ class AIService:
                     formatted_text = self._format_urls_as_markdown(accumulated_text)
                     # If formatting changed anything, we'd need to yield the difference
                     # For now, we'll format on the frontend or in the final message
+                else:
+                    formatted_text = "" # Ensure formatted_text is defined even if accumulated_text is empty
                 
-                print(f"✅ [AI SERVICE] Successfully streamed AI response: {len(accumulated_text)} characters")
-                logger.info(f"✅ [AI SERVICE] Successfully streamed AI response: {len(accumulated_text)} characters")
+                logger.info(f"✅ [AI SERVICE] Successfully streamed AI response: {len(formatted_text)} characters")
                 
             except Exception as api_error:
                 error_msg = str(api_error)
