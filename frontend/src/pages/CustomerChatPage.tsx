@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { chatAPI, type ChatMessage, type ChatConversation } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -676,35 +677,38 @@ const CustomerChatPage: React.FC = () => {
           accumulatedContent += update.value;
           
           // Update the streaming message in real-time
-          setMessages((prev) => {
-            const messageExists = prev.some(msg => msg.id === streamingMessageId);
-            
-            if (!messageExists) {
-              console.warn('[STREAMING] Streaming message not found in state! Adding it...');
-              // Message was removed somehow, add it back
-              const streamingMessage: ChatMessage = {
-                id: streamingMessageId,
-                conversation_id: conversationId,
-                sender_id: 'ai-streaming',
-                message: accumulatedContent,
-                message_type: 'text',
-                created_at: new Date().toISOString(),
-                read_at: undefined,
-                file_url: undefined,
-                file_name: undefined,
-              };
-              return [...prev, streamingMessage];
-            }
-            
-            return prev.map((msg) =>
-              msg.id === streamingMessageId
-                ? { ...msg, message: accumulatedContent }
-                : msg
-            );
+          // Use flushSync to force immediate DOM updates (not batched)
+          flushSync(() => {
+            setMessages((prev) => {
+              const messageExists = prev.some(msg => msg.id === streamingMessageId);
+              
+              if (!messageExists) {
+                console.warn('[STREAMING] Streaming message not found in state! Adding it...');
+                // Message was removed somehow, add it back
+                const streamingMessage: ChatMessage = {
+                  id: streamingMessageId,
+                  conversation_id: conversationId,
+                  sender_id: 'ai-streaming',
+                  message: accumulatedContent,
+                  message_type: 'text',
+                  created_at: new Date().toISOString(),
+                  read_at: undefined,
+                  file_url: undefined,
+                  file_name: undefined,
+                };
+                return [...prev, streamingMessage];
+              }
+              
+              return prev.map((msg) =>
+                msg.id === streamingMessageId
+                  ? { ...msg, message: accumulatedContent }
+                  : msg
+              );
+            });
           });
 
-          // Auto-scroll to bottom while streaming
-          if (shouldAutoScroll) {
+          // Auto-scroll to bottom while streaming (throttled to avoid excessive scrolling)
+          if (shouldAutoScroll && chunkCount % 5 === 0) {
             setTimeout(() => {
               messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
             }, 0);
@@ -872,12 +876,15 @@ const CustomerChatPage: React.FC = () => {
       const isGroupStart = !shouldGroupMessages(message, previousMessage);
       const isGroupContinued = previousMessage && shouldGroupMessages(message, previousMessage);
 
+      // Check if this is a streaming message
+      const isStreamingMessage = message.sender_id === 'ai-streaming';
+      
       return (
         <div
           key={message.id}
           className={`message ${isCustomer ? 'user-message' : 'ai-message'} ${
             isGroupStart ? 'message-group-start' : ''
-          } ${isGroupContinued ? 'message-group-continued' : ''}`}
+          } ${isGroupContinued ? 'message-group-continued' : ''} ${isStreamingMessage ? 'streaming-message' : ''}`}
         >
           <div className="message-wrapper">
             <div className="message-sender-name">
@@ -885,6 +892,15 @@ const CustomerChatPage: React.FC = () => {
             </div>
             <div className="message-content">
               {!isCustomer && message.message_type === 'system' && !isStreamingRef.current ? (
+                <div className="typing-indicator">
+                  <span className="typing-text">AI is thinking...</span>
+                  <div className="typing-dots">
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                  </div>
+                </div>
+              ) : message.sender_id === 'ai-streaming' && (!message.message || message.message.length === 0) ? (
                 <div className="typing-indicator">
                   <span className="typing-text">AI is thinking...</span>
                   <div className="typing-dots">

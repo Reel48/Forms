@@ -67,13 +67,16 @@ export function ChatMessageBody({
     );
   }
 
+  // Handle empty messages gracefully (shouldn't happen, but handle for streaming)
+  const messageText = message.message || '';
+  
   if (!renderAsMarkdown) {
-    return <>{message.message}</>;
+    return <>{messageText}</>;
   }
 
   return (
     <div className="markdown-content">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.message}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{messageText}</ReactMarkdown>
     </div>
   );
 }
