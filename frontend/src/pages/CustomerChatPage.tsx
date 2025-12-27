@@ -36,6 +36,7 @@ const CustomerChatPage: React.FC = () => {
   const lastActivityRef = useRef<number>(Date.now());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const streamingMessageRef = useRef<{ id: string; content: string } | null>(null);
+  const streamingCleanupTimeoutRef = useRef<number | null>(null);
   const isStreamingRef = useRef(false);
 
   // Load messages function - defined early so it can be used in other callbacks
@@ -102,37 +103,36 @@ const CustomerChatPage: React.FC = () => {
             
             // If this is an AI message and we have a streaming message, replace it
             // This handles the case where Realtime delivers the final message
-            // BUT: Don't replace if we're still actively streaming (isStreamingRef.current)
+            // We can replace even if streaming is still active (the backend has saved the message)
             if (newMessage.sender_id !== user?.id && 
                 newMessage.message_type === 'text' &&
-                newMessage.message && newMessage.message.length > 0 &&
-                streamingMessageRef.current &&
-                !isStreamingRef.current) {  // Only replace if streaming is complete
-              console.log('[REALTIME] Replacing streaming message with final message from backend');
+                newMessage.message && newMessage.message.trim().length > 0 &&
+                streamingMessageRef.current) {
+              console.log('[REALTIME] Replacing streaming message with final message from backend:', newMessage.id);
               // Store the streaming message ID before clearing the ref
               const streamingMessageId = streamingMessageRef.current.id;
               streamingMessageRef.current = null;
+              
+              // Clear the cleanup timeout since we've received the final message
+              if (streamingCleanupTimeoutRef.current) {
+                clearTimeout(streamingCleanupTimeoutRef.current);
+                streamingCleanupTimeoutRef.current = null;
+              }
               
               setMessages((prev) => {
                 // Check if message already exists (avoid duplicates)
                 if (prev.some((msg) => msg.id === newMessage.id)) {
                   // Message already exists, just remove streaming message
+                  console.log('[REALTIME] Final message already exists, removing streaming message');
                   return prev.filter((msg) => msg.id !== streamingMessageId);
                 }
                 // Remove the streaming message and add the real one
+                console.log('[REALTIME] Adding final message and removing streaming message');
                 return prev
                   .filter((msg) => msg.id !== streamingMessageId)
                   .concat(newMessage);
               });
               lastActivityRef.current = Date.now();
-              return;
-            }
-            
-            // If we're still streaming and this is an AI message, ignore it (we'll handle it when streaming completes)
-            if (isStreamingRef.current && 
-                newMessage.sender_id !== user?.id && 
-                newMessage.message_type === 'text') {
-              console.log('[REALTIME] Ignoring AI message from Realtime while streaming is active');
               return;
             }
             
@@ -152,6 +152,22 @@ const CustomerChatPage: React.FC = () => {
             );
           } else if (payload.eventType === 'DELETE') {
             const deletedMessage = payload.old as ChatMessage;
+            
+            // IMPORTANT: Don't remove messages if:
+            // 1. It's the streaming message (frontend placeholder)
+            // 2. It's a recent AI message (might be a false DELETE event)
+            // 3. We're currently streaming (the message might still be valid)
+            const isStreamingMessage = streamingMessageRef.current?.id === deletedMessage.id;
+            const isRecentAIMessage = deletedMessage.sender_id !== user?.id && 
+                                     deletedMessage.message_type === 'text' &&
+                                     deletedMessage.message && deletedMessage.message.length > 0;
+            const wasCreatedRecently = new Date(deletedMessage.created_at).getTime() > (Date.now() - 10000); // Within last 10 seconds
+            
+            if (isStreamingMessage || (isRecentAIMessage && wasCreatedRecently && isStreamingRef.current)) {
+              console.log('[REALTIME] Ignoring DELETE event for streaming/recent AI message:', deletedMessage.id);
+              return; // Don't remove the message
+            }
+            
             setMessages((prev) => {
               const filtered = prev.filter((msg) => msg.id !== deletedMessage.id);
               // If all messages were deleted (likely session reset), clear the list
@@ -735,27 +751,40 @@ const CustomerChatPage: React.FC = () => {
         );
         
         // Set a timeout to clean up if Realtime doesn't deliver
-        setTimeout(() => {
+        // Use a longer timeout and be more careful about when we remove the streaming message
+        // Clear any existing cleanup timeout
+        if (streamingCleanupTimeoutRef.current) {
+          clearTimeout(streamingCleanupTimeoutRef.current);
+        }
+        streamingCleanupTimeoutRef.current = window.setTimeout(() => {
           setMessages((prev) => {
             // Check if we have the final message from Realtime (with a different ID)
+            // Make sure it's a real message (not empty, has content, matches the conversation)
             const hasFinalMessage = prev.some(
               (msg) => 
                 msg.conversation_id === conversationId &&
                 msg.sender_id !== user?.id &&
                 msg.id !== streamingMessageId &&
                 msg.message_type === 'text' &&
-                msg.message && msg.message.length > 0
+                msg.message && 
+                msg.message.trim().length > 0 &&
+                // Make sure it's not a placeholder or system message
+                msg.message_type !== 'system'
             );
             
             if (hasFinalMessage) {
               // Realtime delivered the final message - remove the streaming message
+              console.log('[STREAMING] Removing streaming message - final message received from Realtime');
+              streamingMessageRef.current = null;
               return prev.filter((msg) => msg.id !== streamingMessageId);
             }
             // Otherwise keep the streaming message - it has the content
+            // Don't clear streamingMessageRef here - keep it so we can still replace it if Realtime delivers later
+            console.log('[STREAMING] Keeping streaming message - no final message from Realtime yet');
             return prev;
           });
-          streamingMessageRef.current = null;
-        }, 3000); // Give Realtime 3 seconds to deliver the message
+          streamingCleanupTimeoutRef.current = null;
+        }, 5000); // Give Realtime 5 seconds to deliver the message (increased from 3)
       } else {
         // No content - remove the blank message immediately
         setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
@@ -769,6 +798,11 @@ const CustomerChatPage: React.FC = () => {
         const streamingMessageId = streamingMessageRef.current.id;
         streamingMessageRef.current = null;
         setMessages((prev) => prev.filter((msg) => msg.id !== streamingMessageId));
+      }
+      // Clear cleanup timeout on error
+      if (streamingCleanupTimeoutRef.current) {
+        clearTimeout(streamingCleanupTimeoutRef.current);
+        streamingCleanupTimeoutRef.current = null;
       }
     } finally {
       isStreamingRef.current = false;
