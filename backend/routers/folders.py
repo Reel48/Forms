@@ -1238,19 +1238,28 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             # Get templates assigned via many-to-many relationship
             form_assignments = supabase_storage.table("form_folder_assignments").select("form_id").eq("folder_id", folder_id).execute()
             template_form_ids = [fa["form_id"] for fa in (form_assignments.data or [])]
+            logger.info(f"Folder {folder_id}: Found {len(template_form_ids)} form assignments")
             
             # Get templates
             if template_form_ids:
                 templates_response = supabase_storage.table("forms").select("*, form_fields(*)").in_("id", template_form_ids).eq("is_template", True).execute()
                 templates = templates_response.data if templates_response.data else []
+                logger.info(f"Folder {folder_id}: Found {len(templates)} form templates")
             else:
                 templates = []
+                logger.info(f"Folder {folder_id}: No form templates found")
             
             # Check completion status and submission count for each form
+            # IMPORTANT: ALL forms assigned to the folder must be included, regardless of:
+            # - Completion status (completed items should ALWAYS be shown)
+            # - Whether they have fields or not (empty forms may be filtered elsewhere, but completed ones should show)
+            # - Any other status
             # For admins: check if ANY user has submitted it and count all submissions
             # For customers: check if the current user has submitted it and count their submissions
             # Note: Forms use submitter_email instead of user_id, so we'll check by email
+            processed_forms = []
             for form in templates:
+                # Always include the form - never filter out completed items
                 form["item_type"] = "form"
                 try:
                     if is_admin:
@@ -1324,9 +1333,17 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                 except Exception:
                     form["is_completed"] = False
                     form["submissions_count"] = 0
-            forms = templates
+                
+                # Always add the form to the list - never filter out completed items
+                processed_forms.append(form)
+            
+            # IMPORTANT: Use processed_forms to ensure all forms are included
+            # Do NOT filter out completed forms - they must always be shown to customers
+            forms = processed_forms
+            logger.info(f"Folder {folder_id}: Returning {len(forms)} forms (completed: {len([f for f in forms if f.get('is_completed')])}, incomplete: {len([f for f in forms if not f.get('is_completed')])})")
         except Exception as e:
             logger.warning(f"Error fetching forms: {str(e)}")
+            forms = []  # Ensure forms is always a list
             pass
         
         # Get e-signature documents assigned to folder
@@ -1338,11 +1355,17 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
             # These are copies created when templates were assigned, with is_template=False
             instances_response = supabase_storage.table("esignature_documents").select("*").eq("folder_id", folder_id).eq("is_template", False).execute()
             instances = instances_response.data if instances_response.data else []
+            logger.info(f"Folder {folder_id}: Found {len(instances)} e-signature instances")
             
             # Check completion status for each e-signature
+            # IMPORTANT: ALL e-signatures assigned to the folder must be included, regardless of:
+            # - Completion status (completed items should ALWAYS be shown)
+            # - Any other status
             # For admins: check if ANY user has signed it
             # For customers: check if the current user has signed it
+            processed_esignatures = []
             for esig in instances:
+                # Always include the e-signature - never filter out completed items
                 esig["item_type"] = "esignature"
                 try:
                     if is_admin:
@@ -1361,9 +1384,17 @@ async def get_folder_content(folder_id: str, user = Depends(get_current_user)):
                             esig["signed_file_url"] = signature_check.data[0].get("signed_file_url")
                 except Exception:
                     esig["is_completed"] = False
-            esignatures = instances
+                
+                # Always add the e-signature to the list - never filter out completed items
+                processed_esignatures.append(esig)
+            
+            # IMPORTANT: Use processed_esignatures to ensure all e-signatures are included
+            # Do NOT filter out completed e-signatures - they must always be shown to customers
+            esignatures = processed_esignatures
+            logger.info(f"Folder {folder_id}: Returning {len(esignatures)} e-signatures (completed: {len([e for e in esignatures if e.get('is_completed')])}, incomplete: {len([e for e in esignatures if not e.get('is_completed')])})")
         except Exception as e:
             logger.warning(f"Error fetching e-signatures: {str(e)}")
+            esignatures = []  # Ensure esignatures is always a list
             pass
         
         # Compute customer-friendly status summary
