@@ -1148,31 +1148,23 @@
 .typing-indicator {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 0.5rem;
-  height: 24px;
-}
-
-.typing-text {
-  font-size: 0.875rem;
-  color: var(--chat-text-secondary);
-  opacity: 0.7;
-  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  min-height: 32px;
 }
 
 .typing-dots {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .typing-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   background-color: var(--chat-text-secondary);
   border-radius: 50%;
   animation: typingBounce 1.4s infinite ease-in-out both;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 .typing-dot:nth-child(1) { 

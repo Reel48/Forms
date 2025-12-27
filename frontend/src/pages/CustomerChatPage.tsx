@@ -893,7 +893,6 @@ const CustomerChatPage: React.FC = () => {
             <div className="message-content">
               {!isCustomer && message.message_type === 'system' && !isStreamingRef.current ? (
                 <div className="typing-indicator">
-                  <span className="typing-text">AI is thinking...</span>
                   <div className="typing-dots">
                     <div className="typing-dot"></div>
                     <div className="typing-dot"></div>
@@ -902,7 +901,6 @@ const CustomerChatPage: React.FC = () => {
                 </div>
               ) : message.sender_id === 'ai-streaming' && (!message.message || message.message.length === 0) ? (
                 <div className="typing-indicator">
-                  <span className="typing-text">AI is thinking...</span>
                   <div className="typing-dots">
                     <div className="typing-dot"></div>
                     <div className="typing-dot"></div>
