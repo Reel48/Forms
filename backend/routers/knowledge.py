@@ -51,7 +51,7 @@ except Exception as e:
 MAX_FILE_SIZE = 50 * 1024 * 1024
 
 # Allowed file types
-ALLOWED_EXTENSIONS = {'.pdf', '.xlsx', '.xls', '.pptx', '.ppt', '.docx'}
+ALLOWED_EXTENSIONS = {'.pdf', '.xlsx', '.xls', '.pptx', '.ppt', '.docx', '.txt'}
 
 
 async def process_document_background(
@@ -178,7 +178,7 @@ async def upload_document(
     """
     Upload a document for knowledge base
     
-    Supports: PDF, Excel (.xlsx, .xls), PowerPoint (.pptx, .ppt), Word (.docx)
+    Supports: PDF, Excel (.xlsx, .xls), PowerPoint (.pptx, .ppt), Word (.docx), Text (.txt)
     
     Returns document ID and processing status
     """

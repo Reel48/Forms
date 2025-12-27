@@ -22,7 +22,7 @@ const KnowledgeBaseUpload: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const ALLOWED_EXTENSIONS = ['.pdf', '.xlsx', '.xls', '.pptx', '.ppt', '.docx'];
+  const ALLOWED_EXTENSIONS = ['.pdf', '.xlsx', '.xls', '.pptx', '.ppt', '.docx', '.txt'];
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
   const loadDocuments = useCallback(async () => {
@@ -258,7 +258,7 @@ const KnowledgeBaseUpload: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.xlsx,.xls,.pptx,.ppt,.docx"
+            accept=".pdf,.xlsx,.xls,.pptx,.ppt,.docx,.txt"
             onChange={(e) => handleFileUpload(e.target.files)}
             style={{ display: 'none' }}
             disabled={uploading}
@@ -274,7 +274,7 @@ const KnowledgeBaseUpload: React.FC = () => {
               <FaUpload className="upload-icon" />
               <p>Drag & drop a document here, or click to browse</p>
               <p className="upload-hint">
-                Supported: PDF, Excel (.xlsx, .xls), PowerPoint (.pptx, .ppt), Word (.docx)
+                Supported: PDF, Excel (.xlsx, .xls), PowerPoint (.pptx, .ppt), Word (.docx), Text (.txt)
                 <br />
                 Max size: 50MB
               </p>
