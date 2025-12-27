@@ -1741,17 +1741,8 @@ async def stream_ai_response(
                         "updated_at": datetime.now().isoformat()
                     }).eq("id", conversation_id).execute()
                     
-                    # Clean up any system placeholder messages for this conversation
-                    # This prevents duplicate "AI is thinking..." indicators
-                    try:
-                        supabase_storage.table("chat_messages").delete()\
-                            .eq("conversation_id", conversation_id)\
-                            .eq("message_type", "system")\
-                            .eq("sender_id", OCHO_USER_ID)\
-                            .execute()
-                        logger.info(f"[STREAMING] Cleaned up any system placeholder messages")
-                    except Exception as cleanup_error:
-                        logger.debug(f"[STREAMING] Placeholder cleanup failed (non-fatal): {str(cleanup_error)}")
+                    # Note: No cleanup needed - we don't create placeholder messages anymore
+                    # The frontend handles streaming UI feedback, so there are no system placeholders to clean up
                 except Exception as save_error:
                     logger.error(f"[STREAMING] Failed to save streamed message to database: {str(save_error)}", exc_info=True)
                     # Don't fail the stream if save fails - user already saw the response
