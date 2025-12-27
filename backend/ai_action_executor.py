@@ -798,7 +798,7 @@ class AIActionExecutor:
             "success": True,
             "result": {
                 "scheduling_url": scheduling_url,
-                "message": f"I'd be happy to help you schedule a meeting! Please visit our [scheduling page]({scheduling_url}) to view available times and book your preferred slot. The scheduling page allows you to see all available meeting times, choose a time that works for you, and book directly. Once you've selected a time, you'll receive a confirmation email with all the meeting details."
+                "message": f"You can schedule a meeting with our team by visiting our [scheduling page]({scheduling_url}). The scheduling page allows you to see all available meeting times, choose a time that works for you, and book directly. Once you've selected a time, you'll receive a confirmation email with all the meeting details."
             }
         }
     
