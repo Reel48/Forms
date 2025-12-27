@@ -767,9 +767,7 @@ const CustomerChatPage: React.FC = () => {
                 msg.id !== streamingMessageId &&
                 msg.message_type === 'text' &&
                 msg.message && 
-                msg.message.trim().length > 0 &&
-                // Make sure it's not a placeholder or system message
-                msg.message_type !== 'system'
+                msg.message.trim().length > 0
             );
             
             if (hasFinalMessage) {
