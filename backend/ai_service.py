@@ -127,11 +127,11 @@ class AIService:
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "The UUID of the client/customer for whom the quote is being created"
+                            "description": "Optional: The UUID of the client/customer for whom the quote is being created. This will be automatically determined from the conversation context, so you don't need to provide it."
                         },
                         "title": {
                             "type": "string",
-                            "description": "Title/name for the quote (e.g., 'Custom Hat Order - 100 units')"
+                            "description": "Optional: Title/name for the quote (e.g., 'Custom Hat Order - 100 units'). If not provided, a default title will be generated."
                         },
                         "line_items": {
                             "type": "array",
@@ -148,27 +148,27 @@ class AIService:
                                         "description": "REQUIRED: Quantity of this item (e.g., 200, 100)"
                                     },
                                     "unit_price": {
-                                        "type": "string",
-                                        "description": "REQUIRED: Price per unit as a decimal string (e.g., '15.50', '2.00', '3.00')"
+                                        "type": "number",
+                                        "description": "REQUIRED: Price per unit as a number (e.g., 15.50, 2.00, 3.00). This will be automatically converted to the proper format internally."
                                     },
                                     "discount": {
-                                        "type": "string",
-                                        "description": "Optional: Discount percentage as a decimal string (e.g., '0.00' for no discount, '10.00' for 10% off). Default is '0.00'."
+                                        "type": "number",
+                                        "description": "Optional: Discount percentage as a number (e.g., 0 for no discount, 10 for 10% off). Default is 0. This will be automatically converted to the proper format internally."
                                     }
                                 },
                                 "required": ["description", "quantity", "unit_price"]
                             }
                         },
                         "tax_rate": {
-                            "type": "string",
-                            "description": "Tax rate as a decimal string (e.g., '0.00' for no tax, '8.50' for 8.5% tax)"
+                            "type": "number",
+                            "description": "Tax rate as a number (e.g., 0 for no tax, 8.5 for 8.5% tax). This will be automatically converted to the proper format internally."
                         },
                         "create_folder": {
                             "type": "boolean",
                             "description": "Whether to create a folder for this order (default: true)"
                         }
                     },
-                    "required": ["client_id", "title", "line_items"]
+                    "required": ["line_items"]
                 }
             },
             {
@@ -204,12 +204,12 @@ class AIService:
                                         "description": "REQUIRED: Quantity of this item"
                                     },
                                     "unit_price": {
-                                        "type": "string",
-                                        "description": "REQUIRED: Price per unit as a decimal string (e.g., '15.50', '1.00', '0.00')"
+                                        "type": "number",
+                                        "description": "REQUIRED: Price per unit as a number (e.g., 15.50, 1.00, 0.00). This will be automatically converted to the proper format internally."
                                     },
                                     "discount": {
-                                        "type": "string",
-                                        "description": "Optional: Discount percentage as a decimal string (default: '0.00')"
+                                        "type": "number",
+                                        "description": "Optional: Discount percentage as a number (e.g., 0 for no discount, 10 for 10% off). Default is 0. This will be automatically converted to the proper format internally."
                                     }
                                 },
                                 "required": ["description", "quantity", "unit_price"]
@@ -807,16 +807,47 @@ class AIService:
                 # Check for invalid function calls (finish_reason 10)
                 if hasattr(candidate, 'finish_reason') and candidate.finish_reason == 10:
                     error_msg = "Model generated an invalid function call. This may be due to function calling constraints."
-                    logger.warning(f"⚠️ [FUNCTION CALLING] {error_msg}")
-                    print(f"⚠️ [FUNCTION CALLING] {error_msg}")
-                    # Try to extract any text from parts
+                    logger.warning(f"⚠️ [AI SERVICE] {error_msg}")
+                    
+                    # Try to extract function call details for debugging
+                    attempted_function_call = None
                     if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                         for part in candidate.content.parts:
-                            if hasattr(part, 'text'):
+                            if hasattr(part, 'function_call'):
+                                func_call = part.function_call
+                                func_name = getattr(func_call, 'name', 'unknown')
+                                func_args = {}
+                                if hasattr(func_call, 'args') and func_call.args is not None:
+                                    try:
+                                        if isinstance(func_call.args, dict):
+                                            func_args = func_call.args
+                                        else:
+                                            func_args = dict(func_call.args)
+                                    except (TypeError, ValueError):
+                                        func_args = {"error": "Could not parse args"}
+                                attempted_function_call = {
+                                    "name": func_name,
+                                    "arguments": func_args
+                                }
+                                logger.warning(f"⚠️ [AI SERVICE] Attempted function call: {func_name} with args: {func_args}")
+                            elif hasattr(part, 'text'):
                                 response_text += part.text
+                    
+                    # If we know what function was attempted, provide more specific error
+                    if attempted_function_call:
+                        func_name = attempted_function_call.get("name", "unknown")
+                        if func_name == "create_quote":
+                            logger.warning(f"⚠️ [AI SERVICE] Invalid create_quote call - likely missing required fields (description, quantity, unit_price) or wrong data types")
+                            # Try to provide helpful response
+                            if not response_text:
+                                response_text = "I need a bit more information to create that quote. Could you please provide the product description, quantity, and any specific details about what you'd like?"
+                        else:
+                            logger.warning(f"⚠️ [AI SERVICE] Invalid function call for {func_name}")
+                    
                     # If still no text, provide a fallback message
                     if not response_text:
-                        response_text = "I apologize, but I encountered an issue processing that request. Could you please rephrase your question?"
+                        response_text = "I apologize, but I encountered an issue processing that request. Could you please provide more details or rephrase your question?"
+                    
                     # Return early with no function calls
                     return {
                         "response": self._format_urls_as_markdown(response_text),

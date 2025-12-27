@@ -2079,12 +2079,67 @@ async def _generate_ai_response_async(
                                 # Remove invalid line_items to prevent error
                                 del func_params["line_items"]
                         
-                        # If it's a list, ensure each item is a dict
+                        # If it's a list, ensure each item is a dict and normalize types
                         if isinstance(func_params.get("line_items"), list):
-                            func_params["line_items"] = [
-                                item if isinstance(item, dict) else _convert_proto_to_dict(item)
-                                for item in func_params["line_items"]
-                            ]
+                            normalized_line_items = []
+                            for item in func_params["line_items"]:
+                                # Convert proto objects to dicts
+                                if not isinstance(item, dict):
+                                    item = _convert_proto_to_dict(item)
+                                
+                                # Normalize types: ensure unit_price and discount are strings
+                                if isinstance(item, dict):
+                                    normalized_item = dict(item)
+                                    # Convert unit_price to string if it's a number
+                                    if "unit_price" in normalized_item:
+                                        unit_price = normalized_item["unit_price"]
+                                        if isinstance(unit_price, (int, float)):
+                                            normalized_item["unit_price"] = str(unit_price)
+                                        elif unit_price is None:
+                                            normalized_item["unit_price"] = "0.00"
+                                    
+                                    # Convert discount to string if it's a number
+                                    if "discount" in normalized_item:
+                                        discount = normalized_item["discount"]
+                                        if isinstance(discount, (int, float)):
+                                            normalized_item["discount"] = str(discount)
+                                        elif discount is None:
+                                            normalized_item["discount"] = "0.00"
+                                    
+                                    # Ensure quantity is a number (can be int or float)
+                                    if "quantity" in normalized_item:
+                                        quantity = normalized_item["quantity"]
+                                        if isinstance(quantity, str):
+                                            try:
+                                                # Try to parse as float first, then int if whole number
+                                                qty_float = float(quantity)
+                                                normalized_item["quantity"] = int(qty_float) if qty_float == int(qty_float) else qty_float
+                                            except (ValueError, TypeError):
+                                                logger.warning(f"Could not parse quantity '{quantity}' as number, using 1")
+                                                normalized_item["quantity"] = 1
+                                        elif quantity is None:
+                                            logger.warning("Quantity is None, using default 1")
+                                            normalized_item["quantity"] = 1
+                                    else:
+                                        # Missing quantity - use default
+                                        logger.warning("Missing quantity in line item, using default 1")
+                                        normalized_item["quantity"] = 1
+                                    
+                                    # Ensure description exists (required field)
+                                    if "description" not in normalized_item or not normalized_item.get("description"):
+                                        logger.warning("Missing description in line item - this is required but will use empty string")
+                                        normalized_item["description"] = normalized_item.get("description", "")
+                                    
+                                    # Ensure unit_price exists (required field) - provide default if missing
+                                    if "unit_price" not in normalized_item or normalized_item.get("unit_price") is None:
+                                        logger.warning("Missing unit_price in line item - this is required, using default 0.00")
+                                        normalized_item["unit_price"] = "0.00"
+                                    
+                                    normalized_line_items.append(normalized_item)
+                                else:
+                                    logger.warning(f"Skipping invalid line item (not a dict): {item}")
+                            
+                            func_params["line_items"] = normalized_line_items
                     
                     # ALWAYS override client_id with the one from conversation context (don't trust AI-generated IDs)
                     if client_id:
