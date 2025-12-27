@@ -339,15 +339,15 @@ async def delete_document(
 @router.post("/documents/{document_id}/reprocess")
 async def reprocess_document(
     document_id: str,
+    file: Optional[UploadFile] = File(None),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     admin: dict = Depends(get_current_admin)
 ):
     """
-    Reprocess a document (regenerate embeddings)
+    Reprocess a document with new chunking strategy
     
-    Note: This requires the original file. If file is not stored, this will fail.
-    For now, this endpoint is a placeholder - full implementation would require
-    storing files or re-uploading.
+    If file is provided, will use that file. Otherwise, requires re-upload.
+    Deletes old chunks and regenerates with improved chunking algorithm.
     """
     try:
         # Get document
@@ -358,35 +358,129 @@ async def reprocess_document(
         
         document = doc_response.data
         
-        # Check if file is stored
-        if not document.get("storage_path"):
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot reprocess: original file not stored. Please re-upload the document."
-            )
-        
         # Delete existing chunks
-        supabase_storage.table("knowledge_embeddings").delete().eq("document_id", document_id).execute()
+        logger.info(f"Deleting old chunks for document {document_id}...")
+        chunks_deleted = supabase_storage.table("knowledge_embeddings").delete().eq("document_id", document_id).execute()
+        logger.info(f"Deleted chunks for document {document_id}")
         
-        # Reset status
-        supabase_storage.table("knowledge_documents").update({
-            "processing_status": "pending",
-            "chunk_count": 0,
-            "error_message": None
-        }).eq("id", document_id).execute()
-        
-        # TODO: Re-download file from storage and reprocess
-        # For now, return message that user should re-upload
-        return {
-            "message": "Document marked for reprocessing. Please re-upload the file to regenerate embeddings.",
-            "note": "Full reprocessing requires file storage implementation"
-        }
+        # If file is provided, reprocess with new file
+        if file:
+            # Validate file type
+            filename = file.filename or document.get("filename", "unknown")
+            file_ext = os.path.splitext(filename)[1].lower()
+            
+            if file_ext not in ALLOWED_EXTENSIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+                )
+            
+            # Read file data
+            file_data = await file.read()
+            file_size = len(file_data)
+            
+            if file_size == 0:
+                raise HTTPException(status_code=400, detail="File is empty")
+            
+            if file_size > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024):.0f}MB"
+                )
+            
+            # Determine file type
+            mime_type = file.content_type or ""
+            
+            # Update document record
+            supabase_storage.table("knowledge_documents").update({
+                "filename": filename,
+                "file_size": file_size,
+                "processing_status": "pending",
+                "chunk_count": 0,
+                "error_message": None
+            }).eq("id", document_id).execute()
+            
+            # Start background processing with new chunking
+            background_tasks.add_task(
+                process_document_background,
+                document_id=document_id,
+                file_data=file_data,
+                filename=filename,
+                mime_type=mime_type
+            )
+            
+            return JSONResponse({
+                "id": document_id,
+                "filename": filename,
+                "processing_status": "pending",
+                "message": "Document reprocessing started with new chunking strategy..."
+            })
+        else:
+            # No file provided - just delete chunks and mark for re-upload
+            supabase_storage.table("knowledge_documents").update({
+                "processing_status": "pending",
+                "chunk_count": 0,
+                "error_message": None
+            }).eq("id", document_id).execute()
+            
+            return JSONResponse({
+                "id": document_id,
+                "message": "Old chunks deleted. Please re-upload the file to reprocess with new chunking strategy.",
+                "note": "Use this endpoint with a file parameter to reprocess immediately"
+            })
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error reprocessing document: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to reprocess document: {str(e)}")
+
+
+@router.post("/reprocess-all")
+async def reprocess_all_documents(
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Reprocess all documents with new chunking strategy
+    
+    This will delete all existing chunks and mark documents for reprocessing.
+    Documents will need to be re-uploaded to complete reprocessing.
+    """
+    try:
+        # Get all documents
+        docs_response = supabase_storage.table("knowledge_documents").select("id, filename").execute()
+        documents = docs_response.data if docs_response.data else []
+        
+        if not documents:
+            return JSONResponse({
+                "message": "No documents found to reprocess",
+                "count": 0
+            })
+        
+        # Delete all chunks from all documents
+        logger.info(f"Deleting all chunks from {len(documents)} documents...")
+        chunks_deleted = supabase_storage.table("knowledge_embeddings").delete().neq("document_id", "null").execute()
+        
+        # Reset all document statuses
+        updated = supabase_storage.table("knowledge_documents").update({
+            "processing_status": "pending",
+            "chunk_count": 0,
+            "error_message": None
+        }).execute()
+        
+        logger.info(f"Marked {len(documents)} documents for reprocessing")
+        
+        return JSONResponse({
+            "message": f"All {len(documents)} documents marked for reprocessing. Please re-upload files to complete reprocessing with new chunking strategy.",
+            "count": len(documents),
+            "documents": [{"id": doc["id"], "filename": doc.get("filename")} for doc in documents],
+            "note": "Use POST /api/knowledge/documents/{document_id}/reprocess with file parameter to reprocess individual documents"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error reprocessing all documents: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to reprocess all documents: {str(e)}")
 
 
 # ==================== Knowledge Entries Management ====================
